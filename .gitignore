@@ -1,0 +1,13 @@
+*.lis
+*.bin
+*.tap
+*.map
+*.o
+*.dep
+game_data.inc
+game_data.c
+game_data.h
+*.c.asm
+serial.log
+gen_*.c
+gen_*.h
