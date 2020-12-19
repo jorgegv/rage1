@@ -138,9 +138,9 @@
 ## Documentation
 
 - [x] Prepare README.md for publication in GitHub
-- [ ] Document global game structure and each of the submodules.
+- [x] Document global game structure and each of the submodules.
   - [x] DESIGN.md
-  - [ ] DATAGEN.md (review)
+  - [x] DATAGEN.md (review)
   - [x] FLOWGEN.md
   - [x] OPTIMIZATIONS.md
   - [x] REQUIREMENTS.md
