@@ -2,7 +2,7 @@
 
 Documentation index:
 
-* INDEX.md: this file
+* README.md: this file
 * REQUIREMENTS.md: requirements needed to compile and run
 * DESIGN.md: general design of the game flow and main loop
 * OPTIMIZATIONS.md: some general directions on optimizing for Z80
