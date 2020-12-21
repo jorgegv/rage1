@@ -22,9 +22,21 @@ function which is part of the main game loop, and from several other places.
   several tables of pointers to rules to be executed at each moment. The
   different moments are identified by the WHEN clauses in the rules
 * When a new "WHEN" moment is identified (that is: when we identify a new
-  point in the game loop where it would be interesting to execute hooks), we
-  should define a new table in the flow_rules element of the map_screen_s
-  struct (see below for the places already identified).
+  condition in the game loop where it would be interesting to execute
+  hooks), we should define a new table in the flow_rules element of the
+  map_screen_s struct (see below for the places already identified).
+* The code at different points in the game loop only activates and
+  deactivates game flags
+* These game flags are processed and acted upon in check_game_flags()
+  function. Most processing must take place here. There may be some reactions
+  that may be executed at the place of detection (?)
+* Before executing check_game_flags(), the function run_flow_rules() should
+  be executed. This function checks and executes the FLOWGEN rules, it is
+  the main loop of the scripting engine, and all FLOWGEN code is executed
+  here
+* A separate field `user_flags`, analogous to `game_flags`, must exist in
+  `game_state` structure. This user flags can be manipulated through FLOWGEN
+  rules
 
 ## Rule design
 

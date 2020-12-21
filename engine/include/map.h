@@ -18,7 +18,7 @@
 #include "btile.h"
 #include "inventory.h"
 #include "hotzone.h"
-#include "flow_rule.h"
+#include "flow.h"
 
 // Screen functions and definitions
 // A screen has a set of btiles , a set of sprites and some hero data
@@ -46,14 +46,7 @@ struct map_screen_s {
         uint8_t num_hotzones;
         struct hotzone_info_s *hotzones;
     } hotzone_data;
-    struct {
-        struct flow_rule_table_s rules_enter_screen;
-        struct flow_rule_table_s rules_exit_screen;
-        struct flow_rule_table_s rules_hero_hit;
-        struct flow_rule_table_s rules_enemy_hit;
-        struct flow_rule_table_s rules_item_grabbed;
-        struct flow_rule_table_s rules_game_loop;
-    } flow_data;
+    struct flow_info_s flow_data;
 };
 
 // with a generic function to draw a screen passed by pointer we can
