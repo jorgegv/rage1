@@ -25,6 +25,7 @@
 #include "debug.h"
 #include "btile.h"
 #include "game_loop.h"
+#include "flow.h"
 
 void check_game_pause(void) {
    if ( controller_pause_key_pressed() ) {
@@ -149,10 +150,6 @@ void run_main_game_loop(void) {
       // changes game_state
       check_hotzones();
 
-      // check game flags and react to conditions
-      // changes game_state
-      check_game_flags();
-
       // update sprites
       // does not change game_state
       move_sprites();
@@ -174,6 +171,13 @@ void run_main_game_loop(void) {
 
       // test light just to be sure we did not hang
 //      show_heartbeat();
+
+      // check flow rules before the regular ones. We trust the user :-)
+      check_flow_rules();
+
+      // check game flags and react to conditions
+      // changes game_state
+      check_game_flags();
 
       // update screen
       sp1_UpdateNow();

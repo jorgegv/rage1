@@ -50,6 +50,7 @@ void game_state_goto_screen(uint8_t screen) {
     bullet_move_offscreen_all();
 
     // update basic screen data
+    game_state.previous_screen = game_state.current_screen;
     game_state.current_screen = screen;
 
     // set flag

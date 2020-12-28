@@ -25,8 +25,9 @@
 //  struct
 struct game_state_s {
 
-   // current screen index in map table
+   // current and previous screen indexes in map table
    uint8_t current_screen;
+   uint8_t previous_screen;
 
    // hero info and state
    struct hero_info_s hero;
@@ -36,6 +37,9 @@ struct game_state_s {
 
    // game flags, see below
    uint16_t flags;
+
+   // user flags are checked and manipulated from flow rules
+   uint16_t user_flags;
 
    // controller data
    struct controller_info_s controller;
@@ -76,5 +80,10 @@ void game_state_goto_screen(uint8_t screen );
 #define F_GAME_INSIDE_EXIT_ZONE		0x0040
 // all enemies killed
 #define F_GAME_ALL_ENEMIES_KILLED	0x0080
+
+// user flags macros and definitions
+#define GET_USER_FLAG(f)	(game_state.user_flags & (f))
+#define SET_USER_FLAG(f)	(game_state.user_flags |= (f))
+#define RESET_USER_FLAG(f)	(game_state.user_flags &= ~(f))
 
 #endif // _GAME_STATE_H

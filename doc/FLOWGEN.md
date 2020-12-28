@@ -37,6 +37,8 @@ function which is part of the main game loop, and from several other places.
 * A separate field `user_flags`, analogous to `game_flags`, must exist in
   `game_state` structure. This user flags can be manipulated through FLOWGEN
   rules
+* FLOWGEN rules can check game flags (but can not modify them), and can check
+and modify user flags.
 
 ## Rule design
 
@@ -54,15 +56,17 @@ check is successful. Options:
   - [ ] WHEN_GAME_LOOP
 
 * WHAT_TO_CHECK: the condition to check. Options:
-  - [ ] CHECK_FLAG_IS_SET <flag>
-  - [ ] CHECK_FLAG_IS_RESET <flag>
+  - [ ] CHECK_GAME_FLAG_IS_SET <flag>
+  - [ ] CHECK_GAME_FLAG_IS_RESET <flag>
+  - [ ] CHECK_USER_FLAG_IS_SET <flag>
+  - [ ] CHECK_USER_FLAG_IS_RESET <flag>
   - [ ] CHECK_ITEM_IS_OWNED <item>
   - [ ] CHECK_LIVES <comparison> <value>
   - [ ] CHECK_ENEMIES_ALIVE <comparison> <value>
 
 * ACTION_TO_EXECUTE:
-  - [ ] DO_SET_FLAG <flag>
-  - [ ] DO_RESET_FLAG <flag>
+  - [ ] DO_SET_USER_FLAG <flag>
+  - [ ] DO_RESET_USER_FLAG <flag>
   - [ ] DO_INC_LIVES
   - [ ] DO_DEC_LIVES
   - [ ] DO_GOTO_SCREEN <index>
