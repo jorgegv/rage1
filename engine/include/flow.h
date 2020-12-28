@@ -34,13 +34,14 @@ struct flow_rule_s {
     // what to check
     uint8_t check;
     union {
-        struct { uint16_t flag; }	game_flag_is_set;
+        struct { uint16_t flag; }	flag_is_set;
     } check_data;
 
     // what to do if check successful
     uint8_t action;
     union {
-        struct { uint8_t sound_id; }	play_sound;
+        struct { uint8_t sound_id; }	play_sound;	// PLAY_SOUND
+        struct { uint16_t flag; }	user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
     } action_data;
 
 };

@@ -10,23 +10,19 @@
 
 #include "flow.h"
 #include "game_state.h"
+#include "beeper.h"
 
-// table of check functions.  Rule check value is used to index into this
-// table and execute the appropriate function
-uint8_t (*rule_check_function)( struct flow_rule_s * ) [ RULE_CHECK_MAX ];
-
-// table of action functions.  Rule action value is used to index into this
-// table and execute the appropriate function
-void (*rule_action_function)( struct flow_rule_s * ) [ RULE_ACTION_MAX ];
+// Dispatch tables for rule checks and actions
+extern uint8_t (*rule_check_function)( struct flow_rule_s * )[ RULE_CHECK_MAX + 1 ];
+extern void (*rule_action_function)( struct flow_rule_s * )[ RULE_ACTION_MAX + 1 ];
 
 // executes a complete rule table
 void run_flow_rule_table( struct flow_rule_table_s *t ) {
     // beware Z80 optimizations!  The rule table is an ordered list, so it
     // has to be run in order from 0 to (num_rules-1)
     uint8_t i;
-    for( i = 0; i < t->num_rules; i++ ) {
-        static struct flow_rule_s *r;
-        r = t->rules[ i ];
+    for ( i = 0; i < t->num_rules; i++ ) {
+        struct flow_rule_s *r = t->rules[ i ];
         if ( rule_check_function[ r->check ]( r ) )
             rule_action_function[ r->action ]( r );
     }
@@ -51,4 +47,53 @@ void check_flow_rules(void) {
     }
 
 }
+
+////////////////////////////////////////////////////////////////////
+// rules: functions for 'check' dispatch table
+// prototype: 
+//   uint8_t do_rule_check_xxxx( struct flow_rule_s *r )
+////////////////////////////////////////////////////////////////////
+
+uint8_t do_rule_check_game_flag_set( struct flow_rule_s *r ) {
+    return ( GET_GAME_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
+}
+
+uint8_t do_rule_check_user_flag_set( struct flow_rule_s *r ) {
+    return ( GET_USER_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
+}
+
+////////////////////////////////////////////////////////////////////
+// rules: functions for 'action' dispatch table
+// prototype:
+//   void do_rule_action_xxxx( struct flow_rule_s *r )
+////////////////////////////////////////////////////////////////////
+
+void do_rule_action_set_user_flag( struct flow_rule_s *r ) {
+    SET_USER_FLAG( r->action_data.user_flag.flag );
+}
+
+void do_rule_action_reset_user_flag( struct flow_rule_s *r ) {
+    RESET_USER_FLAG( r->action_data.user_flag.flag );
+}
+
+void do_rule_action_play_sound( struct flow_rule_s *r ) {
+    beep_fx( r->action_data.play_sound.sound_id );
+}
+
+// dispatch tables for check and action functions
+
+// Table of check functions. The 'check' value from the rule is used to
+// index into this table and execute the appropriate function
+uint8_t (*rule_check_function)( struct flow_rule_s * ) [ RULE_CHECK_MAX + 1 ] = {
+    do_rule_check_game_flag_set,
+    do_rule_check_user_flag_set,
+};
+
+// Table of action functions.  The 'action' value from the rule is used to
+// index into this table and execute the appropriate function
+void (*rule_action_function)( struct flow_rule_s * ) [ RULE_ACTION_MAX + 1 ] = {
+    do_rule_action_set_user_flag,
+    do_rule_action_reset_user_flag,
+    do_rule_action_play_sound
+};
 
