@@ -54,9 +54,6 @@ struct flow_rule_table_s {
 struct flow_info_s {
         struct flow_rule_table_s enter_screen;
         struct flow_rule_table_s exit_screen;
-        struct flow_rule_table_s hero_hit;
-        struct flow_rule_table_s enemy_hit;
-        struct flow_rule_table_s item_grabbed;
         struct flow_rule_table_s game_loop;
 };
 

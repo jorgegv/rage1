@@ -33,7 +33,6 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
 
 // check_flow_rules: execute rules in flowgen data tables for the current
 // screen.  See documentation for implementation details
-
 void check_flow_rules(void) {
 
     ////////////////////////////////////////////////////////
@@ -48,6 +47,12 @@ void check_flow_rules(void) {
         // run ENTER_SCREEN rules
         run_flow_rule_table( &map[ game_state.current_screen ].flow_data.enter_screen );
     }
+
+    ////////////////////////////////////////////////////////
+    // WHEN_GAME_LOOP rules
+    ////////////////////////////////////////////////////////
+
+    run_flow_rule_table( &map[ game_state.current_screen ].flow_data.game_loop );
 
 }
 

@@ -42,7 +42,7 @@ void collision_check_hero_with_sprites(void) {
         if ( IS_SPRITE_ACTIVE( *s ) ) {
             sprite_pos = &s->position;
             if ( collision_check( hero_pos, sprite_pos ) ) {
-                SET_GAME_FLAG( F_GAME_PLAYER_DIED );
+                SET_GAME_FLAG( F_GAME_HERO_HIT );
                 return;
             }
         }

@@ -51,7 +51,7 @@ void check_game_flags( void ) {
       }
 
       // check if player has died
-      if ( GET_GAME_FLAG( F_GAME_PLAYER_DIED ) ) {
+      if ( GET_GAME_FLAG( F_GAME_HERO_HIT ) ) {
          beep_fx( SOUND_HERO_DIED );
          if ( ! --game_state.hero.num_lives )
             SET_GAME_FLAG( F_GAME_OVER );
@@ -64,7 +64,7 @@ void check_game_flags( void ) {
             bullet_reset_all();
             hero_update_lives_display();
             SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
-            RESET_GAME_FLAG( F_GAME_PLAYER_DIED );
+            RESET_GAME_FLAG( F_GAME_HERO_HIT );
          }
       }
 
@@ -78,7 +78,6 @@ void check_game_flags( void ) {
              GET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED )
          ) 
          SET_GAME_FLAG( F_GAME_END );
-
       }
 }
 

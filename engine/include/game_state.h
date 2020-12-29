@@ -71,7 +71,7 @@ void game_state_goto_screen(uint8_t screen );
 // player has finished the game successfully
 #define F_GAME_END			0x0004
 // player has collided with a sprite
-#define F_GAME_PLAYER_DIED		0x0008
+#define F_GAME_HERO_HIT			0x0008
 // game has just started
 #define F_GAME_START			0x0010
 // all items collected
@@ -80,6 +80,10 @@ void game_state_goto_screen(uint8_t screen );
 #define F_GAME_INSIDE_EXIT_ZONE		0x0040
 // all enemies killed
 #define F_GAME_ALL_ENEMIES_KILLED	0x0080
+// enemy was hit
+#define F_GAME_ENEMY_HIT		0x0100
+// an item was picked up
+#define F_GAME_ITEM_GRABBED		0x0200
 
 // user flags macros and definitions
 #define GET_USER_FLAG(f)	(game_state.user_flags & (f))

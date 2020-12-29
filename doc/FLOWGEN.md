@@ -50,9 +50,6 @@ All rules follow the pattern:
 check is successful. Options: 
   - [ ] WHEN_ENTER_SCREEN
   - [ ] WHEN_EXIT_SCREEN
-  - [ ] WHEN_HERO_HIT
-  - [ ] WHEN_ENEMY_HIT
-  - [ ] WHEN_ITEM_GRABBED
   - [ ] WHEN_GAME_LOOP
 
 * WHAT_TO_CHECK: the condition to check. Options:
