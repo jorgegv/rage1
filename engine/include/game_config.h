@@ -17,6 +17,9 @@ struct game_config_s {
         void (*run_intro)(void);
         void (*run_game_end)(void);
         void (*run_game_over)(void);
+        void (*run_user_init)(void);
+        void (*run_user_game_init)(void);
+        void (*run_user_game_loop)(void);
     } game_functions;
 };
 extern struct game_config_s game_config;

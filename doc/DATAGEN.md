@@ -383,3 +383,9 @@ END_GAME_CONFIG
   i.e. the hero has completed the game objectives
   * `GAME_OVER`: this runs when the hero has lost all of his/her lives
   without completing the game objectives
+  * `USER_INIT`: this function runs once when the game has just finished
+  loading. It is a one-time initialization.
+  * `USER_GAME_INIT`: this function runs once when a new gameplay is
+  started.
+  * `USER_GAME_LOOP`: this function runs once in every game loop. Use with
+  care, this function can hurt performance badly!
