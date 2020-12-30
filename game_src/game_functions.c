@@ -198,3 +198,11 @@ void my_game_over_screen(void) {
    sp1_UpdateNow();
 }
 
+void my_user_init(void) {
+}
+
+void my_user_game_init(void) {
+}
+
+void my_user_game_loop(void) {
+}

@@ -34,6 +34,11 @@ void init_program(void) {
 void main(void)
 {
    init_program();
+
+   // run one-time initialization, if any
+   if ( game_config.game_functions.run_user_init )
+      game_config.game_functions.run_user_init();
+
    while (1) {
 
       if ( game_config.game_functions.run_menu )

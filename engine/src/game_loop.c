@@ -25,6 +25,7 @@
 #include "debug.h"
 #include "btile.h"
 #include "game_loop.h"
+#include "game_config.h"
 
 void check_game_pause(void) {
    if ( controller_pause_key_pressed() ) {
@@ -136,6 +137,10 @@ void run_main_game_loop(void) {
    hero_update_lives_display();
    inventory_show();
 
+   // run user game initialization, if any
+   if ( game_config.game_functions.run_user_game_init )
+      game_config.game_functions.run_user_game_init();
+
    // run main game loop
    while ( ! ( GET_GAME_FLAG( F_GAME_OVER ) || GET_GAME_FLAG( F_GAME_END ) ) ) {
 
@@ -174,6 +179,10 @@ void run_main_game_loop(void) {
 
       // test light just to be sure we did not hang
 //      show_heartbeat();
+
+      // run user game loop function, if any
+      if ( game_config.game_functions.run_user_game_loop )
+         game_config.game_functions.run_user_game_loop();
 
       // update screen
       sp1_UpdateNow();
