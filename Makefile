@@ -67,7 +67,7 @@ $(GENERATED_DIR)/game_data.c: $(GENERATED_DIR)/game_data.dep
 	$(MAKE) -s data
 
 data:
-	@./tools/datagen.pl -d $(GENERATED_DIR) game_data/{btiles,sprites,map,heroes,game_config}/*.gdata
+	@./tools/datagen.pl -c -d $(GENERATED_DIR) game_data/{btiles,sprites,map,heroes,game_config}/*.gdata
 
 depend:
 	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{btiles,sprites,map,heroes,game_config}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi

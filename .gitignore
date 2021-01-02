@@ -11,3 +11,4 @@ game_data.h
 serial.log
 gen_*.c
 gen_*.h
+*.dmp

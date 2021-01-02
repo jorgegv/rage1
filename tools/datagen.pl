@@ -18,6 +18,10 @@ use Data::Dumper;
 use List::MoreUtils qw( zip );
 use Getopt::Std;
 
+# global program state
+# if you add any global variable here, don't forget to add a reference to it
+# also in $all_state variable in dump_internal_state function at the end of
+# the script
 my @btiles;
 my @screens;
 my %screen_name_to_index = ( '__NO_SCREEN__', 0 );
@@ -27,9 +31,12 @@ my $hero;
 my $all_items;
 my $game_config;
 
-my $c_file = "game_data.c";
-my $h_file = "game_data.h";
+my $c_file = 'game_data.c';
+my $h_file = 'game_data.h';
 my $output_fh;
+
+# dump file for internal state
+my $dump_file = 'datagen_internal.dmp';
 
 ##########################################
 ## Input data parsing and state machine
@@ -1326,15 +1333,37 @@ sub output_generated_data {
 
 }
 
+# creates a dump of internal data so that other tools (e.g.  FLOWGEN) can
+# load it and use the parsed data. Use "-c" option to dump the internal data
+sub dump_internal_data {
+    open DUMP, ">$dump_file" or
+        die "Could not open $dump_file for writing\n";
+
+    my $all_state = {
+        btiles			=> \@btiles,
+        screens			=> \@screens,
+        screen_name_to_index	=> \%screen_name_to_index,
+        sprites			=> \@sprites,
+        sprite_name_to_index	=> \%sprite_name_to_index,
+        hero			=> $hero,
+        all_items		=> $all_items,
+        game_config		=> $game_config,
+    };
+
+    print DUMP Dumper( $all_state );
+    close DUMP;
+}
+
 #########################
 ## Main loop
 #########################
 
-our $opt_d;
-getopts("d:");
+our ( $opt_d, $opt_c );
+getopts("d:c");
 if ( defined( $opt_d ) ) {
     $c_file = "$opt_d/$c_file";
     $h_file = "$opt_d/$h_file";
+    $dump_file = "$opt_d/$dump_file";
 }
 
 # read, validate and compile input
@@ -1345,3 +1374,7 @@ run_consistency_checks;
 
 # generate output
 output_generated_data;
+
+# dump internal data if required to do so
+dump_internal_data
+    if ( $opt_c );
