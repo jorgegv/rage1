@@ -20,6 +20,9 @@
 #include "beeper.h"
 #include "game_data.h"
 #include "btile.h"
+#include "flow.h"
+
+#include "debug.h"
 
 // global text printing context
 struct sp1_pss print_ctx = {
@@ -198,11 +201,25 @@ void my_game_over_screen(void) {
    sp1_UpdateNow();
 }
 
+struct flow_rule_s all_rules[1] = {
+   {
+      .check				= RULE_CHECK_LOOP_FLAG_IS_SET,
+      .check_data.flag_is_set.flag	= F_LOOP_ENEMY_HIT,
+      .action				= RULE_ACTION_SET_USER_FLAG,
+      .action_data.user_flag.flag	= 0x0001,
+   },
+};
+
 void my_user_init(void) {
+//    map[0].flow_data.game_loop.rules[0] = &all_rules[0];
+//    map[0].flow_data.game_loop.num_rules = 1;
 }
 
 void my_user_game_init(void) {
 }
 
 void my_user_game_loop(void) {
+    debug_out( "\nF:" ); debug_out( itohex( game_state.flags ) );
+    debug_out( " U:" ); debug_out( itohex( game_state.user_flags ) );
+    debug_out( " L:" ); debug_out( itohex( game_state.loop_flags ) );
 }

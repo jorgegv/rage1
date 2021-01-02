@@ -37,8 +37,11 @@ void game_state_reset_initial(void) {
    hotzone_deactivate_all_endofgame_zones();
    game_state.enemies_alive = map_count_enemies_all();
 
-   // set initial game flags
-   game_state.flags = F_GAME_START;
+   // reset all flags and set initial ones
+   RESET_ALL_GAME_FLAGS();
+   RESET_ALL_LOOP_FLAGS();
+   RESET_ALL_USER_FLAGS();
+   SET_GAME_FLAG( F_GAME_START );
 }
 
 // change to a new screen
@@ -54,5 +57,5 @@ void game_state_goto_screen(uint8_t screen) {
     game_state.current_screen = screen;
 
     // set flag
-    SET_GAME_FLAG( F_GAME_ENTER_SCREEN );
+    SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
 }

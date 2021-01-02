@@ -302,8 +302,6 @@ void hero_check_if_inside_hotzones(void) {
     static uint8_t i;
     static struct hotzone_info_s *hz;
 
-    RESET_GAME_FLAG( F_GAME_INSIDE_EXIT_ZONE );
-
     i = map[ game_state.current_screen ].hotzone_data.num_hotzones;
     while ( i-- ) {
         hz = &map[ game_state.current_screen ].hotzone_data.hotzones[ i ];
@@ -317,11 +315,11 @@ void hero_check_if_inside_hotzones(void) {
                     game_state_goto_screen( hz->destination_screen.screen_num );
                     game_state.hero.position.x = hz->destination_screen.hero_x;
                     game_state.hero.position.y = hz->destination_screen.hero_y;
-                    SET_GAME_FLAG( F_GAME_ENTER_SCREEN );
+                    SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
                     return;
                     break;
                 case HZ_TYPE_END_OF_GAME:
-                    SET_GAME_FLAG( F_GAME_INSIDE_EXIT_ZONE );
+                    SET_LOOP_FLAG( F_LOOP_INSIDE_EXIT_ZONE );
                     return;
                     break;
                 default:

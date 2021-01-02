@@ -35,10 +35,19 @@ struct game_state_s {
    // bullets info and state
    struct bullet_info_s bullet;
 
-   // game flags, see below
+   // game flags:
+   //
+   //   * flags: game indicators that are preserved during the game.  If a
+   //     flag is set a here, it will be kept set during the whole game
+   //
+   //   * loop flags: game condition results.  They are set in the different
+   //     game loop functions and reacted upon in a central place.  They are
+   //     all reset at the end of the game loop
+   //
+   //   * user flags: they are checked and manipulated from FLOWGEN rules
+   //
    uint16_t flags;
-
-   // user flags are checked and manipulated from flow rules
+   uint16_t loop_flags;
    uint16_t user_flags;
 
    // controller data
@@ -59,35 +68,55 @@ void game_state_reset_initial(void);
 // manage game state when moving to a new screen
 void game_state_goto_screen(uint8_t screen );
 
+///////////////////////////////////////////////
 // game flags macros and definitions
+///////////////////////////////////////////////
+
 #define GET_GAME_FLAG(f)	(game_state.flags & (f))
 #define SET_GAME_FLAG(f)	(game_state.flags |= (f))
 #define RESET_GAME_FLAG(f)	(game_state.flags &= ~(f))
+#define RESET_ALL_GAME_FLAGS()	(game_state.flags = 0)
 
-// player has just entered a new screen
-#define F_GAME_ENTER_SCREEN		0x0001
 // player has exhausted his lives
-#define F_GAME_OVER			0x0002
+#define F_GAME_OVER			0x0001
 // player has finished the game successfully
-#define F_GAME_END			0x0004
-// player has collided with a sprite
-#define F_GAME_HERO_HIT			0x0008
+#define F_GAME_END			0x0002
+// all items collected
+#define F_GAME_GOT_ALL_ITEMS		0x0004
+// all enemies killed
+#define F_GAME_ALL_ENEMIES_KILLED	0x0008
 // game has just started
 #define F_GAME_START			0x0010
-// all items collected
-#define F_GAME_GOT_ALL_ITEMS		0x0020
-// inside EXIT hotzone
-#define F_GAME_INSIDE_EXIT_ZONE		0x0040
-// all enemies killed
-#define F_GAME_ALL_ENEMIES_KILLED	0x0080
-// enemy was hit
-#define F_GAME_ENEMY_HIT		0x0100
-// an item was picked up
-#define F_GAME_ITEM_GRABBED		0x0200
 
+///////////////////////////////////////////////
+// loop flags macros and definitions
+///////////////////////////////////////////////
+
+#define GET_LOOP_FLAG(f)	(game_state.loop_flags & (f))
+#define SET_LOOP_FLAG(f)	(game_state.loop_flags |= (f))
+#define RESET_LOOP_FLAG(f)	(game_state.loop_flags &= ~(f))
+#define RESET_ALL_LOOP_FLAGS()	(game_state.loop_flags = 0)
+
+
+// player has just entered a new screen
+#define F_LOOP_ENTER_SCREEN		0x0001
+// player has collided with a sprite
+#define F_LOOP_HERO_HIT			0x0004
+// inside EXIT hotzone
+#define F_LOOP_INSIDE_EXIT_ZONE		0x0008
+// enemy was hit
+#define F_LOOP_ENEMY_HIT		0x0010
+// an item was picked up
+#define F_LOOP_ITEM_GRABBED		0x0020
+
+///////////////////////////////////////////////
 // user flags macros and definitions
+///////////////////////////////////////////////
+
 #define GET_USER_FLAG(f)	(game_state.user_flags & (f))
 #define SET_USER_FLAG(f)	(game_state.user_flags |= (f))
 #define RESET_USER_FLAG(f)	(game_state.user_flags &= ~(f))
+#define RESET_ALL_USER_FLAGS()	(game_state.user_flags = 0)
+
 
 #endif // _GAME_STATE_H

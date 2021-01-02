@@ -39,7 +39,7 @@ void check_flow_rules(void) {
     // WHEN_ENTER_SCREEN and WHEN_EXIT_SCREEN rules
     ////////////////////////////////////////////////////////
     
-    if ( GET_GAME_FLAG( F_GAME_ENTER_SCREEN ) ) {
+    if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) ) {
         // run EXIT_SCREEN rules for the previous screen
         // but skip if game just started and this is the first game loop run
         if ( ! GET_GAME_FLAG( F_GAME_START ) )
@@ -64,6 +64,10 @@ void check_flow_rules(void) {
 
 uint8_t do_rule_check_game_flag_set( struct flow_rule_s *r ) {
     return ( GET_GAME_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
+}
+
+uint8_t do_rule_check_loop_flag_set( struct flow_rule_s *r ) {
+    return ( GET_LOOP_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_user_flag_set( struct flow_rule_s *r ) {
@@ -94,6 +98,7 @@ void do_rule_action_play_sound( struct flow_rule_s *r ) {
 // index into this table and execute the appropriate function
 rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     do_rule_check_game_flag_set,
+    do_rule_check_loop_flag_set,
     do_rule_check_user_flag_set,
 };
 

@@ -39,7 +39,7 @@ void check_game_pause(void) {
 void check_game_flags( void ) {
 
       // check if the player has entered new screen or has just started
-      if ( GET_GAME_FLAG( F_GAME_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
+      if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
          // handle tasks and reset flag
          map_draw_screen( &map[ game_state.current_screen ] );
          sprite_reset_position_all( 
@@ -47,12 +47,11 @@ void check_game_flags( void ) {
             map[ game_state.current_screen ].sprite_data.sprites
          );
          bullet_reset_all();
-         RESET_GAME_FLAG( F_GAME_ENTER_SCREEN );
          RESET_GAME_FLAG( F_GAME_START );
       }
 
       // check if player has died
-      if ( GET_GAME_FLAG( F_GAME_HERO_HIT ) ) {
+      if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
          beep_fx( SOUND_HERO_DIED );
          if ( ! --game_state.hero.num_lives )
             SET_GAME_FLAG( F_GAME_OVER );
@@ -65,7 +64,6 @@ void check_game_flags( void ) {
             bullet_reset_all();
             hero_update_lives_display();
             SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
-            RESET_GAME_FLAG( F_GAME_HERO_HIT );
          }
       }
 
@@ -74,7 +72,7 @@ void check_game_flags( void ) {
          hotzone_activate_all_endofgame_zones();
 
       // check for end of game ( collected all items, killed all enemies and inside exit zone )
-      if ( GET_GAME_FLAG( F_GAME_INSIDE_EXIT_ZONE) && 
+      if ( GET_LOOP_FLAG( F_LOOP_INSIDE_EXIT_ZONE) && 
              GET_GAME_FLAG( F_GAME_GOT_ALL_ITEMS ) &&
              GET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED )
          ) 
@@ -147,6 +145,9 @@ void run_main_game_loop(void) {
       // check if game has been paused (press 'y')
       check_game_pause();
 
+      // reset all loop flags for a clear iteration
+      RESET_ALL_LOOP_FLAGS();
+
       // hotzones need to be checked at the very beginning of the game loop,
       // because they can change the current screen, hero position, sprites, etc.
 
@@ -172,10 +173,6 @@ void run_main_game_loop(void) {
       // changes game_state
       check_collisions();
 
-
-      // test light just to be sure we did not hang
-//      show_heartbeat();
-
       // check flow rules before the regular ones. We trust the user :-)
       check_flow_rules();
 
@@ -196,6 +193,8 @@ void run_main_game_loop(void) {
       // current_time.frame and ignore the call if needed. See how it has been
       // done in move_sprites()
 
+      // test light just to be sure we did not hang
+//      show_heartbeat();
    }
 
    // end of main game loop

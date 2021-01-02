@@ -16,9 +16,10 @@
 // flow rule check constants
 // always update RULE_CHECK_MAX when adding new checks!
 #define RULE_CHECK_GAME_FLAG_IS_SET		0
-#define RULE_CHECK_USER_FLAG_IS_SET		1
+#define RULE_CHECK_LOOP_FLAG_IS_SET		1
+#define RULE_CHECK_USER_FLAG_IS_SET		2
 
-#define RULE_CHECK_MAX				1
+#define RULE_CHECK_MAX				2
 
 // flow rule action constants
 // always ipdate RULE_ACTION_MAX when adding new actions!
