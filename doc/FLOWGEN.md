@@ -48,23 +48,27 @@ All rules follow the pattern:
 
 * WHEN_TO_RUN: the point where the rule is checked and action executed if
 check is successful. Options: 
-  - [ ] WHEN_ENTER_SCREEN
-  - [ ] WHEN_EXIT_SCREEN
-  - [ ] WHEN_GAME_LOOP
+  - [x] ENTER_SCREEN
+  - [x] EXIT_SCREEN
+  - [x] GAME_LOOP
 
 * WHAT_TO_CHECK: the condition to check. Options:
-  - [ ] CHECK_GAME_FLAG_IS_SET <flag>
-  - [ ] CHECK_GAME_FLAG_IS_RESET <flag>
-  - [ ] CHECK_USER_FLAG_IS_SET <flag>
-  - [ ] CHECK_USER_FLAG_IS_RESET <flag>
-  - [ ] CHECK_ITEM_IS_OWNED <item>
-  - [ ] CHECK_LIVES <comparison> <value>
-  - [ ] CHECK_ENEMIES_ALIVE <comparison> <value>
+  - [x] GAME_FLAG_IS_SET <flag>
+  - [x] GAME_FLAG_IS_RESET <flag>
+  - [x] LOOP_FLAG_IS_SET <flag>
+  - [x] LOOP_FLAG_IS_RESET <flag>
+  - [x] USER_FLAG_IS_SET <flag>
+  - [x] USER_FLAG_IS_RESET <flag>
+  - [ ] ITEM_IS_OWNED <item>
+  - [ ] LIVES <comparison> <value>
+  - [ ] ENEMIES_ALIVE <comparison> <value>
 
 * ACTION_TO_EXECUTE:
-  - [ ] DO_SET_USER_FLAG <flag>
-  - [ ] DO_RESET_USER_FLAG <flag>
-  - [ ] DO_INC_LIVES
-  - [ ] DO_DEC_LIVES
-  - [ ] DO_GOTO_SCREEN <index>
-  - [ ] DO_BEEPFX <fxid>
+  - [x] SET_USER_FLAG <flag>
+  - [x] RESET_USER_FLAG <flag>
+  - [x] INC_LIVES <num_lives>
+  - [x] PLAY_SOUND <fxid>
+  - [ ] ENABLE_TILE <tile_name>
+  - [ ] DISABLE_TILE <tile_name>
+  - [ ] ENABLE_HOTZONE <hotzone_name>
+  - [ ] DISABLE_HOTZONE <hotzone_name>

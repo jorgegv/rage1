@@ -11,6 +11,7 @@
 #include "flow.h"
 #include "game_state.h"
 #include "beeper.h"
+#include "hero.h"
 
 // Dispatch tables for rule checks and actions
 typedef uint8_t (*rule_check_fn_t)( struct flow_rule_s * );
@@ -66,12 +67,24 @@ uint8_t do_rule_check_game_flag_set( struct flow_rule_s *r ) {
     return ( GET_GAME_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
 }
 
+uint8_t do_rule_check_game_flag_reset( struct flow_rule_s *r ) {
+    return ( GET_GAME_FLAG( r->check_data.flag_is_set.flag ) ? 0 : 1 );
+}
+
 uint8_t do_rule_check_loop_flag_set( struct flow_rule_s *r ) {
     return ( GET_LOOP_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
 }
 
+uint8_t do_rule_check_loop_flag_reset( struct flow_rule_s *r ) {
+    return ( GET_LOOP_FLAG( r->check_data.flag_is_set.flag ) ? 0 : 1 );
+}
+
 uint8_t do_rule_check_user_flag_set( struct flow_rule_s *r ) {
     return ( GET_USER_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
+}
+
+uint8_t do_rule_check_user_flag_reset( struct flow_rule_s *r ) {
+    return ( GET_USER_FLAG( r->check_data.flag_is_set.flag ) ? 0 : 1 );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -92,14 +105,22 @@ void do_rule_action_play_sound( struct flow_rule_s *r ) {
     beep_fx( r->action_data.play_sound.sound_id );
 }
 
+void do_rule_action_inc_lives( struct flow_rule_s *r ) {
+    game_state.hero.num_lives += r->action_data.lives.num_lives;
+    hero_update_lives_display();
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
 // index into this table and execute the appropriate function
 rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     do_rule_check_game_flag_set,
+    do_rule_check_game_flag_reset,
     do_rule_check_loop_flag_set,
+    do_rule_check_loop_flag_reset,
     do_rule_check_user_flag_set,
+    do_rule_check_user_flag_reset,
 };
 
 // Table of action functions.  The 'action' value from the rule is used to
@@ -108,5 +129,5 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_set_user_flag,
     do_rule_action_reset_user_flag,
     do_rule_action_play_sound,
+    do_rule_action_inc_lives,
 };
-

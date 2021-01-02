@@ -201,29 +201,36 @@ void my_game_over_screen(void) {
    sp1_UpdateNow();
 }
 
-struct flow_rule_s all_rules[1] = {
+struct flow_rule_s all_rules[2] = {
    {
       .check				= RULE_CHECK_LOOP_FLAG_IS_SET,
       .check_data.flag_is_set.flag	= F_LOOP_ENEMY_HIT,
       .action				= RULE_ACTION_SET_USER_FLAG,
       .action_data.user_flag.flag	= 0x0001,
    },
+   {
+      .check				= RULE_CHECK_LOOP_FLAG_IS_SET,
+      .check_data.flag_is_set.flag	= F_LOOP_ENEMY_HIT,
+      .action				= RULE_ACTION_INC_LIVES,
+      .action_data.lives.num_lives	= 1,
+   },
 };
 
-struct flow_rule_s *screen_00_rule_table[1] = {
+struct flow_rule_s *screen_00_rule_table[2] = {
    &all_rules[0],
+   &all_rules[1],
 };
 
 void my_user_init(void) {
     map[0].flow_data.rule_tables.game_loop.rules = screen_00_rule_table;
-    map[0].flow_data.rule_tables.game_loop.num_rules = 1;
+    map[0].flow_data.rule_tables.game_loop.num_rules = 2;
 }
 
 void my_user_game_init(void) {
 }
 
 void my_user_game_loop(void) {
-    debug_out( "\nF:" ); debug_out( itohex( game_state.flags ) );
-    debug_out( " U:" ); debug_out( itohex( game_state.user_flags ) );
-    debug_out( " L:" ); debug_out( itohex( game_state.loop_flags ) );
+//    debug_out( "\nF:" ); debug_out( itohex( game_state.flags ) );
+//    debug_out( " U:" ); debug_out( itohex( game_state.user_flags ) );
+//    debug_out( " L:" ); debug_out( itohex( game_state.loop_flags ) );
 }
