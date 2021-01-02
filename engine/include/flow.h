@@ -52,12 +52,6 @@ struct flow_rule_table_s {
     struct flow_rule_s **rules;
 };
 
-struct flow_info_s {
-        struct flow_rule_table_s enter_screen;
-        struct flow_rule_table_s exit_screen;
-        struct flow_rule_table_s game_loop;
-};
-
 // executes user flow rules
 void check_flow_rules(void);
 

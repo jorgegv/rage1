@@ -46,7 +46,13 @@ struct map_screen_s {
         uint8_t num_hotzones;
         struct hotzone_info_s *hotzones;
     } hotzone_data;
-    struct flow_info_s flow_data;
+    struct {
+        struct {
+            struct flow_rule_table_s enter_screen;
+            struct flow_rule_table_s exit_screen;
+            struct flow_rule_table_s game_loop;
+        } rule_tables;
+    } flow_data;
 };
 
 // with a generic function to draw a screen passed by pointer we can

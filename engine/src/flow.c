@@ -43,16 +43,16 @@ void check_flow_rules(void) {
         // run EXIT_SCREEN rules for the previous screen
         // but skip if game just started and this is the first game loop run
         if ( ! GET_GAME_FLAG( F_GAME_START ) )
-            run_flow_rule_table( &map[ game_state.previous_screen ].flow_data.exit_screen );
+            run_flow_rule_table( &map[ game_state.previous_screen ].flow_data.rule_tables.exit_screen );
         // run ENTER_SCREEN rules
-        run_flow_rule_table( &map[ game_state.current_screen ].flow_data.enter_screen );
+        run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.enter_screen );
     }
 
     ////////////////////////////////////////////////////////
     // WHEN_GAME_LOOP rules
     ////////////////////////////////////////////////////////
 
-    run_flow_rule_table( &map[ game_state.current_screen ].flow_data.game_loop );
+    run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.game_loop );
 
 }
 
