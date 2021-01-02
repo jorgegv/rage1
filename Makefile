@@ -51,7 +51,7 @@ build: clean data
 
 clean:
 	@-rm *.{lis,bin,tap,c.asm,map,log} \
-		$(GENERATED_DIR)/*.{c,h,map,lis,o,c.asm,dep} \
+		$(GENERATED_DIR)/*.{c,h,map,lis,o,c.asm,dep,dmp} \
 		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm} \
 		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm} \
 		2>/dev/null
