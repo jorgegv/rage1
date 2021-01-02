@@ -210,9 +210,13 @@ struct flow_rule_s all_rules[1] = {
    },
 };
 
+struct flow_rule_s *screen_00_rule_table[1] = {
+   &all_rules[0],
+};
+
 void my_user_init(void) {
-//    map[0].flow_data.game_loop.rules[0] = &all_rules[0];
-//    map[0].flow_data.game_loop.num_rules = 1;
+    map[0].flow_data.rule_tables.game_loop.rules = screen_00_rule_table;
+    map[0].flow_data.rule_tables.game_loop.num_rules = 1;
 }
 
 void my_user_game_init(void) {
