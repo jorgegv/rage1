@@ -183,51 +183,60 @@ sub validate_rule {
 ## General Output Functions
 #############################
 
-sub output_header {
-    print $output_fh <<EOF_HEADER
-///////////////////////////////////////////////////////////
-//
-// Flow data - automatically generated with flowgen.pl
-//
-///////////////////////////////////////////////////////////
+sub output_h_file {
+    # output .h file
+    open( $output_fh, ">", $h_file ) or
+        die "Could not open $h_file for writing\n";
 
-EOF_HEADER
-;
-}
-
-sub output_header_file {
     print $output_fh <<FLOW_DATA_H_1
 #ifndef _FLOW_DATA_H
 #define _FLOW_DATA_H
 
 // FLOWGEN initialization function, called from main game initialization
-void init_flowgen( void );
+void init_flowgen(void);
 
 FLOW_DATA_H_1
 ;
 
     print $output_fh "\n#endif // _FLOW_DATA_H\n";
 
+    close $output_fh;
 }
 
-# this function is called from main
-sub output_generated_data {
+sub output_c_file {
     # output .c file
     open( $output_fh, ">", $c_file ) or
         die "Could not open $c_file for writing\n";
 
-    output_header;
+    print $output_fh <<FLOW_DATA_C_1
+///////////////////////////////////////////////////////////
+//
+// Flow data - automatically generated with flowgen.pl
+//
+///////////////////////////////////////////////////////////
+
+FLOW_DATA_C_1
+;
+
+    print $output_fh <<FLOW_DATA_C_2
+void init_flowgen(void) {
+FLOW_DATA_C_2
+;
+
+    print $output_fh <<FLOW_DATA_C_3
+}
+
+FLOW_DATA_C_3
+;
 
     close $output_fh;
 
-    # output .h file
-    open( $output_fh, ">", $h_file ) or
-        die "Could not open $h_file for writing\n";
+}
 
-    output_header_file;
-
-    close $output_fh;
-
+# this function is called from main
+sub output_generated_data {
+    output_c_file;
+    output_h_file;
 }
 
 # creates a dump of internal data so that other tools (e.g.  FLOWGEN) can

@@ -18,6 +18,7 @@
 #include "hero.h"
 #include "game_state.h"
 #include "game_config.h"
+#include "flow_data.h"
 
 #include "debug.h"
 
@@ -28,6 +29,7 @@ void init_program(void) {
    init_controllers();
    init_screen_sprite_tables();
    init_hero();
+   init_flowgen();
 }
 
 
