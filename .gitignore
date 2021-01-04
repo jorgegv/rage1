@@ -7,6 +7,8 @@
 game_data.inc
 game_data.c
 game_data.h
+flow_data.c
+flow_data.h
 *.c.asm
 serial.log
 gen_*.c

@@ -36,7 +36,7 @@ my $h_file = 'game_data.h';
 my $output_fh;
 
 # dump file for internal state
-my $dump_file = 'datagen_internal.dmp';
+my $dump_file = 'internal_state.dmp';
 
 ##########################################
 ## Input data parsing and state machine
@@ -1350,7 +1350,7 @@ sub dump_internal_data {
         game_config		=> $game_config,
     };
 
-    print DUMP Dumper( $all_state );
+    print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
     close DUMP;
 }
 
