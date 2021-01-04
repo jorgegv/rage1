@@ -37,6 +37,8 @@ my $screen_rules;
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
 
+# this variable must be named like this.  Internal state dumping/loading
+# depends on its name!
 my $all_state;
 
 sub load_internal_state {
@@ -47,6 +49,14 @@ sub load_internal_state {
     close $fh;
     eval $dump;
 }
+
+######################################################
+## Configuration syntax definitions and lists
+######################################################
+
+my $syntax = {
+    valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
+};
 
 ##########################################
 ## Input data parsing and state machine
@@ -98,6 +108,7 @@ sub read_input_data {
                 next;
             }
             if ( $line =~ /^END_RULE$/ ) {
+                # validate rule before deduplicating it
                 validate_rule( $cur_rule );
 
                 # we must delete WHEN and SCREEN for deduplicating rules,
@@ -110,14 +121,18 @@ sub read_input_data {
                 # find an identical rule if it exists
                 my $found = find_existing_rule_index( $cur_rule );
                 my $index;
-                # use it if found, otherwise define a new one
+                # use it if found, otherwise add the new one to the global rule list
                 if ( defined( $found ) ) {
                     $index = $found;
                 } else {
                     $index = scalar( @all_rules );
                     push @all_rules, $cur_rule;
                 }
+
+                # add the rule index to the proper screen rule table
                 push @{ $screen_rules->{ $screen }{ $when } }, $index;
+
+                # clean up for next rule
                 $cur_rule = undef;
                 $state = 'NONE';
                 next;
@@ -141,6 +156,26 @@ sub find_existing_rule_index {
 
 sub validate_rule {
     my $rule = shift;
+
+    defined( $rule->{'screen'} ) or
+        die "Rule has no SCREEN\n";
+    my $screen = $rule->{'screen'};
+    exists( $all_state->{'screen_name_to_index'}{ $screen } ) or
+        die "Screen '$screen' is not defined\n";
+
+    defined( $rule->{'when'} ) or
+        die "Rule has no WHEN clause\n";
+    my $when = $rule->{'when'};
+    grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
+        die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
+
+    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
+        die "At least one CHECK clause must be specified\n";
+
+    defined( $rule->{'do'} ) and scalar( @{ $rule->{'do'} } ) or
+        die "At least one DO clause must be specified\n";
+
+    1;
 }
 
 
