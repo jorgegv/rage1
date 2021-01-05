@@ -64,27 +64,27 @@ void check_flow_rules(void) {
 ////////////////////////////////////////////////////////////////////
 
 uint8_t do_rule_check_game_flag_set( struct flow_rule_s *r ) {
-    return ( GET_GAME_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
+    return ( GET_GAME_FLAG( r->check_data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_game_flag_reset( struct flow_rule_s *r ) {
-    return ( GET_GAME_FLAG( r->check_data.flag_is_set.flag ) ? 0 : 1 );
+    return ( GET_GAME_FLAG( r->check_data.flag_state.flag ) ? 0 : 1 );
 }
 
 uint8_t do_rule_check_loop_flag_set( struct flow_rule_s *r ) {
-    return ( GET_LOOP_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
+    return ( GET_LOOP_FLAG( r->check_data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_loop_flag_reset( struct flow_rule_s *r ) {
-    return ( GET_LOOP_FLAG( r->check_data.flag_is_set.flag ) ? 0 : 1 );
+    return ( GET_LOOP_FLAG( r->check_data.flag_state.flag ) ? 0 : 1 );
 }
 
 uint8_t do_rule_check_user_flag_set( struct flow_rule_s *r ) {
-    return ( GET_USER_FLAG( r->check_data.flag_is_set.flag ) ? 1 : 0 );
+    return ( GET_USER_FLAG( r->check_data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_user_flag_reset( struct flow_rule_s *r ) {
-    return ( GET_USER_FLAG( r->check_data.flag_is_set.flag ) ? 0 : 1 );
+    return ( GET_USER_FLAG( r->check_data.flag_state.flag ) ? 0 : 1 );
 }
 
 ////////////////////////////////////////////////////////////////////

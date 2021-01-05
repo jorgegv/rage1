@@ -178,6 +178,34 @@ sub validate_rule {
     1;
 }
 
+# struct initializer formats depending on the check and action names
+my $check_data_output_format = {
+    GAME_FLAG_IS_SET	=> ".check_data.flag_state.flag = %s",
+    GAME_FLAG_IS_RESET	=> ".check_data.flag_state.flag = %s",
+    LOOP_FLAG_IS_SET	=> ".check_data.flag_state.flag = %s",
+    LOOP_FLAG_IS_RESET	=> ".check_data.flag_state.flag = %s",
+    USER_FLAG_IS_SET	=> ".check_data.flag_state.flag = %s",
+    USER_FLAG_IS_RESET	=> ".check_data.flag_state.flag = %s",
+};
+
+my $action_data_output_format = {
+    SET_USER_FLAG	=> ".action_data.user_flag.flag = %s",
+    RESET_USER_FLAG	=> ".action_data.user_flag.flag = %s",
+    INC_LIVES		=> ".action_data.lives.num_lives = %s",
+    PLAY_SOUND		=> ".action_data.play_sound.sound_id = %s",
+};
+
+sub output_rule {
+    my $rule = shift;
+    my ( $check, $check_data ) = split( /\s+/, $rule->{'check'}[0] );
+    my ( $action, $action_data ) = split( /\s+/, $rule->{'do'}[0] );
+    return sprintf( "\t{\n\t.check = RULE_CHECK_%s,\n\t%s,\n\t.action = RULE_ACTION_%s,\n\t%s\n\t}",
+            $check,
+            sprintf( $check_data_output_format->{ $check }, $check_data ),
+            $action,
+            sprintf( $action_data_output_format->{ $action }, $action_data )
+    );
+}
 
 #############################
 ## General Output Functions
@@ -192,8 +220,13 @@ sub output_h_file {
 #ifndef _FLOW_DATA_H
 #define _FLOW_DATA_H
 
+#include "flow.h"
+
 // FLOWGEN initialization function, called from main game initialization
 void init_flowgen(void);
+
+// global rule table
+extern struct flow_rule_s flow_all_rules[];
 
 FLOW_DATA_H_1
 ;
@@ -208,6 +241,7 @@ sub output_c_file {
     open( $output_fh, ">", $c_file ) or
         die "Could not open $c_file for writing\n";
 
+    # file header comments
     print $output_fh <<FLOW_DATA_C_1
 ///////////////////////////////////////////////////////////
 //
@@ -215,13 +249,72 @@ sub output_c_file {
 //
 ///////////////////////////////////////////////////////////
 
+#include "flow.h"
+#include "flow_data.h"
+#include "game_state.h"
+#include "map.h"
+
 FLOW_DATA_C_1
 ;
 
+    # output global rule table
+    printf $output_fh "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
+        scalar( @all_rules );
+    print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
+    print $output_fh join( ",\n", map { output_rule( $_ ) } @all_rules );
+    print $output_fh "\n};\n\n";
+
+    # output rule tables for each screen
+    print $output_fh "// rule tables for each screen\n";
+    foreach my $screen (sort keys %$screen_rules ) {
+        printf $output_fh "\n// rules for screen '%s'\n", $screen;
+        foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
+            if ( defined( $screen_rules->{ $screen } ) and defined( $screen_rules->{ $screen }{ $table } ) ) {
+                my $num_rules = scalar( @{ $screen_rules->{ $screen }{ $table } } );
+                if ( $num_rules ) {
+                    printf $output_fh "\n// screen '%s', table '%s' (%d rules)\n",
+                        $screen, $table, $num_rules;
+                    printf $output_fh "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
+                        $screen, $table, $num_rules;
+                    print $output_fh join( ",\n\t",
+                        map { 
+                            sprintf "&flow_all_rules[ %d ]", $_
+                        } @{ $screen_rules->{ $screen }{ $table } }
+                    );
+                    print $output_fh "\n};\n";
+                }
+            }
+        }
+    }
+
+    # output initialization code to set the table pointers for each screen
+    # that has rules in any table
     print $output_fh <<FLOW_DATA_C_2
+
 void init_flowgen(void) {
 FLOW_DATA_C_2
 ;
+    foreach my $screen (sort keys %$screen_rules ) {
+        foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
+            if ( defined( $screen_rules->{ $screen } ) and defined( $screen_rules->{ $screen }{ $table } ) ) {
+                my $num_rules = scalar( @{ $screen_rules->{ $screen }{ $table } } );
+                if ( $num_rules ) {
+                    printf $output_fh "\t// screen '%s', table '%s' (%d rules)\n",
+                        $screen, $table, $num_rules;
+                    printf $output_fh "\tmap[ %d ].flow_data.rule_tables.%s.num_rules = %d;\n",
+                        $all_state->{'screen_name_to_index'}{ $screen },
+                        $table,
+                        $num_rules;
+                    printf $output_fh "\tmap[ %d ].flow_data.rule_tables.%s.rules = &screen_%s_%s_rules[0];\n",
+                        $all_state->{'screen_name_to_index'}{ $screen },
+                        $table,
+                        $screen,
+                        $table;
+                }
+            }
+        }
+    }
+
 
     print $output_fh <<FLOW_DATA_C_3
 }

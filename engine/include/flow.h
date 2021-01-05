@@ -39,7 +39,7 @@ struct flow_rule_s {
     // what to check
     uint8_t check;
     union {
-        struct { uint16_t flag; }	flag_is_set;
+        struct { uint16_t flag; }	flag_state;
     } check_data;
 
     // what to do if check successful
