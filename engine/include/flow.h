@@ -30,8 +30,9 @@
 #define RULE_CHECK_ENEMIES_KILLED_EQUAL		12
 #define RULE_CHECK_ENEMIES_KILLED_MORE_THAN	13
 #define RULE_CHECK_ENEMIES_KILLED_LESS_THAN	14
+#define RULE_CHECK_CALL_CUSTOM_FUNCTION		15
 
-#define RULE_CHECK_MAX				14
+#define RULE_CHECK_MAX				15
 
 // flow rule action constants
 // always ipdate RULE_ACTION_MAX when adding new actions!
@@ -39,8 +40,9 @@
 #define RULE_ACTION_RESET_USER_FLAG		1
 #define RULE_ACTION_PLAY_SOUND			2
 #define RULE_ACTION_INC_LIVES			3
+#define RULE_ACTION_CALL_CUSTOM_FUNCTION	4
 
-#define RULE_ACTION_MAX				3
+#define RULE_ACTION_MAX				4
 
 // data definition for a rule
 struct flow_rule_s {
@@ -48,18 +50,20 @@ struct flow_rule_s {
     // what to check
     uint8_t check;
     union {
-        struct { uint16_t flag; }		flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
-        struct { uint8_t count; }		lives;		// INC_LIVES
-        struct { uint16_t count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
+        struct { uint16_t flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
+        struct { uint8_t count; }			lives;		// INC_LIVES
+        struct { uint16_t count; }			enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
+        struct { uint8_t (*function)(void); }		custom;		// CALL_CUSTOM_FUNCTION
     } check_data;
 
     // what to do if check successful
     uint8_t action;
     union {
-        struct { uint8_t count; }		lives;		// INC_LIVES
-        struct { uint8_t sound_id; }		play_sound;	// PLAY_SOUND
-        struct { uint16_t flag; }		user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
-        struct { uint16_t count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
+        struct { uint8_t count; }			lives;		// INC_LIVES
+        struct { uint8_t sound_id; }			play_sound;	// PLAY_SOUND
+        struct { uint16_t flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
+        struct { uint16_t count; }			enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
+        struct { void (*function)(void); }		custom;		// CALL_CUSTOM_FUNCTION
     } action_data;
 
 };

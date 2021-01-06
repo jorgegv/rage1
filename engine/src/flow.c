@@ -123,6 +123,10 @@ uint8_t do_rule_check_enemies_killed_less_than( struct flow_rule_s *r ) {
     return ( game_state.enemies_killed < r->check_data.enemies.count ? 1 : 0 );
 }
 
+uint8_t do_rule_check_call_custom_function( struct flow_rule_s *r ) {
+    return r->check_data.custom.function();
+}
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -146,6 +150,10 @@ void do_rule_action_inc_lives( struct flow_rule_s *r ) {
     hero_update_lives_display();
 }
 
+void do_rule_action_call_custom_function( struct flow_rule_s *r ) {
+    r->action_data.custom.function();
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -166,6 +174,7 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     do_rule_check_enemies_killed_equal,
     do_rule_check_enemies_killed_more_than,
     do_rule_check_enemies_killed_less_than,
+    do_rule_check_call_custom_function,
 };
 
 // Table of action functions.  The 'action' value from the rule is used to
@@ -175,4 +184,5 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_reset_user_flag,
     do_rule_action_play_sound,
     do_rule_action_inc_lives,
+    do_rule_action_call_custom_function,
 };

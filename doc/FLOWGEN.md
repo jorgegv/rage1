@@ -84,7 +84,7 @@ check is successful. Options:
   - [x] ENEMIES_KILLED_EQUAL <value>
   - [x] ENEMIES_KILLED_MORE_THAN <value>
   - [x] ENEMIES_KILLED_LESS_THAN <value>
-  - [ ] CALL_CUSTOM_CHECK
+  - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `uint8_t my_custom_check(void)`
 
 * ACTION_TO_EXECUTE:
   - [x] SET_USER_FLAG <flag>
@@ -95,7 +95,7 @@ check is successful. Options:
   - [ ] DISABLE_TILE <tile_name>
   - [ ] ENABLE_HOTZONE <hotzone_name>
   - [ ] DISABLE_HOTZONE <hotzone_name>
-  - [ ] CALL_CUSTOM_ACTION <function_name>
+  - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `void my_custom_action(void)`
 
 ## FLOWGEN Gdata file syntax
 
