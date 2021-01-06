@@ -75,8 +75,16 @@ check is successful. Options:
   - [x] USER_FLAG_IS_SET <flag>
   - [x] USER_FLAG_IS_RESET <flag>
   - [ ] ITEM_IS_OWNED <item>
-  - [ ] LIVES <comparison> <value>
-  - [ ] ENEMIES_ALIVE <comparison> <value>
+  - [x] LIVES_EQUAL <value>
+  - [x] LIVES_MORE_THAN <value>
+  - [x] LIVES_LESS_THAN <value>
+  - [x] ENEMIES_ALIVE_EQUAL <value>
+  - [x] ENEMIES_ALIVE_MORE_THAN <value>
+  - [x] ENEMIES_ALIVE_LESS_THAN <value>
+  - [x] ENEMIES_KILLED_EQUAL <value>
+  - [x] ENEMIES_KILLED_MORE_THAN <value>
+  - [x] ENEMIES_KILLED_LESS_THAN <value>
+  - [ ] CALL_CUSTOM_CHECK
 
 * ACTION_TO_EXECUTE:
   - [x] SET_USER_FLAG <flag>
@@ -87,6 +95,7 @@ check is successful. Options:
   - [ ] DISABLE_TILE <tile_name>
   - [ ] ENABLE_HOTZONE <hotzone_name>
   - [ ] DISABLE_HOTZONE <hotzone_name>
+  - [ ] CALL_CUSTOM_ACTION <function_name>
 
 ## FLOWGEN Gdata file syntax
 

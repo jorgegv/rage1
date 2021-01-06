@@ -21,8 +21,17 @@
 #define RULE_CHECK_LOOP_FLAG_IS_RESET		3
 #define RULE_CHECK_USER_FLAG_IS_SET		4
 #define RULE_CHECK_USER_FLAG_IS_RESET		5
+#define RULE_CHECK_LIVES_EQUAL			6
+#define RULE_CHECK_LIVES_MORE_THAN		7
+#define RULE_CHECK_LIVES_LESS_THAN		8
+#define RULE_CHECK_ENEMIES_ALIVE_EQUAL		9
+#define RULE_CHECK_ENEMIES_ALIVE_MORE_THAN	10
+#define RULE_CHECK_ENEMIES_ALIVE_LESS_THAN	11
+#define RULE_CHECK_ENEMIES_KILLED_EQUAL		12
+#define RULE_CHECK_ENEMIES_KILLED_MORE_THAN	13
+#define RULE_CHECK_ENEMIES_KILLED_LESS_THAN	14
 
-#define RULE_CHECK_MAX				5
+#define RULE_CHECK_MAX				14
 
 // flow rule action constants
 // always ipdate RULE_ACTION_MAX when adding new actions!
@@ -39,15 +48,18 @@ struct flow_rule_s {
     // what to check
     uint8_t check;
     union {
-        struct { uint16_t flag; }	flag_state;
+        struct { uint16_t flag; }		flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
+        struct { uint8_t count; }		lives;		// INC_LIVES
+        struct { uint16_t count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
     } check_data;
 
     // what to do if check successful
     uint8_t action;
     union {
-        struct { uint8_t num_lives; }	lives;		// INC_LIVES
-        struct { uint8_t sound_id; }	play_sound;	// PLAY_SOUND
-        struct { uint16_t flag; }	user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
+        struct { uint8_t count; }		lives;		// INC_LIVES
+        struct { uint8_t sound_id; }		play_sound;	// PLAY_SOUND
+        struct { uint16_t flag; }		user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
+        struct { uint16_t count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
     } action_data;
 
 };

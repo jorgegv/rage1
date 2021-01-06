@@ -87,6 +87,42 @@ uint8_t do_rule_check_user_flag_reset( struct flow_rule_s *r ) {
     return ( GET_USER_FLAG( r->check_data.flag_state.flag ) ? 0 : 1 );
 }
 
+uint8_t do_rule_check_lives_equal( struct flow_rule_s *r ) {
+    return ( game_state.hero.num_lives == r->check_data.lives.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_lives_more_than( struct flow_rule_s *r ) {
+    return ( game_state.hero.num_lives > r->check_data.lives.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_lives_less_than( struct flow_rule_s *r ) {
+    return ( game_state.hero.num_lives < r->check_data.lives.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_enemies_alive_equal( struct flow_rule_s *r ) {
+    return ( game_state.enemies_alive == r->check_data.enemies.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_enemies_alive_more_than( struct flow_rule_s *r ) {
+    return ( game_state.enemies_alive > r->check_data.enemies.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_enemies_alive_less_than( struct flow_rule_s *r ) {
+    return ( game_state.enemies_alive < r->check_data.enemies.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_enemies_killed_equal( struct flow_rule_s *r ) {
+    return ( game_state.enemies_killed == r->check_data.enemies.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_enemies_killed_more_than( struct flow_rule_s *r ) {
+    return ( game_state.enemies_killed > r->check_data.enemies.count ? 1 : 0 );
+}
+
+uint8_t do_rule_check_enemies_killed_less_than( struct flow_rule_s *r ) {
+    return ( game_state.enemies_killed < r->check_data.enemies.count ? 1 : 0 );
+}
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -106,7 +142,7 @@ void do_rule_action_play_sound( struct flow_rule_s *r ) {
 }
 
 void do_rule_action_inc_lives( struct flow_rule_s *r ) {
-    game_state.hero.num_lives += r->action_data.lives.num_lives;
+    game_state.hero.num_lives += r->action_data.lives.count;
     hero_update_lives_display();
 }
 
@@ -121,6 +157,15 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     do_rule_check_loop_flag_reset,
     do_rule_check_user_flag_set,
     do_rule_check_user_flag_reset,
+    do_rule_check_lives_equal,
+    do_rule_check_lives_more_than,
+    do_rule_check_lives_less_than,
+    do_rule_check_enemies_alive_equal,
+    do_rule_check_enemies_alive_more_than,
+    do_rule_check_enemies_alive_less_than,
+    do_rule_check_enemies_killed_equal,
+    do_rule_check_enemies_killed_more_than,
+    do_rule_check_enemies_killed_less_than,
 };
 
 // Table of action functions.  The 'action' value from the rule is used to

@@ -191,7 +191,7 @@ my $check_data_output_format = {
 my $action_data_output_format = {
     SET_USER_FLAG	=> ".action_data.user_flag.flag = %s",
     RESET_USER_FLAG	=> ".action_data.user_flag.flag = %s",
-    INC_LIVES		=> ".action_data.lives.num_lives = %s",
+    INC_LIVES		=> ".action_data.lives.count = %s",
     PLAY_SOUND		=> ".action_data.play_sound.sound_id = %s",
 };
 

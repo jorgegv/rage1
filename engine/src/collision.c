@@ -75,6 +75,7 @@ void collision_check_bullets_with_sprites( void ) {
                         // TO DO: increment score, etc.
                         if ( ! --game_state.enemies_alive )
                             SET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED );
+                        ++game_state.enemies_killed;
                         SET_LOOP_FLAG( F_LOOP_ENEMY_HIT );
                         beep_fx( SOUND_ENEMY_KILLED );
                     }

@@ -58,6 +58,7 @@ struct game_state_s {
 
    // enemies left
    uint16_t enemies_alive;
+   uint16_t enemies_killed;
 };
 
 extern struct game_state_s game_state;

@@ -36,6 +36,7 @@ void game_state_reset_initial(void) {
    map_sprites_reset_all();
    hotzone_deactivate_all_endofgame_zones();
    game_state.enemies_alive = map_count_enemies_all();
+   game_state.enemies_killed = 0;
 
    // reset all flags and set initial ones
    RESET_ALL_GAME_FLAGS();
