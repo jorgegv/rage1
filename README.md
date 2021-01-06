@@ -20,6 +20,9 @@ Apologies for not being complete; if in doubt, navigate the source :-)
 See `doc/TODO.md` for some short term enhancements which are in the works,
 and feel free to suggest more by opening GitHub issues!
 
+You can also chat about the engine, your ideas, proposals and possibly games
+built around it in the [GitHub RAGE1 Discussions forum](https://github.com/jorgegv/rage1/discussions/12)
+
 ## Quick Start
 
 * Make sure you have a Z88DK distribution in directory `z88dk` at the same
