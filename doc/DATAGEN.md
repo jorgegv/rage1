@@ -270,7 +270,7 @@ this element (=obstacle) but s/he must move around. Arguments:
 * `ITEM`: positions an inventory item on the screen. Arguments:
   * `NAME`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
-  * `ITEM_ID`: item ID in the game inventory
+  * `ITEM_INDEX`: item index in the game inventory (0-15)
 * `SPRITE`: defines an enemy on the screen (this element should probably be
     named ENEMY, I know, the name is a bit misleading :-( ). Arguments:
   * `NAME`: the name of the sprite to be used for this enemy

@@ -252,7 +252,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 push @{ $cur_screen->{'items'} }, $item;
-                $all_items->{ $item->{'item_id'} } = $item;
+                $all_items->{ $item->{'item_index'} } = $item;
                 next;
             }
             if ( $line =~ /^HOTZONE\s+(\w.*)$/ ) {
@@ -742,8 +742,8 @@ sub output_screen {
         printf $output_fh "struct item_location_s screen_%s_items[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'items'}});
-        print $output_fh join( ",\n", map {	# real item id is 0x1 << item_id
-                sprintf( "\t{ %d, %d, %d }", $_->{'item_id'}, $_->{'row'}, $_->{'col'} )
+        print $output_fh join( ",\n", map {	# real item id is 0x1 << item_index
+                sprintf( "\t{ %d, %d, %d }", $_->{'item_index'}, $_->{'row'}, $_->{'col'} )
             } @{$screen->{'items'}} );
         print $output_fh "\n};\n\n";
     }
@@ -886,7 +886,7 @@ EOF_ITEMS1
                 sprintf( "\t{ \"%s\", &btile_%s, 0x%04x, F_ITEM_ACTIVE }",
                     $all_items->{ $_ }{'name'},
                     $all_items->{ $_ }{'name'},
-                    ( 0x1 << $all_items->{ $_ }{'item_id'} )
+                    ( 0x1 << $all_items->{ $_ }{'item_index'} )
                     ) :
                 "\t{ NULL, NULL, 0, 0 }"
             } ( 0 .. 15 )
