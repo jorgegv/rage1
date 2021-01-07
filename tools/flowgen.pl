@@ -196,6 +196,7 @@ my $check_data_output_format = {
     ENEMIES_KILLED_MORE_THAN	=> ".check_data.enemies.count = %d",
     ENEMIES_KILLED_LESS_THAN	=> ".check_data.enemies.count = %d",
     CALL_CUSTOM_FUNCTION	=> ".check_data.custom.function = %s",
+    ITEM_IS_OWNED		=> ".check_data.item.item_id = %s",
 };
 
 my $action_data_output_format = {

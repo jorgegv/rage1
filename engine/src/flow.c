@@ -127,6 +127,10 @@ uint8_t do_rule_check_call_custom_function( struct flow_rule_s *r ) {
     return r->check_data.custom.function();
 }
 
+uint8_t do_rule_check_item_is_owned( struct flow_rule_s *r ) {
+    return ( INVENTORY_HAS_ITEM( &game_state.inventory, r->check_data.item.item_id ) ? 1 : 0 );
+}
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -175,6 +179,7 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     do_rule_check_enemies_killed_more_than,
     do_rule_check_enemies_killed_less_than,
     do_rule_check_call_custom_function,
+    do_rule_check_item_is_owned,
 };
 
 // Table of action functions.  The 'action' value from the rule is used to

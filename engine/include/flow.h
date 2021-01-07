@@ -31,8 +31,9 @@
 #define RULE_CHECK_ENEMIES_KILLED_MORE_THAN	13
 #define RULE_CHECK_ENEMIES_KILLED_LESS_THAN	14
 #define RULE_CHECK_CALL_CUSTOM_FUNCTION		15
+#define RULE_CHECK_ITEM_IS_OWNED		16
 
-#define RULE_CHECK_MAX				15
+#define RULE_CHECK_MAX				16
 
 // flow rule action constants
 // always ipdate RULE_ACTION_MAX when adding new actions!
@@ -50,10 +51,11 @@ struct flow_rule_s {
     // what to check
     uint8_t check;
     union {
-        struct { uint16_t flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
-        struct { uint8_t count; }			lives;		// INC_LIVES
-        struct { uint16_t count; }			enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
-        struct { uint8_t (*function)(void); }		custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
+        struct { uint8_t	count; }		lives;		// INC_LIVES
+        struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
+        struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
     } check_data;
 
     // what to do if check successful
