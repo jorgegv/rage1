@@ -74,7 +74,7 @@ check is successful. Options:
   - [x] LOOP_FLAG_IS_RESET <flag>
   - [x] USER_FLAG_IS_SET <flag>
   - [x] USER_FLAG_IS_RESET <flag>
-  - [x] ITEM_IS_OWNED <item_id>
+  - [x] ITEM_IS_OWNED <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
   - [x] LIVES_EQUAL <value>
   - [x] LIVES_MORE_THAN <value>
   - [x] LIVES_LESS_THAN <value>
