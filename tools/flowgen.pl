@@ -180,19 +180,30 @@ sub validate_rule {
 
 # struct initializer formats depending on the check and action names
 my $check_data_output_format = {
-    GAME_FLAG_IS_SET	=> ".check_data.flag_state.flag = %s",
-    GAME_FLAG_IS_RESET	=> ".check_data.flag_state.flag = %s",
-    LOOP_FLAG_IS_SET	=> ".check_data.flag_state.flag = %s",
-    LOOP_FLAG_IS_RESET	=> ".check_data.flag_state.flag = %s",
-    USER_FLAG_IS_SET	=> ".check_data.flag_state.flag = %s",
-    USER_FLAG_IS_RESET	=> ".check_data.flag_state.flag = %s",
+    GAME_FLAG_IS_SET		=> ".check_data.flag_state.flag = %s",
+    GAME_FLAG_IS_RESET		=> ".check_data.flag_state.flag = %s",
+    LOOP_FLAG_IS_SET		=> ".check_data.flag_state.flag = %s",
+    LOOP_FLAG_IS_RESET		=> ".check_data.flag_state.flag = %s",
+    USER_FLAG_IS_SET		=> ".check_data.flag_state.flag = %s",
+    USER_FLAG_IS_RESET		=> ".check_data.flag_state.flag = %s",
+    LIVES_EQUAL			=> ".check_data.lives.count = %d",
+    LIVES_MORE_THAN		=> ".check_data.lives.count = %d",
+    LIVES_LESS_THAN		=> ".check_data.lives.count = %d",
+    ENEMIES_ALIVE_EQUAL		=> ".check_data.enemies.count = %d",
+    ENEMIES_ALIVE_MORE_THAN	=> ".check_data.enemies.count = %d",
+    ENEMIES_ALIVE_LESS_THAN	=> ".check_data.enemies.count = %d",
+    ENEMIES_KILLED_EQUAL	=> ".check_data.enemies.count = %d",
+    ENEMIES_KILLED_MORE_THAN	=> ".check_data.enemies.count = %d",
+    ENEMIES_KILLED_LESS_THAN	=> ".check_data.enemies.count = %d",
+    CALL_CUSTOM_FUNCTION	=> ".check_data.custom.function = %s",
 };
 
 my $action_data_output_format = {
-    SET_USER_FLAG	=> ".action_data.user_flag.flag = %s",
-    RESET_USER_FLAG	=> ".action_data.user_flag.flag = %s",
-    INC_LIVES		=> ".action_data.lives.count = %s",
-    PLAY_SOUND		=> ".action_data.play_sound.sound_id = %s",
+    SET_USER_FLAG		=> ".action_data.user_flag.flag = %s",
+    RESET_USER_FLAG		=> ".action_data.user_flag.flag = %s",
+    INC_LIVES			=> ".action_data.lives.count = %s",
+    PLAY_SOUND			=> ".action_data.play_sound.sound_id = %s",
+    CALL_CUSTOM_FUNCTION	=> ".action_data.custom.function = %s",
 };
 
 sub output_rule {
