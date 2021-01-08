@@ -205,6 +205,8 @@ my $action_data_output_format = {
     INC_LIVES			=> ".action_data.lives.count = %s",
     PLAY_SOUND			=> ".action_data.play_sound.sound_id = %s",
     CALL_CUSTOM_FUNCTION	=> ".action_data.custom.function = %s",
+    END_OF_GAME			=> ".action_data.unused = %d",
+    ACTIVATE_EXIT_ZONES		=> ".action_data.unused = %d",
 };
 
 sub output_rule {
@@ -213,9 +215,9 @@ sub output_rule {
     my ( $action, $action_data ) = split( /\s+/, $rule->{'do'}[0] );
     return sprintf( "\t{\n\t.check = RULE_CHECK_%s,\n\t%s,\n\t.action = RULE_ACTION_%s,\n\t%s\n\t}",
             $check,
-            sprintf( $check_data_output_format->{ $check }, $check_data ),
+            sprintf( $check_data_output_format->{ $check }, $check_data || 0 ),
             $action,
-            sprintf( $action_data_output_format->{ $action }, $action_data )
+            sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
     );
 }
 
