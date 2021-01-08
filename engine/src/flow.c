@@ -12,6 +12,7 @@
 #include "game_state.h"
 #include "beeper.h"
 #include "hero.h"
+#include "hotzone.h"
 
 // Dispatch tables for rule checks and actions
 typedef uint8_t (*rule_check_fn_t)( struct flow_rule_s * );
@@ -162,6 +163,10 @@ void do_rule_action_end_of_game( struct flow_rule_s *r ) {
     SET_GAME_FLAG( F_GAME_END );
 }
 
+void do_rule_action_activate_exit_zones( struct flow_rule_s *r ) {
+    hotzone_activate_all_endofgame_zones();
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -195,4 +200,5 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_inc_lives,
     do_rule_action_call_custom_function,
     do_rule_action_end_of_game,
+    do_rule_action_activate_exit_zones,
 };

@@ -97,6 +97,7 @@ check is successful. Options:
   - [ ] DISABLE_HOTZONE <hotzone_name>
   - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `void my_custom_action(void)`
   - [x] END_OF_GAME
+  - [x] ACTIVATE_EXIT_ZONES
 
 ## FLOWGEN Gdata file syntax
 

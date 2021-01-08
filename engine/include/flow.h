@@ -43,8 +43,9 @@
 #define RULE_ACTION_INC_LIVES			3
 #define RULE_ACTION_CALL_CUSTOM_FUNCTION	4
 #define RULE_ACTION_END_OF_GAME			5
+#define RULE_ACTION_ACTIVATE_EXIT_ZONES		6
 
-#define RULE_ACTION_MAX				5
+#define RULE_ACTION_MAX				6
 
 // data definition for a rule
 struct flow_rule_s {
@@ -52,6 +53,7 @@ struct flow_rule_s {
     // what to check
     uint8_t check;
     union {
+        uint16_t					unused;		// for checks that do not need data
         struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
         struct { uint8_t	count; }		lives;		// INC_LIVES
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
@@ -62,6 +64,7 @@ struct flow_rule_s {
     // what to do if check successful
     uint8_t action;
     union {
+        uint16_t					unused;		// for actions that do not need data
         struct { uint8_t count; }			lives;		// INC_LIVES
         struct { uint8_t sound_id; }			play_sound;	// PLAY_SOUND
         struct { uint16_t flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
