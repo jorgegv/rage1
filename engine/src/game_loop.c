@@ -70,6 +70,7 @@ void check_game_flags( void ) {
       // check for endofgame zone activation (all items grabbed)
       if ( GET_GAME_FLAG( F_GAME_GOT_ALL_ITEMS ) ) {
          hotzone_activate_all_endofgame_zones();
+      }
 
       // check for end of game ( collected all items, killed all enemies and inside exit zone )
       if ( GET_LOOP_FLAG( F_LOOP_INSIDE_EXIT_ZONE) && 
@@ -77,7 +78,7 @@ void check_game_flags( void ) {
              GET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED )
          ) 
          SET_GAME_FLAG( F_GAME_END );
-      }
+
 }
 
 void move_sprites(void) {
