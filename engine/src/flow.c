@@ -158,6 +158,10 @@ void do_rule_action_call_custom_function( struct flow_rule_s *r ) {
     r->action_data.custom.function();
 }
 
+void do_rule_action_end_of_game( struct flow_rule_s *r ) {
+    SET_GAME_FLAG( F_GAME_END );
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -190,4 +194,5 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_play_sound,
     do_rule_action_inc_lives,
     do_rule_action_call_custom_function,
+    do_rule_action_end_of_game,
 };

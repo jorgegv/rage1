@@ -42,8 +42,9 @@
 #define RULE_ACTION_PLAY_SOUND			2
 #define RULE_ACTION_INC_LIVES			3
 #define RULE_ACTION_CALL_CUSTOM_FUNCTION	4
+#define RULE_ACTION_END_OF_GAME			5
 
-#define RULE_ACTION_MAX				4
+#define RULE_ACTION_MAX				5
 
 // data definition for a rule
 struct flow_rule_s {
