@@ -72,7 +72,7 @@ sub read_input_data {
             }
             if ( $line =~ /^BEGIN_SCREEN$/ ) {
                 $state = 'SCREEN';
-                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ] };
+                $cur_screen = { btiles => [ ], items => [ ], hotzones => { }, sprites => [ ] };
                 next;
             }
             if ( $line =~ /^BEGIN_SPRITE$/ ) {
@@ -262,7 +262,8 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                push @{ $cur_screen->{'hotzones'} }, $item;
+                $cur_screen->{'hotzones'}{ $item->{'name'} } = $item;
+#                push @{ $cur_screen->{'hotzones'} }, $item;
                 next;
             }
             if ( $line =~ /^END_SCREEN$/ ) {
@@ -638,7 +639,7 @@ sub validate_and_compile_screen {
     }
 
     # adjust hotzones
-    foreach my $h ( @{$screen->{'hotzones'}} ) {
+    foreach my $h ( map { $screen->{'hotzones'}{ $_ } } keys %{ $screen->{'hotzones'} } ) {
         if ( $h->{'type'} eq 'END_OF_GAME' ) {
             $h->{'dest_screen'} = '__NO_SCREEN__';
             $h->{'dest_hero_x'} = 0;
@@ -749,11 +750,11 @@ sub output_screen {
     }
 
     # hot zones
-    if ( scalar( @{$screen->{'hotzones'}} ) ) {
+    if ( scalar( keys %{$screen->{'hotzones'}} ) ) {
         printf $output_fh "// Screen '%s' hot zone data\n", $screen->{'name'};
         printf $output_fh "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
             $screen->{'name'},
-            scalar( @{$screen->{'hotzones'}});
+            scalar( keys %{$screen->{'hotzones'}});
         print $output_fh join( ",\n", map {
                 sprintf( "\t{ HZ_TYPE_%s, %d, %d, %d, %d, %s, { %d, %d, %d } }", 
                     $_->{'type'},
@@ -763,7 +764,9 @@ sub output_screen {
                     $screen_name_to_index{ $_->{'dest_screen'} },
                     $_->{'dest_hero_x'},$_->{'dest_hero_y'},
                 )
-            } @{$screen->{'hotzones'}} );
+            } map {
+                $screen->{'hotzones'}{ $_ }
+            } keys %{$screen->{'hotzones'}} );
         print $output_fh "\n};\n\n";
     }
 
@@ -992,14 +995,14 @@ sub check_screen_hotzones_do_not_overlap {
     my $hero_center_y = $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ]{'rows'} * 8 / 2;
     foreach my $screen ( @screens ) {
         my $org_hz_cnt = 0;
-        foreach my $hz ( @{ $screen->{'hotzones'} } ) {
+        foreach my $hz ( map { $screen->{'hotzones'}{ $_ } } keys %{ $screen->{'hotzones'} } ) {
             $org_hz_cnt++;
             next if ( $hz->{'type'} ne 'WARP' );
             my $dest_x = $hz->{'dest_hero_x'} + $hero_center_x;
             my $dest_y = $hz->{'dest_hero_y'} + $hero_center_y;
             my $dest_screen = $hz->{'dest_screen'};
             my $dst_hz_cnt = 0;
-            foreach my $dst_hz ( @{ $screens[ $screen_name_to_index{ $dest_screen } ]{'hotzones'} } ) {
+            foreach my $dst_hz ( map { $screens[ $screen_name_to_index{ $dest_screen } ]{'hotzones'}{ $_ } } keys %{ $screens[ $screen_name_to_index{ $dest_screen } ]{'hotzones'} } ) {
                 $dst_hz_cnt++;
                 # for destination, all types of hotzones need to be checked, not just WARP zones
                 if ( integer_in_range( $dest_x, $dst_hz->{'col'} * 8, ( ( $dst_hz->{'col'} + $dst_hz->{'height'} ) * 8 ) - 1 ) and
@@ -1112,7 +1115,7 @@ EOF_MAP
             sprintf( "\t\t{ %d, %s },\t// item_data\n", 
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t{ %d, %s },\t// hotzone_data\n", 
-                scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
+                scalar( keys %{$_->{'hotzones'}} ), ( scalar( keys %{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
             "\t}"
         } @screens );
     print $output_fh "\n};\n\n";
