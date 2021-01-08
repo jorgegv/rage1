@@ -262,6 +262,7 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                $item->{'index'} = scalar( keys %{ $cur_screen->{'hotzones'} } );
                 $cur_screen->{'hotzones'}{ $item->{'name'} } = $item;
 #                push @{ $cur_screen->{'hotzones'} }, $item;
                 next;
@@ -764,6 +765,8 @@ sub output_screen {
                     $screen_name_to_index{ $_->{'dest_screen'} },
                     $_->{'dest_hero_x'},$_->{'dest_hero_y'},
                 )
+            } sort {
+                $a->{'index'} <=> $b->{'index'}
             } map {
                 $screen->{'hotzones'}{ $_ }
             } keys %{$screen->{'hotzones'}} );
