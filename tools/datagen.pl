@@ -30,8 +30,6 @@ my %sprite_name_to_index;
 my $hero;
 my $all_items;
 my $game_config;
-my @hotzones;
-my %hotzone_name_to_index;
 
 my $c_file = 'game_data.c';
 my $h_file = 'game_data.h';
@@ -264,11 +262,9 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $index = scalar( @hotzones );
-                push @hotzones, $item;
-                push @{ $cur_screen->{'hotzones'} }, $index;
-                # hotzone names have the screen name prepended to its name
-                $hotzone_name_to_index{ $cur_screen->{'name'} . '_' . $item->{'name'} } = $index;
+                my $index = scalar( @{ $cur_screen->{'hotzones'} } );
+                push @{ $cur_screen->{'hotzones'} }, $item;
+                $cur_screen->{'hotzone_name_to_index'}{ $item->{'name'} } = $index;
                 next;
             }
             if ( $line =~ /^END_SCREEN$/ ) {
@@ -644,7 +640,7 @@ sub validate_and_compile_screen {
     }
 
     # adjust hotzones
-    foreach my $h ( map { $hotzones[ $_ ] } @{$screen->{'hotzones'}} ) {
+    foreach my $h ( @{ $screen->{'hotzones'} } ) {
         if ( $h->{'type'} eq 'END_OF_GAME' ) {
             $h->{'dest_screen'} = '__NO_SCREEN__';
             $h->{'dest_hero_x'} = 0;
@@ -769,9 +765,7 @@ sub output_screen {
                     $screen_name_to_index{ $_->{'dest_screen'} },
                     $_->{'dest_hero_x'},$_->{'dest_hero_y'},
                 )
-            } map {
-                $hotzones[ $_ ]
-            } @{$screen->{'hotzones'}} );
+            } @{ $screen->{'hotzones'} } );
         print $output_fh "\n};\n\n";
     }
 
@@ -1000,14 +994,14 @@ sub check_screen_hotzones_do_not_overlap {
     my $hero_center_y = $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ]{'rows'} * 8 / 2;
     foreach my $screen ( @screens ) {
         my $org_hz_cnt = 0;
-        foreach my $hz ( map { $hotzones[ $_ ] } @{ $screen->{'hotzones'} } ) {
+        foreach my $hz ( @{ $screen->{'hotzones'} } ) {
             $org_hz_cnt++;
             next if ( $hz->{'type'} ne 'WARP' );
             my $dest_x = $hz->{'dest_hero_x'} + $hero_center_x;
             my $dest_y = $hz->{'dest_hero_y'} + $hero_center_y;
             my $dest_screen = $hz->{'dest_screen'};
             my $dst_hz_cnt = 0;
-            foreach my $dst_hz ( map { $hotzones[ $_ ] } @{ $screens[ $screen_name_to_index{ $dest_screen } ]{'hotzones'} } ) {
+            foreach my $dst_hz ( @{ $screens[ $screen_name_to_index{ $dest_screen } ]{'hotzones'} } ) {
                 $dst_hz_cnt++;
                 # for destination, all types of hotzones need to be checked, not just WARP zones
                 if ( integer_in_range( $dest_x, $dst_hz->{'col'} * 8, ( ( $dst_hz->{'col'} + $dst_hz->{'height'} ) * 8 ) - 1 ) and
@@ -1356,8 +1350,6 @@ sub dump_internal_data {
         hero			=> $hero,
         all_items		=> $all_items,
         game_config		=> $game_config,
-        hotzones		=> \@hotzones,
-        hotzone_name_to_index	=> \%hotzone_name_to_index,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
