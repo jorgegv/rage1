@@ -36,7 +36,7 @@
 #define RULE_CHECK_MAX				16
 
 // flow rule action constants
-// always ipdate RULE_ACTION_MAX when adding new actions!
+// always update RULE_ACTION_MAX when adding new actions!
 #define RULE_ACTION_SET_USER_FLAG		0
 #define RULE_ACTION_RESET_USER_FLAG		1
 #define RULE_ACTION_PLAY_SOUND			2
@@ -44,8 +44,10 @@
 #define RULE_ACTION_CALL_CUSTOM_FUNCTION	4
 #define RULE_ACTION_END_OF_GAME			5
 #define RULE_ACTION_ACTIVATE_EXIT_ZONES		6
+#define RULE_ACTION_ENABLE_HOTZONE		7
+#define RULE_ACTION_DISABLE_HOTZONE		8
 
-#define RULE_ACTION_MAX				6
+#define RULE_ACTION_MAX				8
 
 // data definition for a rule
 struct flow_rule_s {
@@ -65,11 +67,12 @@ struct flow_rule_s {
     uint8_t action;
     union {
         uint16_t					unused;		// for actions that do not need data
-        struct { uint8_t count; }			lives;		// INC_LIVES
-        struct { uint8_t sound_id; }			play_sound;	// PLAY_SOUND
-        struct { uint16_t flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
-        struct { uint16_t count; }			enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
-        struct { void (*function)(void); }		custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint8_t	count; }		lives;		// INC_LIVES
+        struct { uint8_t	sound_id; }		play_sound;	// PLAY_SOUND
+        struct { uint16_t	flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
+        struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
+        struct { void		(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
     } action_data;
 
 };

@@ -109,7 +109,7 @@ sub read_input_data {
             }
             if ( $line =~ /^END_RULE$/ ) {
                 # validate rule before deduplicating it
-                validate_rule( $cur_rule );
+                validate_and_compile_rule( $cur_rule );
 
                 # we must delete WHEN and SCREEN for deduplicating rules,
                 # bt we must keep them for properly storing the rule
@@ -154,9 +154,10 @@ sub find_existing_rule_index {
 }
 
 
-sub validate_rule {
+sub validate_and_compile_rule {
     my $rule = shift;
 
+    # validate rule
     defined( $rule->{'screen'} ) or
         die "Rule has no SCREEN\n";
     my $screen = $rule->{'screen'};
@@ -174,6 +175,16 @@ sub validate_rule {
 
     defined( $rule->{'do'} ) and scalar( @{ $rule->{'do'} } ) or
         die "At least one DO clause must be specified\n";
+
+    # do any special filtering of values
+    foreach my $do ( @{ $rule->{'do'} } ) {
+        my ( $action, $action_data ) = split( /\s+/, $do );
+        if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
+            $action_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
+            # regenerate the value with the filtered data
+            $do = sprintf "%s\t%d", $action, $action_data;
+        }
+    }
 
     1;
 }
@@ -207,6 +218,8 @@ my $action_data_output_format = {
     CALL_CUSTOM_FUNCTION	=> ".action_data.custom.function = %s",
     END_OF_GAME			=> ".action_data.unused = %d",
     ACTIVATE_EXIT_ZONES		=> ".action_data.unused = %d",
+    ENABLE_HOTZONE		=> ".action_data.hotzone.num_hotzone = %d",
+    DISABLE_HOTZONE		=> ".action_data.hotzone.num_hotzone = %d",
 };
 
 sub output_rule {

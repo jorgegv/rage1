@@ -93,8 +93,8 @@ check is successful. Options:
   - [x] PLAY_SOUND <fxid>
   - [ ] ENABLE_TILE <tile_name>
   - [ ] DISABLE_TILE <tile_name>
-  - [ ] ENABLE_HOTZONE <hotzone_name>
-  - [ ] DISABLE_HOTZONE <hotzone_name>
+  - [x] ENABLE_HOTZONE <hotzone_name>
+  - [x] DISABLE_HOTZONE <hotzone_name>
   - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `void my_custom_action(void)`
   - [x] END_OF_GAME
   - [x] ACTIVATE_EXIT_ZONES

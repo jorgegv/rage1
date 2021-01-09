@@ -13,6 +13,7 @@
 #include "beeper.h"
 #include "hero.h"
 #include "hotzone.h"
+#include "map.h"
 
 // Dispatch tables for rule checks and actions
 typedef uint8_t (*rule_check_fn_t)( struct flow_rule_s * );
@@ -167,6 +168,16 @@ void do_rule_action_activate_exit_zones( struct flow_rule_s *r ) {
     hotzone_activate_all_endofgame_zones();
 }
 
+void do_rule_action_enable_hotzone( struct flow_rule_s *r ) {
+    SET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ r->action_data.hotzone.num_hotzone ],
+        F_HOTZONE_ACTIVE );
+}
+
+void do_rule_action_disable_hotzone( struct flow_rule_s *r ) {
+    RESET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ r->action_data.hotzone.num_hotzone ],
+        F_HOTZONE_ACTIVE );
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -201,4 +212,6 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_call_custom_function,
     do_rule_action_end_of_game,
     do_rule_action_activate_exit_zones,
+    do_rule_action_enable_hotzone,
+    do_rule_action_disable_hotzone,
 };
