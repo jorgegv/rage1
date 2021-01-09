@@ -29,8 +29,8 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
     uint8_t i;
     for ( i = 0; i < t->num_rules; i++ ) {
         struct flow_rule_s *r = t->rules[ i ];
-        if ( rule_check_fn[ r->check ]( r ) )
-            rule_action_fn[ r->action ]( r );
+        if ( rule_check_fn[ r->check.type ]( r ) )
+            rule_action_fn[ r->action.type ]( r );
     }
 }
 
@@ -66,71 +66,71 @@ void check_flow_rules(void) {
 ////////////////////////////////////////////////////////////////////
 
 uint8_t do_rule_check_game_flag_set( struct flow_rule_s *r ) {
-    return ( GET_GAME_FLAG( r->check_data.flag_state.flag ) ? 1 : 0 );
+    return ( GET_GAME_FLAG( r->check.data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_game_flag_reset( struct flow_rule_s *r ) {
-    return ( GET_GAME_FLAG( r->check_data.flag_state.flag ) ? 0 : 1 );
+    return ( GET_GAME_FLAG( r->check.data.flag_state.flag ) ? 0 : 1 );
 }
 
 uint8_t do_rule_check_loop_flag_set( struct flow_rule_s *r ) {
-    return ( GET_LOOP_FLAG( r->check_data.flag_state.flag ) ? 1 : 0 );
+    return ( GET_LOOP_FLAG( r->check.data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_loop_flag_reset( struct flow_rule_s *r ) {
-    return ( GET_LOOP_FLAG( r->check_data.flag_state.flag ) ? 0 : 1 );
+    return ( GET_LOOP_FLAG( r->check.data.flag_state.flag ) ? 0 : 1 );
 }
 
 uint8_t do_rule_check_user_flag_set( struct flow_rule_s *r ) {
-    return ( GET_USER_FLAG( r->check_data.flag_state.flag ) ? 1 : 0 );
+    return ( GET_USER_FLAG( r->check.data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_user_flag_reset( struct flow_rule_s *r ) {
-    return ( GET_USER_FLAG( r->check_data.flag_state.flag ) ? 0 : 1 );
+    return ( GET_USER_FLAG( r->check.data.flag_state.flag ) ? 0 : 1 );
 }
 
 uint8_t do_rule_check_lives_equal( struct flow_rule_s *r ) {
-    return ( game_state.hero.num_lives == r->check_data.lives.count ? 1 : 0 );
+    return ( game_state.hero.num_lives == r->check.data.lives.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_lives_more_than( struct flow_rule_s *r ) {
-    return ( game_state.hero.num_lives > r->check_data.lives.count ? 1 : 0 );
+    return ( game_state.hero.num_lives > r->check.data.lives.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_lives_less_than( struct flow_rule_s *r ) {
-    return ( game_state.hero.num_lives < r->check_data.lives.count ? 1 : 0 );
+    return ( game_state.hero.num_lives < r->check.data.lives.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_enemies_alive_equal( struct flow_rule_s *r ) {
-    return ( game_state.enemies_alive == r->check_data.enemies.count ? 1 : 0 );
+    return ( game_state.enemies_alive == r->check.data.enemies.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_enemies_alive_more_than( struct flow_rule_s *r ) {
-    return ( game_state.enemies_alive > r->check_data.enemies.count ? 1 : 0 );
+    return ( game_state.enemies_alive > r->check.data.enemies.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_enemies_alive_less_than( struct flow_rule_s *r ) {
-    return ( game_state.enemies_alive < r->check_data.enemies.count ? 1 : 0 );
+    return ( game_state.enemies_alive < r->check.data.enemies.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_enemies_killed_equal( struct flow_rule_s *r ) {
-    return ( game_state.enemies_killed == r->check_data.enemies.count ? 1 : 0 );
+    return ( game_state.enemies_killed == r->check.data.enemies.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_enemies_killed_more_than( struct flow_rule_s *r ) {
-    return ( game_state.enemies_killed > r->check_data.enemies.count ? 1 : 0 );
+    return ( game_state.enemies_killed > r->check.data.enemies.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_enemies_killed_less_than( struct flow_rule_s *r ) {
-    return ( game_state.enemies_killed < r->check_data.enemies.count ? 1 : 0 );
+    return ( game_state.enemies_killed < r->check.data.enemies.count ? 1 : 0 );
 }
 
 uint8_t do_rule_check_call_custom_function( struct flow_rule_s *r ) {
-    return r->check_data.custom.function();
+    return r->check.data.custom.function();
 }
 
 uint8_t do_rule_check_item_is_owned( struct flow_rule_s *r ) {
-    return ( INVENTORY_HAS_ITEM( &game_state.inventory, r->check_data.item.item_id ) ? 1 : 0 );
+    return ( INVENTORY_HAS_ITEM( &game_state.inventory, r->check.data.item.item_id ) ? 1 : 0 );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -140,24 +140,24 @@ uint8_t do_rule_check_item_is_owned( struct flow_rule_s *r ) {
 ////////////////////////////////////////////////////////////////////
 
 void do_rule_action_set_user_flag( struct flow_rule_s *r ) {
-    SET_USER_FLAG( r->action_data.user_flag.flag );
+    SET_USER_FLAG( r->action.data.user_flag.flag );
 }
 
 void do_rule_action_reset_user_flag( struct flow_rule_s *r ) {
-    RESET_USER_FLAG( r->action_data.user_flag.flag );
+    RESET_USER_FLAG( r->action.data.user_flag.flag );
 }
 
 void do_rule_action_play_sound( struct flow_rule_s *r ) {
-    beep_fx( r->action_data.play_sound.sound_id );
+    beep_fx( r->action.data.play_sound.sound_id );
 }
 
 void do_rule_action_inc_lives( struct flow_rule_s *r ) {
-    game_state.hero.num_lives += r->action_data.lives.count;
+    game_state.hero.num_lives += r->action.data.lives.count;
     hero_update_lives_display();
 }
 
 void do_rule_action_call_custom_function( struct flow_rule_s *r ) {
-    r->action_data.custom.function();
+    r->action.data.custom.function();
 }
 
 void do_rule_action_end_of_game( struct flow_rule_s *r ) {
@@ -169,12 +169,12 @@ void do_rule_action_activate_exit_zones( struct flow_rule_s *r ) {
 }
 
 void do_rule_action_enable_hotzone( struct flow_rule_s *r ) {
-    SET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ r->action_data.hotzone.num_hotzone ],
+    SET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ r->action.data.hotzone.num_hotzone ],
         F_HOTZONE_ACTIVE );
 }
 
 void do_rule_action_disable_hotzone( struct flow_rule_s *r ) {
-    RESET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ r->action_data.hotzone.num_hotzone ],
+    RESET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ r->action.data.hotzone.num_hotzone ],
         F_HOTZONE_ACTIVE );
 }
 

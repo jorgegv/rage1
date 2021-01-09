@@ -49,11 +49,8 @@
 
 #define RULE_ACTION_MAX				8
 
-// data definition for a rule
-struct flow_rule_s {
-
-    // what to check
-    uint8_t check;
+struct flow_rule_check_s {
+    uint8_t type;
     union {
         uint16_t					unused;		// for checks that do not need data
         struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
@@ -61,10 +58,11 @@ struct flow_rule_s {
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
-    } check_data;
+    } data;
+};
 
-    // what to do if check successful
-    uint8_t action;
+struct flow_rule_action_s {
+    uint8_t type;
     union {
         uint16_t					unused;		// for actions that do not need data
         struct { uint8_t	count; }		lives;		// INC_LIVES
@@ -73,8 +71,15 @@ struct flow_rule_s {
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { void		(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
-    } action_data;
+    } data;
+};
 
+// data definition for a rule
+struct flow_rule_s {
+    // what to check
+    struct flow_rule_check_s check;
+    // what to do if checks are all successful
+    struct flow_rule_action_s action;
 };
 
 struct flow_rule_table_s {
