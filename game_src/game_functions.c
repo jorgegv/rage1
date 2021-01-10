@@ -208,4 +208,6 @@ void my_user_game_init(void) {
 }
 
 void my_user_game_loop(void) {
+debug_out("\nI:"); debug_out(itohex(game_state.inventory.owned_items));
+debug_out(" G:"); debug_out(itohex(game_state.flags));
 }
