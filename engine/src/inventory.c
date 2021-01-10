@@ -60,13 +60,6 @@ void inventory_add_item( struct inventory_info_s *inv, uint8_t item ) {
     ADD_TO_INVENTORY( inv, all_items[ item ].item_id );
 
     // check if we have all items and set flag if so
-    c = 16;
-    id = 1;
-    num_items = 0;
-    while ( c-- ) {
-        if ( INVENTORY_HAS_ITEM( inv, id ) ) num_items++;
-        id <<= 1;
-    }
-    if ( num_items == inventory_max_items )
+    if ( game_state.inventory.owned_items == inventory_all_items_mask )
         SET_GAME_FLAG( F_GAME_GOT_ALL_ITEMS );
 }

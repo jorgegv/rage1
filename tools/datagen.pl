@@ -873,12 +873,19 @@ EOF_BULLET4
 
 sub output_items {
     my $max_items = scalar( keys %$all_items );
+    my $all_items_mask = 0;
+    my $mask = 1;
+    foreach my $i ( 1 .. $max_items ) {
+        $all_items_mask += $mask;
+        $mask <<= 1;
+    }
     print $output_fh <<EOF_ITEMS1
 ///////////////////////
 // Global items table
 ///////////////////////
 
 uint8_t inventory_max_items = $max_items;
+uint16_t inventory_all_items_mask = $all_items_mask;
 struct item_info_s all_items[16] = {
 EOF_ITEMS1
 ;
@@ -1265,6 +1272,7 @@ extern struct map_screen_s map[];
 
 // global items table
 extern uint8_t inventory_max_items;
+extern uint16_t inventory_all_items_mask;
 extern struct item_info_s all_items[];
 
 // a pre-filled hero_info_s struct for game reset
