@@ -71,8 +71,8 @@ data:
 	@./tools/flowgen.pl -c -d $(GENERATED_DIR) game_data/flow/*.gdata
 
 depend:
-	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{btiles,sprites,map,heroes,game_config}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
-	@ls -1 game_data/{btiles,sprites,map,heroes,game_config}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
+	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{btiles,sprites,map,heroes,game_config,flow}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
+	@ls -1 game_data/{btiles,sprites,map,heroes,game_config,flow}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
 
 ##
