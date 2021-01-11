@@ -37,8 +37,9 @@ char *itohex( uint16_t i ) {
         ito_buffer[c] = digits[ i & 0x0f ];
         i >>= 4;
     }
-    ito_buffer[4]='h';
-    ito_buffer[5]='\0';
+//    ito_buffer[4]='h';
+//    ito_buffer[5]='\0';
+    ito_buffer[4]='\0';
     return &ito_buffer[0];
 }
 

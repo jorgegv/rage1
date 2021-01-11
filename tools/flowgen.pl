@@ -191,35 +191,35 @@ sub validate_and_compile_rule {
 
 # struct initializer formats depending on the check and action names
 my $check_data_output_format = {
-    GAME_FLAG_IS_SET		=> ".check.data.flag_state.flag = %s",
-    GAME_FLAG_IS_RESET		=> ".check.data.flag_state.flag = %s",
-    LOOP_FLAG_IS_SET		=> ".check.data.flag_state.flag = %s",
-    LOOP_FLAG_IS_RESET		=> ".check.data.flag_state.flag = %s",
-    USER_FLAG_IS_SET		=> ".check.data.flag_state.flag = %s",
-    USER_FLAG_IS_RESET		=> ".check.data.flag_state.flag = %s",
-    LIVES_EQUAL			=> ".check.data.lives.count = %d",
-    LIVES_MORE_THAN		=> ".check.data.lives.count = %d",
-    LIVES_LESS_THAN		=> ".check.data.lives.count = %d",
-    ENEMIES_ALIVE_EQUAL		=> ".check.data.enemies.count = %d",
-    ENEMIES_ALIVE_MORE_THAN	=> ".check.data.enemies.count = %d",
-    ENEMIES_ALIVE_LESS_THAN	=> ".check.data.enemies.count = %d",
-    ENEMIES_KILLED_EQUAL	=> ".check.data.enemies.count = %d",
-    ENEMIES_KILLED_MORE_THAN	=> ".check.data.enemies.count = %d",
-    ENEMIES_KILLED_LESS_THAN	=> ".check.data.enemies.count = %d",
-    CALL_CUSTOM_FUNCTION	=> ".check.data.custom.function = %s",
-    ITEM_IS_OWNED		=> ".check.data.item.item_id = %s",
+    GAME_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    GAME_FLAG_IS_RESET		=> ".data.flag_state.flag = %s",
+    LOOP_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    LOOP_FLAG_IS_RESET		=> ".data.flag_state.flag = %s",
+    USER_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    USER_FLAG_IS_RESET		=> ".data.flag_state.flag = %s",
+    LIVES_EQUAL			=> ".data.lives.count = %d",
+    LIVES_MORE_THAN		=> ".data.lives.count = %d",
+    LIVES_LESS_THAN		=> ".data.lives.count = %d",
+    ENEMIES_ALIVE_EQUAL		=> ".data.enemies.count = %d",
+    ENEMIES_ALIVE_MORE_THAN	=> ".data.enemies.count = %d",
+    ENEMIES_ALIVE_LESS_THAN	=> ".data.enemies.count = %d",
+    ENEMIES_KILLED_EQUAL	=> ".data.enemies.count = %d",
+    ENEMIES_KILLED_MORE_THAN	=> ".data.enemies.count = %d",
+    ENEMIES_KILLED_LESS_THAN	=> ".data.enemies.count = %d",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    ITEM_IS_OWNED		=> ".data.item.item_id = %s",
 };
 
 my $action_data_output_format = {
-    SET_USER_FLAG		=> ".action.data.user_flag.flag = %s",
-    RESET_USER_FLAG		=> ".action.data.user_flag.flag = %s",
-    INC_LIVES			=> ".action.data.lives.count = %s",
-    PLAY_SOUND			=> ".action.data.play_sound.sound_id = %s",
-    CALL_CUSTOM_FUNCTION	=> ".action.data.custom.function = %s",
-    END_OF_GAME			=> ".action.data.unused = %d",
-    ACTIVATE_EXIT_ZONES		=> ".action.data.unused = %d",
-    ENABLE_HOTZONE		=> ".action.data.hotzone.num_hotzone = %d",
-    DISABLE_HOTZONE		=> ".action.data.hotzone.num_hotzone = %d",
+    SET_USER_FLAG		=> ".data.user_flag.flag = %s",
+    RESET_USER_FLAG		=> ".data.user_flag.flag = %s",
+    INC_LIVES			=> ".data.lives.count = %s",
+    PLAY_SOUND			=> ".data.play_sound.sound_id = %s",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    END_OF_GAME			=> ".data.unused = %d",
+    ACTIVATE_EXIT_ZONES		=> ".data.unused = %d",
+    ENABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
+    DISABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
 };
 
 sub output_rule {
@@ -232,6 +232,40 @@ sub output_rule {
             $action,
             sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
     );
+}
+
+sub output_rule_checks {
+    my ( $rule, $index ) = @_;
+    my $num_checks = scalar( @{ $rule->{'check'} } );
+    my $output = sprintf "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
+        $index, $num_checks;
+    foreach my $ch ( @{ $rule->{'check'} } ) {
+        my ( $check, $check_data ) = split( /\s+/, $ch );
+        $output .= sprintf( "\t{\n\t.type = RULE_CHECK_%s,\n\t%s,\n",
+            $check,
+            sprintf( $check_data_output_format->{ $check }, $check_data || 0 )
+        );
+        $output .= "\t},\n";
+    }
+    $output .= "};\n\n";
+    return $output;
+}
+
+sub output_rule_actions {
+    my ( $rule, $index ) = @_;
+    my $num_actions = scalar( @{ $rule->{'do'} } );
+    my $output = sprintf "struct flow_rule_action_s flow_rule_actions_%05d[%d] = {\n",
+        $index, $num_actions;
+    foreach my $ac ( @{ $rule->{'do'} } ) {
+        my ( $action, $action_data ) = split( /\s+/, $ac );
+        $output .= sprintf( "\t{\n\t.type = RULE_ACTION_%s,\n\t%s,\n",
+            $action,
+            sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
+        );
+        $output .= "\t},\n";
+    }
+    $output .= "};\n\n";
+    return $output;
 }
 
 #############################
@@ -284,12 +318,36 @@ sub output_c_file {
 FLOW_DATA_C_1
 ;
 
+    # output check and action tables for each rule
+    printf $output_fh "// check tables for all rules\n";
+    foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
+        print $output_fh output_rule_checks( $all_rules[ $i ], $i );
+    }
+    printf $output_fh "// action tables for all rules\n";
+    foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
+        print $output_fh output_rule_actions( $all_rules[ $i ], $i );
+    }
+
     # output global rule table
     printf $output_fh "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
         scalar( @all_rules );
     print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
-    print $output_fh join( ",\n", map { output_rule( $_ ) } @all_rules );
+    foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
+        print $output_fh "\t{\n";
+        printf $output_fh "\t.num_checks = %d,\n\t.checks = &flow_rule_checks_%05d[0],\n",
+            scalar( @{ $all_rules[ $i ]{'check'} } ), $i;
+        printf $output_fh "\t.num_actions = %d,\n\t.actions = &flow_rule_actions_%05d[0],\n",
+            scalar( @{ $all_rules[ $i ]{'do'} } ), $i;
+        print $output_fh "\t},\n";
+    }
     print $output_fh "\n};\n\n";
+
+    # output global rule table (for checking)
+#    printf $output_fh "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
+#        scalar( @all_rules );
+#    print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
+#    print $output_fh join( ",\n", map { output_rule( $_ ) } @all_rules );
+#    print $output_fh "\n};\n\n";
 
     # output rule tables for each screen
     print $output_fh "// rule tables for each screen\n";

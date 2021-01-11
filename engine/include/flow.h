@@ -77,15 +77,18 @@ struct flow_rule_action_s {
 // data definition for a rule
 struct flow_rule_s {
     // what to check
-    struct flow_rule_check_s check;
-    // what to do if checks are all successful
-    struct flow_rule_action_s action;
+    uint8_t num_checks;
+    struct flow_rule_check_s *checks;
+    // what to do if all checks are successful
+    uint8_t num_actions;
+    struct flow_rule_action_s *actions;
 };
 
 struct flow_rule_table_s {
     uint8_t num_rules;
     struct flow_rule_s **rules;
 };
+
 
 // executes user flow rules
 void check_flow_rules(void);
