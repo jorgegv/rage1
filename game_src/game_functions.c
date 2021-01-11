@@ -201,16 +201,3 @@ void my_game_over_screen(void) {
    sp1_UpdateNow();
 }
 
-void my_user_init(void) {
-}
-
-void my_user_game_init(void) {
-}
-
-void my_user_game_loop(void) {
-   debug_out("\nG"); debug_out(itohex(game_state.flags));
-   debug_out(" U"); debug_out(itohex(game_state.user_flags));
-   debug_out(" L"); debug_out(itohex(game_state.loop_flags));
-   debug_out(" I"); debug_out(itohex(game_state.inventory.owned_items));
-   debug_out(" H"); debug_out(i8toa(game_state.hero.num_lives));
-}
