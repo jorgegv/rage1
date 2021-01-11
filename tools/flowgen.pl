@@ -222,18 +222,6 @@ my $action_data_output_format = {
     DISABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
 };
 
-sub output_rule {
-    my $rule = shift;
-    my ( $check, $check_data ) = split( /\s+/, $rule->{'check'}[0] );
-    my ( $action, $action_data ) = split( /\s+/, $rule->{'do'}[0] );
-    return sprintf( "\t{\n\t.check.type = RULE_CHECK_%s,\n\t%s,\n\t.action.type = RULE_ACTION_%s,\n\t%s\n\t}",
-            $check,
-            sprintf( $check_data_output_format->{ $check }, $check_data || 0 ),
-            $action,
-            sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
-    );
-}
-
 sub output_rule_checks {
     my ( $rule, $index ) = @_;
     my $num_checks = scalar( @{ $rule->{'check'} } );
@@ -241,11 +229,10 @@ sub output_rule_checks {
         $index, $num_checks;
     foreach my $ch ( @{ $rule->{'check'} } ) {
         my ( $check, $check_data ) = split( /\s+/, $ch );
-        $output .= sprintf( "\t{\n\t.type = RULE_CHECK_%s,\n\t%s,\n",
+        $output .= sprintf( "\t{ .type = RULE_CHECK_%s, %s },\n",
             $check,
             sprintf( $check_data_output_format->{ $check }, $check_data || 0 )
         );
-        $output .= "\t},\n";
     }
     $output .= "};\n\n";
     return $output;
@@ -258,11 +245,10 @@ sub output_rule_actions {
         $index, $num_actions;
     foreach my $ac ( @{ $rule->{'do'} } ) {
         my ( $action, $action_data ) = split( /\s+/, $ac );
-        $output .= sprintf( "\t{\n\t.type = RULE_ACTION_%s,\n\t%s,\n",
+        $output .= sprintf( "\t{ .type = RULE_ACTION_%s, %s },\n",
             $action,
             sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
         );
-        $output .= "\t},\n";
     }
     $output .= "};\n\n";
     return $output;
@@ -333,21 +319,14 @@ FLOW_DATA_C_1
         scalar( @all_rules );
     print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
     foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        print $output_fh "\t{\n";
-        printf $output_fh "\t.num_checks = %d,\n\t.checks = &flow_rule_checks_%05d[0],\n",
+        print $output_fh "\t{";
+        printf $output_fh " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
             scalar( @{ $all_rules[ $i ]{'check'} } ), $i;
-        printf $output_fh "\t.num_actions = %d,\n\t.actions = &flow_rule_actions_%05d[0],\n",
+        printf $output_fh " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
             scalar( @{ $all_rules[ $i ]{'do'} } ), $i;
-        print $output_fh "\t},\n";
+        print $output_fh " },\n";
     }
     print $output_fh "\n};\n\n";
-
-    # output global rule table (for checking)
-#    printf $output_fh "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
-#        scalar( @all_rules );
-#    print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
-#    print $output_fh join( ",\n", map { output_rule( $_ ) } @all_rules );
-#    print $output_fh "\n};\n\n";
 
     # output rule tables for each screen
     print $output_fh "// rule tables for each screen\n";
@@ -386,7 +365,7 @@ FLOW_DATA_C_2
                 if ( $num_rules ) {
                     printf $output_fh "\t// screen '%s', table '%s' (%d rules)\n",
                         $screen, $table, $num_rules;
-                    printf $output_fh "\tmap[ %d ].flow_data.rule_tables.%s.num_rules = %d;\n",
+                    printf $output_fh "\tmap[ %d ].flow_data.rule_tables.%s.num_rules = %d, \n",
                         $all_state->{'screen_name_to_index'}{ $screen },
                         $table,
                         $num_rules;
