@@ -16,7 +16,7 @@
 
 uint8_t initialized = 0;
 
-struct sp1_Rect debug_area = { 23, 0, 32, 1 };
+struct sp1_Rect debug_area = { 0, 1, 30, 1 };
 struct sp1_pss debug_ctx = { &debug_area, SP1_PSSFLAG_INVALIDATE, 0, 0, 0, INK_WHITE | PAPER_BLACK, 0, 0 };
 
 void debug_out( char *txt ) {
