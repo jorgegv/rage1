@@ -83,6 +83,9 @@ RUNOPTS		+= --machine 48 --rs232-rx serial.log --rs232-tx serial.log
 run: game.tap
 	@rm -f serial.log; touch serial.log && fuse $(RUNOPTS) game.tap
 
+runz: game.tap
+	@../zesarux/src/zesarux game.tap
+
 ##
 ## Tests
 ##
