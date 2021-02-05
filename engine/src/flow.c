@@ -37,13 +37,14 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
         for ( j = 0; j < r->num_checks; j++ ) {
             check = &r->checks[j];
             if ( ! rule_check_fn[ check->type ]( check ) )
-                return;
+                goto next_rule;
         }
         // if we reach here, all checks were true; run the actions in order
         for ( j = 0; j < r->num_actions; j++ ) {
             action = &r->actions[j];
             rule_action_fn[ action->type ]( action );
         }
+    next_rule:
     }
 }
 
