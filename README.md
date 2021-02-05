@@ -25,6 +25,10 @@ built around it in the [GitHub RAGE1 Discussions forum](https://github.com/jorge
 
 ## Quick Start
 
+Warning: these instructions are for Linux users only (at the moment). They
+may work on Windows by using some kind of UNIX'y environment (e.g. MINGW,
+WSL2, etc.) but YMMV.
+
 * Make sure you have a Z88DK distribution in directory `z88dk` at the same
   directory level as this repo, compiled with SDCC support
 * Check the `doc/REQUIREMENTS.md` file for some minimal requirements, and install them if needed
