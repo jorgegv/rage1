@@ -42,11 +42,11 @@ CFLAGS_TO_ASM	= -a --c-code-in-asm
 	$(ZCC) $(CFLAGS) $(CFLAGS_TO_ASM) -c $*.c
 
 # build targets
-.PHONY: data all build clean data_depend flow_depend build-data
+.PHONY: data flow all build clean data_depend flow_depend build-data
 
 all: data_depend flow_depend game.tap
 
-build: clean data
+build: clean data flow
 	make -j8 all
 
 clean:
