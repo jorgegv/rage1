@@ -16,10 +16,16 @@
 
 uint8_t initialized = 0;
 
-struct sp1_Rect debug_area = { 0, 1, 30, 1 };
+uint16_t debug_flags = 0;
+
+struct sp1_Rect debug_area = { 0, 1, 15, 1 };
 struct sp1_pss debug_ctx = { &debug_area, SP1_PSSFLAG_INVALIDATE, 0, 0, 0, INK_WHITE | PAPER_BLACK, 0, 0 };
 
 void debug_out( char *txt ) {
+    if ( ! initialized ) {
+        sp1_SetPrintPos( &debug_ctx, 0, 0 );
+        initialized++;
+    }
     if ( *txt == '\n' ) {
         sp1_ClearRectInv( &debug_area, INK_WHITE | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
         sp1_SetPrintPos( &debug_ctx, 0, 0 );
