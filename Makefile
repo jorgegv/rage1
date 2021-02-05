@@ -42,9 +42,9 @@ CFLAGS_TO_ASM	= -a --c-code-in-asm
 	$(ZCC) $(CFLAGS) $(CFLAGS_TO_ASM) -c $*.c
 
 # build targets
-.PHONY: data all build clean depend build-data
+.PHONY: data all build clean data_depend flow_depend build-data
 
-all: depend game.tap
+all: data_depend flow_depend game.tap
 
 build: clean data
 	make -j8 all
@@ -66,14 +66,24 @@ game.tap: $(OBJS)
 $(GENERATED_DIR)/game_data.c: $(GENERATED_DIR)/game_data.dep
 	$(MAKE) -s data
 
+$(GENERATED_DIR)/flow_data.c: $(GENERATED_DIR)/flow_data.dep
+	$(MAKE) -s flow
+
 data:
 	@./tools/datagen.pl -c -d $(GENERATED_DIR) game_data/{btiles,sprites,map,heroes,game_config}/*.gdata
+
+flow:
 	@./tools/flowgen.pl -c -d $(GENERATED_DIR) game_data/flow/*.gdata
 
-depend:
-	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{btiles,sprites,map,heroes,game_config,flow}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
-	@ls -1 game_data/{btiles,sprites,map,heroes,game_config,flow}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
+data_depend:
+	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{btiles,sprites,map,heroes,game_config}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
+	@ls -1 game_data/{btiles,sprites,map,heroes,game_config}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
+
+flow_depend:
+	@if [ ! -f $(GENERATED_DIR)/flow_data.dep ]; then ls -1 game_data/flow/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/flow_data.dep; fi
+	@ls -1 game_data/flow/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/flow_data.dep
+	@if ( ! cmp -s $(GENERATED_DIR)/flow_data.dep /tmp/flow_data.dep ) then rm $(GENERATED_DIR)/flow_data.dep; mv /tmp/flow_data.dep $(GENERATED_DIR)/flow_data.dep; fi
 
 ##
 ## Run options and target
