@@ -15,6 +15,8 @@
 #include "hotzone.h"
 #include "map.h"
 
+#include "debug.h"
+
 // Dispatch tables for rule checks and actions
 typedef uint8_t (*rule_check_fn_t)( struct flow_rule_check_s * );
 typedef void (*rule_action_fn_t)( struct flow_rule_action_s * );

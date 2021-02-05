@@ -22,7 +22,8 @@ char *itohex( uint16_t );
 char *i8toa( uint8_t i );
 
 extern uint16_t debug_flags;
-#define debug_set_flag(f)	( debug_flags |= (f) )
-#define debug_reset_flag(f)       ( debug_flags &= ~(f) )
+#define GET_DEBUG_FLAG(f)	( debug_flags & (f) )
+#define SET_DEBUG_FLAG(f)	( debug_flags |= (f) )
+#define RESET_DEBUG_FLAG(f)	( debug_flags &= ~(f) )
 
 #endif // _DEBUG_H
