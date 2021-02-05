@@ -9,7 +9,7 @@ void my_user_game_init(void) {
 }
 
 void my_user_game_loop(void) {
-   debug_out( "\nDBG:" ); debug_out( itohex( debug_flags ) );
+//   debug_out( "\nDBG:" ); debug_out( itohex( debug_flags ) );
 //   debug_out("\n");
 //   debug_out("G"); debug_out(itohex(game_state.flags));
 //   debug_out(" U"); debug_out(itohex(game_state.user_flags));
