@@ -46,8 +46,10 @@
 #define RULE_ACTION_ACTIVATE_EXIT_ZONES		6
 #define RULE_ACTION_ENABLE_HOTZONE		7
 #define RULE_ACTION_DISABLE_HOTZONE		8
+#define RULE_ACTION_ENABLE_BTILE		9
+#define RULE_ACTION_DISABLE_BTILE		10
 
-#define RULE_ACTION_MAX				8
+#define RULE_ACTION_MAX				10
 
 struct flow_rule_check_s {
     uint8_t type;
@@ -71,6 +73,7 @@ struct flow_rule_action_s {
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { void		(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
+        struct { uint8_t	num_btile; }		btile;		// ENABLE/DISABLE_BTILE
     } data;
 };
 

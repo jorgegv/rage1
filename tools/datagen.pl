@@ -211,19 +211,25 @@ sub read_input_data {
             if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = "$1 TYPE=DECORATION";
-                push @{ $cur_screen->{'btiles'} }, {
+                my $item = {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                my $index = scalar( @{ $cur_screen->{'btiles'} } );
+                push @{ $cur_screen->{'btiles'} }, $item;
+                $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
                 next;
             }
             if ( $line =~ /^OBSTACLE\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = "$1 TYPE=OBSTACLE";
-                push @{ $cur_screen->{'btiles'} }, {
+                my $item = {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                my $index = scalar( @{ $cur_screen->{'btiles'} } );
+                push @{ $cur_screen->{'btiles'} }, $item;
+                $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
                 next;
             }
             if ( $line =~ /^SPRITE\s+(\w.*)$/ ) {

@@ -14,7 +14,7 @@
 #include "hero.h"
 #include "hotzone.h"
 #include "map.h"
-
+#include "btile.h"
 #include "debug.h"
 
 // Dispatch tables for rule checks and actions
@@ -45,6 +45,7 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
             rule_action_fn[ action->type ]( action );
         }
     next_rule:
+        continue;
     }
 }
 
@@ -192,6 +193,18 @@ void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) {
         F_HOTZONE_ACTIVE );
 }
 
+void do_rule_action_enable_btile( struct flow_rule_action_s *action ) {
+    struct btile_pos_s *t = &map[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
+    SET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
+    btile_draw( t->row, t->col, t->btile, t->type );
+}
+
+void do_rule_action_disable_btile( struct flow_rule_action_s *action ) {
+    struct btile_pos_s *t = &map[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
+    RESET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
+    btile_remove( t->row, t->col, t->btile );
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -228,4 +241,6 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_activate_exit_zones,
     do_rule_action_enable_hotzone,
     do_rule_action_disable_hotzone,
+    do_rule_action_enable_btile,
+    do_rule_action_disable_btile,
 };

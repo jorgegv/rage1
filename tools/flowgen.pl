@@ -179,11 +179,21 @@ sub validate_and_compile_rule {
     # do any special filtering of values
     foreach my $do ( @{ $rule->{'do'} } ) {
         my ( $action, $action_data ) = split( /\s+/, $do );
+
+        # hotzone filtering
         if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
             $action_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
             # regenerate the value with the filtered data
             $do = sprintf "%s\t%d", $action, $action_data;
         }
+
+        # btile filtering
+        if ( $action =~ /^(ENABLE|DISABLE)_BTILE$/ ) {
+            $action_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
+            # regenerate the value with the filtered data
+            $do = sprintf "%s\t%d", $action, $action_data;
+        }
+
     }
 
     1;
@@ -220,6 +230,8 @@ my $action_data_output_format = {
     ACTIVATE_EXIT_ZONES		=> ".data.unused = %d",
     ENABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
     DISABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
+    ENABLE_BTILE		=> ".data.btile.num_btile = %d",
+    DISABLE_BTILE		=> ".data.btile.num_btile = %d",
 };
 
 sub output_rule_checks {

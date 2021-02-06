@@ -91,8 +91,8 @@ check is successful. Options:
   - [x] RESET_USER_FLAG <flag>
   - [x] INC_LIVES <num_lives>
   - [x] PLAY_SOUND <fxid>
-  - [ ] ENABLE_TILE <tile_name>
-  - [ ] DISABLE_TILE <tile_name>
+  - [x] ENABLE_TILE <tile_name>
+  - [x] DISABLE_TILE <tile_name>
   - [x] ENABLE_HOTZONE <hotzone_name>
   - [x] DISABLE_HOTZONE <hotzone_name>
   - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `void my_custom_action(void)`
