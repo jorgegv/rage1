@@ -25,12 +25,11 @@
   - [x] Add all enemies killed and end of game detection
   - [x] Informative text box: used for end of game and game over screens
 - [x] Game over: lives = 0 -> menu
-- [ ] Refactor special conditions into engine (like La Churrera by Mojon Twins), with
+- [x] Refactor special conditions into engine (like La Churrera by Mojon Twins), with
   different conditions to be checked:
-  - [ ] When: enter screen; exit screen; every game_loop cycle
-  - [ ] Conditions: all items grabbed, all enemies killed, hot zone,...
-  - [ ] Actions: end of game,...
-
+  - [x] When: enter screen; exit screen; every game_loop cycle
+  - [x] Conditions: all items grabbed, all enemies killed, hot zone,...
+  - [x] Actions: end of game,...
 
 ## Inventory:
 
