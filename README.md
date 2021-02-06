@@ -30,7 +30,12 @@ may work on Windows by using some kind of UNIX'y environment (e.g. MINGW,
 WSL2, etc.) but YMMV.
 
 * Make sure you have a Z88DK distribution in directory `z88dk` at the same
-  directory level as this repo, compiled with SDCC support
+  directory level as this repo, compiled with SDCC support. E.g.
+```
+my_sources/
+├── rage1
+└── z88dk
+```
 * Check the `doc/REQUIREMENTS.md` file for some minimal requirements, and install them if needed
 * Execute the following to compile and run the demo game with FUSE (Unix
 Spectrum Emulator):
