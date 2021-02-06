@@ -691,7 +691,7 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'btiles'}});
         print $output_fh join( ",\n", map {
-                sprintf("\t{ TT_%s, %d, %d, &btile_%s, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $_->{'name'}, 'F_BTILE_ACTIVE' )
+                sprintf("\t{ TT_%s, %d, %d, &btile_%s, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $_->{'btile'}, 'F_BTILE_ACTIVE' )
             } @{$screen->{'btiles'}} );
         print $output_fh "\n};\n\n";
     }
@@ -966,8 +966,13 @@ sub check_screen_btiles_are_valid {
     my %is_valid_btile = map { $_->{'name'}, 1 } @btiles;
     foreach my $screen ( @screens ) {
         foreach my $btile ( @{ $screen->{'btiles'} } ) {
-            if ( not $is_valid_btile{ $btile->{'name'} } ) {
-                warn sprintf "Screen '%s': undefined btile '%s'\n", $screen->{'name'}, $btile->{'name'};
+            if ( not defined( $btile->{'btile'} ) ) {
+                warn sprintf "Screen '%s': %s has no associated btile attribute\n", $screen->{'name'}, $btile->{'type'};
+                $errors++;
+                next;
+            }
+            if ( not $is_valid_btile{ $btile->{'btile'} } ) {
+                warn sprintf "Screen '%s': undefined btile '%s'\n", $screen->{'name'}, $btile->{'btile'};
                 $errors++;
             }
         }
