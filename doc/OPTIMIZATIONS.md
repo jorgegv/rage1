@@ -7,8 +7,8 @@ The following sections explain the most interesting techniques mentioned there.
 ## Use static local variables
 
 * Stack allocated vars (i.e.  local vars) are normally accessed by using a
-  base pointer (e.g.  ld a, (ix+7)).  But in Z80 this load type is way
-  slower than direct address loading (e.g.  ld hl, 23000 + ld a,(hl)).
+  base pointer (e.g.  `ld a, (ix+7)` ).  But in Z80 this load type is way
+  slower than direct address loading (e.g.  `ld hl, 23000` + `ld a,(hl)`).
 
 * Use local variables in functions, but declare them with "static", which
   makes them use a fixed address, instead of being dynamically stack
@@ -35,10 +35,10 @@ void my_fun( int a ) {			void my_fun( int a ) {
 ## Use 8-bit integers whenever possible
 
 * Z80 is an 8-bit machine and it's optimized for that, so always declare
-  counters, indexes, etc. as uint8_t if possible.
+  counters, indexes, etc. as `uint8_t` if possible.
 
-* For comfortable programming, always include <stdint.h> so that you have
-  bit-explicit integer types available for use (e.g. uint8_t, uint16_t)
+* For comfortable programming, always include `<stdint.h>` so that you have
+  bit-explicit integer types available for use (e.g. `uint8_t`, `uint16_t`)
 
 * Always prefer unsigned to signed integers if possible
 
@@ -55,9 +55,11 @@ void my_fun( int a ) {			void my_fun( int a ) {
 
 Example:
 
+```
 for ( i = 0; i < MAX_ITEMS; i++ ) {		i = MAX_ITEMS;
   ...						while ( i-- ) {
   (code)					  ...
   ...						  (code)
 }						  ...
 						}
+```
