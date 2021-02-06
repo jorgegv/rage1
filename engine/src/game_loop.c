@@ -38,7 +38,8 @@ void check_game_pause(void) {
 
 void check_game_flags( void ) {
 
-      // check if the player has entered new screen or has just started
+      // update screen data if the player has entered new screen
+      // also done whe game has just started
       if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
          // handle tasks and reset flag
          map_draw_screen( &map[ game_state.current_screen ] );
@@ -66,13 +67,6 @@ void check_game_flags( void ) {
             SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
          }
       }
-
-      // check for end of game ( collected all items, killed all enemies and inside exit zone )
-      if ( GET_LOOP_FLAG( F_LOOP_INSIDE_EXIT_ZONE) && 
-             GET_GAME_FLAG( F_GAME_GOT_ALL_ITEMS ) &&
-             GET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED )
-         ) 
-         SET_GAME_FLAG( F_GAME_END );
 
 }
 
