@@ -2,6 +2,7 @@
 
 Documentation index:
 
+* [USAGE.md](USAGE.md): how to use the engine to create your own game - Start with this
 * [REQUIREMENTS.md](REQUIREMENTS.md): requirements needed to compile and run
 * [DESIGN.md](DESIGN.md): general design of the game flow and main loop
 * [OPTIMIZATIONS.md](OPTIMIZATIONS.md): some general directions on optimizing for Z80
@@ -11,5 +12,4 @@ Documentation index:
   (sprites, tiles, items, etc.)
 * [TODO.md](TODO.md): general checklist of desired items for the game
 (obsolete, use GitHub issue list)
-* [USAGE.md](USAGE.md): how to use the engine to create your own game - Start with this
   one!
