@@ -33,7 +33,7 @@ built around it in the [GitHub RAGE1 Discussions forum](https://github.com/jorge
   ├── rage1
   └── z88dk
   ```
-* Execute the following to compile and run the demo game with FUSE (Unix
+* Move to the RAGE1 directory and execute the following to compile and run the demo game with FUSE (Unix
 Spectrum Emulator):
   ```
   source env.sh
@@ -46,7 +46,8 @@ Spectrum Emulator):
 
 * Download and install [requirements](doc/REQUIREMENTS.md)
 * Add Fuse installation directory to path in user environment variables
-* Open Cygwin terminal, cd to the Rage1 directory and run:
+* Open Cygwin terminal, move to the RAGE1 directory and execute the following to compile and run the demo game with FUSE (Unix
+Spectrum Emulator):
   ```
   make build
   make run
