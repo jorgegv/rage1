@@ -284,9 +284,6 @@ sub output_h_file {
 // FLOWGEN initialization function, called from main game initialization
 void init_flowgen(void);
 
-// global rule table
-extern struct flow_rule_s flow_all_rules[];
-
 FLOW_DATA_H_1
 ;
 
