@@ -11,6 +11,7 @@
 #include "hotzone.h"
 #include "util.h"
 #include "game_state.h"
+#include "game_data.h"
 
 uint8_t hotzone_is_inside( struct hotzone_info_s *h, uint8_t x, uint8_t y ) {
     if (    ( x >= CELL_TO_PIXEL_COORD( h->col ) 		) &&
@@ -28,7 +29,7 @@ void hotzone_activate_all_endofgame_zones(void) {
     static struct hotzone_info_s *hzi;
     static struct map_screen_s *s;
 
-    i = map_num_screens;
+    i = MAP_NUM_SCREENS;
     while ( i-- ) {
         s = &map[ i ];
         j = s->hotzone_data.num_hotzones;
@@ -45,7 +46,7 @@ void hotzone_deactivate_all_endofgame_zones(void) {
     static struct hotzone_info_s *hzi;
     static struct map_screen_s *s;
 
-    i = map_num_screens;
+    i = MAP_NUM_SCREENS;
     while ( i-- ) {
         s = &map[ i ];
         j = s->hotzone_data.num_hotzones;

@@ -69,7 +69,7 @@ void map_screen_reset_all_sprites( struct map_screen_s *s ) {
 
 void map_sprites_reset_all(void) {
     static uint8_t i;
-    i = map_num_screens;
+    i = MAP_NUM_SCREENS;
     while ( i-- )
         map_screen_reset_all_sprites ( &map[ i ] );
 }
@@ -79,7 +79,7 @@ uint16_t map_count_enemies_all(void) {
     static uint8_t i;
 
     count = 0;
-    i = map_num_screens;
+    i = MAP_NUM_SCREENS;
     while ( i-- )
         count += map[ i ].sprite_data.num_sprites;
 
