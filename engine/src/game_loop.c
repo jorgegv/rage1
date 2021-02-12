@@ -154,8 +154,7 @@ void run_main_game_loop(void) {
       check_controller();
 
       // do all hero related actions: update main character position, shoot
-      // bullets if fire pressed, grab nearby items, check if hero is in a
-      // hotzone
+      // bullets if fire pressed, grab nearby items
       // changes game_state
       do_hero_actions();
 
