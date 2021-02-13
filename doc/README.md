@@ -2,7 +2,7 @@
 
 Documentation index:
 
-* [USAGE.md](USAGE.md): how to use the engine to create your own game - Start with this
+* [USAGE-OVERVIEW.md](USAGE.md): how to use the engine to create your own game - Start with this
 * [REQUIREMENTS.md](REQUIREMENTS.md): requirements needed to compile and run
 * [DESIGN.md](DESIGN.md): general design of the game flow and main loop
 * [OPTIMIZATIONS.md](OPTIMIZATIONS.md): some general directions on optimizing for Z80

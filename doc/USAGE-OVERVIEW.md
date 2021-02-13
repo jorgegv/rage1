@@ -13,17 +13,14 @@ If you use the standard file and directory structure, the Makefile is
 already set to do this, and you can build your full game with just a `make
 build` command.
 
-* *NOTE:* FLOWGEN is still a work in progress!
-
 Files under `engine` directory are the engine source files and are not
 intended to be modified if you are creating a game (unless you want to
 contribute to the engine, of course!)
 
-There is a minimal test game included with the engine, which is intended to
-showcase (and develop/test, of course!) the main engine features.  I
-recommend to go through the files under `game_data` directory and understand
-the main components.  If in doubt, check the game source and data, it's
-pretty well explained (I think :-).
+There is a minimal test game included with the engine, which is intended for
+testing all engine features.  I recommend to go through the files under
+`game_data` directory and understand the main components.  If in doubt,
+check the game source and data, it's pretty well explained (I think :-).
 
 ## Game Entities
 
@@ -37,7 +34,7 @@ pretty well explained (I think :-).
   screens in the game map, for example.
 
 * SPRITES: sprites are graphic entities for enemies, hero, bullets, and in
-  general, thing that move.  The sprites just define the graphic part: size,
+  general, moving things.  The sprites just define the graphic part: size,
   pixel data, masks, animation frames, etc.  Assignment to the higher level
   objects is done elsewhere.  I.e.  you just define the look and feel here,
   not the behaviour.
@@ -86,7 +83,7 @@ code is well commented.
 ## Custom source code
 
 Custom code can be defined in .c and .asm files under directory `game_src`. 
-The Makefile is prepared to compile anything in that directoru and add it to
+The Makefile is prepared to compile anything in that directory and add it to
 your main program.  This can be used to include the Game Functions in
 GAME_CONFIG structure, for example.
 
