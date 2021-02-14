@@ -11,8 +11,8 @@
 #ifndef _BEEPER_H
 #define _BEEPER_H
 
-#include <stdint.h>
+#include <sound.h>
 
-void beep_fx( uint8_t n );
+#define beep_fx(n)	bit_beepfx(n)
 
 #endif // _BEEPER_H
