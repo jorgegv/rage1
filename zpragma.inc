@@ -10,9 +10,10 @@
 
 // COMPILE TIME CRT CONFIGURATION
 
-#pragma output CRT_ORG_CODE           = 25124      // org of compile
-#pragma output REGISTER_SP            = 0xd000     // typical stack location when using sp1
-#pragma output CRT_STACK_SIZE         = 512
+// don't change these values before reading doc/MEMORY_MAP.md !!
+#pragma output CRT_ORG_CODE           = 0x5f00      // org of compile
+#pragma output REGISTER_SP            = 0xd1d1      // just below ISR
+#pragma output CRT_STACK_SIZE         = 208         // just enough
 
 #pragma output CRT_ENABLE_CLOSE       = 0          // don't bother closing files on exit
 #pragma output CRT_ENABLE_EIDI        = 0x1        // disable interrupts at start
