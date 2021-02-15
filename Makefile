@@ -14,8 +14,8 @@ GENERATED_DIR	= generated
 GAME_SRC_DIR	= game_src
 
 # Sources
-CSRC 		= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GENERATED_DIR)/*.c) $(wildcard $(GAME_SRC_DIR)/*.c)
-ASMSRC		= $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GAME_SRC_DIR)/*.asm )
+CSRC 		= $(wildcard $(GAME_SRC_DIR)/*.c)   $(wildcard $(ENGINE_DIR)/src/*.c)   $(wildcard $(GENERATED_DIR)/*.c)
+ASMSRC		= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
 SRC		= $(CSRC) $(ASMSRC)
 
 # Objs:
