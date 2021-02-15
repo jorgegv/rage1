@@ -1313,7 +1313,7 @@ GAME_DATA_H_1
 
     print $output_fh "\n// sound effect constants\n";
     foreach my $effect ( keys %{$game_config->{'sounds'}} ) {
-        printf $output_fh "#define SOUND_%s %d\n", uc( $effect ), $game_config->{'sounds'}{ $effect };
+        printf $output_fh "#define SOUND_%s %s\n", uc( $effect ), $game_config->{'sounds'}{ $effect };
     }
 
     # end of header file

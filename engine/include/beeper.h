@@ -11,8 +11,11 @@
 #ifndef _BEEPER_H
 #define _BEEPER_H
 
-#include <stdint.h>
+#include <sound.h>
 
-void beep_fx( uint8_t n );
+// this is a private copy of bit_beepfx function
+// effect definitions are the same and compatible, so we can use them
+
+void beep_fx(void *bfx) __z88dk_fastcall;
 
 #endif // _BEEPER_H
