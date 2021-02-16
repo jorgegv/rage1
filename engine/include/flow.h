@@ -68,7 +68,7 @@ struct flow_rule_action_s {
     union {
         uint16_t					unused;		// for actions that do not need data
         struct { uint8_t	count; }		lives;		// INC_LIVES
-        struct { uint8_t	sound_id; }		play_sound;	// PLAY_SOUND
+        struct { void		*sound_id; }		play_sound;	// PLAY_SOUND
         struct { uint16_t	flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { void		(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
