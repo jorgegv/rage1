@@ -17,9 +17,13 @@
 #include "btile.h"
 #include "debug.h"
 
+// disable "unreferenced function argument" warning, there are some
+// functions here that don't use their parameter
+# pragma disable_warning 85
+
 // Dispatch tables for rule checks and actions
-typedef uint8_t (*rule_check_fn_t)( struct flow_rule_check_s * );
-typedef void (*rule_action_fn_t)( struct flow_rule_action_s * );
+typedef uint8_t (*rule_check_fn_t)( struct flow_rule_check_s * ) __z88dk_fastcall;
+typedef void (*rule_action_fn_t)( struct flow_rule_action_s * ) __z88dk_fastcall;
 
 extern rule_check_fn_t rule_check_fn[];
 extern rule_action_fn_t rule_action_fn[];
@@ -80,71 +84,71 @@ void check_flow_rules(void) {
 //   uint8_t do_rule_check_xxxx( struct flow_rule_check_s *check )
 ////////////////////////////////////////////////////////////////////
 
-uint8_t do_rule_check_game_flag_set( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_game_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_GAME_FLAG( check->data.flag_state.flag ) ? 1 : 0 );
 }
 
-uint8_t do_rule_check_game_flag_reset( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_game_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_GAME_FLAG( check->data.flag_state.flag ) ? 0 : 1 );
 }
 
-uint8_t do_rule_check_loop_flag_set( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_loop_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_LOOP_FLAG( check->data.flag_state.flag ) ? 1 : 0 );
 }
 
-uint8_t do_rule_check_loop_flag_reset( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_loop_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_LOOP_FLAG( check->data.flag_state.flag ) ? 0 : 1 );
 }
 
-uint8_t do_rule_check_user_flag_set( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_user_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_USER_FLAG( check->data.flag_state.flag ) ? 1 : 0 );
 }
 
-uint8_t do_rule_check_user_flag_reset( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_user_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_USER_FLAG( check->data.flag_state.flag ) ? 0 : 1 );
 }
 
-uint8_t do_rule_check_lives_equal( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_lives_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.hero.num_lives == check->data.lives.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_lives_more_than( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_lives_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.hero.num_lives > check->data.lives.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_lives_less_than( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_lives_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.hero.num_lives < check->data.lives.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_enemies_alive_equal( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_enemies_alive_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_alive == check->data.enemies.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_enemies_alive_more_than( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_enemies_alive_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_alive > check->data.enemies.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_enemies_alive_less_than( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_enemies_alive_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_alive < check->data.enemies.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_enemies_killed_equal( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_enemies_killed_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_killed == check->data.enemies.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_enemies_killed_more_than( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_enemies_killed_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_killed > check->data.enemies.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_enemies_killed_less_than( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_enemies_killed_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_killed < check->data.enemies.count ? 1 : 0 );
 }
 
-uint8_t do_rule_check_call_custom_function( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_call_custom_function( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return check->data.custom.function();
 }
 
-uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) {
+uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( INVENTORY_HAS_ITEM( &game_state.inventory, check->data.item.item_id ) ? 1 : 0 );
 }
 
@@ -154,52 +158,52 @@ uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) {
 //   void do_rule_action_xxxx( struct flow_rule_action_s *action )
 ////////////////////////////////////////////////////////////////////
 
-void do_rule_action_set_user_flag( struct flow_rule_action_s *action ) {
+void do_rule_action_set_user_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
     SET_USER_FLAG( action->data.user_flag.flag );
 }
 
-void do_rule_action_reset_user_flag( struct flow_rule_action_s *action ) {
+void do_rule_action_reset_user_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
     RESET_USER_FLAG( action->data.user_flag.flag );
 }
 
-void do_rule_action_play_sound( struct flow_rule_action_s *action ) {
+void do_rule_action_play_sound( struct flow_rule_action_s *action ) __z88dk_fastcall {
     beep_fx( action->data.play_sound.sound_id );
 }
 
-void do_rule_action_inc_lives( struct flow_rule_action_s *action ) {
+void do_rule_action_inc_lives( struct flow_rule_action_s *action ) __z88dk_fastcall {
     game_state.hero.num_lives += action->data.lives.count;
     hero_update_lives_display();
 }
 
-void do_rule_action_call_custom_function( struct flow_rule_action_s *action ) {
+void do_rule_action_call_custom_function( struct flow_rule_action_s *action ) __z88dk_fastcall {
     action->data.custom.function();
 }
 
-void do_rule_action_end_of_game( struct flow_rule_action_s *action ) {
+void do_rule_action_end_of_game( struct flow_rule_action_s *action ) __z88dk_fastcall {
     SET_GAME_FLAG( F_GAME_END );
 }
 
-void do_rule_action_activate_exit_zones( struct flow_rule_action_s *action ) {
+void do_rule_action_activate_exit_zones( struct flow_rule_action_s *action ) __z88dk_fastcall {
     hotzone_activate_all_endofgame_zones();
 }
 
-void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) {
+void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
     SET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
         F_HOTZONE_ACTIVE );
 }
 
-void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) {
+void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
     RESET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
         F_HOTZONE_ACTIVE );
 }
 
-void do_rule_action_enable_btile( struct flow_rule_action_s *action ) {
+void do_rule_action_enable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &map[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
     SET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
     btile_draw( t->row, t->col, t->btile, t->type );
 }
 
-void do_rule_action_disable_btile( struct flow_rule_action_s *action ) {
+void do_rule_action_disable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &map[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
     RESET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
     btile_remove( t->row, t->col, t->btile );
