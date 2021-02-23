@@ -39,7 +39,7 @@ void my_menu_screen(void) {
    uint16_t key_pressed;
 
    // clear screen
-   sp1_ClearRectInv( &full_screen, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+   sp1_ClearRectInv( &full_screen, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
    sp1_UpdateNow();
 
    // draw external border
@@ -96,7 +96,7 @@ void my_menu_screen(void) {
    in_pause(500);
 
    // clear screen and exit to main game loop
-   sp1_ClearRectInv( &game_area, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+   sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
 }
 
 // info box text printing context
@@ -104,7 +104,7 @@ struct sp1_pss textbox_ctx = {
    &border_area,			// bounds
    SP1_PSSFLAG_INVALIDATE,		// flags
    0,0,					// initial position x,y
-   0, INK_GREEN | PAPER_BLACK | BRIGHT,		// attr mask and attribute
+   0, DEFAULT_BG_ATTR | BRIGHT,		// attr mask and attribute
    0,0					// RESERVED
 };
 
@@ -139,7 +139,7 @@ void draw_text_box( struct sp1_Rect *box, char *msg ) {
 
    // clear interior rectangle
    if ( ( interior.width > 0 ) && ( interior.height > 0 ) ) {
-      sp1_ClearRectInv( &interior, INK_GREEN | PAPER_BLACK | BRIGHT, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+      sp1_ClearRectInv( &interior, DEFAULT_BG_ATTR | BRIGHT, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
 
       // output text
       textbox_ctx.bounds = &interior;
@@ -171,7 +171,7 @@ void my_intro_screen(void) {
    in_wait_key();
 
    // clear screen and exit
-   sp1_ClearRectInv( &game_area, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+   sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
    sp1_UpdateNow();
 }
 
@@ -184,7 +184,7 @@ void my_game_end_screen(void) {
    in_wait_key();
 
    // clear screen and exit
-   sp1_ClearRectInv( &game_area, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+   sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
    sp1_UpdateNow();
 }
 
@@ -197,7 +197,7 @@ void my_game_over_screen(void) {
    in_wait_key();
 
    // clear screen and exit
-   sp1_ClearRectInv( &game_area, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+   sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
    sp1_UpdateNow();
 }
 

@@ -109,10 +109,9 @@ void check_hotzones(void) {
     hero_check_if_inside_hotzones();
 }
 
-const uint8_t heartbeat_attr = INK_YELLOW | PAPER_GREEN;
 void show_heartbeat(void) {
     if ( current_time.frame & 0x08 ) {
-        sp1_PrintAtInv(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, INK_YELLOW | PAPER_BLACK, ' ');
+        sp1_PrintAtInv(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, DEFAULT_BG_ATTR, ' ');
     } else {
         sp1_PrintAtInv(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, INK_YELLOW | PAPER_GREEN, ' ');
     }

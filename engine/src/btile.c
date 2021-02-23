@@ -12,6 +12,7 @@
 #include <games/sp1.h>
 
 #include "btile.h"
+#include "game_data.h"
 
 // an array to store the type of the tile which is on each screen position
 // TT_DECORATION, TT_OBSTACLE, ...
@@ -39,7 +40,7 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b ) {
     cmax = b->num_cols;
     for ( dr = 0; dr < rmax; ++dr )
         for ( dc = 0; dc < cmax; ++dc ) {
-            sp1_PrintAtInv( row + dr, col + dc, INK_YELLOW | PAPER_BLACK, ' ' );
+            sp1_PrintAtInv( row + dr, col + dc, DEFAULT_BG_ATTR, ' ' );
             TILE_TYPE_AT( row + dr, col + dc ) = TT_DECORATION;
         }
 }

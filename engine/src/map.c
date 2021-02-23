@@ -23,7 +23,7 @@ void map_draw_screen(struct map_screen_s *s) {
     static struct item_location_s *it;
 
     // clear screen
-    sp1_ClearRectInv( &game_area, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
 
     // clear btile types
     btile_clear_type_all_screen();

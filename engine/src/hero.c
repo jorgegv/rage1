@@ -289,7 +289,7 @@ void hero_update_lives_display(void) {
     static uint8_t n;
 
     // clear the area
-    sp1_ClearRectInv( &lives_area, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    sp1_ClearRectInv( &lives_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
 
     // draw one tile per live
     col = LIVES_AREA_LEFT;

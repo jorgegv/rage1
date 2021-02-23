@@ -39,7 +39,7 @@ void inventory_show(void) {
     struct btile_s *tile;
 
     // clear the area
-    sp1_ClearRectInv( &inventory_area, INK_YELLOW | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    sp1_ClearRectInv( &inventory_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
 
     // draw owned items, right to left
     col = GAME_AREA_RIGHT;
