@@ -125,7 +125,7 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $fgcolor = sprintf '%3d %3d %3d', map { oct( '0x'.$_ ) } unpack('A2A2A2', $vars->{'fgcolor'} );
+                my $fgcolor = uc( $vars->{'fgcolor'} );
                 push @{$cur_btile->{'pixels'}}, @{ pixels_data_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ) };
@@ -171,7 +171,7 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $fgcolor = sprintf '%3d %3d %3d', map { oct( '0x'.$_ ) } unpack('A2A2A2', $vars->{'fgcolor'} );
+                my $fgcolor = uc( $vars->{'fgcolor'} );
                 push @{$cur_sprite->{'pixels'}}, @{ pixels_data_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ) };
@@ -183,7 +183,7 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $maskcolor = sprintf '%3d %3d %3d', map { oct( '0x'.$_ ) } unpack('A2A2A2', $vars->{'maskcolor'} );
+                my $maskcolor = uc( $vars->{'maskcolor'} );
                 push @{$cur_sprite->{'mask'}}, @{ pixels_data_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
@@ -404,19 +404,34 @@ sub read_input_data {
 
 sub pixels_data_from_png {
     my ($file, $xpos, $ypos, $width, $height, $hexcolor) = @_;
-    # pngtopam game_data/btiles/btile.png | \
-    # pamcut -top 8 -left 8 -height 16 -width 24 | \
-    # pamtable| sed 's/  0   0   0/##/g'|sed 's/255 255 255/../g'|tr -d '|'
-    my $command = sprintf "pngtopam %s | pamcut -top %d -left %d -height %d -width %d | pamtable",
-        $file, $ypos, $xpos, $height, $width;
-    my @pixels = `$command`;
-    chomp @pixels;
-    foreach (@pixels) { s/\Q$hexcolor\E/##/g; }
-    foreach (@pixels) { s/\s*\d+\s+\d+\s+\d+/../g; }
-    foreach (@pixels) { s/\|//g; }
+    my $png = load_png_file( $file );
+    my @pixels = map {
+        join( "",
+            map {
+                $_ eq $hexcolor ? "##" : "..";			# filter color
+                } @$_[ $xpos .. ( $xpos + $width - 1 ) ]	# select cols
+        )
+    } @$png[ $ypos .. ( $ypos + $height - 1 ) ];		# select rows
     return \@pixels;
 }
 
+# return a ref to a list of refs to lists of pixels
+# i.e. each pixel can addressed as $png->[y][x]
+sub load_png_file {
+    my $file = shift;
+    my $command = sprintf "pngtopam '%s' | pamtable", $file;
+    my @pixel_lines = `$command`;
+    chomp @pixel_lines;
+    foreach ( @pixel_lines ) {
+        s/(\d+)/sprintf("%02X",$1)/ge;
+        s/ //g;
+    }
+    my @pixels;
+    foreach my $line ( @pixel_lines ) {
+        push @pixels, [ split( /\|/, $line) ];
+    }
+    return \@pixels;
+}
 
 ######################################
 ## BTile functions
