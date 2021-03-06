@@ -129,8 +129,8 @@ sub read_input_data {
                 push @{$cur_btile->{'pixels'}}, @{ pixel_data_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ) };
-                push @{$cur_btile->{'png_attr'}}, @{ attr_data_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} ) };
+                $cur_btile->{'png_attr'} = attr_data_from_png(
+                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} );
                 next;
             }
             if ( $line =~ /^END_BTILE$/ ) {
@@ -479,7 +479,7 @@ sub extract_attr_from_cell {
     my @l = sort { $histogram{ $a } > $histogram{ $b } } keys %histogram;
     my ( $bg, $fg ) = ( $l[0], $l[1] );
     if (scalar( @l ) > 2 ) {
-        foreach my $e ( 2 .. $#l ) {
+        foreach my $e ( 3 .. $#l ) {
             printf STDERR "Warning: color #%s (%s)  detected but ignored\n",
                 $l[$e], $zx_colors{ $l[$e] };
         }
@@ -495,13 +495,13 @@ sub attr_data_from_png {
     my @attrs;
     # extract attr from cells left-right, top-bottom order
     my $y = $ypos;
-    while ( $ypos < $height ) {
+    while ( $y < ( $ypos + $height ) ) {
         my $x = $xpos;
-        while ( $xpos < $width ) {
+        while ( $x < ( $xpos + $width ) ) {
             push @attrs, extract_attr_from_cell( $png, $x, $y );
-            $xpos += 8;
+            $x += 8;
         }
-        $ypos += 8;
+        $y += 8;
     }
     return \@attrs;
 }
