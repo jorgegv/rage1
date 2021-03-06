@@ -119,16 +119,18 @@ sub read_input_data {
                 push @{$cur_btile->{'attr'}}, $1;
                 next;
             }
-            if ( $line =~ /^PNG_PIXELS\s+(.*)$/ ) {
+            if ( $line =~ /^PNG_DATA\s+(.*)$/ ) {
                 my $args = $1;
                 my $vars = {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
-                push @{$cur_btile->{'pixels'}}, @{ pixels_data_from_png(
+                push @{$cur_btile->{'pixels'}}, @{ pixel_data_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ) };
+                push @{$cur_btile->{'png_attr'}}, @{ attr_data_from_png(
+                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} ) };
                 next;
             }
             if ( $line =~ /^END_BTILE$/ ) {
@@ -165,16 +167,18 @@ sub read_input_data {
                 push @{$cur_sprite->{'mask'}}, $1;
                 next;
             }
-            if ( $line =~ /^PNG_PIXELS\s+(.*)$/ ) {
+            if ( $line =~ /^PNG_DATA\s+(.*)$/ ) {
                 my $args = $1;
                 my $vars = {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
-                push @{$cur_sprite->{'pixels'}}, @{ pixels_data_from_png(
+                push @{$cur_sprite->{'pixels'}}, @{ pixel_data_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ) };
+                push @{$cur_sprite->{'png_attr'}}, @{ attr_data_from_png(
+                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} ) };
                 next;
             }
             if ( $line =~ /^PNG_MASK\s+(.*)$/ ) {
@@ -184,7 +188,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
-                push @{$cur_sprite->{'mask'}}, @{ pixels_data_from_png(
+                push @{$cur_sprite->{'mask'}}, @{ pixel_data_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
                 next;
@@ -402,35 +406,104 @@ sub read_input_data {
     }
 }
 
-sub pixels_data_from_png {
-    my ($file, $xpos, $ypos, $width, $height, $hexcolor) = @_;
+# Loads a PNG file
+# Returns a ref to a list of refs to lists of pixels
+# i.e. each pixel can addressed as $png->[y][x]
+my $png_file_cache;
+sub load_png_file {
+    my $file = shift;
+
+    # if data exists in cache for the file, just return it
+    if ( exists( $png_file_cache->{ $file } ) ) {
+        return $png_file_cache->{ $file };
+    }
+
+    # ..else, build it...
+    my $command = sprintf "pngtopam '%s' | pamtable", $file;
+    my @pixel_lines = `$command`;
+    chomp @pixel_lines;
+    my @pixels = map {			# for each line...
+        s/(\d+)/sprintf("%02X",$1)/ge;	# replace decimals by upper hex equivalent
+        s/ //g;				# remove spaces
+       [ split /\|/ ];			# split each pixel data by '|' and return listref of pixels
+    } @pixel_lines;
+
+    # ...store in cache for later use...
+    $png_file_cache->{ $file } = \@pixels;
+
+    # ..and return it
+    return \@pixels;
+}
+
+# extracts pixel data from a PNG file
+sub pixel_data_from_png {
+    my ( $file, $xpos, $ypos, $width, $height, $hex_fgcolor ) = @_;
     my $png = load_png_file( $file );
     my @pixels = map {
         join( "",
             map {
-                $_ eq $hexcolor ? "##" : "..";			# filter color
+                $_ eq $hex_fgcolor ? "##" : "..";		# filter color
                 } @$_[ $xpos .. ( $xpos + $width - 1 ) ]	# select cols
         )
     } @$png[ $ypos .. ( $ypos + $height - 1 ) ];		# select rows
     return \@pixels;
 }
 
-# return a ref to a list of refs to lists of pixels
-# i.e. each pixel can addressed as $png->[y][x]
-sub load_png_file {
-    my $file = shift;
-    my $command = sprintf "pngtopam '%s' | pamtable", $file;
-    my @pixel_lines = `$command`;
-    chomp @pixel_lines;
-    foreach ( @pixel_lines ) {
-        s/(\d+)/sprintf("%02X",$1)/ge;
-        s/ //g;
+# calculates best attributes for a 8x8 cell out of PNG data
+my %zx_colors = (
+    '000000' => 'BLACK',
+    '0000C0' => 'BLUE',
+    '00C000' => 'GREEN',
+    '00C0C0' => 'CYAN',
+    'C00000' => 'RED',
+    'C000C0' => 'MAGENTA',
+    'C0C000' => 'YELLOW',
+    'C0C0C0' => 'WHITE',
+    '0000FF' => 'BLUE',
+    '00FF00' => 'GREEN',
+    '00FFFF' => 'CYAN',
+    'FF0000' => 'RED',
+    'FF00FF' => 'MAGENTA',
+    'FFFF00' => 'YELLOW',
+    'FFFFFF' => 'WHITE',
+);
+sub extract_attr_from_cell {
+    my %histogram;
+    my ( $png, $xpos, $ypos ) = @_;
+    foreach my $x ( $xpos .. ( $xpos + 7 ) ) {
+        foreach my $y ( $ypos .. ( $ypos + 7 ) ) {
+            my $pixel_color = $png->[$y][$x];
+            $histogram{$pixel_color}++;
+        }
     }
-    my @pixels;
-    foreach my $line ( @pixel_lines ) {
-        push @pixels, [ split( /\|/, $line) ];
+    my @l = sort { $histogram{ $a } > $histogram{ $b } } keys %histogram;
+    my ( $bg, $fg ) = ( $l[0], $l[1] );
+    if (scalar( @l ) > 2 ) {
+        foreach my $e ( 2 .. $#l ) {
+            printf STDERR "Warning: color #%s (%s)  detected but ignored\n",
+                $l[$e], $zx_colors{ $l[$e] };
+        }
     }
-    return \@pixels;
+    my $attr = sprintf "INK_%s | PAPER_%s", $zx_colors{ $fg }, $zx_colors{ $bg };
+    if ( ( $fg =~ /FF/ ) or ( $bg =~ /FF/ ) ) { $attr .= " | BRIGHT"; }
+    return $attr;
+}
+
+sub attr_data_from_png {
+    my ( $file, $xpos, $ypos, $width, $height ) = @_;
+    my $png = load_png_file( $file );
+    my @attrs;
+    # extract attr from cells left-right, top-bottom order
+    my $y = $ypos;
+    while ( $ypos < $height ) {
+        my $x = $xpos;
+        while ( $xpos < $width ) {
+            push @attrs, extract_attr_from_cell( $png, $x, $y );
+            $xpos += 8;
+        }
+        $ypos += 8;
+    }
+    return \@attrs;
 }
 
 ######################################
@@ -447,13 +520,18 @@ sub validate_and_compile_btile {
         die "Btile '$tile->{name}' has no COLS\n";
     defined( $tile->{'pixels'} ) or
         die "Btile '$tile->{name}' has no PIXELS\n";
-    defined( $tile->{'attr'} ) or
-        die "Btile '$tile->{name}' has no ATTR\n";
+    defined( $tile->{'attr'} ) or defined( $tile->{'png_attr'} ) or
+        die "Btile '$tile->{name}' has no ATTR or PNG_ATTRS\n";
     my $num_attrs = $tile->{'rows'} * $tile->{'cols'};
-    ( scalar( @{$tile->{'attr'}} ) == $num_attrs ) or
-        die "Btile should have $num_attrs ATTR elements\n";
+    if ( defined( $tile->{'attr'} ) ) {
+        ( scalar( @{$tile->{'attr'}} ) == $num_attrs ) or
+            die "Btile '$tile->{name}' should have $num_attrs ATTR elements\n";
+    } else {
+        ( scalar( @{$tile->{'png_attr'}} ) == $num_attrs ) or
+            die "Btile '$tile->{name}' should have $num_attrs elements in PNG_ATTR\n";
+    }
     ( scalar( @{$tile->{'pixels'}} ) == $tile->{'rows'} * 8 ) or
-        die "Btile should have ".( $tile->{'rows'} * 8 )." PIXELS elements\n";
+        die "Btile '$tile->{name}' should have ".( $tile->{'rows'} * 8 )." PIXELS elements\n";
     foreach my $p ( @{$tile->{'pixels'}} ) {
         ( length( $p ) == $tile->{'cols'} * 2 * 8 ) or
             die "Btile PIXELS line should be of length ".( $tile->{'rows'} * 2 * 8 );
@@ -494,10 +572,12 @@ sub output_btile {
             grep { ( $_ % 8 ) == 0 }
             ( 0 .. ( $tile->{'rows'} * $tile->{'cols'} * 8 - 1 ) )
         );
+    # manually specified attrs have preference over PNG ones
+    my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
     printf $output_fh "uint8_t btile_%s_attrs[%d] = { %s };\n",
         $tile->{'name'},
-        scalar( @{ $tile->{'attr'} } ),
-        join( ', ', @{ $tile->{'attr'} } );
+        scalar( @{ $attrs } ),
+        join( ', ', @{ $attrs } );
     printf $output_fh "struct btile_s btile_%s = { %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] };\n",
         $tile->{'name'},
         $tile->{'rows'},

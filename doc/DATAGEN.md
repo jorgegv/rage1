@@ -49,13 +49,14 @@ BEGIN_BTILE
         PIXELS  ..########..################....
         PIXELS  ................................
 
-	// or...
-        PNG_PIXELS      FILE=game_data/png/btile.png XPOS=8 YPOS=8 WIDTH=16 HEIGHT=16 BGCOLOR=ffffff FGCOLOR=000000
-
         ATTR    INK_YELLOW | PAPER_BLACK | BRIGHT
         ATTR    INK_YELLOW | PAPER_BLACK
         ATTR    INK_YELLOW | PAPER_BLACK
         ATTR    INK_YELLOW | PAPER_BLACK
+
+	// ...or load both pixels and attrs from PNG
+        PNG_DATA      FILE=game_data/png/btile.png XPOS=8 YPOS=8 WIDTH=16 HEIGHT=16 BGCOLOR=ffffff FGCOLOR=000000
+
 END_BTILE
 ```
 
@@ -67,17 +68,20 @@ END_BTILE
 * `PIXELS`: pixel data.  Data must be COLS x 8 pixels (=bits) long.  Paper
   pixels must be specified as `..`, and ink pixels with `##`.  Yes, double
   characters :-). There must be ROWS x 8 PIXELS lines in the Btile definition.
-* `PNG_PIXELS`: instead of PIXELS lines, pixel data can be extracted from a
-  PNG image. Arguments for this attribute are specified as `ARG=value` pairs
-  separated by spacs in the same PNG_PIXELS line. Possible arguments:
+* `ATTR`: specified the attributes for each of the character cells of the
+  Btile. Standard z88dk ATTR definitions must be used (found in spectrum.h)
+* `PNG_DATA`: instead of PIXELS and ATTR lines, pixel and attribute data can
+  be extracted from a PNG image.  Arguments for this attribute are specified
+  as `ARG=value` pairs separated by spacs in the same PNG_DATA line. 
+  Possible arguments:
+
   * `FILE`: the PNG file where pixels are extracted from. File name relative
   to the repository top directory level.
   * `XPOS`, `YPOS`: pixel coordinates of the top left rectangle of pixels
   * `WIDTH`, `HEIGHT`: pixels dimensions of the rectangle of pixels
   * `BGCOLOR`: color in the PNG that will be considered as ink pixels
   * `FGCOLOR`: color that will be considered as paper pixels
-* `ATTR`: specified the attributes for each of the character cells of the
-  Btile. Standard z88dk ATTR definitions must be used (found in spectrum.h)
+
 
 ### SPRITE data
 
@@ -168,11 +172,11 @@ BEGIN_SPRITE
 
 	// or also...
         // frame 1
-        PNG_PIXELS      FILE=game_data/png/sprite.png XPOS=8 YPOS=8 WIDTH=16 HEIGHT=16 FGCOLOR=000000
+        PNG_DATA        FILE=game_data/png/sprite.png XPOS=8 YPOS=8 WIDTH=16 HEIGHT=16 FGCOLOR=000000
         PNG_MASK        FILE=game_data/png/sprite.png XPOS=8 YPOS=8 WIDTH=16 HEIGHT=16 MASKCOLOR=ff0000
 
         // frame 2
-        PNG_PIXELS      FILE=game_data/png/sprite.png XPOS=24 YPOS=8 WIDTH=16 HEIGHT=16 FGCOLOR=000000
+        PNG_DATA        FILE=game_data/png/sprite.png XPOS=24 YPOS=8 WIDTH=16 HEIGHT=16 FGCOLOR=000000
         PNG_MASK        FILE=game_data/png/sprite.png XPOS=24 YPOS=8 WIDTH=16 HEIGHT=16 MASKCOLOR=ff0000
 
 END_SPRITE
@@ -185,10 +189,10 @@ END_SPRITE
 * `FRAMES`: sprites can be animated, this is used to specify the number of
   animation frames that will be defined. There should be enough data and
   mask pixels for all frames
-* `PNG_PIXELS`: as in Btiles, selects pixel data from a PNG image.  The
+* `PNG_DATA`: as in Btiles, selects pixel data from a PNG image.  The
   BGCOLOR argument is not used, only the FGCOLOR is used to select ink
   pixels.
-* `PNG_MASK`: analogous to PNG_PIXELS, but selects sprite mask data instead.
+* `PNG_MASK`: analogous to PNG_DATA, but selects sprite mask data instead.
   The new argument MASKCOLOR is used to specify the color that will be used
   as the mask.
 
@@ -197,7 +201,7 @@ in B/W (#000000, #ffffff), and the mask in red (#ff0000)
 
 Also, there is no need for a separate PNG for each sprite. You can define
 all sprites and tiles in the same PNG file, and select pixel and mask data
-for each of them by using coordinates in the PNG_PIXELS and PNG_MASK lines.
+for each of them by using coordinates in the PNG_DATA and PNG_MASK lines.
 
 ### SCREEN data
 
