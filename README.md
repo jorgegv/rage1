@@ -20,7 +20,7 @@ Apologies for not being complete; if in doubt, navigate the source :-)
 See [TODO](doc/TODO.md) for some short term enhancements which are in the works,
 and feel free to suggest more by opening GitHub issues!
 
-See [USAGE](doc/USAGE.md) for detailed info about how a RAGE1 game can be
+See [USAGE-OVERVIEW](doc/USAGE-OVERVIEW.md) for detailed info about how a RAGE1 game can be
 developed, understanding the inputs and outputs of the engine, etc.
 
 You can also chat about the engine, your ideas, proposals and possibly games
