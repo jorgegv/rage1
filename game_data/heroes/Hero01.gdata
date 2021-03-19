@@ -1,9 +1,9 @@
 BEGIN_HERO
-	NAME		Marcos
-	SPRITE_UP	MarcosUp
-	SPRITE_DOWN	MarcosDown
-	SPRITE_LEFT	MarcosLeft
-	SPRITE_RIGHT	MarcosRight
+	NAME		Jorge
+	SPRITE_UP	JorgeUp
+	SPRITE_DOWN	JorgeDown
+	SPRITE_LEFT	JorgeLeft
+	SPRITE_RIGHT	JorgeRight
 	ANIMATION_DELAY	3
 	HSTEP		2
 	VSTEP		2
