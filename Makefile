@@ -42,7 +42,21 @@ CFLAGS_TO_ASM	= -a --c-code-in-asm
 	$(ZCC) $(CFLAGS) $(CFLAGS_TO_ASM) -c $*.c
 
 # build targets
-.PHONY: data flow all build clean data_depend flow_depend build-data
+.PHONY: data flow all build clean data_depend flow_depend build-data help
+
+help:
+	@echo "============================================================"
+	@echo "==  RAGE1 library Makefile                                =="
+	@echo "============================================================"
+	@echo ""
+	@echo "Usage: make <target> [options]..."
+	@echo ""
+	@echo "Available targets:"
+	@grep -P '^[\w\-]+:' Makefile | grep -v ":=" | cut -f1 -d: | grep -v -E '^default' | sed 's/^/    /g'
+	@echo ""
+	@echo "* Use 'make new-game' for creating a new template game using the library"
+	@echo "* Use 'make update-game' for updating library code in an existing game"
+	@echo ""
 
 all: data_depend flow_depend game.tap
 
@@ -120,3 +134,42 @@ beeptest: tests/beeptest.c $(BEEPTEST_OBJS)
 TEXTBOX_OBJS=$(OBJS)
 textbox: tests/textbox.c $(TEXTBOX_OBJS)
 	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) tests/textbox.c $(TEXTBOX_OBJS) -startup=31 -create-app -o textbox.bin
+
+##
+## Update and sync targets for games using the library. See USAGE-OVERVIEW.md document
+##
+
+# template files and directories needed for game creation and update
+
+# these are pure library files that will be overwritten when updating the library
+# do not modify these in your game!
+LIB_ENGINE_FILES	= engine tools Makefile zpragma.inc .gitignore env.sh
+
+# these are game data directories that will be copied from the template when creating
+# a new game, but will _not_ be overwritten when updating the library. These contain
+# your game!
+LIB_GAME_DATA_DIRS	= game_data game_src
+
+# needed directories that will be created empty if they do not exist
+LIB_ENGINE_EMPTY_DIRS	= generated tests
+
+# create a game using the library
+new-game:
+	@if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
+	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) detected, use 'make update-game' instead"; exit 2; fi
+	@echo "Creating game directory $(target)..."
+	@mkdir -p "$(target)"
+	@echo -n "Syncing library and game template files... "
+	@rsync -ap $(LIB_ENGINE_FILES) "$(target)"
+	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)"
+	@for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done
+	@echo "Done!"
+
+# update the library for an existing game
+update-game:
+	@if [ -z "$(target)" ]; then echo "Usage: make update-game target=<game-directory>"; exit 1; fi
+	@if [ ! -d "$(target)" ]; then echo "Game directory $(target) not detected, use 'make new-game' instead"; exit 2; fi
+	@echo -n "Syncing library and game template files... "
+	@rsync -ap $(LIB_ENGINE_FILES) "$(target)"
+	@-for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done 2>/dev/null
+	@echo "Done!"
