@@ -59,7 +59,7 @@ void my_menu_screen(void) {
    // draw menu
    sp1_PrintString( &print_ctx, "\x13\x01" );		// bright 1
    sp1_PrintString( &print_ctx, "\x10\x04" );		// green color
-   sp1_PrintString( &print_ctx, "\x16\x09\x07 Home Adventure" );
+   sp1_PrintString( &print_ctx, "\x16\x09\x07 Test Adventure" );
    sp1_PrintString( &print_ctx, "\x10\x05" );		// cyan color
    sp1_PrintString( &print_ctx, "\x16\x0e\x09 1: KEYBOARD" );
    sp1_PrintString( &print_ctx, "\x16\x0f\x09 2: KEMPSTON" );
