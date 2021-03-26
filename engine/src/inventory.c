@@ -13,6 +13,7 @@
 //
 
 #include <arch/spectrum.h>
+#include <games/sp1.h>
 
 #include "inventory.h"
 #include "game_state.h"
@@ -48,7 +49,7 @@ void inventory_show(void) {
     while ( item_index-- ) {
         tile = all_items[ item_index ].btile;
         if ( ( tile != NULL ) && ( INVENTORY_HAS_ITEM( inv, all_items[ item_index].item_id ) ) )
-            btile_draw( INVENTORY_TOP, col--, tile, TT_DECORATION );
+            btile_draw( INVENTORY_TOP, col--, tile, TT_DECORATION, &inventory_area );
     }
 }
 

@@ -34,7 +34,7 @@ void map_draw_screen(struct map_screen_s *s) {
         t = &s->btile_data.btiles_pos[i];
         if ( ! IS_BTILE_ACTIVE( *t ) )
             continue;
-        btile_draw( t->row, t->col, t->btile, t->type );
+        btile_draw( t->row, t->col, t->btile, t->type, &game_area );
     }
 
     // draw items
@@ -43,7 +43,7 @@ void map_draw_screen(struct map_screen_s *s) {
         it = &s->item_data.items[i];
         if ( ! IS_ITEM_ACTIVE( all_items[ it->item_num ] ) )
             continue;
-        btile_draw( it->row, it->col, all_items[ it->item_num ].btile, TT_ITEM );
+        btile_draw( it->row, it->col, all_items[ it->item_num ].btile, TT_ITEM, &game_area );
     }
 }
 

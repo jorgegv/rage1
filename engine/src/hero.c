@@ -295,7 +295,7 @@ void hero_update_lives_display(void) {
     col = LIVES_AREA_LEFT;
     n = game_state.hero.num_lives;
     while ( n-- )
-        btile_draw( LIVES_AREA_TOP, col++, game_state.hero.lives_tile, TT_DECORATION );
+        btile_draw( LIVES_AREA_TOP, col++, game_state.hero.lives_tile, TT_DECORATION, &lives_area );
 }
 
 void hero_check_if_inside_hotzones(void) {

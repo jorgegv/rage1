@@ -33,7 +33,7 @@ struct btile_pos_s {
     uint16_t flags;
 };
 
-void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type );
+void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box );
 void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
 
 // big tile types

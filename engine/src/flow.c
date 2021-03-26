@@ -16,6 +16,7 @@
 #include "map.h"
 #include "btile.h"
 #include "debug.h"
+#include "screen.h"
 
 // disable "unreferenced function argument" warning, there are some
 // functions here that don't use their parameter
@@ -200,7 +201,7 @@ void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk
 void do_rule_action_enable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &map[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
     SET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
-    btile_draw( t->row, t->col, t->btile, t->type );
+    btile_draw( t->row, t->col, t->btile, t->type, &game_area);
 }
 
 void do_rule_action_disable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {

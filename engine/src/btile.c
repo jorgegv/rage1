@@ -23,8 +23,14 @@
 uint8_t screen_pos_tile_type[ SCREEN_SIZE ];
 
 // draw a given btile
-void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type ) {
+void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
     static uint8_t dr, dc, r, c, n, rmax, cmax;
+    static uint8_t brmin, brmax, bcmin, bcmax;
+
+    brmin = box->row;
+    bcmin = box->col;
+    brmax = brmin + box->height - 1;
+    bcmax = bcmin + box->width - 1;
 
     n = 0;	// tile counter
     rmax = b->num_rows;
@@ -33,7 +39,7 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type ) {
         for ( dc = 0; dc < cmax; ++dc, ++n ) {
             r = row + dr;
             c = col + dc;
-            if ( ( r <= SCREEN_MAX_ROW ) && ( c <= SCREEN_MAX_COL ) )  {
+            if ( ( r >= brmin ) && ( r <= brmax ) && ( c >= bcmin ) && ( c <= bcmax ) )  {
                 sp1_PrintAtInv( r, c, b->attrs[n], (uint16_t)b->tiles[n] );
                 TILE_TYPE_AT( r, c ) = type;
             }
