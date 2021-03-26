@@ -23,6 +23,7 @@ use Getopt::Std;
 # also in $all_state variable in dump_internal_state function at the end of
 # the script
 my @btiles;
+my %btile_name_to_index;
 my @screens;
 my %screen_name_to_index = ( '__NO_SCREEN__', 0 );
 my @sprites;
@@ -135,7 +136,9 @@ sub read_input_data {
             }
             if ( $line =~ /^END_BTILE$/ ) {
                 validate_and_compile_btile( $cur_btile );
+                my $index = scalar( @btiles );
                 push @btiles, $cur_btile;
+                $btile_name_to_index{ $cur_btile->{'name'} } = $index;
                 $state = 'NONE';
                 next;
             }
@@ -275,6 +278,15 @@ sub read_input_data {
                 my $index = scalar( @{ $cur_screen->{'hotzones'} } );
                 push @{ $cur_screen->{'hotzones'} }, $item;
                 $cur_screen->{'hotzone_name_to_index'}{ $item->{'name'} } = $index;
+                next;
+            }
+            if ( $line =~ /^BACKGROUND\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                $cur_screen->{'background'} = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
                 next;
             }
             if ( $line =~ /^END_SCREEN$/ ) {
@@ -709,7 +721,6 @@ sub output_sprite {
     }
     printf $output_fh "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
         $sprite->{'name'},
-#        $sprite->{'frames'},
         join( ",\n", 
             map { sprintf "\t&sprite_%s_data[%d]", $sprite->{'name'}, $_ }
             @frame_offsets
@@ -746,6 +757,35 @@ sub validate_and_compile_screen {
             $h->{'dest_screen'} = '__NO_SCREEN__';
             $h->{'dest_hero_x'} = 0;
             $h->{'dest_hero_y'} = 0;
+        }
+    }
+
+    # generate background tiles from BACKGROUND element
+    if ( defined( $screen->{'background'} ) ) {
+        my $bg = $screen->{'background'};
+        ( $bg->{'row'} =~ /^\d+/ ) or
+            die "Screen '$screen->{name}': BACKGROUND: invalid ROW value\n";
+        ( $bg->{'col'} =~ /^\d+/ ) or
+            die "Screen '$screen->{name}': BACKGROUND: invalid COL value\n";
+        ( $bg->{'width'} =~ /^\d+/ ) or
+            die "Screen '$screen->{name}': BACKGROUND: invalid WIDTH value\n";
+        ( $bg->{'height'} =~ /^\d+/ ) or
+            die "Screen '$screen->{name}': BACKGROUND: invalid HEIGHT value\n";
+        my $r = $bg->{'row'};
+        my $c = $bg->{'col'};
+        my $bt = $btiles[ $btile_name_to_index{ $bg->{'btile'} } ];
+        while ( $r < ( $bg->{'row'} + $bg->{'height'} ) ) {
+            my $c = $bg->{'col'};
+            while ( $c < ( $bg->{'col'} + $bg->{'width'} ) ) {
+                push @{ $screen->{'btiles'} }, {
+                    btile	=> $bg->{'btile'},
+                    row		=> $r,
+                    col		=> $c,
+                    type	=> 'DECORATION',
+                };
+                $c += $bt->{'cols'};
+            }
+            $r += $bt->{'rows'};
         }
     }
 }
