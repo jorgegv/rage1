@@ -14,9 +14,12 @@
 #include "btile.h"
 #include "game_data.h"
 
+#define SCREEN_MAX_ROW	23
+#define SCREEN_MAX_COL	31
+#define SCREEN_SIZE	( ( SCREEN_MAX_ROW + 1 ) * ( SCREEN_MAX_COL + 1 ) )
+
 // an array to store the type of the tile which is on each screen position
 // TT_DECORATION, TT_OBSTACLE, ...
-#define SCREEN_SIZE	(24*32)
 uint8_t screen_pos_tile_type[ SCREEN_SIZE ];
 
 // draw a given btile
@@ -28,8 +31,13 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type ) {
     cmax = b->num_cols;
     for ( dr = 0; dr < rmax; ++dr )
         for ( dc = 0; dc < cmax; ++dc, ++n ) {
-            sp1_PrintAtInv( row + dr, col + dc, b->attrs[n], (uint16_t)b->tiles[n] );
-            TILE_TYPE_AT( row + dr, col + dc ) = type;
+            static uint8_t r,c;
+            r = row + dr;
+            c = col + dc;
+            if ( ( r <= SCREEN_MAX_ROW ) && ( c <= SCREEN_MAX_COL ) )  {
+                sp1_PrintAtInv( r, c, b->attrs[n], (uint16_t)b->tiles[n] );
+                TILE_TYPE_AT( r, c ) = type;
+            }
         }
 }
 
