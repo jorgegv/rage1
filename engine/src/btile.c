@@ -24,14 +24,13 @@ uint8_t screen_pos_tile_type[ SCREEN_SIZE ];
 
 // draw a given btile
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type ) {
-    static uint8_t dr, dc, n, rmax, cmax;
+    static uint8_t dr, dc, r, c, n, rmax, cmax;
 
     n = 0;	// tile counter
     rmax = b->num_rows;
     cmax = b->num_cols;
     for ( dr = 0; dr < rmax; ++dr )
         for ( dc = 0; dc < cmax; ++dc, ++n ) {
-            static uint8_t r,c;
             r = row + dr;
             c = col + dc;
             if ( ( r <= SCREEN_MAX_ROW ) && ( c <= SCREEN_MAX_COL ) )  {
