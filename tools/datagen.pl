@@ -162,6 +162,14 @@ sub read_input_data {
                 $cur_sprite->{'frames'} = $1;
                 next;
             }
+            if ( $line =~ /^REAL_PIXEL_WIDTH\s+(\d+)$/ ) {
+                $cur_sprite->{'real_pixel_width'} = $1;
+                next;
+            }
+            if ( $line =~ /^REAL_PIXEL_HEIGHT\s+(\d+)$/ ) {
+                $cur_sprite->{'real_pixel_height'} = $1;
+                next;
+            }
             if ( $line =~ /^PIXELS\s+([\.#]+)$/ ) {
                 push @{$cur_sprite->{'pixels'}}, $1;
                 next;
@@ -800,6 +808,7 @@ sub output_screen_sprite_initialization_code {
     foreach my $sprite ( map { $sprites[ $sprite_name_to_index{$_->{'name'}} ] } @$sprites ) {
         printf $output_fh "\t// Sprite '%s'\n", $sprite->{'name'};
 
+        # generate code for initializing SP1 structure
         printf $output_fh "\tmap[%d].sprite_data.sprites[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
             $screen_num,
             $sprite_num,
@@ -815,6 +824,22 @@ sub output_screen_sprite_initialization_code {
             ;
         }
         printf $output_fh "\tsp1_AddColSpr(s, SP1_DRAW_MASK2RB, 0, 0, 0);\n";	# empty rightmost column
+
+        # optimize SP1 for xthresh and vthresh
+        if ( defined( $sprite->{'real_pixel_width'} ) ) {
+            my $xthresh = ( 8 - ( $sprite->{'real_pixel_width'} % 8 ) + 1 ) % 8;
+            if ( $xthresh > 1 ) {
+                printf $output_fh "\ts->xthresh = %d;\n", $xthresh;
+            }
+        }
+        if ( defined( $sprite->{'real_pixel_height'} ) ) {
+            my $ythresh = ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8;
+            if ( $ythresh > 1 ) {
+                printf $output_fh "\ts->ythresh = %d;\n", $ythresh;
+            }
+        }
+
+        # set sprite initial flags and end of sprite
         printf $output_fh "\tSET_SPRITE_FLAG( map[%d].sprite_data.sprites[%d], F_SPRITE_ACTIVE );\n", $screen_num, $sprite_num;
         printf $output_fh "\t// End of Sprite '%s'\n\n", $sprite->{'name'};
         $sprite_num++;
@@ -1359,7 +1384,7 @@ void init_bullet_sprites(void) {
     while ( i-- ) {
 EOF_BULLET1
 ;
-    printf $output_fh "\t\tbullet_state_data[i].sprite = bs = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
+    printf $output_fh "\tbullet_state_data[i].sprite = bs = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
         $sprite->{'rows'} + 1,	# height in chars including blank bottom row
         0,				# left column graphic offset
         0,				# plane
@@ -1372,6 +1397,21 @@ EOF_BULLET1
         ;
     }
     printf $output_fh "\tsp1_AddColSpr(bs, SP1_DRAW_MASK2RB, 0, 0, 0);\n";	# empty rightmost column
+
+    # optimize SP1 for xthresh and vthresh
+    if ( defined( $sprite->{'real_pixel_width'} ) ) {
+        my $xthresh = ( 8 - ( $sprite->{'real_pixel_width'} % 8 ) + 1 ) % 8;
+        if ( $xthresh > 1 ) {
+            printf $output_fh "\tbs->xthresh = %d;\n", $xthresh;
+        }
+    }
+    if ( defined( $sprite->{'real_pixel_height'} ) ) {
+        my $ythresh = ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8;
+        if ( $ythresh > 1 ) {
+            printf $output_fh "\tbs->ythresh = %d;\n", $ythresh;
+        }
+    }
+
     print $output_fh <<EOF_BULLET6
     }
 
