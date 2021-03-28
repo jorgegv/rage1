@@ -27,6 +27,7 @@
 
 // struct describing a screen
 struct map_screen_s {
+    // data
     struct {
         uint8_t num_btiles;
         struct btile_pos_s *btiles_pos;
@@ -53,6 +54,10 @@ struct map_screen_s {
             struct flow_rule_table_s game_loop;
         } rule_tables;
     } flow_data;
+
+    // code
+    void (*allocate_sprites)(void);	// called on ENTER_SCREEN by map_enter_screen
+    void (*free_sprites)(void);		// called on EXIT_SCREEN by map_exit_screen
 };
 
 // with a generic function to draw a screen passed by pointer we can

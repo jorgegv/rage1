@@ -85,3 +85,11 @@ uint16_t map_count_enemies_all(void) {
 
     return count;
 }
+
+void map_enter_screen( struct map_screen_s *s ) {
+    if ( s->allocate_sprites ) s->allocate_sprites();
+}
+
+void map_exit_screen( struct map_screen_s *s ) {
+    if ( s->free_sprites ) s->free_sprites();
+}
