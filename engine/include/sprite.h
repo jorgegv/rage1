@@ -76,4 +76,13 @@ void sprite_animate_and_move_all( uint8_t num_sprites, struct sprite_info_s *spr
 void sprite_move_offscreen( struct sp1_ss *s );
 void sprite_move_offscreen_all( uint8_t num_sprites, struct sprite_info_s *sprites );
 
+// callback function and static params to set a sprite attributes
+struct attr_param_s {
+    uint8_t attr;
+    uint8_t attr_mask;
+};
+
+extern struct attr_param_s sprite_attr_param;
+void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c );
+
 #endif // _SPRITES_H

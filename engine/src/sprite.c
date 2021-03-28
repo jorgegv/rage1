@@ -117,3 +117,12 @@ void sprite_move_offscreen_all( uint8_t num_sprites, struct sprite_info_s *sprit
     i = num_sprites;
     while ( i-- ) sprite_move_offscreen( sprites[i].sprite );
 }
+
+// standard hook to set sprite attributes. This is a strange function,
+// its parameters must be passed through 2 global variables, defined below :-/
+struct attr_param_s sprite_attr_param;
+
+void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c ) {
+    c->attr		= sprite_attr_param.attr;
+    c->attr_mask	= sprite_attr_param.attr_mask;
+}

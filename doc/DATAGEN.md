@@ -195,6 +195,7 @@ END_SPRITE
 * `PNG_MASK`: analogous to PNG_DATA, but selects sprite mask data instead.
   The new argument MASKCOLOR is used to specify the color that will be used
   as the mask.
+* `COLOR`: The color of the sprite. Must be an INK_* Spectrum constant
 
 A common arrangement for sprite graphics in PNG files is to draw the sprite
 in B/W (#000000, #ffffff), and the mask in red (#ff0000)
@@ -294,6 +295,13 @@ this element (=obstacle) but s/he must move around. Arguments:
   the speed of the enemy). Specified in 1/50s (screen frames)
   * `ANIMATION_DELAY`: delay between different sprites frames to be used for drawing
   the enemy, specified in 1/50s (screen frames)
+* `BACKGROUND`: defines a background as a rectangle of repeated tiles.
+Arguments:
+  * `BTILE`: the name of the BTILE which will be repeated
+  * `ROW`,`COL`: top-left corner of the rectangle that will be filled with
+  btiles
+  * `WIDTH`,`HEIGHT`: width and height in char cells of the rectangle to be
+  filled
 
 ### HERO data
 

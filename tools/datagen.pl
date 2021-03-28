@@ -805,7 +805,9 @@ sub output_screen_sprite_initialization_code {
     printf $output_fh "\t// Screen '%s' - Sprite initialization\n", $screen->{'name'};
     printf $output_fh "\tmap[%d].sprite_data.num_sprites = %d;\n\n", $screen_num, scalar( @$sprites );
     my $sprite_num = 0;
-    foreach my $sprite ( map { $sprites[ $sprite_name_to_index{$_->{'name'}} ] } @$sprites ) {
+    foreach my $enemy ( @$sprites ) {
+        my $sprite = $sprites[ $sprite_name_to_index{ $enemy->{'name'} } ];
+
         printf $output_fh "\t// Sprite '%s'\n", $sprite->{'name'};
 
         # generate code for initializing SP1 structure
@@ -837,6 +839,13 @@ sub output_screen_sprite_initialization_code {
             if ( $ythresh > 1 ) {
                 printf $output_fh "\ts->ythresh = %d;\n", $ythresh;
             }
+        }
+
+        # if there is a COLOR element in the enemy, set enemy color
+        if ( defined( $enemy->{'color'} ) ) {
+            printf $output_fh "\tsprite_attr_param.attr = %s;\n", $enemy->{'color'};
+            printf $output_fh "\tsprite_attr_param.attr_mask = 0xF8;\n";
+            printf $output_fh "\tsp1_IterateSprChar( s, sprite_set_cell_attributes );\n";
         }
 
         # set sprite initial flags and end of sprite
