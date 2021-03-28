@@ -41,7 +41,15 @@ void check_game_flags( void ) {
       // update screen data if the player has entered new screen
       // also done whe game has just started
       if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
-         // handle tasks and reset flag
+
+         // do housekeeping in previous screen, but only if there is a previous screen
+         if ( ! GET_GAME_FLAG( F_GAME_START ) )
+             map_exit_screen( &map[ game_state.previous_screen ] );
+
+         // prepare current screen
+         map_enter_screen( &map[ game_state.current_screen ] );
+
+         // draw screen and reset sprites
          map_draw_screen( &map[ game_state.current_screen ] );
          sprite_reset_position_all( 
             map[ game_state.current_screen ].sprite_data.num_sprites, 
@@ -188,7 +196,12 @@ void run_main_game_loop(void) {
    // end of main game loop
    // we reach here if game over or game finished successfully
 
-   // cleanup: move all sprites off-screen:
+   // cleanup
+
+   // free sprites in the current screen
+   map_exit_screen( &map[ game_state.current_screen ] );
+
+   // move all sprites off-screen:
    // hero
    sprite_move_offscreen( game_state.hero.sprite );
    // enemies

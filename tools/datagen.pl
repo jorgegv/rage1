@@ -944,6 +944,25 @@ sub output_screen {
         print $output_fh "\n};\n\n";
     }
 
+    # functions for allocating/freeing sprites
+    if ( scalar( @{$screen->{'sprites'}} ) ) {
+        my $screen_name = $screen->{'name'};
+
+        printf $output_fh "// Screen '%s' functions\n", $screen_name;
+
+        print $output_fh <<EOF_MAP_ALLOC_FN
+void screen_${screen_name}_allocate_sprites( struct map_screen_s *m ) {
+EOF_MAP_ALLOC_FN
+;
+        print $output_fh "}\n\n";
+
+        print $output_fh <<EOF_MAP_FREE_FN
+void screen_${screen_name}_free_sprites( struct map_screen_s *m ) {
+EOF_MAP_FREE_FN
+;
+        print $output_fh "}\n\n";
+    }
+
 }
 
 ###################################
@@ -1292,6 +1311,12 @@ EOF_MAP
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t{ %d, %s },\t// hotzone_data\n", 
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
+            sprintf( "\t\t.allocate_sprites = %s,\n",
+                ( scalar( @{$_->{'sprites'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
+                ) .
+            sprintf( "\t\t.free_sprites = %s\n",
+                ( scalar( @{$_->{'sprites'}} ) ? sprintf( "screen_%s_free_sprites", $_->{'name'} ) : "NULL" ),
+                ) .
             "\t}"
         } @screens );
     print $output_fh "\n};\n\n";

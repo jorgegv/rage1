@@ -56,8 +56,8 @@ struct map_screen_s {
     } flow_data;
 
     // code
-    void (*allocate_sprites)(void);	// called on ENTER_SCREEN by map_enter_screen
-    void (*free_sprites)(void);		// called on EXIT_SCREEN by map_exit_screen
+    void (*allocate_sprites)(struct map_screen_s *m);	// called on ENTER_SCREEN by map_enter_screen
+    void (*free_sprites)(struct map_screen_s *m);	// called on EXIT_SCREEN by map_exit_screen
 };
 
 // with a generic function to draw a screen passed by pointer we can
@@ -67,6 +67,8 @@ void map_draw_screen(struct map_screen_s *s);
 uint8_t map_get_item_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
 void map_sprites_reset_all(void);
 uint16_t map_count_enemies_all(void);
+void map_enter_screen( struct map_screen_s *s );
+void map_exit_screen( struct map_screen_s *s );
 
 // utility macros and definitions
 
