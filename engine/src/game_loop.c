@@ -11,6 +11,7 @@
 #include <arch/spectrum.h>
 #include <intrinsic.h>
 #include <input.h>
+#include <stdlib.h>
 
 #include "game_state.h"
 #include "interrupts.h"
@@ -118,6 +119,12 @@ void show_heartbeat(void) {
 }
 
 void run_main_game_loop(void) {
+
+   // seed PRNG. It is important that this is done here, after the menu has been run
+   // and the controller has been selected. This involves the human user, and so
+   // introduces a random factor in the frame and seconds counter, which are then
+   // used to set the initial seed of the PRNG
+   srand( ( current_time.sec << 16 ) & current_time.frame );
 
    // reset game vars and setup initial state
    game_state_reset_initial();
