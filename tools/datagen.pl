@@ -956,11 +956,15 @@ EOF_MAP_ALLOC_FN
 ;
         print $output_fh "}\n\n";
 
-        print $output_fh <<EOF_MAP_FREE_FN
-void screen_${screen_name}_free_sprites( struct map_screen_s *m ) {
-EOF_MAP_FREE_FN
-;
-        print $output_fh "}\n\n";
+# we do not need to output a private sprite-freeing function, since we can
+# use the generic one provided in engine/src/map.c:
+#   void map_generic_free_sprites_function( struct map_screen_s *s );
+
+#        print $output_fh <<EOF_MAP_FREE_FN
+#void screen_${screen_name}_free_sprites( struct map_screen_s *m ) {
+#EOF_MAP_FREE_FN
+#;
+#        print $output_fh "}\n\n";
     }
 
 }
@@ -1314,9 +1318,8 @@ EOF_MAP
             sprintf( "\t\t.allocate_sprites = %s,\n",
                 ( scalar( @{$_->{'sprites'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
                 ) .
-            sprintf( "\t\t.free_sprites = %s\n",
-                ( scalar( @{$_->{'sprites'}} ) ? sprintf( "screen_%s_free_sprites", $_->{'name'} ) : "NULL" ),
-                ) .
+            # use generic sprite freeing function
+            sprintf( "\t\t.free_sprites = %s\n", "map_generic_free_sprites_function" ) .
             "\t}"
         } @screens );
     print $output_fh "\n};\n\n";

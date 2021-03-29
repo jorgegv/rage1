@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
+#include <stdlib.h>
 
 #include "map.h"
 #include "game_state.h"
@@ -92,4 +93,14 @@ void map_enter_screen( struct map_screen_s *s ) {
 
 void map_exit_screen( struct map_screen_s *s ) {
     if ( s->free_sprites ) s->free_sprites( s );
+}
+
+// this function can be used generically, since the only data needed for
+// free is the pointer itself, and we know the number of sprites from
+// map_screen_s struct
+void map_generic_free_sprites_function( struct map_screen_s *s ) {
+    static uint8_t i;
+    i = s->sprite_data.num_sprites;
+    while ( i-- )
+        free( &s->sprite_data.sprites[ i ] );
 }

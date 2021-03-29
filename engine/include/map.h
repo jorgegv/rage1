@@ -69,6 +69,7 @@ void map_sprites_reset_all(void);
 uint16_t map_count_enemies_all(void);
 void map_enter_screen( struct map_screen_s *s );
 void map_exit_screen( struct map_screen_s *s );
+void map_generic_free_sprites_function( struct map_screen_s *s );
 
 // utility macros and definitions
 
