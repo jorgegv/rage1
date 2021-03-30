@@ -27,7 +27,6 @@ void init_program(void) {
    init_sp1();
    init_interrupts();
    init_controllers();
-   init_screen_sprite_tables();
    init_hero();
    init_flowgen();
 }

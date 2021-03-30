@@ -43,13 +43,6 @@ void check_game_flags( void ) {
       // also done whe game has just started
       if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
 
-         // do housekeeping in previous screen, but only if there is a previous screen
-         if ( ! GET_GAME_FLAG( F_GAME_START ) )
-             map_exit_screen( &map[ game_state.previous_screen ] );
-
-         // prepare current screen
-         map_enter_screen( &map[ game_state.current_screen ] );
-
          // draw screen and reset sprites
          map_draw_screen( &map[ game_state.current_screen ] );
          sprite_reset_position_all( 
@@ -132,7 +125,7 @@ void run_main_game_loop(void) {
    // and the controller has been selected. This involves the human user, and so
    // introduces a random factor in the frame and seconds counter, which are then
    // used to set the initial seed of the PRNG
-   srand( ( current_time.sec << 16 ) & current_time.frame );
+   srand( ( current_time.sec << 8 ) & current_time.frame );
 
    // reset game vars and setup initial state
    game_state_reset_initial();
@@ -152,11 +145,10 @@ void run_main_game_loop(void) {
       // reset all loop flags for a clear iteration
       RESET_ALL_LOOP_FLAGS();
 
-      // hotzones need to be checked at the very beginning of the game loop,
-      // because they can change the current screen, hero position, sprites, etc.
-
       // check hotzones
       // changes game_state
+      // hotzones need to be checked at the very beginning of the game loop,
+      // because they can change the current screen, hero position, sprites, etc.
       check_hotzones();
 
       // update sprites

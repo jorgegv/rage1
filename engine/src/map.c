@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
+#include <games/sp1.h>
 #include <stdlib.h>
 
 #include "map.h"
@@ -102,5 +103,5 @@ void map_generic_free_sprites_function( struct map_screen_s *s ) {
     static uint8_t i;
     i = s->sprite_data.num_sprites;
     while ( i-- )
-        free( &s->sprite_data.sprites[ i ] );
+        sp1_DeleteSpr( s->sprite_data.sprites[ i ].sprite );
 }

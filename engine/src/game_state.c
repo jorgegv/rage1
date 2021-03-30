@@ -26,8 +26,11 @@ struct game_state_s game_state;
 
 void game_state_reset_initial(void) {
 
-   // current_screen.{row,col} are set by this function
-   game_state_goto_screen( MAP_INITIAL_SCREEN );
+   // set initial screen
+   game_state.current_screen = MAP_INITIAL_SCREEN;
+
+   // run ENTER_SCREEN hooks for the initial screen
+   map_enter_screen( &map[ game_state.current_screen ] );
 
    // reset everything
    hero_reset_all();
@@ -46,6 +49,8 @@ void game_state_reset_initial(void) {
 }
 
 // change to a new screen
+// can't be used on game start!
+// this function presumes a previous screen
 void game_state_goto_screen(uint8_t screen) {
 
     // move all spritess and bullets off-screen
@@ -53,9 +58,15 @@ void game_state_goto_screen(uint8_t screen) {
         map[ game_state.current_screen ].sprite_data.sprites );
     bullet_move_offscreen_all();
 
+    // run EXIT_SCREEN hooks for the old screen
+    map_exit_screen( &map[ game_state.current_screen ] );
+
     // update basic screen data
     game_state.previous_screen = game_state.current_screen;
     game_state.current_screen = screen;
+
+    // run ENTER_SCREEN hooks for the new screen
+    map_enter_screen( &map[ game_state.current_screen ] );
 
     // set flag
     SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );

@@ -312,10 +312,9 @@ void hero_check_if_inside_hotzones(void) {
             ) ) {
             switch ( hz->type ) {
                 case HZ_TYPE_WARP:
-                    game_state_goto_screen( hz->destination_screen.screen_num );
                     game_state.hero.position.x = hz->destination_screen.hero_x;
                     game_state.hero.position.y = hz->destination_screen.hero_y;
-                    SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
+                    game_state_goto_screen( hz->destination_screen.screen_num );
                     return;
                     break;
                 case HZ_TYPE_END_OF_GAME:
