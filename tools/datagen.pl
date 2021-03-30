@@ -860,7 +860,6 @@ sub output_screen_sprite_initialization_code_new {
     my $screen = shift;
     my $sprites = $screen->{'sprites'};
     printf $output_fh "\t// Screen '%s' - Sprite initialization\n", $screen->{'name'};
-    printf $output_fh "\tm->sprite_data.num_sprites = %d;\n\n", scalar( @$sprites );
     my $sprite_num = 0;
     foreach my $enemy ( @$sprites ) {
         my $sprite = $sprites[ $sprite_name_to_index{ $enemy->{'name'} } ];
@@ -904,8 +903,6 @@ sub output_screen_sprite_initialization_code_new {
             printf $output_fh "\tsp1_IterateSprChar( s, sprite_set_cell_attributes );\n";
         }
 
-        # set sprite initial flags and end of sprite
-        printf $output_fh "\tSET_SPRITE_FLAG( m->sprite_data.sprites[%d], F_SPRITE_ACTIVE );\n", $sprite_num;
         printf $output_fh "\t// End of Sprite '%s'\n\n", $sprite->{'name'};
         $sprite_num++;
     }
