@@ -799,64 +799,6 @@ sub validate_and_compile_screen {
 }
 
 sub output_screen_sprite_initialization_code {
-    my ( $screen_num ) = @_;
-    my $screen = $screens[ $screen_num ];
-    my $sprites = $screen->{'sprites'};
-    printf $output_fh "\t// Screen '%s' - Sprite initialization\n", $screen->{'name'};
-    printf $output_fh "\tmap[%d].sprite_data.num_sprites = %d;\n\n", $screen_num, scalar( @$sprites );
-    my $sprite_num = 0;
-    foreach my $enemy ( @$sprites ) {
-        my $sprite = $sprites[ $sprite_name_to_index{ $enemy->{'name'} } ];
-
-        printf $output_fh "\t// Sprite '%s'\n", $sprite->{'name'};
-
-        # generate code for initializing SP1 structure
-        printf $output_fh "\tmap[%d].sprite_data.sprites[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
-            $screen_num,
-            $sprite_num,
-            $sprite->{'rows'} + 1,	# height in chars including blank bottom row
-            0,				# left column graphic offset
-            0,				# plane
-        ;
-        foreach my $ac ( 1 .. ($sprite->{'cols'} - 1) ) {
-            printf $output_fh "\tsp1_AddColSpr(s, SP1_DRAW_MASK2, %d, %d, %d );\n",
-                0,					# type
-                ( $sprite->{'rows'} + 1 ) * 16 * $ac,	# nth column graphic offset
-                0,					# plane
-            ;
-        }
-        printf $output_fh "\tsp1_AddColSpr(s, SP1_DRAW_MASK2RB, 0, 0, 0);\n";	# empty rightmost column
-
-        # optimize SP1 for xthresh and vthresh
-        if ( defined( $sprite->{'real_pixel_width'} ) ) {
-            my $xthresh = ( 8 - ( $sprite->{'real_pixel_width'} % 8 ) + 1 ) % 8;
-            if ( $xthresh > 1 ) {
-                printf $output_fh "\ts->xthresh = %d;\n", $xthresh;
-            }
-        }
-        if ( defined( $sprite->{'real_pixel_height'} ) ) {
-            my $ythresh = ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8;
-            if ( $ythresh > 1 ) {
-                printf $output_fh "\ts->ythresh = %d;\n", $ythresh;
-            }
-        }
-
-        # if there is a COLOR element in the enemy, set enemy color
-        if ( defined( $enemy->{'color'} ) ) {
-            printf $output_fh "\tsprite_attr_param.attr = %s;\n", $enemy->{'color'};
-            printf $output_fh "\tsprite_attr_param.attr_mask = 0xF8;\n";
-            printf $output_fh "\tsp1_IterateSprChar( s, sprite_set_cell_attributes );\n";
-        }
-
-        # set sprite initial flags and end of sprite
-        printf $output_fh "\tSET_SPRITE_FLAG( map[%d].sprite_data.sprites[%d], F_SPRITE_ACTIVE );\n", $screen_num, $sprite_num;
-        printf $output_fh "\t// End of Sprite '%s'\n\n", $sprite->{'name'};
-        $sprite_num++;
-    }
-    printf $output_fh "\t// Screen '%s' - End of Sprite initialization\n\n", $screen->{'name'};
-}
-
-sub output_screen_sprite_initialization_code_new {
     my $screen = shift;
     my $sprites = $screen->{'sprites'};
     printf $output_fh "\t// Screen '%s' - Sprite initialization\n", $screen->{'name'};
@@ -1009,7 +951,7 @@ void screen_${screen_name}_allocate_sprites( struct map_screen_s *m ) {
 \tstruct sp1_ss *s;     // temporary storage
 EOF_MAP_ALLOC_FN
 ;
-        output_screen_sprite_initialization_code_new( $screen );
+        output_screen_sprite_initialization_code( $screen );
         print $output_fh "}\n\n";
 
 # we do not need to output a private sprite-freeing function, since we can
@@ -1381,33 +1323,6 @@ EOF_MAP
     print $output_fh "\n};\n\n";
 }
 
-sub output_map_sprites_initialization {
-    # output sprite creation code
-    # this must be done after the map definition, since this function
-    # loads the sprite data into every screen
-    print $output_fh <<EOF_SPRITES2
-//////////////////////////////////////
-// Sprite initialization function
-//////////////////////////////////////
-
-void init_screen_sprite_tables(void) {
-\tstruct sp1_ss *s;	// temporary storage
-
-EOF_SPRITES2
-;
-
-    foreach my $s ( 0 .. (scalar( @screens ) - 1) ) {
-        output_screen_sprite_initialization_code( $s );
-    }
-
-    print $output_fh <<EOF_SPRITES3
-
-}
-
-EOF_SPRITES3
-;
-}
-
 sub output_hero_sprites_initialization {
     my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ];
 
@@ -1603,7 +1518,6 @@ sub output_generated_data {
     output_map;
     output_hero;
     output_bullets;
-    output_map_sprites_initialization;
     output_hero_sprites_initialization;
     output_bullet_sprites_initialization;
     output_items;
