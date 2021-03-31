@@ -20,7 +20,7 @@
 
 // draw a given screen
 void map_draw_screen(struct map_screen_s *s) {
-    static uint8_t i;
+    static uint8_t i,r,c, maxr, maxc, btwidth, btheight;
     static struct btile_pos_s *t;
     static struct item_location_s *it;
 
@@ -29,6 +29,26 @@ void map_draw_screen(struct map_screen_s *s) {
 
     // clear btile types
     btile_clear_type_all_screen();
+
+    // draw background if present
+    if ( s->background_data.btile ) {
+        maxr = s->background_data.box.row + s->background_data.box.height - 1;
+        maxc = s->background_data.box.col + s->background_data.box.width - 1;
+        btwidth = s->background_data.btile->num_cols;
+        btheight = s->background_data.btile->num_rows;
+
+        r = s->background_data.box.row;
+        while ( r <= maxr ) {
+            c = s->background_data.box.col;
+            while ( c <= maxc ) {
+                // draw the btile with probability (s->background_data.probability / 255)
+                if ( (uint8_t) rand() <= s->background_data.probability )
+                    btile_draw( r, c, s->background_data.btile, TT_DECORATION, &s->background_data.box );
+                c += btwidth;
+            }
+            r += btheight;
+        }
+    }
 
     // draw tiles
     i = s->btile_data.num_btiles;
