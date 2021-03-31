@@ -768,34 +768,6 @@ sub validate_and_compile_screen {
         }
     }
 
-    # generate background tiles from BACKGROUND element
-    if ( defined( $screen->{'background'} ) ) {
-        my $bg = $screen->{'background'};
-        ( $bg->{'row'} =~ /^\d+/ ) or
-            die "Screen '$screen->{name}': BACKGROUND: invalid ROW value\n";
-        ( $bg->{'col'} =~ /^\d+/ ) or
-            die "Screen '$screen->{name}': BACKGROUND: invalid COL value\n";
-        ( $bg->{'width'} =~ /^\d+/ ) or
-            die "Screen '$screen->{name}': BACKGROUND: invalid WIDTH value\n";
-        ( $bg->{'height'} =~ /^\d+/ ) or
-            die "Screen '$screen->{name}': BACKGROUND: invalid HEIGHT value\n";
-        my $r = $bg->{'row'};
-        my $c = $bg->{'col'};
-        my $bt = $btiles[ $btile_name_to_index{ $bg->{'btile'} } ];
-        while ( $r < ( $bg->{'row'} + $bg->{'height'} ) ) {
-            my $c = $bg->{'col'};
-            while ( $c < ( $bg->{'col'} + $bg->{'width'} ) ) {
-                push @{ $screen->{'btiles'} }, {
-                    btile	=> $bg->{'btile'},
-                    row		=> $r,
-                    col		=> $c,
-                    type	=> 'DECORATION',
-                };
-                $c += $bt->{'cols'};
-            }
-            $r += $bt->{'rows'};
-        }
-    }
 }
 
 sub output_screen_sprite_initialization_code {
@@ -1303,16 +1275,21 @@ EOF_MAP
 
     print $output_fh join( ",\n", map {
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
-            sprintf( "\t\t{ %d, %s },\t// btile_data\n", 
+            sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
-            sprintf( "\t\t{ %d, %s },\t// sprite_data\n", 
+            sprintf( "\t\t.sprite_data = { %d, %s },\t// sprite_data\n",
                 scalar( @{$_->{'sprites'}} ), ( scalar( @{$_->{'sprites'}} ) ? sprintf( 'screen_%s_sprites', $_->{'name'} ) : 'NULL' ) ) .
-            sprintf( "\t\t{ %d, %d },\t// hero_data\n", 
+            sprintf( "\t\t.hero_data = { %d, %d },\t// hero_data\n",
                 $_->{'hero'}{'startup_xpos'}, $_->{'hero'}{'startup_ypos'} ) .
-            sprintf( "\t\t{ %d, %s },\t// item_data\n", 
+            sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) ) .
-            sprintf( "\t\t{ %d, %s },\t// hotzone_data\n", 
+            sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
+            sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
+                ( defined( $_->{'background'} ) ? sprintf( "&btile_%s", $_->{'background'}{'btile'} ) : "NULL" ),
+                ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
+                ( defined( $_->{'background'} ) ? ( $_->{'background'}{'row'}, $_->{'background'}{'col'}, $_->{'background'}{'width'}, $_->{'background'}{'height'} ) : ( 0,0,0,0 ) )
+                ) .
             sprintf( "\t\t.allocate_sprites = %s,\n",
                 ( scalar( @{$_->{'sprites'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
                 ) .

@@ -54,6 +54,11 @@ struct map_screen_s {
             struct flow_rule_table_s game_loop;
         } rule_tables;
     } flow_data;
+    struct {
+        struct btile_s *btile;
+        uint8_t probability;
+        struct sp1_Rect box;
+    } background_data;
 
     // code
     void (*allocate_sprites)(struct map_screen_s *m);	// called on ENTER_SCREEN by map_enter_screen
