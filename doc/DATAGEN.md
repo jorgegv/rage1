@@ -236,7 +236,7 @@ BEGIN_SCREEN
 
 	ITEM		NAME=Heart	ROW=3 COL=6 ITEM_ID=0
 
-	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=22
+	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=22 PROBABILITY=140
 END_SCREEN
 ```
 
@@ -302,6 +302,9 @@ Arguments:
   btiles
   * `WIDTH`,`HEIGHT`: width and height in char cells of the rectangle to be
   filled
+  * `PROBABILITY`: a value in 0-255 which maps to the probability [0..1]
+  that each filling btile is generated. Useful for generating randomized
+  backgrounds: stars, grass, water, etc.
 
 ### HERO data
 
