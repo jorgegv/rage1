@@ -13,21 +13,7 @@
 #include <input.h>
 #include <stdlib.h>
 
-#include "game_state.h"
-#include "interrupts.h"
-#include "screen.h"
-#include "beeper.h"
-#include "controller.h"
-#include "sp1engine.h"
-#include "game_data.h"
-#include "sprite.h"
-#include "collision.h"
-#include "bullet.h"
-#include "debug.h"
-#include "btile.h"
-#include "game_loop.h"
-#include "flow.h"
-#include "game_config.h"
+#include "rage1.h"
 
 void check_game_pause(void) {
    if ( controller_pause_key_pressed() ) {

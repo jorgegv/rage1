@@ -12,11 +12,7 @@
 #include <games/sp1.h>
 #include <stdlib.h>
 
-#include "map.h"
-#include "game_state.h"
-#include "inventory.h"
-#include "game_data.h"
-#include "screen.h"
+#include "rage1.h"
 
 // draw a given screen
 void map_draw_screen(struct map_screen_s *s) {

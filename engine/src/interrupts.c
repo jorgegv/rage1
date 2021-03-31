@@ -19,12 +19,10 @@
 #include <string.h>
 #include <intrinsic.h>
 
-#include "debug.h"
+#include "rage1.h"
 
 // data struct and ISR hook for timekeeping
-struct time {
-   uint8_t hour, min, sec, frame;
-} current_time = { 0, 0, 0, 0 };
+struct time current_time = { 0, 0, 0, 0 };
 
 // timer tick routine
 IM2_DEFINE_ISR(do_timer_tick)

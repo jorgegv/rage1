@@ -14,17 +14,7 @@
 #include <input.h>
 #include <arch/spectrum.h>
 
-#include "hero.h"
-#include "game_state.h"
-#include "btile.h"
-#include "screen.h"
-#include "sprite.h"
-#include "debug.h"
-#include "game_data.h"
-#include "interrupts.h"
-#include "bullet.h"
-#include "beeper.h"
-#include "hotzone.h"
+#include "rage1.h"
 
 void init_hero(void) {
     init_hero_sprites();

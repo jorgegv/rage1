@@ -13,9 +13,10 @@
 
 #include <stdint.h>
 
-extern struct time {
+struct time {
    uint8_t hour, min, sec, frame;
-} current_time;
+};
+extern struct time current_time;
 
 void init_interrupts(void);
 
