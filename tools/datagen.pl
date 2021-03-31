@@ -1285,11 +1285,14 @@ EOF_MAP
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
-            sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
-                ( defined( $_->{'background'} ) ? sprintf( "&btile_%s", $_->{'background'}{'btile'} ) : "NULL" ),
-                ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
-                ( defined( $_->{'background'} ) ? ( $_->{'background'}{'row'}, $_->{'background'}{'col'}, $_->{'background'}{'width'}, $_->{'background'}{'height'} ) : ( 0,0,0,0 ) )
-                ) .
+            ( defined( $_->{'background'} ) ?
+                sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
+                    sprintf( "&btile_%s", $_->{'background'}{'btile'} ),
+                    ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
+                    $_->{'background'}{'row'}, $_->{'background'}{'col'},
+                    $_->{'background'}{'width'}, $_->{'background'}{'height'}
+                ) :
+                "\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
             sprintf( "\t\t.allocate_sprites = %s,\n",
                 ( scalar( @{$_->{'sprites'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
                 ) .
