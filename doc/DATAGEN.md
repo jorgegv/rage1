@@ -237,6 +237,11 @@ BEGIN_SCREEN
 	ITEM		NAME=Heart	ROW=3 COL=6 ITEM_ID=0
 
 	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=22 PROBABILITY=140
+
+	DEFINE		GRAPH=II	TYPE=OBSTACLE   BTILE=Ice01
+	SCREEN_DATA	"    (64 spaces)    "
+	... (24 SCREEN_DATA lines)
+
 END_SCREEN
 ```
 
@@ -305,6 +310,26 @@ Arguments:
   * `PROBABILITY`: a value in 0-255 which maps to the probability [0..1]
   that each filling btile is generated. Useful for generating randomized
   backgrounds: stars, grass, water, etc.
+* `SCREEN_DATA`: optional 24 lines of 64 characters, enclosed by quotes (").
+A text representation of the screen map, with the different btiles
+(obstacles and decorations) drawn by 2-char sequences. See
+`game_data/map/Screen03.gdata` for an example). Only OBSTACLEs and
+DECORATIONs can be drawn with this method. The remaining elements (ITEMs,
+HOTZONEs, etc.) must be specified with the previous commands.
+* `DEFINE`: define a graph for using it in SCREEN_DATA lines. Arguments:
+  * `GRAPH`: 2-char repsesentation of each character cell for the BTILE
+  * `BTILE`: the btile name for this graph
+  * `TYPE`: OBSTACLE or DECORATION
+
+*Special Note:*
+
+The order in which the elements are placed on the screen is the following:
+
+- If SCREEN_DATA lines exist, there must be exactly 24 lines, and exactly of
+64 characters each (not counting the enclosing quotes). That is a 32x24
+character-cell screen.
+- SCREEN_DATA elements are generated
+- Remaining elements are positioned over the previous ones if needed
 
 ### HERO data
 
