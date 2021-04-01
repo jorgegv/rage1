@@ -1,0 +1,57 @@
+BEGIN_SCREEN
+	NAME		Screen03
+
+	// Decoration for a hotzone must defined separately
+	// warp to Screen02
+	HOTZONE		NAME=Stairs	ROW=17 COL=11 WIDTH=1 HEIGHT=2 TYPE=WARP DEST_SCREEN=Screen02 DEST_HERO_X=180 DEST_HERO_Y=136 ACTIVE=1
+
+	// Decoration for a hotzone must defined separately
+	HOTZONE		NAME=ExitGame	ROW=1 COL=29 WIDTH=2 HEIGHT=2 TYPE=END_OF_GAME ACTIVE=0
+
+	SPRITE  	NAME=Ghost01	MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1 COLOR=INK_RED
+	SPRITE  	NAME=GhostPNG	MOVEMENT=LINEAR XMIN=40 YMIN=8 XMAX=233 YMAX=159 INITX=50 INITY=8 DX=1 DY=2 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1 COLOR=INK_CYAN
+	SPRITE  	NAME=GhostPNG	MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=159 INITX=50 INITY=108 DX=1 DY=2 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1 COLOR=INK_GREEN
+
+	HERO		STARTUP_XPOS=20 STARTUP_YPOS=20
+
+	ITEM		NAME=Heart	BTILE=Heart ROW=3 COL=6 ITEM_INDEX=0
+	ITEM		NAME=MagicKey	BTILE=MagicKey ROW=3 COL=16 ITEM_INDEX=1
+
+	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=21 PROBABILITY=255
+
+	DEFINE		GRAPH=II	TYPE=OBSTACLE	BTILE=Ice01
+	DEFINE		GRAPH=RR	TYPE=OBSTACLE	BTILE=Rock01
+	DEFINE		GRAPH=TT	TYPE=OBSTACLE	BTILE=Tree01
+	DEFINE		GRAPH=SS	TYPE=DECORATION	BTILE=Stairs
+	DEFINE		GRAPH=QP	TYPE=DECORATION	BTILE=QuePereza
+	DEFINE		GRAPH=TE	TYPE=OBSTACLE	BTILE=TomaEmail
+	DEFINE		GRAPH=PN	TYPE=OBSTACLE	BTILE=PNGTest
+	DEFINE		GRAPH=WW	TYPE=OBSTACLE	BTILE=Wall1x1
+	DEFINE		GRAPH=EG	TYPE=DECORATION	BTILE=ExitGame
+	SCREEN_DATA	"                                                                "
+	SCREEN_DATA	"                                                        WWEGEG  "
+	SCREEN_DATA	"                                                        WWEGEG  "
+	SCREEN_DATA	"                                                        WWWWWW  "
+	SCREEN_DATA	"                            QPQPQP                              "
+	SCREEN_DATA	"                            QPQPQP                              "
+	SCREEN_DATA	"                                                                "
+	SCREEN_DATA	"                                                                "
+	SCREEN_DATA	"        TTTT                                IIII                "
+	SCREEN_DATA	"        TTTT                            IIIIIIII                "
+	SCREEN_DATA	"        TTTTTTTT        RRRRRRRR        IIII                    "
+	SCREEN_DATA	"            TTTT        RRRRRRRR                                "
+	SCREEN_DATA	"            TTTT                                                "
+	SCREEN_DATA	"                                                                "
+	SCREEN_DATA	"                                            TETETE              "
+	SCREEN_DATA	"                                            TETETE              "
+	SCREEN_DATA	"                    SSSSSS                                      "
+	SCREEN_DATA	"                    SSSSSS          PNPNPN                      "
+	SCREEN_DATA	"                    SSSSSS          PNPNPN                      "
+	SCREEN_DATA	"                    SSSSSS                                      "
+	SCREEN_DATA	"                                                                "
+	SCREEN_DATA	"                                                                "
+	SCREEN_DATA	"                                                                "
+	SCREEN_DATA	"                                                                "
+
+
+END_SCREEN
