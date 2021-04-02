@@ -29,7 +29,7 @@ Procedure:
 - The DATA array is processed cell by cell, left to right, top to bottom.
     - If a cell in DATA contains a non-null graph (i.e. not '  '), then:
       - If the same cell in DEST contains a null graph, then:
-        - Lookup the associated BTILE and its dimensions
+        - Lookup the associated BTILE and its dimensions and die if there is no defined digraph
         - "Paint" the BTILE in the DEST array by setting the graphs to those of
           the btile in all the cells (we know everything: position, width,
           height)

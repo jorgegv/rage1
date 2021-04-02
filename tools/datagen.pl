@@ -297,6 +297,20 @@ sub read_input_data {
                 };
                 next;
             }
+            if ( $line =~ /^DEFINE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                $cur_screen->{'digraphs'}{ $item->{'digraph'} } = $item;
+                next;
+            }
+            if ( $line =~ /^SCREEN_DATA\s+"(.*)"$/ ) {
+                push @{ $cur_screen->{'screen_data'} }, $1;
+                next;
+            }
             if ( $line =~ /^END_SCREEN$/ ) {
                 validate_and_compile_screen( $cur_screen );
                 $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @screens );
@@ -745,8 +759,6 @@ sub validate_and_compile_screen {
     my $screen = shift;
     defined( $screen->{'name'} ) or
         die "Screen has no NAME\n";
-    ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
-        die "Screen '$screen->{name}' has no Btiles\n";
     defined( $screen->{'hero'} ) or
         die "Screen '$screen->{name}' has no Hero\n";
 
@@ -768,7 +780,116 @@ sub validate_and_compile_screen {
         }
     }
 
+    # compile SCREEN_DATA lines
+    compile_screen_data( $screen );
+
+    ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
+        die "Screen '$screen->{name}' has no Btiles\n";
 }
+
+# SCREEN_DATA and DEFINE compilation
+sub compile_screen_data {
+    my $screen = shift;
+
+    # map: digraph -> btile, type, row, col
+    # this has been previously generated via the DEFINE directives
+    my $screen_digraphs = $screen->{'digraphs'};
+    my $screen_digraph_counters;
+
+    # DATA and DEST arrays (see MAP-SCREEN-DATA-DESIGN.md)
+    my $screen_data;
+    my $screen_dest;
+    # list of btiles generated from the SCREEN_DATA
+    my @screen_btiles;
+
+    # if no SCREEN_DATA lines exist, nothing to compile, return
+    return if not defined( $screen->{'screen_data'} );
+
+    # check that there are 24 lines of 32 elements (64 chars)
+    ( scalar( @{ $screen->{'screen_data'} } ) == 24 ) or
+        die "Screen '$screen->{name}': there must be exactly 24 SCREEN_DATA lines\n";
+    foreach my $sd ( @{ $screen->{'screen_data'} } ) {
+        ( length( $sd ) == 64 ) or
+            die "Screen '$screen->{name}': SCREEN_DATA lines must be exactly 64 characters long\n";
+    }
+
+    # populate the DEST array
+    foreach my $r ( 0 .. 23 ) {
+        foreach my $c ( 0 .. 31 ) {
+            $screen_dest->[ $r ][ $c ] = '  ';
+        }
+    }
+
+    # populate the DATA array
+    my $row = 0;
+    foreach my $sd ( @{$screen->{'screen_data'}} ) {
+        $screen_data->[$row++] = [ ( $sd =~ m/.{2}/g ) ];
+    }
+
+    # process the DATA array
+    foreach my $r ( 0 .. 23 ) {
+        foreach my $c ( 0 .. 31 ) {
+
+            # ignore the cell if there is no tile in input data
+            next if ( $screen_data->[ $r ][ $c ] eq '  ' );
+
+            # there is a tile in DATA, so process it
+            my $data_dg = $screen_data->[ $r ][ $c ];
+            my $dest_dg = $screen_dest->[ $r ][ $c ];
+
+            # if there is no tile in DEST, this is the first time we see the tile
+            if ( $dest_dg eq '  ' ) {
+
+                # make sure there is a tile DEFINEd with that digraph
+                ( defined( $screen_digraphs->{ $data_dg } ) ) or
+                    die "Screen '$screen->{name}': digraph '$data_dg' is undefined\n";
+
+                # "paint" the tile in the DEST array
+                my $btile = $btiles[ $btile_name_to_index{ $screen_digraphs->{ $data_dg }{'btile'} } ];
+                foreach my $i ( 0 .. ( $btile->{'rows'} - 1 ) ) {
+                    foreach my $j ( 0 .. ( $btile->{'cols'} - 1 ) ) {
+                        $screen_dest->[ $r + $i ][ $c + $j ] = $data_dg;
+                    }
+                }
+
+                # ...and add the tile to the tile list - we add a generated name
+                push @screen_btiles, { 
+                    name => sprintf( "%s_%03d",
+                        $screen_digraphs->{ $data_dg }{'name'},
+                        ( $screen_digraph_counters->{ $screen_digraphs->{ $data_dg }{'name'} }++ || 1 )
+                        ),
+                    btile => $screen_digraphs->{ $data_dg }{'btile'},
+                    type => $screen_digraphs->{ $data_dg }{'type'},
+                    row => $r,
+                    col => $c,
+                };
+
+            # else if there is a tile in DEST and it is different from the one in DATA...
+            } elsif ( $dest_dg ne $data_dg ) {
+
+                # die: we do not allow overlapping btiles (for the moment)
+                die "Screen '$screen->{name}': overlapping btiles at row=$r, col=$c\n";
+
+            # and finally, if the tile in DEST and DATA match, ignore since it's correct (they should match)
+            }
+        }
+    }
+
+    # finally, check that both DATA and DEST array elements match one by one
+    foreach my $r ( 0 .. 23 ) {
+        foreach my $c ( 0 .. 31 ) {
+            ( $screen_data->[ $r ][ $c ] eq $screen_dest->[ $r ][ $c ] ) or
+                die "Screen '$screen->{name}': mismatching btiles at row=$r, col=$c\n";
+        }
+    }
+
+    # at this point, all is correct and we have the list of btiles generated
+    # from the SCREEN_DATA and DEFINE lines.  Add then to the general btile
+    # list for the screen.
+    push @{ $screen->{'btiles'} }, @screen_btiles;
+
+}
+
 
 sub output_screen_sprite_initialization_code {
     my $screen = shift;
