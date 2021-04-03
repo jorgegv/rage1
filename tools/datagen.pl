@@ -428,6 +428,15 @@ sub read_input_data {
                 }
                 next;
             }
+            if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA)\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my ( $directive, $args ) = ( $1, $2 );
+                $game_config->{ lc( $directive ) } = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                next;
+            }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
                 next;
@@ -1208,6 +1217,15 @@ EOF_GAME_CONFIG1
         keys %{ $game_config->{'game_functions'} } );
 
     print $output_fh "\n};\n\n";
+
+    # output game areas
+    print $output_fh "// screen areas\n";
+    print $output_fh "\n" . join( "\n", map {
+        sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
+            $_, ( uc( $_ ) ) x 4 )
+        } qw( game_area lives_area inventory_area debug_area )
+    );
+
 }
 
 ###################################
@@ -1333,14 +1351,7 @@ sub output_header {
 
 #include <arch/spectrum.h>
 
-#include "map.h"
-#include "sprite.h"
-#include "game_data.h"
-#include "debug.h"
-#include "hero.h"
-#include "game_state.h"
-#include "bullet.h"
-#include "game_config.h"
+#include "rage1.h"
 
 EOF_HEADER
 ;
@@ -1600,9 +1611,21 @@ GAME_DATA_H_1
         printf $output_fh "#define SOUND_%s %s\n", uc( $effect ), $game_config->{'sounds'}{ $effect };
     }
 
+    # output definitions for screen areas
+    print $output_fh "\n" . join( "\n", map {
+            "// " .uc( $_ ). " definitions\n" .
+            sprintf( "#define %s_TOP	%d\n", uc( $_ ), $game_config->{ $_ }{'top'} ) .
+            sprintf( "#define %s_LEFT	%d\n", uc( $_ ), $game_config->{ $_ }{'left'} ) .
+            sprintf( "#define %s_BOTTOM	%d\n", uc( $_ ), $game_config->{ $_ }{'bottom'} ) .
+            sprintf( "#define %s_RIGHT	%d\n", uc( $_ ), $game_config->{ $_ }{'right'} ) .
+            sprintf( "#define %s_WIDTH	( %s_RIGHT - %s_LEFT + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
+            sprintf( "#define %s_HEIGHT	( %s_BOTTOM - %s_TOP + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
+            sprintf( "extern struct sp1_Rect %s;\n", $_ )
+        } qw( game_area lives_area inventory_area debug_area )
+    );
+
     # end of header file
     print $output_fh "\n#endif // _GAME_DATA_H\n";
-
 
 }
 

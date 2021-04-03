@@ -12,17 +12,17 @@
 #include <games/sp1.h>
 #include <input.h>
 
-#include "screen.h"
-#include "map.h"
-#include "sp1engine.h"
-#include "game_state.h"
-#include "controller.h"
-#include "beeper.h"
-#include "game_data.h"
-#include "btile.h"
-#include "flow.h"
+#include "rage1.h"
 
-#include "debug.h"
+// External frame coordinates and dimensions
+#define BORDER_TOP		0
+#define BORDER_LEFT		0
+#define BORDER_BOTTOM		22
+#define BORDER_RIGHT		31
+#define BORDER_WIDTH		( BORDER_RIGHT - BORDER_LEFT + 1 )
+#define BORDER_HEIGHT		( BORDER_BOTTOM - BORDER_TOP + 1 )
+
+struct sp1_Rect border_area = { BORDER_TOP, BORDER_LEFT, BORDER_WIDTH, BORDER_HEIGHT };
 
 // global text printing context
 struct sp1_pss print_ctx = {
