@@ -25,11 +25,9 @@
 //  struct
 struct game_state_s {
 
-   // current, previous and next screen indexes in map table
-   // next is only used while we are changing screen. After that, it should always be = current_screen
+   // current, previous screen indexes in map table
    uint8_t current_screen;
    uint8_t previous_screen;
-   uint8_t next_screen;
 
    // hero info and state
    struct hero_info_s hero;
