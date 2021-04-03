@@ -177,14 +177,44 @@ sub validate_and_compile_rule {
         die "At least one DO clause must be specified\n";
 
     # do any special filtering of values
+
+    # check filtering
+    foreach my $chk ( @{ $rule->{'check'} } ) {
+        my ( $check, $check_data ) = split( /\s+/, $chk );
+
+        # hotzone filtering
+        if ( $check =~ /^HERO_INSIDE_HOTZONE$/ ) {
+            $check_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
+            # regenerate the value with the filtered data
+            $chk = sprintf "%s\t%d", $check, $check_data;
+        }
+
+    }
+
+    # action filtering
     foreach my $do ( @{ $rule->{'do'} } ) {
-        my ( $action, $action_data ) = split( /\s+/, $do );
+        $do =~ m/^(\w+)\s*(.*)$/;
+        my ( $action, $action_data ) = ( $1, $2 );
 
         # hotzone filtering
         if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
             $action_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
             # regenerate the value with the filtered data
             $do = sprintf "%s\t%d", $action, $action_data;
+        }
+
+        # warp_to_screen filtering
+        if ( $action =~ /^WARP_TO_SCREEN$/ ) {
+            my $vars = { 
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $action_data )
+            };
+            $action_data = sprintf( "{ .num_screen = %d, .hero_x = %d, .hero_y = %d }",
+                $all_state->{'screen_name_to_index'}{ $vars->{'dest_screen'} },
+                $vars->{'dest_hero_x'},$vars->{'dest_hero_y'}
+            );
+            # regenerate the value with the filtered data
+            $do = sprintf "%s\t%s", $action, $action_data;
         }
 
         # btile filtering
@@ -218,6 +248,7 @@ my $check_data_output_format = {
     ENEMIES_KILLED_LESS_THAN	=> ".data.enemies.count = %d",
     CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
     ITEM_IS_OWNED		=> ".data.item.item_id = %s",
+    HERO_INSIDE_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
 };
 
 my $action_data_output_format = {
@@ -227,7 +258,7 @@ my $action_data_output_format = {
     PLAY_SOUND			=> ".data.play_sound.sound_id = %s",
     CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
     END_OF_GAME			=> ".data.unused = %d",
-    ACTIVATE_EXIT_ZONES		=> ".data.unused = %d",
+    WARP_TO_SCREEN		=> ".data.warp_to_screen = %s",
     ENABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
     DISABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
     ENABLE_BTILE		=> ".data.btile.num_btile = %d",
@@ -256,7 +287,8 @@ sub output_rule_actions {
     my $output = sprintf "struct flow_rule_action_s flow_rule_actions_%05d[%d] = {\n",
         $index, $num_actions;
     foreach my $ac ( @{ $rule->{'do'} } ) {
-        my ( $action, $action_data ) = split( /\s+/, $ac );
+        $ac =~ m/^(\w+)\s*(.*)$/;
+        my ( $action, $action_data ) = ( $1, $2 );
         $output .= sprintf( "\t{ .type = RULE_ACTION_%s, %s },\n",
             $action,
             sprintf( $action_data_output_format->{ $action }, $action_data || 0 )

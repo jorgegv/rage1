@@ -287,33 +287,3 @@ void hero_update_lives_display(void) {
     while ( n-- )
         btile_draw( LIVES_AREA_TOP, col++, game_state.hero.lives_tile, TT_DECORATION, &lives_area );
 }
-
-void hero_check_if_inside_hotzones(void) {
-    static uint8_t i;
-    static struct hotzone_info_s *hz;
-
-    i = map[ game_state.current_screen ].hotzone_data.num_hotzones;
-    while ( i-- ) {
-        hz = &map[ game_state.current_screen ].hotzone_data.hotzones[ i ];
-        if ( GET_HOTZONE_FLAG( *hz, F_HOTZONE_ACTIVE ) &&
-            hotzone_is_inside( hz,
-                game_state.hero.position.x + game_state.hero.width / 2,
-                game_state.hero.position.y + game_state.hero.height / 2
-            ) ) {
-            switch ( hz->type ) {
-                case HZ_TYPE_WARP:
-                    game_state.hero.position.x = hz->destination_screen.hero_x;
-                    game_state.hero.position.y = hz->destination_screen.hero_y;
-                    game_state_goto_screen( hz->destination_screen.screen_num );
-                    return;
-                    break;
-                case HZ_TYPE_END_OF_GAME:
-                    SET_LOOP_FLAG( F_LOOP_INSIDE_EXIT_ZONE );
-                    return;
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-}

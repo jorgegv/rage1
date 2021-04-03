@@ -91,12 +91,6 @@ void check_collisions(void) {
     collision_check_bullets_with_sprites();
 }
 
-void check_hotzones(void) {
-    RUN_ONLY_ONCE_PER_FRAME;
-
-    hero_check_if_inside_hotzones();
-}
-
 void show_heartbeat(void) {
     if ( current_time.frame & 0x08 ) {
         sp1_PrintAtInv(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, DEFAULT_BG_ATTR, ' ');
@@ -131,11 +125,14 @@ void run_main_game_loop(void) {
       // reset all loop flags for a clear iteration
       RESET_ALL_LOOP_FLAGS();
 
-      // check hotzones
+      // check flow rules before the regular ones. We trust the user :-)
+
+      // these must be run first, because they can change the current
+      // screen, hero position, sprites, etc.
       // changes game_state
-      // hotzones need to be checked at the very beginning of the game loop,
-      // because they can change the current screen, hero position, sprites, etc.
-      check_hotzones();
+      check_flow_rules();
+
+      // check_hotzones removed: they are now checked with flow_rules
 
       // update sprites
       // does not change game_state
@@ -153,9 +150,6 @@ void run_main_game_loop(void) {
       // check collisions
       // changes game_state
       check_collisions();
-
-      // check flow rules before the regular ones. We trust the user :-)
-      check_flow_rules();
 
       // check game flags and react to conditions
       // changes game_state

@@ -32,8 +32,9 @@
 #define RULE_CHECK_ENEMIES_KILLED_LESS_THAN	14
 #define RULE_CHECK_CALL_CUSTOM_FUNCTION		15
 #define RULE_CHECK_ITEM_IS_OWNED		16
+#define RULE_CHECK_HERO_INSIDE_HOTZONE		17
 
-#define RULE_CHECK_MAX				16
+#define RULE_CHECK_MAX				17
 
 // flow rule action constants
 // always update RULE_ACTION_MAX when adding new actions!
@@ -43,7 +44,7 @@
 #define RULE_ACTION_INC_LIVES			3
 #define RULE_ACTION_CALL_CUSTOM_FUNCTION	4
 #define RULE_ACTION_END_OF_GAME			5
-#define RULE_ACTION_ACTIVATE_EXIT_ZONES		6
+#define RULE_ACTION_WARP_TO_SCREEN		6
 #define RULE_ACTION_ENABLE_HOTZONE		7
 #define RULE_ACTION_DISABLE_HOTZONE		8
 #define RULE_ACTION_ENABLE_BTILE		9
@@ -60,6 +61,7 @@ struct flow_rule_check_s {
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
+        struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
     } data;
 };
 
@@ -74,6 +76,11 @@ struct flow_rule_action_s {
         struct { void		(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
         struct { uint8_t	num_btile; }		btile;		// ENABLE/DISABLE_BTILE
+        struct { 
+            uint8_t	num_screen;
+            uint8_t	hero_x;
+            uint8_t	hero_y;
+            }						warp_to_screen;	// WARP_TO_SCREEN
     } data;
 };
 

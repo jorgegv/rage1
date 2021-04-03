@@ -78,6 +78,5 @@ void hero_animate_and_move( void );
 void hero_shoot_bullet( void );
 void hero_pickup_items(void);
 void hero_update_lives_display(void);
-void hero_check_if_inside_hotzones(void);
 
 #endif // _HERO_H

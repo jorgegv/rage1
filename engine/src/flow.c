@@ -71,6 +71,9 @@ void check_flow_rules(void) {
 
     run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.game_loop );
 
+    // beware!!  make sure no function calls come after this one!  This rule
+    // run can change the current screen, so game_state.current_screen may
+    // not be the same as before calling run_flow_rule_table!
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -147,6 +150,18 @@ uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) __z88dk_f
     return ( INVENTORY_HAS_ITEM( &game_state.inventory, check->data.item.item_id ) ? 1 : 0 );
 }
 
+uint8_t do_rule_check_hero_inside_hotzone( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    static struct hotzone_info_s *hz;
+    hz = &map[ game_state.current_screen ].hotzone_data.hotzones[ check->data.hotzone.num_hotzone ];
+    return ( GET_HOTZONE_FLAG( *hz, F_HOTZONE_ACTIVE ) &&
+        hotzone_is_inside( hz,
+            game_state.hero.position.x + game_state.hero.width / 2,
+            game_state.hero.position.y + game_state.hero.height / 2
+        )
+    );
+
+}
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -178,8 +193,10 @@ void do_rule_action_end_of_game( struct flow_rule_action_s *action ) __z88dk_fas
     SET_GAME_FLAG( F_GAME_END );
 }
 
-void do_rule_action_activate_exit_zones( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    hotzone_activate_all_endofgame_zones();
+void do_rule_action_warp_to_screen( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    game_state.hero.position.x = action->data.warp_to_screen.hero_x;
+    game_state.hero.position.y = action->data.warp_to_screen.hero_y;
+    game_state_goto_screen( action->data.warp_to_screen.num_screen );
 }
 
 void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
@@ -226,6 +243,7 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     do_rule_check_enemies_killed_less_than,
     do_rule_check_call_custom_function,
     do_rule_check_item_is_owned,
+    do_rule_check_hero_inside_hotzone,
 };
 
 // Table of action functions.  The 'action' value from the rule is used to
@@ -237,7 +255,7 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_inc_lives,
     do_rule_action_call_custom_function,
     do_rule_action_end_of_game,
-    do_rule_action_activate_exit_zones,
+    do_rule_action_warp_to_screen,
     do_rule_action_enable_hotzone,
     do_rule_action_disable_hotzone,
     do_rule_action_enable_btile,

@@ -32,7 +32,6 @@ void game_state_reset_initial(void) {
    bullet_reset_all();
    inventory_reset_all();
    map_sprites_reset_all();
-   hotzone_deactivate_all_endofgame_zones();
    game_state.enemies_alive = map_count_enemies_all();
    game_state.enemies_killed = 0;
 

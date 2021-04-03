@@ -780,15 +780,6 @@ sub validate_and_compile_screen {
             );
     }
 
-    # adjust hotzones
-    foreach my $h ( @{ $screen->{'hotzones'} } ) {
-        if ( $h->{'type'} eq 'END_OF_GAME' ) {
-            $h->{'dest_screen'} = '__NO_SCREEN__';
-            $h->{'dest_hero_x'} = 0;
-            $h->{'dest_hero_y'} = 0;
-        }
-    }
-
     # compile SCREEN_DATA lines
     compile_screen_data( $screen );
 
@@ -1030,13 +1021,10 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'hotzones'}});
         print $output_fh join( ",\n", map {
-                sprintf( "\t{ HZ_TYPE_%s, %d, %d, %d, %d, %s, { %d, %d, %d } }", 
-                    $_->{'type'},
+                sprintf( "\t{ %d, %d, %d, %d, %s }", 
                     $_->{'row'}, $_->{'col'},
                     $_->{'width'}, $_->{'height'},
                     ( $_->{'active'} ? 'F_HOTZONE_ACTIVE' : 0 ),
-                    $screen_name_to_index{ $_->{'dest_screen'} },
-                    $_->{'dest_hero_x'},$_->{'dest_hero_y'},
                 )
             } @{ $screen->{'hotzones'} } );
         print $output_fh "\n};\n\n";
@@ -1298,41 +1286,12 @@ sub integer_in_range {
     return ( ( $value >= $min ) and ( $value <= $max ) );
 }
 
-sub check_screen_hotzones_do_not_overlap {
-    my $errors = 0;
-    my $hero_center_x = $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ]{'cols'} * 8 / 2;
-    my $hero_center_y = $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ]{'rows'} * 8 / 2;
-    foreach my $screen ( @screens ) {
-        my $org_hz_cnt = 0;
-        foreach my $hz ( @{ $screen->{'hotzones'} } ) {
-            $org_hz_cnt++;
-            next if ( $hz->{'type'} ne 'WARP' );
-            my $dest_x = $hz->{'dest_hero_x'} + $hero_center_x;
-            my $dest_y = $hz->{'dest_hero_y'} + $hero_center_y;
-            my $dest_screen = $hz->{'dest_screen'};
-            my $dst_hz_cnt = 0;
-            foreach my $dst_hz ( @{ $screens[ $screen_name_to_index{ $dest_screen } ]{'hotzones'} } ) {
-                $dst_hz_cnt++;
-                # for destination, all types of hotzones need to be checked, not just WARP zones
-                if ( integer_in_range( $dest_x, $dst_hz->{'col'} * 8, ( ( $dst_hz->{'col'} + $dst_hz->{'height'} ) * 8 ) - 1 ) and
-                        integer_in_range( $dest_y, $dst_hz->{'row'} * 8, ( ( $dst_hz->{'row'} + $dst_hz->{'width'} ) * 8 ) - 1 ) ) {
-                    warn sprintf "Screen '%s': hotzone #%d destination coords overlap with hotzone #%d in Screen '%s'\n",
-                        $screen->{'name'}, $org_hz_cnt, $dst_hz_cnt, $dest_screen;
-                    $errors++;
-                }
-            }
-        }
-    }
-    return $errors;
-}
-
 # this function is called from main
 sub run_consistency_checks {
     my $errors = 0;
     $errors += check_screen_sprites_are_valid;
     $errors += check_screen_btiles_are_valid;
     $errors += check_screen_items_are_valid;
-    $errors += check_screen_hotzones_do_not_overlap;
     die sprintf("*** %d errors were found in configuration\n", $errors )
         if ( $errors );
 }

@@ -25,9 +25,11 @@
 //  struct
 struct game_state_s {
 
-   // current and previous screen indexes in map table
+   // current, previous and next screen indexes in map table
+   // next is only used while we are changing screen. After that, it should always be = current_screen
    uint8_t current_screen;
    uint8_t previous_screen;
+   uint8_t next_screen;
 
    // hero info and state
    struct hero_info_s hero;
@@ -104,7 +106,7 @@ void game_state_goto_screen(uint8_t screen );
 // player has collided with a sprite
 #define F_LOOP_HERO_HIT			0x0004
 // inside EXIT hotzone
-#define F_LOOP_INSIDE_EXIT_ZONE		0x0008
+#define F_LOOP_WARP_TO_SCREEN		0x0008
 // enemy was hit
 #define F_LOOP_ENEMY_HIT		0x0010
 // an item was picked up
