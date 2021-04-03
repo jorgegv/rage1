@@ -60,10 +60,4 @@ extern struct sp1_Rect lives_area;
 // global text printing context
 extern struct sp1_pss print_ctx;
 
-// functions
-void run_menu_screen(void);
-void run_intro_screen(void);
-void run_game_end_screen(void);
-void run_game_over_screen(void);
-
 #endif // _SCREEN_H
