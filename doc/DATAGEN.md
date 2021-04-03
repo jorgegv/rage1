@@ -228,7 +228,7 @@ BEGIN_SCREEN
 
 	// Decoration for a hotzone must defined separately
 	DECORATION	NAME=Stairs	ROW=16 COL=10
-	HOTZONE				ROW=17 COL=11 WIDTH=1 HEIGHT=2 TYPE=WARP DEST_SCREEN=Screen02 DEST_HERO_X=100 DEST_HERO_Y=136 ACTIVE=1
+	HOTZONE		NAME=Stairs	ROW=17 COL=11 WIDTH=1 HEIGHT=2 ACTIVE=1
 
 	SPRITE  	NAME=Ghost01	MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1
 
@@ -239,8 +239,8 @@ BEGIN_SCREEN
 	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=22 PROBABILITY=140
 
 	DEFINE		GRAPH=II	TYPE=OBSTACLE   BTILE=Ice01
-	SCREEN_DATA	"    (64 spaces)    "
-	... (24 SCREEN_DATA lines)
+	SCREEN_DATA	"    (2 x GAME_AREA_WIDTH spaces)    "
+	... ( GAME_AREA_HEIGHT x  SCREEN_DATA lines)
 
 END_SCREEN
 ```
@@ -267,15 +267,6 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `ACTIVE`: 1 if this hotzone is active, 0 if not. Hot zones can be
   activated and deactivated during the game, this setting defined the
   initial state.
-  * `TYPE`: the action the hot zone will do when the hero touches it. It can
-  have the following values:
-    * `END_OF_GAME`: the game jumps instantly to the end-of-game function (see
-      GAME_CONFIG definition)
-    * `WARP`: switches screen to another one. When this type is used, the
-    following additional arguments must be specified.
-  * `DEST_SCREEN`: name of the destination screen to warp to
-  * `DEST_HERO_X`, `DEST_HERO_Y`: position of the hero on the destination
-  screen after warping
 * `HERO`: defines hero properties in this screen. Arguments:
   * `STARTUP_XPOS`,`STARTP_YPOS`: startup hero coordinates in this screen,
     of this is the initial screen.
@@ -310,12 +301,14 @@ Arguments:
   * `PROBABILITY`: a value in 0-255 which maps to the probability [0..1]
   that each filling btile is generated. Useful for generating randomized
   backgrounds: stars, grass, water, etc.
-* `SCREEN_DATA`: optional 24 lines of 64 characters, enclosed by quotes (").
+* `SCREEN_DATA`: optional lines of digraphs characters, enclosed by quotes (").
 A text representation of the screen map, with the different btiles
 (obstacles and decorations) drawn by 2-char sequences. See
 `game_data/map/Screen03.gdata` for an example). Only OBSTACLEs and
 DECORATIONs can be drawn with this method. The remaining elements (ITEMs,
-HOTZONEs, etc.) must be specified with the previous commands.
+HOTZONEs, etc.) must be specified with the previous commands. There must be
+GAME_AREA.HEIGHT lines, and the strings must be GAME_AREA.WIDTH * 2
+characters long.
 * `DEFINE`: define a graph for using it in SCREEN_DATA lines. Arguments:
   * `GRAPH`: 2-char repsesentation of each character cell for the BTILE
   * `BTILE`: the btile name for this graph
@@ -395,6 +388,10 @@ BEGIN_GAME_CONFIG
         SOUND           GAME_WON=6
         SOUND           GAME_OVER=10
         GAME_FUNCTIONS  MENU=my_menu_screen INTRO=my_intro_screen GAME_END=my_game_end_screen GAME_OVER=my_game_over_screen
+        GAME_AREA       TOP=1 LEFT=1 BOTTOM=21 RIGHT=30
+        LIVES_AREA      TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
+        INVENTORY_AREA  TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
+        DEBUG_AREA      TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
 END_GAME_CONFIG
 ```
 
@@ -431,3 +428,7 @@ END_GAME_CONFIG
   started.
   * `USER_GAME_LOOP`: this function runs once in every game loop. Use with
   care, this function can hurt performance badly!
+* `GAME_AREA`, `LIVES_ARES`, `INVENTORY_AREA`, `DEBUG_AREA`: definitions for
+the different screen areas used by the game. All of then accept the
+following aguments:
+  * `TOP`, `LEFT`, `BOTTOM`, `RIGHT`: (values are obvious)
