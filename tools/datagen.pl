@@ -805,17 +805,21 @@ sub compile_screen_data {
     # if no SCREEN_DATA lines exist, nothing to compile, return
     return if not defined( $screen->{'screen_data'} );
 
-    # check that there are 24 lines of 32 elements (64 chars)
-    ( scalar( @{ $screen->{'screen_data'} } ) == 24 ) or
-        die "Screen '$screen->{name}': there must be exactly 24 SCREEN_DATA lines\n";
+    # check that there are the right number of rows and columns according to GAME_AREA
+    my $game_area_width = $game_config->{'game_area'}{'right'} - $game_config->{'game_area'}{'left'} + 1;
+    my $game_area_height = $game_config->{'game_area'}{'bottom'} - $game_config->{'game_area'}{'top'} + 1;
+    my $game_area_top = $game_config->{'game_area'}{'top'};
+    my $game_area_left = $game_config->{'game_area'}{'left'};
+    ( scalar( @{ $screen->{'screen_data'} } ) == $game_area_height ) or
+        die "Screen '$screen->{name}': there must be exactly $game_area_height SCREEN_DATA lines\n";
     foreach my $sd ( @{ $screen->{'screen_data'} } ) {
-        ( length( $sd ) == 64 ) or
-            die "Screen '$screen->{name}': SCREEN_DATA lines must be exactly 64 characters long\n";
+        ( length( $sd ) == ( 2 * $game_area_width ) ) or
+            die "Screen '$screen->{name}': SCREEN_DATA lines must be exactly ".( 2 * $game_area_height )." characters long\n";
     }
 
     # populate the DEST array
-    foreach my $r ( 0 .. 23 ) {
-        foreach my $c ( 0 .. 31 ) {
+    foreach my $r ( 0 .. ( $game_area_height - 1 ) ) {
+        foreach my $c ( 0 .. ( $game_area_width - 1 ) ) {
             $screen_dest->[ $r ][ $c ] = '  ';
         }
     }
@@ -827,8 +831,8 @@ sub compile_screen_data {
     }
 
     # process the DATA array
-    foreach my $r ( 0 .. 23 ) {
-        foreach my $c ( 0 .. 31 ) {
+    foreach my $r ( 0 .. ( $game_area_height - 1 ) ) {
+        foreach my $c ( 0 .. ( $game_area_width - 1 ) ) {
 
             # ignore the cell if there is no tile in input data
             next if ( $screen_data->[ $r ][ $c ] eq '  ' );
@@ -860,8 +864,8 @@ sub compile_screen_data {
                         ),
                     btile => $screen_digraphs->{ $data_dg }{'btile'},
                     type => $screen_digraphs->{ $data_dg }{'type'},
-                    row => $r,
-                    col => $c,
+                    row => $game_area_top + $r,
+                    col => $game_area_left + $c,
                 };
 
             # else if there is a tile in DEST and it is different from the one in DATA...
@@ -876,8 +880,8 @@ sub compile_screen_data {
     }
 
     # finally, check that both DATA and DEST array elements match one by one
-    foreach my $r ( 0 .. 23 ) {
-        foreach my $c ( 0 .. 31 ) {
+    foreach my $r ( 0 .. ( $game_area_height - 1 ) ) {
+        foreach my $c ( 0 .. ( $game_area_width - 1 ) ) {
             ( $screen_data->[ $r ][ $c ] eq $screen_dest->[ $r ][ $c ] ) or
                 die "Screen '$screen->{name}': mismatching btiles at row=$r, col=$c\n";
         }

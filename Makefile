@@ -84,14 +84,14 @@ $(GENERATED_DIR)/flow_data.c: $(GENERATED_DIR)/flow_data.dep
 	$(MAKE) -s flow
 
 data:
-	@./tools/datagen.pl -c -d $(GENERATED_DIR) game_data/{btiles,sprites,map,heroes,game_config}/*.gdata
+	@./tools/datagen.pl -c -d $(GENERATED_DIR) game_data/{game_config,btiles,sprites,map,heroes}/*.gdata
 
 flow:
 	@./tools/flowgen.pl -c -d $(GENERATED_DIR) game_data/flow/*.gdata
 
 data_depend:
-	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{btiles,sprites,map,heroes,game_config}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
-	@ls -1 game_data/{btiles,sprites,map,heroes,game_config}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
+	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
+	@ls -1 game_data/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
 
 flow_depend:
