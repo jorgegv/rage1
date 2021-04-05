@@ -1566,7 +1566,7 @@ GAME_DATA_H_1
     }
 
     print $output_fh "\n// game configuration data\n";
-    printf $output_fh "#define MAP_INITIAL_SCREEN %d\n", $game_config->{'screen'}{'initial'};
+    printf $output_fh "#define MAP_INITIAL_SCREEN %d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} };
     printf $output_fh "#define DEFAULT_BG_ATTR ( %s )\n", $game_config->{'default_bg_attr'};
 
     print $output_fh "\n// sound effect constants\n";
