@@ -356,18 +356,20 @@ FLOW_DATA_C_1
     }
 
     # output global rule table
-    printf $output_fh "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
-        scalar( @all_rules );
-    print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
-    foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        print $output_fh "\t{";
-        printf $output_fh " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
-            scalar( @{ $all_rules[ $i ]{'check'} } ), $i;
-        printf $output_fh " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
-            scalar( @{ $all_rules[ $i ]{'do'} } ), $i;
-        print $output_fh " },\n";
+    if ( scalar( @all_rules ) ) {
+        printf $output_fh "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
+            scalar( @all_rules );
+        print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
+        foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
+            print $output_fh "\t{";
+            printf $output_fh " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
+                scalar( @{ $all_rules[ $i ]{'check'} } ), $i;
+            printf $output_fh " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
+                scalar( @{ $all_rules[ $i ]{'do'} } ), $i;
+            print $output_fh " },\n";
+        }
+        print $output_fh "\n};\n\n";
     }
-    print $output_fh "\n};\n\n";
 
     # output rule tables for each screen
     print $output_fh "// rule tables for each screen\n";
