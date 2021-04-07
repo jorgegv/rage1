@@ -32,6 +32,7 @@ struct hero_animation_data_s {
     uint8_t delay;		// frames are rotated every 'delay' calls
     uint8_t current_frame;	// current sprite frame
     uint8_t delay_counter;	// current frame delay counter
+    uint8_t *last_frame_ptr;	// last used frame
 };
 
 // movement data for the hero sprite
@@ -78,5 +79,6 @@ void hero_animate_and_move( void );
 void hero_shoot_bullet( void );
 void hero_pickup_items(void);
 void hero_update_lives_display(void);
+void hero_draw(void);
 
 #endif // _HERO_H

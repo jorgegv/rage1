@@ -106,6 +106,16 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
     return 0;
 }
 
+void hero_draw( void ) {
+    sp1_MoveSprPix(
+        game_state.hero.sprite,
+        &game_area,
+        game_state.hero.animation.last_frame_ptr,
+        game_state.hero.position.x,
+        game_state.hero.position.y
+    );
+}
+
 void hero_animate_and_move( void ) {
     static struct hero_info_s *h;
     static struct hero_animation_data_s *anim;
@@ -217,7 +227,8 @@ void hero_animate_and_move( void ) {
     if ( ( oldx != pos->x ) || ( oldy != pos->y ) ) {
         pos->xmax = pos->x + h->width - 1;
         pos->ymax = pos->y + h->height - 1;
-        sp1_MoveSprPix( h->sprite, &game_area, animation_frame, pos->x, pos->y );
+        anim->last_frame_ptr = animation_frame;
+        hero_draw();
     }
 }
 

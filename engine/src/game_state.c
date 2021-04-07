@@ -62,6 +62,9 @@ void game_state_goto_screen(uint8_t screen) {
     // run ENTER_SCREEN hooks for the new screen
     map_enter_screen( &map[ game_state.current_screen ] );
 
+    // draw the hero in the new position
+    hero_draw();
+
     // set flag
     SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
 }
