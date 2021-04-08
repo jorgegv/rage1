@@ -10,7 +10,7 @@ BEGIN_SCREEN
 
 	// Decoration for a hotzone must defined separately
 	DECORATION	NAME=Stairs	BTILE=Stairs ROW=16 COL=10
-	HOTZONE		NAME=Stairs	ROW=17 COL=11 WIDTH=1 HEIGHT=2 ACTIVE=1
+	HOTZONE		NAME=Stairs	X=88 Y=136 WIDTH=8 HEIGHT=16 ACTIVE=1
 
 	// Decoration for a hotzone must defined separately
 	DECORATION	NAME=ExitGame	BTILE=ExitGame ROW=1 COL=29

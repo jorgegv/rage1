@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 struct hotzone_info_s {
-    uint8_t row,col;
+    uint8_t x,y;
     uint8_t width,height;
     uint16_t flags;
 };

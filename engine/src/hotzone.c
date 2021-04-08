@@ -11,10 +11,10 @@
 #include "rage1.h"
 
 uint8_t hotzone_is_inside( struct hotzone_info_s *h, uint8_t x, uint8_t y ) {
-    if (    ( x >= CELL_TO_PIXEL_COORD( h->col ) 		) &&
-            ( x <  CELL_TO_PIXEL_COORD( h->col + h->width ) 	) &&
-            ( y >= CELL_TO_PIXEL_COORD( h->row ) 		) &&
-            ( y <  CELL_TO_PIXEL_COORD( h->row + h->height ) 	)
+    if (    ( x >= h->x 		) &&
+            ( x <  ( h->x + h->width ) 	) &&
+            ( y >= h->y  		) &&
+            ( y <  ( h->y + h->height )	)
         )
         return 1;
     else
