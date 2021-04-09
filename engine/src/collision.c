@@ -8,7 +8,13 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "rage1.h"
+#include "collision.h"
+#include "sprite.h"
+#include "game_state.h"
+#include "debug.h"
+#include "bullet.h"
+#include "screen.h"
+#include "beeper.h"
 
 #define COLLISION_TOLERANCE	2
 
