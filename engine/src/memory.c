@@ -10,8 +10,8 @@
 
 #include <stdlib.h>
 
-#include "memory.h"
-#include "debug.h"
+#include "rage1/memory.h"
+#include "rage1/debug.h"
 
 /////////////////////////////////////
 //

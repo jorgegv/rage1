@@ -19,7 +19,7 @@
 #include <string.h>
 #include <intrinsic.h>
 
-#include "debug.h"
+#include "rage1/debug.h"
 
 // data struct and ISR hook for timekeeping
 struct time {

@@ -12,8 +12,9 @@
 #include <games/sp1.h>
 #include <input.h>
 
+#include "rage1/debug.h"
+
 #include "game_data.h"
-#include "debug.h"
 
 uint8_t initialized = 0;
 

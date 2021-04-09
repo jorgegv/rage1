@@ -1,6 +1,6 @@
-#include "debug.h"
-#include "game_state.h"
-#include "map.h"
+#include "rage1/debug.h"
+#include "rage1/game_state.h"
+#include "rage1/map.h"
 
 void my_user_init(void) {
 }

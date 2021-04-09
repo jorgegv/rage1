@@ -12,17 +12,17 @@
 #include <games/sp1.h>
 #include <input.h>
 
-#include "screen.h"
-#include "map.h"
-#include "sp1engine.h"
-#include "game_state.h"
-#include "controller.h"
-#include "beeper.h"
-#include "game_data.h"
-#include "btile.h"
-#include "flow.h"
+#include "rage1/screen.h"
+#include "rage1/map.h"
+#include "rage1/sp1engine.h"
+#include "rage1/game_state.h"
+#include "rage1/controller.h"
+#include "rage1/beeper.h"
+#include "rage1/btile.h"
+#include "rage1/flow.h"
+#include "rage1/debug.h"
 
-#include "debug.h"
+#include "game_data.h"
 
 // External frame coordinates and dimensions
 #define BORDER_TOP		0

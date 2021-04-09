@@ -8,9 +8,10 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "hotzone.h"
-#include "util.h"
-#include "game_state.h"
+#include "rage1/hotzone.h"
+#include "rage1/util.h"
+#include "rage1/game_state.h"
+
 #include "game_data.h"
 
 uint8_t hotzone_is_inside( struct hotzone_info_s *h, uint8_t x, uint8_t y ) {

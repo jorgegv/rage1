@@ -8,15 +8,15 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "flow.h"
-#include "game_state.h"
-#include "beeper.h"
-#include "hero.h"
-#include "hotzone.h"
-#include "map.h"
-#include "btile.h"
-#include "debug.h"
-#include "screen.h"
+#include "rage1/flow.h"
+#include "rage1/game_state.h"
+#include "rage1/beeper.h"
+#include "rage1/hero.h"
+#include "rage1/hotzone.h"
+#include "rage1/map.h"
+#include "rage1/btile.h"
+#include "rage1/debug.h"
+#include "rage1/screen.h"
 
 // disable "unreferenced function argument" warning, there are some
 // functions here that don't use their parameter

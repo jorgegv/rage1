@@ -10,14 +10,14 @@
 
 #include <stdint.h>
 
-#include "bullet.h"
-#include "hero.h"
-#include "game_state.h"
-#include "screen.h"
-#include "util.h"
-#include "beeper.h"
+#include "rage1/bullet.h"
+#include "rage1/hero.h"
+#include "rage1/game_state.h"
+#include "rage1/screen.h"
+#include "rage1/util.h"
+#include "rage1/beeper.h"
 
-#include "debug.h"
+#include "rage1/debug.h"
 
 void bullet_add( void ) {
     static struct bullet_state_data_s *bs;

@@ -10,7 +10,7 @@
 
 #include <games/sp1.h>
 
-#include "screen.h"
+#include "rage1/screen.h"
 
 // rectangles covering the full screen and other screen areas
 struct sp1_Rect full_screen	= { 0, 0, 32, 24 };

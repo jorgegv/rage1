@@ -14,17 +14,18 @@
 #include <input.h>
 #include <arch/spectrum.h>
 
-#include "hero.h"
-#include "game_state.h"
-#include "btile.h"
-#include "screen.h"
-#include "sprite.h"
-#include "debug.h"
+#include "rage1/hero.h"
+#include "rage1/game_state.h"
+#include "rage1/btile.h"
+#include "rage1/screen.h"
+#include "rage1/sprite.h"
+#include "rage1/debug.h"
+#include "rage1/interrupts.h"
+#include "rage1/bullet.h"
+#include "rage1/beeper.h"
+#include "rage1/hotzone.h"
+
 #include "game_data.h"
-#include "interrupts.h"
-#include "bullet.h"
-#include "beeper.h"
-#include "hotzone.h"
 
 void init_hero(void) {
     init_hero_sprites();

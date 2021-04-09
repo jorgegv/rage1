@@ -1314,14 +1314,15 @@ sub output_header {
 
 #include <arch/spectrum.h>
 
-#include "map.h"
-#include "sprite.h"
+#include "rage1/map.h"
+#include "rage1/sprite.h"
+#include "rage1/debug.h"
+#include "rage1/hero.h"
+#include "rage1/game_state.h"
+#include "rage1/bullet.h"
+#include "rage1/game_config.h"
+
 #include "game_data.h"
-#include "debug.h"
-#include "hero.h"
-#include "game_state.h"
-#include "bullet.h"
-#include "game_config.h"
 
 EOF_HEADER
 ;
