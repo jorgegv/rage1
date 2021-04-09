@@ -12,6 +12,7 @@
 #include <games/sp1.h>
 #include <input.h>
 
+#include "game_data.h"
 #include "debug.h"
 
 uint8_t initialized = 0;
