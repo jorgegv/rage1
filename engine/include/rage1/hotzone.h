@@ -13,9 +13,10 @@
 
 #include <stdint.h>
 
+#include "rage1/types.h"
+
 struct hotzone_info_s {
-    uint8_t x,y;
-    uint8_t width,height;
+    struct position_data_s position;
     uint16_t flags;
 };
 

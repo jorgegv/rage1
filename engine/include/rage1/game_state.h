@@ -15,11 +15,11 @@
 #include <input.h>
 #include <stdint.h>
 
-#include "map.h"
-#include "sprite.h"
-#include "hero.h"
-#include "bullet.h"
-#include "inventory.h"
+#include "rage1/map.h"
+#include "rage1/sprite.h"
+#include "rage1/hero.h"
+#include "rage1/bullet.h"
+#include "rage1/inventory.h"
 
 // game state struct and related definitions
 //  struct

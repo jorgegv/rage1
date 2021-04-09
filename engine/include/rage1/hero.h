@@ -16,8 +16,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "sprite.h"
-#include "controller.h"
+#include "rage1/sprite.h"
+#include "rage1/controller.h"
+
 #include "game_data.h"
 
 // animation data for the hero sprite

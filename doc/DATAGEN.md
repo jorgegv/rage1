@@ -261,9 +261,11 @@ this element (=obstacle) but s/he must move around. Arguments:
   want the hotzone to be decorated, you need to define a DECORATION that
   overlaps the HOTZONE (see the example). It suports the following
   arguments:
-  * `ROW`,`COL`: top left position of the hot zone in char cells coordinates
-  * `WIDTH`,`HEIGHT`: width and height of the hot zone in char cell
-  coordinates
+  * `ROW`,`COL`,`WIDTH`,`HEIGHT`: top-left position and width and height of
+  the hot zone in char cells units
+  * `X`,`Y`,`PIX_WIDTH`,`PIX_HEIGHT`: top-left position and width and height of
+  the hot zone in pixel units. If both char and pixel specifications are
+  used (they shouldn't!), the pixel-based ones are used
   * `ACTIVE`: 1 if this hotzone is active, 0 if not. Hot zones can be
   activated and deactivated during the game, this setting defined the
   initial state.

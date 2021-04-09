@@ -8,12 +8,14 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _COLLISION_H
-#define _COLLISION_H
+#ifndef _TYPES_H
+#define _TYPES_H
 
-#include "rage1/sprite.h"
+#include <stdint.h>
 
-void collision_check_hero_with_sprites( void );
-void collision_check_bullets_with_sprites( void );
+struct position_data_s {
+    uint8_t x,y;	// position top, left
+    uint8_t xmax,ymax;	// position bottom,right
+};
 
-#endif // _COLLISION_H
+#endif // _TYPES_H

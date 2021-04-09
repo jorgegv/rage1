@@ -15,10 +15,10 @@
 #include <games/sp1.h>
 #include <stdint.h>
 
-#include "btile.h"
-#include "inventory.h"
-#include "hotzone.h"
-#include "flow.h"
+#include "rage1/btile.h"
+#include "rage1/inventory.h"
+#include "rage1/hotzone.h"
+#include "rage1/flow.h"
 
 // Screen functions and definitions
 // A screen has a set of btiles , a set of sprites and some hero data

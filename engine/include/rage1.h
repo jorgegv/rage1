@@ -18,3 +18,4 @@
 #include "rage1/sp1engine.h"
 #include "rage1/sprite.h"
 #include "rage1/util.h"
+#include "rage1/types.h"

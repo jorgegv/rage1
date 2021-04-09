@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
-#include "sprite.h"
+#include "rage1/sprite.h"
 
 struct bullet_movement_data_s {
     int8_t dx,dy;	// position increments, absolute

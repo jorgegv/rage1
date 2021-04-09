@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-#include "btile.h"
+#include "rage1/btile.h"
 
 //
 // Item definitions and management

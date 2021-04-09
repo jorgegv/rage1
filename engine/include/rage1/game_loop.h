@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-#include "interrupts.h"
+#include "rage1/interrupts.h"
 
 void run_main_game_loop(void);
 

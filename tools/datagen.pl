@@ -1025,9 +1025,12 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'hotzones'}});
         print $output_fh join( ",\n", map {
-                sprintf( "\t{ %d, %d, %d, %d, %s }", 
-                    $_->{'row'}, $_->{'col'},
-                    $_->{'width'}, $_->{'height'},
+                my $x    = ( defined( $_->{'x'} ) ? $_->{'x'} : $_->{'col'} * 8 );
+                my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
+                my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
+                my $ymax = $y + ( defined( $_->{'pix_height'} ) ? $_->{'pix_height'} : $_->{'height'} * 8 ) - 1;
+                sprintf( "\t{ .position = { %d, %d, %d, %d }, %s }",
+                    $x, $y, $xmax, $ymax,
                     ( $_->{'active'} ? 'F_HOTZONE_ACTIVE' : 0 ),
                 )
             } @{ $screen->{'hotzones'} } );

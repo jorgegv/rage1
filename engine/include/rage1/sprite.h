@@ -13,8 +13,9 @@
 
 #include <stdint.h>
 
-#include "map.h"
-#include "util.h"
+#include "rage1/map.h"
+#include "rage1/util.h"
+#include "rage1/types.h"
 
 // structs for storing a single sprite's data on a screen
 struct  sprite_animation_data_s {
@@ -23,11 +24,6 @@ struct  sprite_animation_data_s {
     uint8_t delay;		// frames are rotated every 'delay' calls
     uint8_t current_frame;	// current sprite frame
     uint8_t delay_counter;	// current frame delay counter
-};
-
-struct  position_data_s {
-    uint8_t x,y;		// current sprite position
-    uint8_t xmax,ymax;		// current sprite bottom right coords
 };
 
 #define SPRITE_MOVE_LINEAR		0x00

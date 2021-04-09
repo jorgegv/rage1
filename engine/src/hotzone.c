@@ -15,10 +15,10 @@
 #include "game_data.h"
 
 uint8_t hotzone_is_inside( struct hotzone_info_s *h, uint8_t x, uint8_t y ) {
-    if (    ( x >= h->x 		) &&
-            ( x <  ( h->x + h->width ) 	) &&
-            ( y >= h->y  		) &&
-            ( y <  ( h->y + h->height )	)
+    if (    ( x >= h->position.x	) &&
+            ( x <= h->position.xmax 	) &&
+            ( y >= h->position.y	) &&
+            ( y <= h->position.ymax	)
         )
         return 1;
     else
