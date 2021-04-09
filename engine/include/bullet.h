@@ -23,7 +23,7 @@ struct bullet_movement_data_s {
 
 struct bullet_state_data_s {
     struct sp1_ss *sprite;
-    struct sprite_position_data_s position;
+    struct position_data_s position;
     int8_t dx, dy;		// current x and y increments
     uint8_t delay_counter;	// current delay counter
     uint16_t flags;

@@ -119,7 +119,7 @@ void hero_draw( void ) {
 void hero_animate_and_move( void ) {
     static struct hero_info_s *h;
     static struct hero_animation_data_s *anim;
-    static struct sprite_position_data_s *pos;
+    static struct position_data_s *pos;
     static struct hero_movement_data_s *move;
     static uint8_t controller;
     static uint8_t newx,newy,x,y,oldx,oldy;

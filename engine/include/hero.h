@@ -51,7 +51,7 @@ struct hero_info_s {
     struct sp1_ss *sprite;                      // ptr to SP1 sprite struct
     uint8_t width,height;			// dimensions in pixels ( rows,cols * 8 )
     struct hero_animation_data_s animation;	// animation data	
-    struct sprite_position_data_s position;	// position data
+    struct position_data_s position;	// position data
     struct hero_movement_data_s movement;	// movement data
     uint16_t flags;				// flags
     uint8_t num_lives;				// lives

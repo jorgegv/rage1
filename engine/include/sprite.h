@@ -25,7 +25,7 @@ struct  sprite_animation_data_s {
     uint8_t delay_counter;	// current frame delay counter
 };
 
-struct  sprite_position_data_s {
+struct  position_data_s {
     uint8_t x,y;		// current sprite position
     uint8_t xmax,ymax;		// current sprite bottom right coords
 };
@@ -50,7 +50,7 @@ struct sprite_info_s {
     struct sp1_ss *sprite;				// ptr to SP1 sprite struct
     uint8_t width,height;				// dimensions in pixels ( rows,cols * 8 )
     struct sprite_animation_data_s animation;		// sprite animation data
-    struct sprite_position_data_s position;		// sprite position data
+    struct position_data_s position;		// sprite position data
     struct sprite_movement_data_s movement;		// sprite movement data
     uint16_t flags;					// flags
 };

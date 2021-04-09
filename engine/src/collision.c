@@ -12,7 +12,7 @@
 
 #define COLLISION_TOLERANCE	2
 
-uint8_t collision_check( struct sprite_position_data_s *a,struct sprite_position_data_s *b ) {
+uint8_t collision_check( struct position_data_s *a,struct position_data_s *b ) {
     if ( a->xmax - COLLISION_TOLERANCE < b->x + COLLISION_TOLERANCE    ) return 0;
     if ( a->x + COLLISION_TOLERANCE    > b->xmax - COLLISION_TOLERANCE ) return 0;
     if ( a->ymax - COLLISION_TOLERANCE < b->y + COLLISION_TOLERANCE    ) return 0;
@@ -21,7 +21,7 @@ uint8_t collision_check( struct sprite_position_data_s *a,struct sprite_position
 }
 
 void collision_check_hero_with_sprites(void) {
-    static struct sprite_position_data_s *hero_pos,*sprite_pos;
+    static struct position_data_s *hero_pos,*sprite_pos;
     static struct sprite_info_s *s;
     static uint8_t i;
     struct map_screen_s *sc;

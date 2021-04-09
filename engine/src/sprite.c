@@ -37,7 +37,7 @@ void sprite_reset_position_all( uint8_t num_sprites, struct sprite_info_s *sprit
 void sprite_animate_and_move_all( uint8_t num_sprites, struct sprite_info_s *sprites ) {
     static struct sprite_info_s *s;
     static struct sprite_animation_data_s *anim;
-    static struct sprite_position_data_s *pos;
+    static struct position_data_s *pos;
     static struct sprite_movement_data_s *move;
     static uint8_t n;
 
