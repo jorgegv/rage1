@@ -85,7 +85,7 @@ check is successful. Options:
   - [x] ENEMIES_KILLED_MORE_THAN <value>
   - [x] ENEMIES_KILLED_LESS_THAN <value>
   - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `uint8_t my_custom_check(void)`
-  - [x] HERO_INSIDE_HOTZONE <hotzone_name>
+  - [x] HERO_OVER_HOTZONE <hotzone_name>
 
 * ACTION_TO_EXECUTE:
   - [x] SET_USER_FLAG <flag>

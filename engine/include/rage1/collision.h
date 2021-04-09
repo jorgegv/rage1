@@ -11,8 +11,10 @@
 #ifndef _COLLISION_H
 #define _COLLISION_H
 
+#include "rage1/types.h"
 #include "rage1/sprite.h"
 
+uint8_t collision_check( struct position_data_s *a,struct position_data_s *b );
 void collision_check_hero_with_sprites( void );
 void collision_check_bullets_with_sprites( void );
 

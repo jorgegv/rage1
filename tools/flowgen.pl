@@ -183,7 +183,7 @@ sub validate_and_compile_rule {
         my ( $check, $check_data ) = split( /\s+/, $chk );
 
         # hotzone filtering
-        if ( $check =~ /^HERO_INSIDE_HOTZONE$/ ) {
+        if ( $check =~ /^HERO_OVER_HOTZONE$/ ) {
             $check_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
             # regenerate the value with the filtered data
             $chk = sprintf "%s\t%d", $check, $check_data;
@@ -248,7 +248,7 @@ my $check_data_output_format = {
     ENEMIES_KILLED_LESS_THAN	=> ".data.enemies.count = %d",
     CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
     ITEM_IS_OWNED		=> ".data.item.item_id = %s",
-    HERO_INSIDE_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
+    HERO_OVER_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
 };
 
 my $action_data_output_format = {
