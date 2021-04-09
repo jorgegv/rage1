@@ -8,7 +8,19 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "rage1.h"
+#include "rage1/memory.h"
+#include "rage1/sp1engine.h"
+#include "rage1/interrupts.h"
+#include "rage1/controller.h"
+#include "rage1/screen.h"
+#include "rage1/game_loop.h"
+#include "rage1/hero.h"
+#include "rage1/game_state.h"
+#include "rage1/game_config.h"
+#include "rage1/debug.h"
+
+#include "game_data.h"
+#include "flow_data.h"
 
 void init_program(void) {
    init_memory();

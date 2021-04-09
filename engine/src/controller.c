@@ -10,7 +10,9 @@
 
 #include <input.h>
 
-#include "rage1.h"
+#include "rage1/controller.h"
+#include "rage1/game_state.h"
+#include "rage1/debug.h"
 
 /////////////////////////////////////
 //

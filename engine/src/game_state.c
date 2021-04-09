@@ -8,7 +8,13 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "rage1.h"
+#include "rage1/map.h"
+#include "rage1/game_state.h"
+#include "rage1/hero.h"
+#include "rage1/inventory.h"
+#include "rage1/controller.h"
+
+#include "game_data.h"
 
 /////////////////////////////////////
 //

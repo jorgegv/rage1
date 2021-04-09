@@ -11,7 +11,11 @@
 #include <arch/spectrum.h>
 #include <games/sp1.h>
 
-#include "rage1.h"
+#include "rage1/sp1engine.h"
+#include "rage1/screen.h"
+#include "rage1/debug.h"
+
+#include "game_data.h"
 
 /////////////////////////////////////
 //

@@ -8,7 +8,14 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "rage1.h"
+#include "rage1/game_state.h"
+#include "rage1/sprite.h"
+#include "rage1/screen.h"
+#include "rage1/map.h"
+#include "rage1/debug.h"
+#include "rage1/util.h"
+
+#include "game_data.h"
 
 void sprite_reset_position_all( uint8_t num_sprites, struct sprite_info_s *sprites ) {
     static struct sprite_info_s *s;

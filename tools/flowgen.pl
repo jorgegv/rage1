@@ -311,7 +311,7 @@ sub output_h_file {
 #ifndef _FLOW_DATA_H
 #define _FLOW_DATA_H
 
-#include "flow.h"
+#include "rage1/flow.h"
 
 // FLOWGEN initialization function, called from main game initialization
 void init_flowgen(void);
@@ -337,10 +337,11 @@ sub output_c_file {
 //
 ///////////////////////////////////////////////////////////
 
-#include "flow.h"
+#include "rage1/flow.h"
+#include "rage1/game_state.h"
+#include "rage1/map.h"
+
 #include "flow_data.h"
-#include "game_state.h"
-#include "map.h"
 
 FLOW_DATA_C_1
 ;

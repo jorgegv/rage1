@@ -11,7 +11,9 @@
 #include <arch/spectrum.h>
 #include <games/sp1.h>
 
-#include "rage1.h"
+#include "rage1/btile.h"
+
+#include "game_data.h"
 
 #define SCREEN_MAX_ROW	23
 #define SCREEN_MAX_COL	31

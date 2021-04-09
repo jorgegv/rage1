@@ -15,7 +15,13 @@
 #include <arch/spectrum.h>
 #include <games/sp1.h>
 
-#include "rage1.h"
+#include "rage1/inventory.h"
+#include "rage1/game_state.h"
+#include "rage1/map.h"
+#include "rage1/debug.h"
+#include "rage1/screen.h"
+
+#include "game_data.h"
 
 void inventory_reset_all(void) {
     static uint8_t i;
