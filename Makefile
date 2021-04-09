@@ -156,7 +156,7 @@ LIB_ENGINE_EMPTY_DIRS	= generated tests
 # create a game using the library
 new-game:
 	@if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
-	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) detected, use 'make update-game' instead"; exit 2; fi
+	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, use 'make update-game' instead"; exit 2; fi
 	@echo "Creating game directory $(target)..."
 	@mkdir -p "$(target)"
 	@echo -n "Syncing library and game template files... "
@@ -168,8 +168,8 @@ new-game:
 # update the library for an existing game
 update-game:
 	@if [ -z "$(target)" ]; then echo "Usage: make update-game target=<game-directory>"; exit 1; fi
-	@if [ ! -d "$(target)" ]; then echo "Game directory $(target) not detected, use 'make new-game' instead"; exit 2; fi
+	@if [ ! -d "$(target)" ]; then echo "Game directory $(target) not found, use 'make new-game' instead"; exit 2; fi
 	@echo -n "Syncing library and game template files... "
-	@rsync -ap $(LIB_ENGINE_FILES) "$(target)"
+	@rsync -ap --delete $(LIB_ENGINE_FILES) "$(target)"
 	@-for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done 2>/dev/null
 	@echo "Done!"
