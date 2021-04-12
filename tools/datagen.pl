@@ -1178,7 +1178,7 @@ EOF_ITEMS1
             exists( $all_items->{ $_ } ) ?
                 sprintf( "\t{ \"%s\", &btile_%s, 0x%04x, F_ITEM_ACTIVE }",
                     $all_items->{ $_ }{'name'},
-                    $all_items->{ $_ }{'name'},
+                    $all_items->{ $_ }{'btile'},
                     ( 0x1 << $all_items->{ $_ }{'item_index'} )
                     ) :
                 "\t{ NULL, NULL, 0, 0 }"
