@@ -43,14 +43,16 @@ void inventory_show(void) {
     // clear the area
     sp1_ClearRectInv( &inventory_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
 
-    // draw owned items, right to left
-    col = INVENTORY_AREA_RIGHT;
+    // draw owned items, left to right
+    col = INVENTORY_AREA_LEFT;
     inv = &game_state.inventory;
     item_index = 16;
     while ( item_index-- ) {
         tile = all_items[ item_index ].btile;
-        if ( ( tile != NULL ) && ( INVENTORY_HAS_ITEM( inv, all_items[ item_index].item_id ) ) )
-            btile_draw( INVENTORY_AREA_TOP, col--, tile, TT_DECORATION, &inventory_area );
+        if ( ( tile != NULL ) && ( INVENTORY_HAS_ITEM( inv, all_items[ item_index].item_id ) ) ) {
+            btile_draw( INVENTORY_AREA_TOP, col, tile, TT_DECORATION, &inventory_area );
+            col += tile->num_cols;
+        }
     }
 }
 
