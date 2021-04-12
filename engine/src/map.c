@@ -70,7 +70,7 @@ void map_draw_screen(struct map_screen_s *s) {
     }
 }
 
-uint8_t map_get_item_at_position( struct map_screen_s *s, uint8_t row, uint8_t col ) {
+struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col ) {
     static uint8_t i, rmax, cmax;
     static struct item_location_s *it;
 
@@ -81,9 +81,9 @@ uint8_t map_get_item_at_position( struct map_screen_s *s, uint8_t row, uint8_t c
         cmax = it->col + all_items[ it->item_num ].btile->num_cols - 1;
         if ( ( row >= it->row ) && ( row <= rmax ) &&
              ( col >= it->col ) && ( col <= cmax ) )
-            return it->item_num;
+            return it;
     }
-    return 255;	// no object
+    return NULL;	// no object
 }
 
 void map_screen_reset_all_sprites( struct map_screen_s *s ) {

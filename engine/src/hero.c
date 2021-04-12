@@ -258,6 +258,7 @@ void hero_shoot_bullet( void ) {
 void hero_pickup_items(void) {
     static struct sp1_ss *s;
     static uint8_t i,j,cols,r,c,item;
+    static struct item_location_s *item_loc;
 
     s = game_state.hero.sprite;
 
@@ -271,13 +272,15 @@ void hero_pickup_items(void) {
         while ( j-- ) {
             c = s->col + j;
             if ( TILE_TYPE_AT( r, c ) == TT_ITEM ) {
-                item = map_get_item_at_position( &map[ game_state.current_screen ], r, c );
+                item_loc = map_get_item_location_at_position( &map[ game_state.current_screen ], r, c );
+                item = item_loc->item_num;
+
                 // add item to inventory
                 inventory_add_item( &game_state.inventory, item );
                 // mark the item as inactive
                 RESET_ITEM_FLAG( all_items[ item ], F_ITEM_ACTIVE );
                 // remove item from screen
-                btile_remove( r, c, all_items[ item ].btile );
+                btile_remove( item_loc->row, item_loc->col, all_items[ item ].btile );
                 // update inventory on screen (show)
                 inventory_show();
                 // play pickup sound

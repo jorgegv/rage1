@@ -69,7 +69,7 @@ struct map_screen_s {
 // later modify the logic behind maps without touching the map display
 // code
 void map_draw_screen(struct map_screen_s *s);
-uint8_t map_get_item_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
+struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
 void map_sprites_reset_all(void);
 uint16_t map_count_enemies_all(void);
 void map_enter_screen( struct map_screen_s *s );
