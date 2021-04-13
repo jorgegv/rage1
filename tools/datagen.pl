@@ -126,12 +126,19 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $fgcolor = uc( $vars->{'fgcolor'} );
-                push @{$cur_btile->{'pixels'}}, @{ pixel_data_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
-                    ) };
-                $cur_btile->{'png_attr'} = attr_data_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} );
+                my $data = png_to_pixels_and_attrs(
+                    $vars->{'file'},
+                    $vars->{'xpos'}, $vars->{'ypos'},
+                    $vars->{'width'}, $vars->{'height'},
+                );
+                $cur_btile->{'pixels'} = $data->{'pixels'};
+                $cur_btile->{'png_attr'} = $data->{'attrs'};
+#                my $fgcolor = uc( $vars->{'fgcolor'} );
+#                push @{$cur_btile->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
+#                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
+#                    ) };
+#                $cur_btile->{'png_attr'} = attr_data_from_png(
+#                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} );
                 next;
             }
             if ( $line =~ /^END_BTILE$/ ) {
@@ -185,7 +192,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
-                push @{$cur_sprite->{'pixels'}}, @{ pixel_data_from_png(
+                push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ) };
                 push @{$cur_sprite->{'png_attr'}}, @{ attr_data_from_png(
@@ -199,7 +206,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
-                push @{$cur_sprite->{'mask'}}, @{ pixel_data_from_png(
+                push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
                 next;
@@ -479,7 +486,7 @@ sub load_png_file {
 }
 
 # extracts pixel data from a PNG file
-sub pixel_data_from_png {
+sub pick_pixel_data_by_color_from_png {
     my ( $file, $xpos, $ypos, $width, $height, $hex_fgcolor ) = @_;
     my $png = load_png_file( $file );
     my @pixels = map {
@@ -510,9 +517,10 @@ my %zx_colors = (
     'FFFF00' => 'YELLOW',
     'FFFFFF' => 'WHITE',
 );
-sub extract_attr_from_cell {
-    my %histogram;
+
+sub extract_colors_from_cell {
     my ( $png, $xpos, $ypos ) = @_;
+    my %histogram;
     foreach my $x ( $xpos .. ( $xpos + 7 ) ) {
         foreach my $y ( $ypos .. ( $ypos + 7 ) ) {
             my $pixel_color = $png->[$y][$x];
@@ -520,13 +528,27 @@ sub extract_attr_from_cell {
         }
     }
     my @l = sort { $histogram{ $a } > $histogram{ $b } } keys %histogram;
-    my ( $bg, $fg ) = ( $l[0], $l[1] );
     if (scalar( @l ) > 2 ) {
         foreach my $e ( 3 .. $#l ) {
             printf STDERR "Warning: color #%s (%s)  detected but ignored\n",
                 $l[$e], $zx_colors{ $l[$e] };
         }
     }
+    my $bg = $l[0];
+    my $fg = $l[1];
+    # if one of them is black, it is preferred as bg color, swap them if needed
+    if ( $fg eq '000000' ) {
+        my $tmp = $bg;
+        $bg = $fg;
+        $fg = $tmp;
+    }
+    return { 'bg' => $bg, 'fg' => $fg };
+}
+
+sub extract_attr_from_cell {
+    my ( $png, $xpos, $ypos ) = @_;
+    my $colors = extract_colors_from_cell( $png, $xpos, $ypos );
+    my ( $bg, $fg ) = map { $colors->{$_} } qw( bg fg );
     my $attr = sprintf "INK_%s | PAPER_%s", $zx_colors{ $fg }, $zx_colors{ $bg };
     if ( ( $fg =~ /FF/ ) or ( $bg =~ /FF/ ) ) { $attr .= " | BRIGHT"; }
     return $attr;
@@ -547,6 +569,45 @@ sub attr_data_from_png {
         $y += 8;
     }
     return \@attrs;
+}
+
+sub png_to_pixels_and_attrs {
+    my ( $file, $xpos, $ypos, $width, $height ) = @_;
+    my $png = load_png_file( $file );
+
+    # extract color and pixel data from cells left-right, top-bottom order
+    my @colors;
+    my @pixels;
+    my $y = $ypos;
+    while ( $y < ( $ypos + $height ) ) {
+        my $x = $xpos;
+        while ( $x < ( $xpos + $width ) ) {
+            my $c = extract_colors_from_cell( $png, $x, $y );
+            push @colors, $c;
+            push @pixels, pick_pixel_data_by_color_from_png( $file, $x, $y, 8, 8, $c->{'fg'} );
+            $x += 8;
+        }
+        $y += 8;
+    }
+
+    # we need to rearrange pixel data
+    my @pixel_data_lines;
+    my $nrows = $height / 8;
+    my $ncols = $width / 8;
+    foreach my $r ( 0 .. ( $nrows - 1 ) ) {
+        foreach my $l ( 0 .. 7 ) {
+            my $pixel_data_line;
+            foreach my $c ( 0 .. ( $ncols - 1 ) ) {
+                $pixel_data_line .= $pixels[ $r * $ncols + $c ][ $l ];
+            }
+            push @pixel_data_lines, $pixel_data_line;
+        }
+    }
+
+    return {
+            'pixels'	=> \@pixel_data_lines,
+            'attrs'	=> attr_data_from_png( $file, $xpos, $ypos, $width, $height ),
+    };
 }
 
 ######################################
