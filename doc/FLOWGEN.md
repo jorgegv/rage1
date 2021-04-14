@@ -98,7 +98,7 @@ check is successful. Options:
   - [x] DISABLE_HOTZONE <hotzone_name>
   - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `void my_custom_action(void)`
   - [x] END_OF_GAME
-  - [x] WARP_TO_SCREEN DEST_SCREEN=<screen_name> DEST_HERO_X=<xxx> DEST_HERO_Y=<yyy>
+  - [x] WARP_TO_SCREEN DEST_SCREEN=<screen_name> [DEST_HERO_X=<xxx>] [DEST_HERO_Y=<yyy>]
 
 ## FLOWGEN Gdata file syntax
 

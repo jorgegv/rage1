@@ -80,9 +80,14 @@ struct flow_rule_action_s {
             uint8_t	num_screen;
             uint8_t	hero_x;
             uint8_t	hero_y;
+            uint8_t	flags;
             }						warp_to_screen;	// WARP_TO_SCREEN
     } data;
 };
+
+// flags for action WARP_TO_SCREEN
+#define ACTION_WARP_TO_SCREEN_KEEP_HERO_X	(0x01)
+#define ACTION_WARP_TO_SCREEN_KEEP_HERO_Y	(0x02)
 
 // data definition for a rule
 struct flow_rule_s {

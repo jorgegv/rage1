@@ -198,8 +198,11 @@ void do_rule_action_end_of_game( struct flow_rule_action_s *action ) __z88dk_fas
 }
 
 void do_rule_action_warp_to_screen( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    game_state.hero.position.x = action->data.warp_to_screen.hero_x;
-    game_state.hero.position.y = action->data.warp_to_screen.hero_y;
+    // only change coords if directed to do it
+    if ( ! ( action->data.warp_to_screen.flags & ACTION_WARP_TO_SCREEN_KEEP_HERO_X ) )
+        game_state.hero.position.x = action->data.warp_to_screen.hero_x;
+    if ( ! ( action->data.warp_to_screen.flags & ACTION_WARP_TO_SCREEN_KEEP_HERO_Y ) )
+        game_state.hero.position.y = action->data.warp_to_screen.hero_y;
     game_state_goto_screen( action->data.warp_to_screen.num_screen );
 }
 

@@ -209,9 +209,18 @@ sub validate_and_compile_rule {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $action_data )
             };
-            $action_data = sprintf( "{ .num_screen = %d, .hero_x = %d, .hero_y = %d }",
+            my @flag_list;
+            if ( not defined( $vars->{'dest_hero_x'} ) ) {
+                push @flag_list, 'ACTION_WARP_TO_SCREEN_KEEP_HERO_X';
+            }
+            if ( not defined( $vars->{'dest_hero_y'} ) ) {
+                push @flag_list, 'ACTION_WARP_TO_SCREEN_KEEP_HERO_Y';
+            }
+            my $flags = ( scalar( @flag_list ) ? join( " | ", @flag_list ) : 0 );
+            $action_data = sprintf( "{ .num_screen = %d, .hero_x = %d, .hero_y = %d, .flags = %s }",
                 $all_state->{'screen_name_to_index'}{ $vars->{'dest_screen'} },
-                $vars->{'dest_hero_x'},$vars->{'dest_hero_y'}
+                ( $vars->{'dest_hero_x'} || 0 ), ( $vars->{'dest_hero_y'} || 0 ),
+                $flags,
             );
             # regenerate the value with the filtered data
             $do = sprintf "%s\t%s", $action, $action_data;
