@@ -13,6 +13,12 @@
 
 #include <arch/spectrum.h>
 
+////////////////////////////////////////////////
+//
+// FLOWGEN RULE CHECKS
+//
+////////////////////////////////////////////////
+
 // flow rule check constants
 // always update RULE_CHECK_MAX when adding new checks!
 #define RULE_CHECK_GAME_FLAG_IS_SET		0
@@ -36,6 +42,25 @@
 
 #define RULE_CHECK_MAX				17
 
+struct flow_rule_check_s {
+    uint8_t type;
+    union {
+        uint16_t					unused;		// for checks that do not need data
+        struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
+        struct { uint8_t	count; }		lives;		// INC_LIVES
+        struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
+        struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
+        struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
+    } data;
+};
+
+////////////////////////////////////////////////
+//
+// FLOWGEN RULE ACTIONS
+//
+////////////////////////////////////////////////
+
 // flow rule action constants
 // always update RULE_ACTION_MAX when adding new actions!
 #define RULE_ACTION_SET_USER_FLAG		0
@@ -49,21 +74,10 @@
 #define RULE_ACTION_DISABLE_HOTZONE		8
 #define RULE_ACTION_ENABLE_BTILE		9
 #define RULE_ACTION_DISABLE_BTILE		10
+#define RULE_ACTION_ADD_TO_INVENTORY		11
+#define RULE_ACTION_REMOVE_FROM_INVENTORY	12
 
-#define RULE_ACTION_MAX				10
-
-struct flow_rule_check_s {
-    uint8_t type;
-    union {
-        uint16_t					unused;		// for checks that do not need data
-        struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
-        struct { uint8_t	count; }		lives;		// INC_LIVES
-        struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
-        struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
-        struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
-        struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
-    } data;
-};
+#define RULE_ACTION_MAX				12
 
 struct flow_rule_action_s {
     uint8_t type;
@@ -82,6 +96,7 @@ struct flow_rule_action_s {
             uint8_t	hero_y;
             uint8_t	flags;
             }						warp_to_screen;	// WARP_TO_SCREEN
+        struct { uint16_t	item_id; }		item;		// ADD_TO/REMOVE_FROM_INVENTORY
     } data;
 };
 

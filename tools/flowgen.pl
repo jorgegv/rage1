@@ -272,6 +272,8 @@ my $action_data_output_format = {
     DISABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
     ENABLE_BTILE		=> ".data.btile.num_btile = %d",
     DISABLE_BTILE		=> ".data.btile.num_btile = %d",
+    ADD_TO_INVENTORY		=> ".data.item.item_id = %s",
+    REMOVE_FROM_INVENTORY	=> ".data.item.item_id = %s",
 };
 
 sub output_rule_checks {

@@ -99,6 +99,8 @@ check is successful. Options:
   - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `void my_custom_action(void)`
   - [x] END_OF_GAME
   - [x] WARP_TO_SCREEN DEST_SCREEN=<screen_name> [DEST_HERO_X=<xxx>] [DEST_HERO_Y=<yyy>]
+  - [x] ADD_TO_INVENTORY <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
+  - [x] REMOVE_FROM_INVENTORY <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
 
 ## FLOWGEN Gdata file syntax
 

@@ -18,6 +18,7 @@
 #include "rage1/debug.h"
 #include "rage1/screen.h"
 #include "rage1/collision.h"
+#include "rage1/inventory.h"
 
 // disable "unreferenced function argument" warning, there are some
 // functions here that don't use their parameter
@@ -228,6 +229,16 @@ void do_rule_action_disable_btile( struct flow_rule_action_s *action ) __z88dk_f
     btile_remove( t->row, t->col, t->btile );
 }
 
+void do_rule_action_add_to_inventory( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    ADD_TO_INVENTORY( &game_state.inventory, action->data.item.item_id );
+    inventory_show();
+}
+
+void do_rule_action_remove_from_inventory( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    REMOVE_FROM_INVENTORY( &game_state.inventory, action->data.item.item_id );
+    inventory_show();
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -267,4 +278,6 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_disable_hotzone,
     do_rule_action_enable_btile,
     do_rule_action_disable_btile,
+    do_rule_action_add_to_inventory,
+    do_rule_action_remove_from_inventory,
 };
