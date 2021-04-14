@@ -55,7 +55,7 @@ BEGIN_BTILE
         ATTR    INK_YELLOW | PAPER_BLACK
 
 	// ...or load both pixels and attrs from PNG
-        PNG_DATA      FILE=game_data/png/btile.png XPOS=8 YPOS=8 WIDTH=16 HEIGHT=16 BGCOLOR=ffffff FGCOLOR=000000
+        PNG_DATA      FILE=game_data/png/btile.png XPOS=8 YPOS=8 WIDTH=16 HEIGHT=16
 
 END_BTILE
 ```
@@ -79,9 +79,12 @@ END_BTILE
   to the repository top directory level.
   * `XPOS`, `YPOS`: pixel coordinates of the top left rectangle of pixels
   * `WIDTH`, `HEIGHT`: pixels dimensions of the rectangle of pixels
-  * `BGCOLOR`: color in the PNG that will be considered as ink pixels
-  * `FGCOLOR`: color that will be considered as paper pixels
-
+  * Attributes for the tile will be automatically assigned from the 2 colors
+  used in each 8x8 cell.  If more than 2 colors are detected in a cell,
+  warnings will be issued.  Also, if one of the 2 colors is black (#000000)
+  it will be preferred as the background color.
+  * For best results, you can use the ZX-Spectrum palette definition for
+  GIMP and use it for coloring your PNG file with the tiles.
 
 ### SPRITE data
 

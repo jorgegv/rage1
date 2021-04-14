@@ -133,12 +133,6 @@ sub read_input_data {
                 );
                 $cur_btile->{'pixels'} = $data->{'pixels'};
                 $cur_btile->{'png_attr'} = $data->{'attrs'};
-#                my $fgcolor = uc( $vars->{'fgcolor'} );
-#                push @{$cur_btile->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
-#                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
-#                    ) };
-#                $cur_btile->{'png_attr'} = attr_data_from_png(
-#                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} );
                 next;
             }
             if ( $line =~ /^END_BTILE$/ ) {
