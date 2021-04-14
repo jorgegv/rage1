@@ -921,6 +921,7 @@ sub compile_screen_data {
                     type => $screen_digraphs->{ $data_dg }{'type'},
                     row => $game_area_top + $r,
                     col => $game_area_left + $c,
+                    active => 1,
                 };
 
             # else if there is a tile in DEST and it is different from the one in DATA...
@@ -1014,7 +1015,7 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'btiles'}});
         print $output_fh join( ",\n", map {
-                sprintf("\t{ TT_%s, %d, %d, &btile_%s, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $_->{'btile'}, 'F_BTILE_ACTIVE' )
+                sprintf("\t{ TT_%s, %d, %d, &btile_%s, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $_->{'btile'}, ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
             } @{$screen->{'btiles'}} );
         print $output_fh "\n};\n\n";
     }
