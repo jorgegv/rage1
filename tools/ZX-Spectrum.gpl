@@ -1,0 +1,19 @@
+GIMP Palette
+Name: ZX Spectrum
+Columns: 1
+#
+  0   0   0	Black
+  0   0 192	Blue
+192   0   0	Red
+192   0 192	Magenta
+  0 192   0	Green
+  0 192 192	Cyan
+192 192   0	Yellow
+192 192 192	White
+  0   0 255	Blue+Bright
+255   0   0	Red+Bright
+255   0 255	Magenta+Bright
+  0 255   0	Green+Bright
+  0 255 255	Cyan+Bright
+255 255   0	Yellow+Bright
+255 255 255	White+Bright
