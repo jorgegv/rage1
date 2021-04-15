@@ -13,3 +13,6 @@ Documentation index:
 * [TODO.md](TODO.md): general checklist of desired items for the game
 (obsolete, use GitHub issue list)
   one!
+* [MAP-SCREEN-DATA-DESIGN.md](MAP-SCREEN-DATA-DESIGN.md): internal design for the
+text-mode map compiler.
+* [MEMORY-MAP.md](MEMORY-MAP.md): memory map for a RAGE1 game

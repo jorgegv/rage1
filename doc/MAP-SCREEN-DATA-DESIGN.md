@@ -2,16 +2,19 @@
 
 Syntax:
 
-- There must be 24 lines of 64 characters each.  This covers the 32x24 ZX
-  Spectrum screen with character cells.  Each cell is represented with 2
-  chars (a digraph) to make it somewhat square.  Check: there are 24 lines
-  of 64 chars each.
+- There must a number of SCREEN_DATA lines equal to the height of the
+  GAME_AREA definition in the game configuration.  This covers the game area
+  with character cells.  Each cell is represented in the SCREEN_DATA line
+  with 2 chars (a digraph) to make it look somewhat square.  So each
+  SCREEN_DATA line needs to be exactly 2 times the width of the GAME_AREA
+  definition. Check: correct number of data lines. Check: correct size of
+  all data lines.
 
 - The digraphs used in the SCREEN_DATA lines must be defined with DEFINE
   directives.  These directives map the digraphs to the BTILEs they
   represent.
 
-- The objective is to compile the 32x24 cell screen to a list of btiles with
+- The objective is to compile the GAME_AREA to a list of btiles with
   their names, types and positions on screen.
 
 - This list can be added to the 'btiles' list for the screen, to be
@@ -19,10 +22,10 @@ Syntax:
 
 Procedure:
 
-- An initial DEST array of 32x24 is generated (all digraphs set to '  ' - 2
+- An initial DEST array of MxN is generated (all digraphs set to '  ' - 2
   spaces)
 
-- A DATA array of 32x24 is populated with the digraphs in each position
+- A DATA array of MxN is populated with the digraphs in each position
   taken from the SCREEN_DATA lines (split the SCREEN_DATA lines in groups of
   2 chars)
 
