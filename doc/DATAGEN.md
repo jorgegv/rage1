@@ -199,6 +199,10 @@ END_SPRITE
   The new argument MASKCOLOR is used to specify the color that will be used
   as the mask.
 * `COLOR`: The color of the sprite. Must be an INK_* Spectrum constant
+* `HMIRROR`, `VMIRROR`: if these properties exist and are set to 1, a
+  horizontal or vertical mirror will be applied to the pixels and mask. 
+  THis is very useful for defining multiple sprites from one graphic asset,
+  going in all direction or the other.
 
 A common arrangement for sprite graphics in PNG files is to draw the sprite
 in B/W (#000000, #ffffff), and the mask in red (#ff0000)

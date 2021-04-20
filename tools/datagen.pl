@@ -209,6 +209,14 @@ sub read_input_data {
                 push @{$cur_sprite->{'attr'}}, $1;
                 next;
             }
+            if ( $line =~ /^HMIRROR\s+(.+)$/ ) {
+                $cur_sprite->{'hmirror'} = $1;
+                next;
+            }
+            if ( $line =~ /^VMIRROR\s+(.+)$/ ) {
+                $cur_sprite->{'vmirror'} = $1;
+                next;
+            }
             if ( $line =~ /^END_SPRITE$/ ) {
                 validate_and_compile_sprite( $cur_sprite );
                 $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @sprites );
@@ -719,6 +727,14 @@ sub validate_and_compile_sprite {
     foreach my $p ( @{$sprite->{'mask'}} ) {
         ( length( $p ) == $sprite->{'cols'} * 2 * 8 ) or
             die "Sprite MASK line should be of length ".( $sprite->{'rows'} * 2 * 8 );
+    }
+
+    # execute the H/V mirror if needed
+    if ( $sprite->{'hmirror'} && 1 ) {
+        @{ $sprite->{'pixels'} } = map { join( '', reverse split( //, $_ ) ) } @{ $sprite->{'pixels'} };
+    }
+    if ( $sprite->{'vmirror'} && 1 ) {
+        @{ $sprite->{'pixels'} } = reverse @{ $sprite->{'pixels'} };
     }
 
     # compile PIXELS string data to numeric data for output
