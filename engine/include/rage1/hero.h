@@ -81,5 +81,7 @@ void hero_shoot_bullet( void );
 void hero_pickup_items(void);
 void hero_update_lives_display(void);
 void hero_draw(void);
+void hero_set_position_x( struct hero_info_s *h, uint8_t x);
+void hero_set_position_y( struct hero_info_s *h, uint8_t y);
 
 #endif // _HERO_H

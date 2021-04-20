@@ -40,14 +40,21 @@ void hero_reset_position(void) {
     h = &game_state.hero;
     anim = &h->animation;
 
-    // set initial position and move it there - update xmax and ymax also
-    h->position.x = map[ game_state.current_screen ].hero_data.startup_x;
-    h->position.y = map[ game_state.current_screen ].hero_data.startup_y;
-
-    // adjust xmax, ymax and move sprite to initial position
-    h->position.xmax = h->position.x + h->width - 1;
-    h->position.ymax = h->position.y + h->height - 1;
+    // set initial position and move it there
+    hero_set_position_x( h, map[ game_state.current_screen ].hero_data.startup_x );
+    hero_set_position_y( h, map[ game_state.current_screen ].hero_data.startup_y );
     sp1_MoveSprPix( h->sprite, &game_area, anim->frames_right[0], h->position.x, h->position.y );
+}
+
+// X and Y setting functions - take care of setting XMAX and YMAX also
+void hero_set_position_x( struct hero_info_s *h, uint8_t x ) {
+    h->position.x = x;
+    h->position.xmax = h->position.x + h->width - 1;
+}
+
+void hero_set_position_y( struct hero_info_s *h, uint8_t y ) {
+    h->position.y = y;
+    h->position.ymax = h->position.y + h->height - 1;
 }
 
 // resets hero state at game startup
