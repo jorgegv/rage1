@@ -18,12 +18,37 @@
 #include "rage1/types.h"
 
 // structs for storing a single sprite's data on a screen
+
+// an animation sequence is an array of frame numbers
+// the frame numbers in a sequence are used to show the corresponding frame for the sprite
+struct animation_sequence_s {
+    uint8_t num_elements;		// number of elements in this sequence
+    uint8_t *frame_numbers;		// ptr to array of sequence of frame numbers
+}
+
 struct  sprite_animation_data_s {
-    uint8_t num_frames;		// number of frames for this sprite
-    uint8_t **frames;		// array of ptrs to sprite frames (SP1 layout)
-    uint8_t delay;		// frames are rotated every 'delay' calls
-    uint8_t current_frame;	// current sprite frame
-    uint8_t delay_counter;	// current frame delay counter
+    // all frames for this sprite
+    struct {
+        uint8_t num_frames;		// number of frames for this sprite
+        uint8_t **frames;		// ptr to array of ptrs to sprite frames (SP1 layout)
+    } frame_data;
+    // all animation sequences for this sprite
+    struct {
+        uint8_t num_sequences;
+        struct animation_sequence_s *sequences;
+    } sequence_data;
+    // animation delays
+    struct {
+        uint8_t frame_delay;		// frames are changed every 'frame_delay' screen frames
+        uint8_t sequence_delay;		// sequences are repeated after waiting 'sequence_delay' screen frames
+    } delay_data;
+    // current animation state
+    struct {
+        uint8_t sequence;		// current animation sequence
+        uint8_t sequence_counter;	// current sequence index (used to get frame number)
+        uint8_t frame_delay_counter;	// current frame delay counter
+        uint8_t sequence_delay_counter;	// current sequence delay counter
+    } current;
 };
 
 #define SPRITE_MOVE_LINEAR		0x00
@@ -71,6 +96,8 @@ void sprite_animate_and_move_all( uint8_t num_sprites, struct sprite_info_s *spr
 // move sprite off screen
 void sprite_move_offscreen( struct sp1_ss *s );
 void sprite_move_offscreen_all( uint8_t num_sprites, struct sprite_info_s *sprites );
+
+void sprite_set_animation_sequence( struct sprite_info_s *s, uint8_t nseq );
 
 // callback function and static params to set a sprite attributes
 struct attr_param_s {
