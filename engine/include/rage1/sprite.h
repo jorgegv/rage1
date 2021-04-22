@@ -26,7 +26,9 @@ struct animation_sequence_s {
     uint8_t *frame_numbers;		// ptr to array of sequence of frame numbers
 }
 
-struct  sprite_animation_data_s {
+// struct and external ref for global sprite graphics table
+struct  sprite_graphic_data_s {
+    uint8_t width,height;		// dimensions in pixels ( rows,cols * 8 )
     // all frames for this sprite
     struct {
         uint8_t num_frames;		// number of frames for this sprite
@@ -37,6 +39,10 @@ struct  sprite_animation_data_s {
         uint8_t num_sequences;
         struct animation_sequence_s *sequences;
     } sequence_data;
+};
+extern struct sprite_graphic_data_s all_sprites[];
+
+struct sprite_animation_data_s {
     // animation delays
     struct {
         uint8_t frame_delay;		// frames are changed every 'frame_delay' screen frames
@@ -68,10 +74,10 @@ struct  sprite_movement_data_s {
 };
 
 struct sprite_info_s {
+    uint8_t num_graphic;				// index into the global sprite graphics table
     struct sp1_ss *sprite;				// ptr to SP1 sprite struct
-    uint8_t width,height;				// dimensions in pixels ( rows,cols * 8 )
     struct sprite_animation_data_s animation;		// sprite animation data
-    struct position_data_s position;		// sprite position data
+    struct position_data_s position;			// sprite position data
     struct sprite_movement_data_s movement;		// sprite movement data
     uint16_t flags;					// flags
 };
