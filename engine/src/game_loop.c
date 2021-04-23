@@ -47,8 +47,8 @@ void check_game_flags( void ) {
          // draw screen and reset sprites
          map_draw_screen( &map[ game_state.current_screen ] );
          sprite_reset_position_all( 
-            map[ game_state.current_screen ].sprite_data.num_sprites, 
-            map[ game_state.current_screen ].sprite_data.sprites
+            map[ game_state.current_screen ].enemy_data.num_enemies, 
+            map[ game_state.current_screen ].enemy_data.enemies
          );
          bullet_reset_all();
          RESET_GAME_FLAG( F_GAME_START );
@@ -61,8 +61,8 @@ void check_game_flags( void ) {
             SET_GAME_FLAG( F_GAME_OVER );
          else {
             sprite_reset_position_all(
-               map[ game_state.current_screen ].sprite_data.num_sprites, 
-               map[ game_state.current_screen ].sprite_data.sprites
+               map[ game_state.current_screen ].enemy_data.num_enemies, 
+               map[ game_state.current_screen ].enemy_data.enemies
             );
             hero_reset_position();
             bullet_reset_all();
@@ -78,8 +78,8 @@ void move_sprites(void) {
 
    // move enemy sprites
    sprite_animate_and_move_all(
-      map[ game_state.current_screen ].sprite_data.num_sprites, 
-      map[ game_state.current_screen ].sprite_data.sprites
+      map[ game_state.current_screen ].enemy_data.num_enemies, 
+      map[ game_state.current_screen ].enemy_data.enemies
    );
 
    // move active shots
@@ -199,8 +199,8 @@ void run_main_game_loop(void) {
    // hero
    sprite_move_offscreen( game_state.hero.sprite );
    // enemies
-   sprite_move_offscreen_all( map[ game_state.current_screen ].sprite_data.num_sprites,
-      map[ game_state.current_screen ].sprite_data.sprites );
+   sprite_move_offscreen_all( map[ game_state.current_screen ].enemy_data.num_enemies,
+      map[ game_state.current_screen ].enemy_data.enemies );
    // bullets
    bullet_move_offscreen_all();
 

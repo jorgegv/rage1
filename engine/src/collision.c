@@ -27,7 +27,7 @@ uint8_t collision_check( struct position_data_s *a,struct position_data_s *b ) {
 }
 
 void collision_check_hero_with_sprites(void) {
-    static struct position_data_s *hero_pos,*sprite_pos;
+    static struct position_data_s *hero_pos,*enemy_pos;
     static struct sprite_info_s *s;
     static uint8_t i;
     struct map_screen_s *sc;
@@ -35,13 +35,13 @@ void collision_check_hero_with_sprites(void) {
     hero_pos = &game_state.hero.position;
     sc = &map[game_state.current_screen];
 
-    i = sc->sprite_data.num_sprites;
+    i = sc->enemy_data.num_enemies;
     while ( i-- ) {
-        s = &sc->sprite_data.sprites[ i ];
+        s = &sc->enemy_data.enemies[ i ];
 
         if ( IS_SPRITE_ACTIVE( *s ) ) {
-            sprite_pos = &s->position;
-            if ( collision_check( hero_pos, sprite_pos ) ) {
+            enemy_pos = &s->position;
+            if ( collision_check( hero_pos, enemy_pos ) ) {
                 SET_LOOP_FLAG( F_LOOP_HERO_HIT );
                 return;
             }
@@ -61,9 +61,9 @@ void collision_check_bullets_with_sprites( void ) {
     while ( bi-- ) {
         b = &game_state.bullet.bullets[ bi ];
         if ( IS_BULLET_ACTIVE( *b ) ) {
-            si = sc->sprite_data.num_sprites;
+            si = sc->enemy_data.num_enemies;
             while ( si-- ) {
-                s = &sc->sprite_data.sprites[ si ];
+                s = &sc->enemy_data.enemies[ si ];
                 if ( IS_SPRITE_ACTIVE( *s ) ) {
                     if ( collision_check( &b->position, &s->position ) ) {
                         // set bullet inactive and move away

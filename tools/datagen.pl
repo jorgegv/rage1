@@ -978,7 +978,7 @@ sub output_screen_sprite_initialization_code {
         printf $output_fh "\t// Sprite '%s'\n", $sprite->{'name'};
 
         # generate code for initializing SP1 structure
-        printf $output_fh "\tm->sprite_data.sprites[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
+        printf $output_fh "\tm->enemy_data.enemies[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
             $sprite_num,
             $sprite->{'rows'} + 1,	# height in chars including blank bottom row
             0,				# left column graphic offset
@@ -1455,7 +1455,7 @@ EOF_MAP
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
-            sprintf( "\t\t.sprite_data = { %d, %s },\t// sprite_data\n",
+            sprintf( "\t\t.enemy_data = { %d, %s },\t// enemy_data\n",
                 scalar( @{$_->{'sprites'}} ), ( scalar( @{$_->{'sprites'}} ) ? sprintf( 'screen_%s_sprites', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.hero_data = { %d, %d },\t// hero_data\n",
                 $_->{'hero'}{'startup_xpos'}, $_->{'hero'}{'startup_ypos'} ) .
