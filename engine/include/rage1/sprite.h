@@ -14,7 +14,9 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
-// structs for storing a single sprite's data on a screen
+//////////////////////////////////////////////////////////////////////////
+// structs for storing a single copy of each sprite graphics in memory
+//////////////////////////////////////////////////////////////////////////
 
 // an animation sequence is an array of frame numbers
 // the frame numbers in a sequence are used to show the corresponding frame for the sprite
@@ -39,6 +41,10 @@ struct  sprite_graphic_data_s {
 };
 extern struct sprite_graphic_data_s all_sprites[];
 
+//////////////////////////////////////////////////////////////////////////
+// animation data structs which can be included in others (e.g. enemy, hero, etc.)
+//////////////////////////////////////////////////////////////////////////
+
 struct sprite_animation_data_s {
     // animation delays
     struct {
@@ -47,10 +53,10 @@ struct sprite_animation_data_s {
     } delay_data;
     // current animation state
     struct {
-        uint8_t sequence;		// current animation sequence
-        uint8_t sequence_counter;	// current sequence index (used to get frame number)
-        uint8_t frame_delay_counter;	// current frame delay counter
-        uint8_t sequence_delay_counter;	// current sequence delay counter
+        uint8_t sequence;			// current animation sequence
+        uint8_t sequence_counter;		// current sequence index (used to get frame number)
+        uint8_t frame_delay_counter;		// current frame delay counter
+        uint8_t sequence_delay_counter;		// current sequence delay counter
     } current;
 };
 

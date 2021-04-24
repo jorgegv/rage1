@@ -32,7 +32,7 @@ struct  enemy_movement_data_s {
 
 struct enemy_info_s {
     struct sp1_ss *sprite;				// ptr to SP1 sprite struct
-    uint8_t width,height;				// dimensions in pixels ( rows,cols * 8 )
+    uint8_t num_graphic;				// sprite graphics index
     struct sprite_animation_data_s animation;		// sprite animation data
     struct position_data_s position;			// enemy position data
     struct enemy_movement_data_s movement;		// enemy movement data
