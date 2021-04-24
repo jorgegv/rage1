@@ -26,9 +26,13 @@ struct  sprite_graphic_data_s {
 extern struct sprite_graphic_data_s all_sprite_graphics[];
 
 struct  sprite_animation_data_s {
-    uint8_t delay;		// frames are rotated every 'delay' calls
-    uint8_t current_frame;	// current sprite frame
-    uint8_t delay_counter;	// current frame delay counter
+    struct {
+        uint8_t frame_delay;		// frames are rotated every 'delay' calls
+    } delay_data;
+    struct {
+        uint8_t frame;			// current sprite frame
+        uint8_t frame_delay_counter;	// current frame delay counter
+    } current;
 };
 
 // move sprite off screen

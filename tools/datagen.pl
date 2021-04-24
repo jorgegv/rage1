@@ -1043,7 +1043,7 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} );
         print $output_fh join( ",\n", map {
-                sprintf("\t{ %s, %d, { %d, %d, %d }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
+                sprintf("\t{ %s, %d, { { %d }, { %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 

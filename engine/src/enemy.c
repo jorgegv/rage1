@@ -32,7 +32,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
         g = &all_sprite_graphics[ e->num_graphic ];
 
         // reset enemy state to initial values - update xmax and ymax also
-        e->animation.current_frame = e->animation.delay_counter = 0;
+        e->animation.current.frame = e->animation.current.frame_delay_counter = 0;
         e->position.x = e->movement.data.linear.initx;
         e->position.y = e->movement.data.linear.inity;
         e->movement.data.linear.dx = e->movement.data.linear.initdx;
@@ -63,10 +63,10 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
 
         // animate sprite
         anim = &e->animation;
-        if ( ++anim->delay_counter == anim->delay ) {
-            anim->delay_counter = 0;
-            if ( ++anim->current_frame == g->frame_data.num_frames ) {
-                anim->current_frame = 0;
+        if ( ++anim->current.frame_delay_counter == anim->delay_data.frame_delay ) {
+            anim->current.frame_delay_counter = 0;
+            if ( ++anim->current.frame == g->frame_data.num_frames ) {
+                anim->current.frame = 0;
             }
         }
 
@@ -112,7 +112,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
         // adjust xmax, ymax and move sprite to new position
         pos->xmax = pos->x + g->width - 1;
         pos->ymax = pos->y + g->height - 1;
-        sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[anim->current_frame], pos->x, pos->y );
+        sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[anim->current.frame], pos->x, pos->y );
     }
 }
 
