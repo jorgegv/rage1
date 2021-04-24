@@ -14,6 +14,13 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
+// an animation sequence is an array of frame numbers
+// the frame numbers in a sequence are used to show the corresponding frame for the sprite
+struct animation_sequence_s {
+    uint8_t num_elements;              // number of elements in this sequence
+    uint8_t *frame_numbers;            // ptr to array of sequence of frame numbers
+};
+
 // structs for storing a single sprite's data
 struct  sprite_graphic_data_s {
     uint8_t width,height;               // dimensions in pixels ( rows,cols * 8 )
@@ -22,16 +29,23 @@ struct  sprite_graphic_data_s {
         uint8_t num_frames;             // number of frames for this sprite
         uint8_t **frames;               // ptr to array of ptrs to sprite frames (SP1 layout)
     } frame_data;
+    struct {
+        uint8_t num_sequences;
+        struct animation_sequence_s *sequences;
+    } sequence_data;
 };
 extern struct sprite_graphic_data_s all_sprite_graphics[];
 
 struct  sprite_animation_data_s {
     struct {
-        uint8_t frame_delay;		// frames are rotated every 'delay' calls
+        uint8_t frame_delay;		// frames are changed every 'frame_delay' calls
+        uint8_t sequence_delay;		// a sequence is repeated after waiting 'sequence_delay' screen frames
     } delay_data;
     struct {
-        uint8_t frame;			// current sprite frame
         uint8_t frame_delay_counter;	// current frame delay counter
+        uint8_t sequence;		// current animation sequence
+        uint8_t sequence_counter;	// current sequence index (used to get frame number)
+        uint8_t sequence_delay_counter;	// current sequence delay counter
     } current;
 };
 

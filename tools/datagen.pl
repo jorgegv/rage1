@@ -776,6 +776,7 @@ sub output_sprite {
     my $sprite_rows = $sprite->{'rows'};
     my $sprite_cols = $sprite->{'cols'};
     my $sprite_frames = $sprite->{'frames'};
+    my $sprite_name = $sprite->{'name'};
 
     my $cur_char = 0;
     my @char_names;
@@ -816,19 +817,28 @@ sub output_sprite {
 
     # output list of pointers to frames
     my @frame_offsets;
-    my $ptr = 16;	# initial frame
+    my $ptr = 16;	# initial frame: 8 bytes pixel + 8 bytes mask for the top blank row
     foreach ( 0 .. ( $sprite->{'frames'} - 1 ) ) {
         push @frame_offsets, $ptr;
         $ptr += 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
     }
     printf $output_fh "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
-        $sprite->{'name'},
+        $sprite_name,
         join( ",\n", 
-            map { sprintf "\t&sprite_%s_data[%d]", $sprite->{'name'}, $_ }
+            map { sprintf "\t&sprite_%s_data[%d]", $sprite_name, $_ }
             @frame_offsets
         );
 
-    printf $output_fh "// End of Sprite '%s'\n\n", $sprite->{'name'};
+    # output list of animation sequences
+    printf $output_fh "uint8_t sprite_%s_sequence_000[%d] = { %s };\n",
+        $sprite_name, $sprite_frames, join( ',', ( 0 .. ($sprite_frames - 1) ) );
+    printf $output_fh "struct animation_sequence_s sprite_%s_sequences[%d] = { { %d, &sprite_%s_sequence_000[0] } };\n",
+        $sprite_name,
+        1,	# number of animation sequences
+        $sprite_frames,
+        $sprite_name;
+
+    printf $output_fh "// End of Sprite '%s'\n\n", $sprite_name;
 }
 
 ######################################
@@ -1429,9 +1439,11 @@ EOF_SPRITES
     print $output_fh "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
     print $output_fh join( ",\n\n\t", map {
         my $sprite = $_;
-        sprintf "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0] }",
+        sprintf "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = &sprite_%s_sequences[0] }",
             $_->{'cols'} * 8, $_->{'rows'} * 8,
-            $_->{'frames'}, $_->{'name'}
+            $_->{'frames'}, $_->{'name'},
+            1,	# number of animation sequences
+            $_->{'name'},
     } @sprites );
     print $output_fh "\n};\n\n";
 }
