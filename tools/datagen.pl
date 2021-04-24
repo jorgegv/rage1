@@ -1043,22 +1043,19 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} );
         print $output_fh join( ",\n", map {
-                sprintf("\t{ %s, %d, %d,{ %d, %s, %d, %d, %d }, { %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
+                sprintf("\t{ %s, %d, { %d, %d, %d }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
-                    # sprite size: width, height
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} }]{'cols'} * 8,
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} }]{'rows'} * 8,
+                    # index into global sprite graphics table
+                    $sprite_name_to_index{ $_->{'sprite'} },
 
-                    # animaton_data
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} }]{'frames'},
-                    sprintf( "&sprite_%s_frames[0]", $_->{'sprite'} ),
+                    # animation_data
                     $_->{'animation_delay'},
                     0,0,				# initial frame and delay counter
 
                     # position_data
-                    0,0,				# position gets reset on initialization
+                    0,0,0,0,				# position gets reset on initialization
 
                     # movement_data
                     sprintf( 'ENEMY_MOVE_%s', uc( $_->{'movement'} ) ),	# movement type
@@ -1426,6 +1423,17 @@ EOF_SPRITES
 ;
     foreach my $sprite ( @sprites ) { output_sprite( $sprite ); }
 
+    # output global sprite graphics table
+    my $num_sprites = scalar( @sprites );
+    print $output_fh "// Global sprite graphics table\n";
+    print $output_fh "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
+    print $output_fh join( ",\n\n\t", map {
+        my $sprite = $_;
+        sprintf "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0] }",
+            $_->{'cols'} * 8, $_->{'rows'} * 8,
+            $_->{'frames'}, $_->{'name'}
+    } @sprites );
+    print $output_fh "\n};\n\n";
 }
 
 sub output_screens {

@@ -19,54 +19,60 @@
 #include "game_data.h"
 
 void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
-    static struct enemy_info_s *s;
+    static struct enemy_info_s *e;
+    static struct sprite_graphic_data_s *g;
     static uint8_t n;
 
     n = num_enemies;
     while( n-- ) {
-        s = &enemies[n];		// eficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE(*s) )	// skip if not active
+        e = &enemies[n];		// eficiency matters ;-)
+        if ( ! IS_ENEMY_ACTIVE(*e) )	// skip if not active
             continue;
 
+        g = &all_sprite_graphics[ e->num_graphic ];
+
         // reset enemy state to initial values - update xmax and ymax also
-        s->animation.current_frame = s->animation.delay_counter = 0;
-        s->position.x = s->movement.data.linear.initx;
-        s->position.y = s->movement.data.linear.inity;
-        s->movement.data.linear.dx = s->movement.data.linear.initdx;
-        s->movement.data.linear.dy = s->movement.data.linear.initdy;
+        e->animation.current_frame = e->animation.delay_counter = 0;
+        e->position.x = e->movement.data.linear.initx;
+        e->position.y = e->movement.data.linear.inity;
+        e->movement.data.linear.dx = e->movement.data.linear.initdx;
+        e->movement.data.linear.dy = e->movement.data.linear.initdy;
 
         // adjust xmax, ymax and move enemy to initial position
-        s->position.xmax = s->position.x + s->width - 1;
-        s->position.ymax = s->position.y + s->height - 1;
-        sp1_MoveSprPix( s->sprite, &game_area, s->animation.frames[0], s->position.x, s->position.y );
+        e->position.xmax = e->position.x + g->width - 1;
+        e->position.ymax = e->position.y + g->height - 1;
+        sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[0], e->position.x, e->position.y );
     }
 }
 
 void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
-    static struct enemy_info_s *s;
+    static struct enemy_info_s *e;
     static struct sprite_animation_data_s *anim;
     static struct position_data_s *pos;
     static struct enemy_movement_data_s *move;
+    static struct sprite_graphic_data_s *g;
     static uint8_t n;
 
     n = num_enemies;
     while( n-- ) {
-        s = &enemies[n];		// efficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE(*s) )	// skip if not active
+        e = &enemies[n];		// efficiency matters ;-)
+        if ( ! IS_ENEMY_ACTIVE(*e) )	// skip if not active
             continue;
 
+        g = &all_sprite_graphics[ e->num_graphic ];
+
         // animate sprite
-        anim = &s->animation;
+        anim = &e->animation;
         if ( ++anim->delay_counter == anim->delay ) {
             anim->delay_counter = 0;
-            if ( ++anim->current_frame == anim->num_frames ) {
+            if ( ++anim->current_frame == g->frame_data.num_frames ) {
                 anim->current_frame = 0;
             }
         }
 
         // set new sprite position according to movement rules
-        pos = &s->position;
-        move = &s->movement;
+        pos = &e->position;
+        move = &e->movement;
         switch ( move->type ) {
             case ENEMY_MOVE_LINEAR:
                 if ( ++move->delay_counter == move->delay ) {
@@ -75,11 +81,11 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                     if (
                             ( pos->x >= move->data.linear.xmax ) ||
                             ( pos->x <= move->data.linear.xmin ) ||
-                            ( ENEMY_MUST_BOUNCE(*s) && (
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x + s->width ) ) == TT_OBSTACLE ) ||
+                            ( ENEMY_MUST_BOUNCE(*e) && (
+                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
                                 ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + s->height - 1), PIXEL_TO_CELL_COORD( pos->x + s->width ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + s->height - 1), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE )
+                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
+                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE )
                             ) )
                         ) { // then
                         move->data.linear.dx = -move->data.linear.dx;
@@ -88,11 +94,11 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                     if (
                             ( pos->y >= move->data.linear.ymax ) ||
                             ( pos->y <= move->data.linear.ymin ) ||
-                            ( ENEMY_MUST_BOUNCE(*s) && (
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + s->height ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
+                            ( ENEMY_MUST_BOUNCE(*e) && (
+                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
                                 ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1 ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + s->height ), PIXEL_TO_CELL_COORD( pos->x + s->width - 1) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1), PIXEL_TO_CELL_COORD( pos->x + s->width - 1 ) ) == TT_OBSTACLE )
+                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x + g->width - 1) ) == TT_OBSTACLE ) ||
+                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1), PIXEL_TO_CELL_COORD( pos->x + g->width - 1 ) ) == TT_OBSTACLE )
                             ) )
                         ) { // then
                         move->data.linear.dy = -move->data.linear.dy;
@@ -104,9 +110,9 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
         }
 
         // adjust xmax, ymax and move sprite to new position
-        pos->xmax = pos->x + s->width - 1;
-        pos->ymax = pos->y + s->height - 1;
-        sp1_MoveSprPix( s->sprite, &game_area, anim->frames[anim->current_frame], pos->x, pos->y );
+        pos->xmax = pos->x + g->width - 1;
+        pos->ymax = pos->y + g->height - 1;
+        sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[anim->current_frame], pos->x, pos->y );
     }
 }
 

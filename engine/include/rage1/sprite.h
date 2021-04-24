@@ -14,10 +14,18 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
-// structs for storing a single sprite's data on a screen
+// structs for storing a single sprite's data
+struct  sprite_graphic_data_s {
+    uint8_t width,height;               // dimensions in pixels ( rows,cols * 8 )
+    // all frames for this sprite
+    struct {
+        uint8_t num_frames;             // number of frames for this sprite
+        uint8_t **frames;               // ptr to array of ptrs to sprite frames (SP1 layout)
+    } frame_data;
+};
+extern struct sprite_graphic_data_s all_sprite_graphics[];
+
 struct  sprite_animation_data_s {
-    uint8_t num_frames;		// number of frames for this sprite
-    uint8_t **frames;		// array of ptrs to sprite frames (SP1 layout)
     uint8_t delay;		// frames are rotated every 'delay' calls
     uint8_t current_frame;	// current sprite frame
     uint8_t delay_counter;	// current frame delay counter
