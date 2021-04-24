@@ -90,7 +90,7 @@ void map_screen_reset_all_sprites( struct map_screen_s *s ) {
     static uint8_t i;
     i = s->enemy_data.num_enemies;
     while ( i-- )
-        SET_SPRITE_FLAG( s->enemy_data.enemies[ i ], F_SPRITE_ACTIVE );
+        SET_ENEMY_FLAG( s->enemy_data.enemies[ i ], F_ENEMY_ACTIVE );
 }
 
 void map_sprites_reset_all(void) {

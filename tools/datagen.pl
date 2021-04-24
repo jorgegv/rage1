@@ -845,7 +845,7 @@ sub validate_and_compile_screen {
     # compile initial flags for each sprite
     foreach my $s ( @{$screen->{'sprites'}} ) {
         $s->{'initial_flags'} = join( " | ", 0,
-            map { "F_SPRITE_" . uc($_) }
+            map { "F_ENEMY_" . uc($_) }
             grep { $s->{$_} }
             qw( bounce )
             );
@@ -1039,7 +1039,7 @@ sub output_screen {
     # screen sprites
     if ( scalar( @{$screen->{'sprites'}} ) ) {
         printf $output_fh "// Screen '%s' sprite data\n", $screen->{'name'};
-        printf $output_fh "struct sprite_info_s screen_%s_sprites[ %d ] = {\n",
+        printf $output_fh "struct enemy_info_s screen_%s_sprites[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'sprites'}});
         print $output_fh join( ",\n", map {
@@ -1061,7 +1061,7 @@ sub output_screen {
                     0,0,				# position gets reset on initialization
 
                     # movement_data
-                    sprintf( 'SPRITE_MOVE_%s', uc( $_->{'movement'} ) ),	# movement type
+                    sprintf( 'ENEMY_MOVE_%s', uc( $_->{'movement'} ) ),	# movement type
                     $_->{'speed_delay'},
                     0,				# initial delay counter
                     lc( $_->{'movement'} ),
@@ -1396,6 +1396,7 @@ sub output_header {
 #include "rage1/game_state.h"
 #include "rage1/bullet.h"
 #include "rage1/game_config.h"
+#include "rage1/enemy.h"
 
 #include "game_data.h"
 

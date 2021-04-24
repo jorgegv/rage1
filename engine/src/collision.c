@@ -15,6 +15,7 @@
 #include "rage1/bullet.h"
 #include "rage1/screen.h"
 #include "rage1/beeper.h"
+#include "rage1/enemy.h"
 
 #define COLLISION_TOLERANCE	2
 
@@ -28,7 +29,7 @@ uint8_t collision_check( struct position_data_s *a,struct position_data_s *b ) {
 
 void collision_check_hero_with_sprites(void) {
     static struct position_data_s *hero_pos,*enemy_pos;
-    static struct sprite_info_s *s;
+    static struct enemy_info_s *s;
     static uint8_t i;
     struct map_screen_s *sc;
 
@@ -39,7 +40,7 @@ void collision_check_hero_with_sprites(void) {
     while ( i-- ) {
         s = &sc->enemy_data.enemies[ i ];
 
-        if ( IS_SPRITE_ACTIVE( *s ) ) {
+        if ( IS_ENEMY_ACTIVE( *s ) ) {
             enemy_pos = &s->position;
             if ( collision_check( hero_pos, enemy_pos ) ) {
                 SET_LOOP_FLAG( F_LOOP_HERO_HIT );
@@ -51,7 +52,7 @@ void collision_check_hero_with_sprites(void) {
 
 void collision_check_bullets_with_sprites( void ) {
     static struct bullet_state_data_s *b;
-    static struct sprite_info_s *s;
+    static struct enemy_info_s *s;
     static uint8_t si,bi;
     struct map_screen_s *sc;
 
@@ -64,13 +65,13 @@ void collision_check_bullets_with_sprites( void ) {
             si = sc->enemy_data.num_enemies;
             while ( si-- ) {
                 s = &sc->enemy_data.enemies[ si ];
-                if ( IS_SPRITE_ACTIVE( *s ) ) {
+                if ( IS_ENEMY_ACTIVE( *s ) ) {
                     if ( collision_check( &b->position, &s->position ) ) {
                         // set bullet inactive and move away
                         RESET_BULLET_FLAG( *b, F_BULLET_ACTIVE );
                         sprite_move_offscreen( b->sprite );
                         // set sprite inactive and move away
-                        RESET_SPRITE_FLAG( *s, F_SPRITE_ACTIVE );
+                        RESET_ENEMY_FLAG( *s, F_ENEMY_ACTIVE );
                         sprite_move_offscreen( s->sprite );
                         // TO DO: increment score, etc.
                         if ( ! --game_state.enemies_alive )

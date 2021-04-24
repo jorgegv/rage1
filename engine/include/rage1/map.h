@@ -19,6 +19,7 @@
 #include "rage1/inventory.h"
 #include "rage1/hotzone.h"
 #include "rage1/flow.h"
+#include "rage1/enemy.h"
 
 // Screen functions and definitions
 // A screen has a set of btiles , a set of sprites and some hero data
@@ -34,7 +35,7 @@ struct map_screen_s {
     } btile_data;
     struct { 
         uint8_t num_enemies; 
-        struct sprite_info_s *enemies;
+        struct enemy_info_s *enemies;
     } enemy_data;
     struct {
         uint8_t	startup_x,startup_y;
