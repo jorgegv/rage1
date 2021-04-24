@@ -27,6 +27,8 @@
 #include "rage1/game_loop.h"
 #include "rage1/flow.h"
 #include "rage1/game_config.h"
+#include "rage1/enemy.h"
+#include "rage1/hero.h"
 
 #include "game_data.h"
 
@@ -46,9 +48,9 @@ void check_game_flags( void ) {
 
          // draw screen and reset sprites
          map_draw_screen( &map[ game_state.current_screen ] );
-         sprite_reset_position_all( 
-            map[ game_state.current_screen ].sprite_data.num_sprites, 
-            map[ game_state.current_screen ].sprite_data.sprites
+         enemy_reset_position_all( 
+            map[ game_state.current_screen ].enemy_data.num_enemies, 
+            map[ game_state.current_screen ].enemy_data.enemies
          );
          bullet_reset_all();
          RESET_GAME_FLAG( F_GAME_START );
@@ -60,9 +62,9 @@ void check_game_flags( void ) {
          if ( ! --game_state.hero.num_lives )
             SET_GAME_FLAG( F_GAME_OVER );
          else {
-            sprite_reset_position_all(
-               map[ game_state.current_screen ].sprite_data.num_sprites, 
-               map[ game_state.current_screen ].sprite_data.sprites
+            enemy_reset_position_all(
+               map[ game_state.current_screen ].enemy_data.num_enemies, 
+               map[ game_state.current_screen ].enemy_data.enemies
             );
             hero_reset_position();
             bullet_reset_all();
@@ -73,14 +75,18 @@ void check_game_flags( void ) {
 
 }
 
-void move_sprites(void) {
+void move_enemies(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
-   // move enemy sprites
-   sprite_animate_and_move_all(
-      map[ game_state.current_screen ].sprite_data.num_sprites, 
-      map[ game_state.current_screen ].sprite_data.sprites
+   // move enemies
+   enemy_animate_and_move_all(
+      map[ game_state.current_screen ].enemy_data.num_enemies, 
+      map[ game_state.current_screen ].enemy_data.enemies
    );
+}
+
+void move_bullets(void) {
+   RUN_ONLY_ONCE_PER_FRAME;
 
    // move active shots
    bullet_animate_and_move_all();
@@ -151,7 +157,8 @@ void run_main_game_loop(void) {
 
       // update sprites
       // does not change game_state
-      move_sprites();
+      move_enemies();
+      move_bullets();
 
       // read controller
       // changes game_state
@@ -195,13 +202,10 @@ void run_main_game_loop(void) {
    // free sprites in the current screen
    map_exit_screen( &map[ game_state.current_screen ] );
 
-   // move all sprites off-screen:
-   // hero
-   sprite_move_offscreen( game_state.hero.sprite );
-   // enemies
-   sprite_move_offscreen_all( map[ game_state.current_screen ].sprite_data.num_sprites,
-      map[ game_state.current_screen ].sprite_data.sprites );
-   // bullets
+   // move all moving things off-screen:
+   hero_move_offscreen();
+   enemy_move_offscreen_all( map[ game_state.current_screen ].enemy_data.num_enemies,
+      map[ game_state.current_screen ].enemy_data.enemies );
    bullet_move_offscreen_all();
 
 }

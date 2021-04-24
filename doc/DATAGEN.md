@@ -237,7 +237,7 @@ BEGIN_SCREEN
 	DECORATION	NAME=Stairs	ROW=16 COL=10
 	HOTZONE		NAME=Stairs	ROW=17 COL=11 WIDTH=1 HEIGHT=2 ACTIVE=1
 
-	SPRITE  	NAME=Ghost01	MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1
+	ENEMY  		NAME=Ghost1	SPRITE=Ghost01 MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1
 
 	HERO		STARTUP_XPOS=20 STARTUP_YPOS=20
 
@@ -283,9 +283,10 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
   * `ITEM_INDEX`: item index in the game inventory (0-15)
-* `SPRITE`: defines an enemy on the screen (this element should probably be
-    named ENEMY, I know, the name is a bit misleading :-( ). Arguments:
-  * `NAME`: the name of the sprite to be used for this enemy
+* `ENEMY`: defines an enemy on the screen. Arguments:
+  * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
+    sprite name
+  * `SPRITE`: the name of the sprite to be used for this enemy
   * `MOVEMENT`: how the enemy moves. For the moment, this can be only
   `LINEAR`, and the following arguments refer to this movement type.
   * `XMIN`,`YMIN`,`XMAX`,`YMAX`: bounds for the enemy movement, in pixel

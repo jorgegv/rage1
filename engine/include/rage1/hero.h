@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "rage1/types.h"
 #include "rage1/sprite.h"
 #include "rage1/controller.h"
 
@@ -83,5 +84,6 @@ void hero_update_lives_display(void);
 void hero_draw(void);
 void hero_set_position_x( struct hero_info_s *h, uint8_t x);
 void hero_set_position_y( struct hero_info_s *h, uint8_t y);
+void hero_move_offscreen(void);
 
 #endif // _HERO_H
