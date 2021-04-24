@@ -256,10 +256,10 @@ sub read_input_data {
                 $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
                 next;
             }
-            if ( $line =~ /^SPRITE\s+(\w.*)$/ ) {
+            if ( $line =~ /^ENEMY\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = $1;
-                push @{ $cur_screen->{'sprites'} }, {
+                push @{ $cur_screen->{'enemies'} }, {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
@@ -842,10 +842,10 @@ sub validate_and_compile_screen {
     defined( $screen->{'hero'} ) or
         die "Screen '$screen->{name}' has no Hero\n";
 
-    # compile initial flags for each sprite
-    foreach my $s ( @{$screen->{'sprites'}} ) {
+    # compile initial flags for each enemy
+    foreach my $s ( @{$screen->{'enemies'}} ) {
         $s->{'initial_flags'} = join( " | ", 0,
-            map { "F_SPRITE_" . uc($_) }
+            map { "F_ENEMY_" . uc($_) }
             grep { $s->{$_} }
             qw( bounce )
             );
@@ -969,17 +969,17 @@ sub compile_screen_data {
 
 sub output_screen_sprite_initialization_code {
     my $screen = shift;
-    my $sprites = $screen->{'sprites'};
-    printf $output_fh "\t// Screen '%s' - Sprite initialization\n", $screen->{'name'};
-    my $sprite_num = 0;
-    foreach my $enemy ( @$sprites ) {
-        my $sprite = $sprites[ $sprite_name_to_index{ $enemy->{'name'} } ];
+    my $enemies = $screen->{'enemies'};
+    printf $output_fh "\t// Screen '%s' - Enemy sprite initialization\n", $screen->{'name'};
+    my $enemy_num = 0;
+    foreach my $enemy ( @$enemies ) {
+        my $sprite = $sprites[ $sprite_name_to_index{ $enemy->{'sprite'} } ];
 
         printf $output_fh "\t// Sprite '%s'\n", $sprite->{'name'};
 
         # generate code for initializing SP1 structure
-        printf $output_fh "\tm->sprite_data.sprites[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
-            $sprite_num,
+        printf $output_fh "\tm->enemy_data.enemies[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
+            $enemy_num,
             $sprite->{'rows'} + 1,	# height in chars including blank bottom row
             0,				# left column graphic offset
             0,				# plane
@@ -1015,7 +1015,7 @@ sub output_screen_sprite_initialization_code {
         }
 
         printf $output_fh "\t// End of Sprite '%s'\n\n", $sprite->{'name'};
-        $sprite_num++;
+        $enemy_num++;
     }
     printf $output_fh "\t// Screen '%s' - End of Sprite initialization\n\n", $screen->{'name'};
 }
@@ -1036,24 +1036,24 @@ sub output_screen {
         print $output_fh "\n};\n\n";
     }
 
-    # screen sprites
-    if ( scalar( @{$screen->{'sprites'}} ) ) {
-        printf $output_fh "// Screen '%s' sprite data\n", $screen->{'name'};
-        printf $output_fh "struct sprite_info_s screen_%s_sprites[ %d ] = {\n",
+    # screen enemies
+    if ( scalar( @{$screen->{'enemies'}} ) ) {
+        printf $output_fh "// Screen '%s' enemy data\n", $screen->{'name'};
+        printf $output_fh "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
             $screen->{'name'},
-            scalar( @{$screen->{'sprites'}});
+            scalar( @{$screen->{'enemies'}} );
         print $output_fh join( ",\n", map {
                 sprintf("\t{ %s, %d, %d,{ %d, %s, %d, %d, %d }, { %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
                     # sprite size: width, height
-                    $sprites[ $sprite_name_to_index{ $_->{'name'} }]{'cols'} * 8,
-                    $sprites[ $sprite_name_to_index{ $_->{'name'} }]{'rows'} * 8,
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} }]{'cols'} * 8,
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} }]{'rows'} * 8,
 
                     # animaton_data
-                    $sprites[ $sprite_name_to_index{ $_->{'name'} }]{'frames'},
-                    sprintf( "&sprite_%s_frames[0]", $_->{'name'} ),
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} }]{'frames'},
+                    sprintf( "&sprite_%s_frames[0]", $_->{'sprite'} ),
                     $_->{'animation_delay'},
                     0,0,				# initial frame and delay counter
 
@@ -1061,7 +1061,7 @@ sub output_screen {
                     0,0,				# position gets reset on initialization
 
                     # movement_data
-                    sprintf( 'SPRITE_MOVE_%s', uc( $_->{'movement'} ) ),	# movement type
+                    sprintf( 'ENEMY_MOVE_%s', uc( $_->{'movement'} ) ),	# movement type
                     $_->{'speed_delay'},
                     0,				# initial delay counter
                     lc( $_->{'movement'} ),
@@ -1074,7 +1074,7 @@ sub output_screen {
                     # initial flags
                     $_->{'initial_flags'},
                  )
-            } @{$screen->{'sprites'}} );
+            } @{$screen->{'enemies'}} );
         print $output_fh "\n};\n\n";
     }
 
@@ -1110,7 +1110,7 @@ sub output_screen {
     }
 
     # functions for allocating/freeing sprites
-    if ( scalar( @{$screen->{'sprites'}} ) ) {
+    if ( scalar( @{$screen->{'enemies'}} ) ) {
         my $screen_name = $screen->{'name'};
 
         printf $output_fh "// Screen '%s' functions\n", $screen_name;
@@ -1396,6 +1396,7 @@ sub output_header {
 #include "rage1/game_state.h"
 #include "rage1/bullet.h"
 #include "rage1/game_config.h"
+#include "rage1/enemy.h"
 
 #include "game_data.h"
 
@@ -1455,8 +1456,8 @@ EOF_MAP
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
-            sprintf( "\t\t.sprite_data = { %d, %s },\t// sprite_data\n",
-                scalar( @{$_->{'sprites'}} ), ( scalar( @{$_->{'sprites'}} ) ? sprintf( 'screen_%s_sprites', $_->{'name'} ) : 'NULL' ) ) .
+            sprintf( "\t\t.enemy_data = { %d, %s },\t// enemy_data\n",
+                scalar( @{$_->{'enemies'}} ), ( scalar( @{$_->{'enemies'}} ) ? sprintf( 'screen_%s_enemies', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.hero_data = { %d, %d },\t// hero_data\n",
                 $_->{'hero'}{'startup_xpos'}, $_->{'hero'}{'startup_ypos'} ) .
             sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
@@ -1472,7 +1473,7 @@ EOF_MAP
                 ) :
                 "\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
             sprintf( "\t\t.allocate_sprites = %s,\n",
-                ( scalar( @{$_->{'sprites'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
+                ( scalar( @{$_->{'enemies'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
                 ) .
             # use generic sprite freeing function
             sprintf( "\t\t.free_sprites = %s\n", "map_generic_free_sprites_function" ) .

@@ -24,6 +24,7 @@
 #include "rage1/bullet.h"
 #include "rage1/beeper.h"
 #include "rage1/hotzone.h"
+#include "rage1/util.h"
 
 #include "game_data.h"
 
@@ -320,4 +321,8 @@ void hero_update_lives_display(void) {
         btile_draw( LIVES_AREA_TOP, col, game_state.hero.lives_tile, TT_DECORATION, &lives_area );
         col += game_state.hero.lives_tile->num_cols;
     }
+}
+
+void hero_move_offscreen(void) {
+    sprite_move_offscreen( game_state.hero.sprite );
 }

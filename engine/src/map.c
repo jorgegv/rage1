@@ -88,9 +88,9 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
 
 void map_screen_reset_all_sprites( struct map_screen_s *s ) {
     static uint8_t i;
-    i = s->sprite_data.num_sprites;
+    i = s->enemy_data.num_enemies;
     while ( i-- )
-        SET_SPRITE_FLAG( s->sprite_data.sprites[ i ], F_SPRITE_ACTIVE );
+        SET_ENEMY_FLAG( s->enemy_data.enemies[ i ], F_ENEMY_ACTIVE );
 }
 
 void map_sprites_reset_all(void) {
@@ -107,7 +107,7 @@ uint16_t map_count_enemies_all(void) {
     count = 0;
     i = MAP_NUM_SCREENS;
     while ( i-- )
-        count += map[ i ].sprite_data.num_sprites;
+        count += map[ i ].enemy_data.num_enemies;
 
     return count;
 }
@@ -125,7 +125,7 @@ void map_exit_screen( struct map_screen_s *s ) {
 // map_screen_s struct
 void map_generic_free_sprites_function( struct map_screen_s *s ) {
     static uint8_t i;
-    i = s->sprite_data.num_sprites;
+    i = s->enemy_data.num_enemies;
     while ( i-- )
-        sp1_DeleteSpr( s->sprite_data.sprites[ i ].sprite );
+        sp1_DeleteSpr( s->enemy_data.enemies[ i ].sprite );
 }

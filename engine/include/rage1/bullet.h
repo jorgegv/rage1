@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
+#include "rage1/types.h"
 #include "rage1/sprite.h"
 
 struct bullet_movement_data_s {

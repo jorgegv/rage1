@@ -53,9 +53,9 @@ void game_state_reset_initial(void) {
 // this function presumes a previous screen
 void game_state_goto_screen(uint8_t screen) {
 
-    // move all spritess and bullets off-screen
-    sprite_move_offscreen_all( map[ game_state.current_screen ].sprite_data.num_sprites,
-        map[ game_state.current_screen ].sprite_data.sprites );
+    // move all enemies and bullets off-screen
+    enemy_move_offscreen_all( map[ game_state.current_screen ].enemy_data.num_enemies,
+        map[ game_state.current_screen ].enemy_data.enemies );
     bullet_move_offscreen_all();
 
     // run EXIT_SCREEN hooks for the old screen
