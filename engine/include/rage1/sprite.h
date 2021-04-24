@@ -57,8 +57,6 @@ struct sprite_animation_data_s {
 // move sprite off screen
 void sprite_move_offscreen( struct sp1_ss *s );
 
-void sprite_set_animation_sequence( struct sprite_info_s *s, uint8_t nseq );
-
 // callback function and static params to set a sprite attributes
 struct attr_param_s {
     uint8_t attr;

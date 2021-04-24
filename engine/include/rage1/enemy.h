@@ -55,7 +55,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
 
 // animates and moves all enemies in a enemy set according to their rules
 void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemies );
-
 void enemy_move_offscreen_all( uint8_t num_enemies, struct enemy_info_s *enemies );
+void enemy_set_animation_sequence( struct enemy_info_s *s, uint8_t nseq );
 
 #endif // _ENEMY_H
