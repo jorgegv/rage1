@@ -31,16 +31,23 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
 
         g = &all_sprite_graphics[ e->num_graphic ];
 
-        // reset enemy state to initial values - update xmax and ymax also
-        e->animation.current.sequence_counter = e->animation.current.frame_delay_counter = 0;
+        // reset enemy state to initial values
+
+        // animation
+        // e->animation.current.sequence is already assigned at data definition
+        e->animation.current.sequence_counter = 0;					// initial frame index
+        e->animation.current.frame_delay_counter = e->animation.delay_data.frame_delay;	// initial frame delay counter
+        e->animation.current.sequence_delay_counter = 0;				// initial sequence delay counter
+        // position - update also xmax and ymax
         e->position.x = e->movement.data.linear.initx;
         e->position.y = e->movement.data.linear.inity;
+        e->position.xmax = e->position.x + g->width - 1;
+        e->position.ymax = e->position.y + g->height - 1;
+        // movement
         e->movement.data.linear.dx = e->movement.data.linear.initdx;
         e->movement.data.linear.dy = e->movement.data.linear.initdy;
 
-        // adjust xmax, ymax and move enemy to initial position
-        e->position.xmax = e->position.x + g->width - 1;
-        e->position.ymax = e->position.y + g->height - 1;
+        // move enemy to initial position
         sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[0], e->position.x, e->position.y );
     }
 }
@@ -62,11 +69,42 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
         g = &all_sprite_graphics[ e->num_graphic ];
 
         // animate sprite
+        // animation can be in 2 states: animating frames or waiting for the next sequence run
+        // logic: if sequence_delay_counter is 0, we are animating frames, so do the frame_delay_counter logic
+        // if it is != 0, we are waiting to the next sequence run, so do the sequence_delay_counter logic
+        // the animation is constantly switching from counting with sequence_delay_counter to counting with frame_delay_counter and back
         anim = &e->animation;
-        if ( ++anim->current.frame_delay_counter == anim->delay_data.frame_delay ) {
-            anim->current.frame_delay_counter = 0;
-            if ( ++anim->current.sequence_counter == g->sequence_data.sequences[ anim->current.sequence ].num_elements ) {
-                anim->current.sequence_counter = 0;
+
+        // only animate if the sprite has frames > 1; quickly skip if not
+        if ( g->frame_data.num_frames > 1 ) {
+            if ( anim->current.sequence_delay_counter ) {
+                // sequence_delay_counter is active, animation is waiting for next cycle
+                if ( ! --anim->current.sequence_delay_counter ) {
+                    // if it reaches 0, we have finished the wait period, so
+                    // reload the frame_delay_counter so that on the next
+                    // iteration we do the frame animation logic, and reset
+                    // animation to initial frame index
+                    anim->current.frame_delay_counter = anim->delay_data.frame_delay;
+                    anim->current.sequence_counter = 0;
+                }
+            } else {
+                // sequence_delay_counter is 0, so frame_delay_counter must be
+                // active, animation is animating frames
+                if ( ! --anim->current.frame_delay_counter ) {
+                    // if it reaches 0, we have finished wait period between
+                    // animation frames, get next frame if possible
+
+                    // reload frame_delay_counter.  sequence_counter holds the
+                    // current frame index into the sequence
+                    anim->current.frame_delay_counter = anim->delay_data.frame_delay;
+
+                    // check for the next frame
+                    if ( ++anim->current.sequence_counter == g->sequence_data.sequences[ anim->current.sequence ].num_elements ) {
+                        // there were no more frames, so restart sequence and go to sequence_delay loop
+                        anim->current.sequence_delay_counter = anim->delay_data.sequence_delay;
+                        anim->current.sequence_counter = 0;	// initial frame index
+                    }
+                }
             }
         }
 

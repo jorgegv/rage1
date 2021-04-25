@@ -201,10 +201,13 @@ END_SPRITE
 * `COLOR`: The color of the sprite. Must be an INK_* Spectrum constant
 * `HMIRROR`, `VMIRROR`: if these properties exist and are set to 1, a
   horizontal or vertical mirror will be applied to the pixels and mask. 
-  THis is very useful for defining multiple sprites from one graphic asset,
+  This is very useful for defining multiple sprites from one graphic asset,
   going in all direction or the other.
-* `SEQUENCE`: defines an animation sequence for a sprite. Sequences can be
-  selected at different times during the sprite lifecycle. Arguments:
+* `SEQUENCE`: (optional) defines an animation sequence for a sprite. 
+  Sequences can be changed at different times during the sprite lifecycle. 
+  More than one sequence can be defined.  If no sequences are defined and
+  the sprite has FRAMES > 1, a default 'Main' sequence is defined with all
+  frames in order.  Arguments:
   * `NAME`: the name for the sequence
   * `FRAMES`: the sequence of frames, comma separated (no spaces). Frames
   are numbered starting at 0 (e.g. FRAMES=0,1,2,3)
@@ -306,6 +309,11 @@ this element (=obstacle) but s/he must move around. Arguments:
   the speed of the enemy). Specified in 1/50s (screen frames)
   * `ANIMATION_DELAY`: delay between different sprites frames to be used for drawing
   the enemy, specified in 1/50s (screen frames)
+  * `ANIMATION_SEQUENCE`: (optional) name of the animation sequence. If not
+  specified, 'Main' is assumed
+  * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
+  (screen frames)
+
 * `BACKGROUND`: defines a background as a rectangle of repeated tiles.
 Arguments:
   * `BTILE`: the name of the BTILE which will be repeated

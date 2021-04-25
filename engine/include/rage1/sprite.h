@@ -14,6 +14,10 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
+//////////////////////////////////////////////////////////////////////////
+// structs for storing a single copy of each sprite graphics in memory
+//////////////////////////////////////////////////////////////////////////
+
 // an animation sequence is an array of frame numbers
 // the frame numbers in a sequence are used to show the corresponding frame for the sprite
 struct animation_sequence_s {
@@ -29,12 +33,17 @@ struct  sprite_graphic_data_s {
         uint8_t num_frames;             // number of frames for this sprite
         uint8_t **frames;               // ptr to array of ptrs to sprite frames (SP1 layout)
     } frame_data;
+    // all animation sequences for this sprite
     struct {
         uint8_t num_sequences;
         struct animation_sequence_s *sequences;
     } sequence_data;
 };
 extern struct sprite_graphic_data_s all_sprite_graphics[];
+
+//////////////////////////////////////////////////////////////////////////
+// animation data structs which can be included in others (e.g. enemy, hero, etc.)
+//////////////////////////////////////////////////////////////////////////
 
 struct  sprite_animation_data_s {
     struct {
@@ -48,6 +57,10 @@ struct  sprite_animation_data_s {
         uint8_t sequence_delay_counter;	// current sequence delay counter
     } current;
 };
+
+//////////////////////////////////////////////////////////////////////////
+// utility functions and data structs
+//////////////////////////////////////////////////////////////////////////
 
 // move sprite off screen
 void sprite_move_offscreen( struct sp1_ss *s );

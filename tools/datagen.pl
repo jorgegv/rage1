@@ -780,6 +780,12 @@ sub validate_and_compile_sprite {
         $sprite->{'sequences'} = [
             { 'name' => 'Main', 'frames' => join( ',', 0 .. ( $sprite->{'frames'} - 1 ) ) }
         ];
+        $sprite->{'sequence_name_to_index'}{'Main'} = 0;
+    }
+
+    # if the sprite has no 'sequence_delay' parameter, define as 0
+    if ( not defined( $sprite->{'sequence_delay'} ) ) {
+        $sprite->{'sequence_delay'} = 0;
     }
 
     # compile animation sequences
@@ -1082,16 +1088,19 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} );
         print $output_fh join( ",\n", map {
-                sprintf("\t{ %s, %d, { { %d }, { %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
+                sprintf("\t{ %s, %d, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
                     # index into global sprite graphics table
                     $sprite_name_to_index{ $_->{'sprite'} },
 
-                    # animation_data
-                    $_->{'animation_delay'},
-                    0,0,				# initial frame and delay counter
+                    # animation_data: delay_data
+                    $_->{'animation_delay'}, ( $_->{'sequence_delay'} || 0 ),
+                    # animation_data: current
+                    # sequence number
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ ( $_->{'animation_sequence'} || 'Main' ) },
+                    0,0,0, # sequence_counter, frame_delay_counter, sequence_delay_counter: will be initialized later
 
                     # position_data
                     0,0,0,0,				# position gets reset on initialization
