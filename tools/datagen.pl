@@ -217,6 +217,17 @@ sub read_input_data {
                 $cur_sprite->{'vmirror'} = $1;
                 next;
             }
+            if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
+                my $args = $1;
+                my $vars = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                my $index = defined( $cur_sprite->{'sequences'} ) ? scalar( @{ $cur_sprite->{'sequences'} } ) : 0 ;
+                push @{ $cur_sprite->{'sequences'} }, $vars;
+                $cur_sprite->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
+                next;
+            }
             if ( $line =~ /^END_SPRITE$/ ) {
                 validate_and_compile_sprite( $cur_sprite );
                 $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @sprites );
@@ -762,6 +773,19 @@ sub validate_and_compile_sprite {
             if ( not ( ++$byte_count % ( 8 * $sprite->{'cols'} ) ) ) { $cur_row++; }
         }
     }
+
+    # if the sprite has more than one frame but there are no sequences
+    # defined, define a default sequence with all frames from first to last
+    if ( ( $sprite->{'frames'} > 1 ) and not defined( $sprite->{'sequences'} ) ) {
+        $sprite->{'sequences'} = [
+            { 'name' => 'Main', 'frames' => join( ',', 0 .. ( $sprite->{'frames'} - 1 ) ) }
+        ];
+    }
+
+    # compile animation sequences
+    foreach my $seq ( @{ $sprite->{'sequences'} } ) {
+        $seq->{'frame_list'} = [ split( /,/, $seq->{'frames'} ) ];
+    }
 }
 
 # SP1 pixel format for a masked sprite:
@@ -830,13 +854,18 @@ sub output_sprite {
         );
 
     # output list of animation sequences
-    printf $output_fh "uint8_t sprite_%s_sequence_000[%d] = { %s };\n",
-        $sprite_name, $sprite_frames, join( ',', ( 0 .. ($sprite_frames - 1) ) );
-    printf $output_fh "struct animation_sequence_s sprite_%s_sequences[%d] = { { %d, &sprite_%s_sequence_000[0] } };\n",
-        $sprite_name,
-        1,	# number of animation sequences
-        $sprite_frames,
-        $sprite_name;
+    if ( scalar( @{ $sprite->{'sequences'} } ) ) {
+        print $output_fh join( "\n", map {
+            sprintf "uint8_t sprite_%s_sequence_%s[%d] = { %s };\n",
+                $sprite_name, $_->{'name'}, scalar( @{ $_->{'frame_list'} } ), join( ',', @{ $_->{'frame_list'} } );
+        } @{ $sprite->{'sequences'} } );
+        printf $output_fh "struct animation_sequence_s sprite_%s_sequences[%d] = {\n\t",
+            $sprite_name, scalar( @{ $sprite->{'sequences'} } );
+        print $output_fh join( ",\n\t", map {
+            sprintf "{ %d, &sprite_%s_sequence_%s[0] }", scalar( @{ $_->{'frame_list'} } ), $sprite_name, $_->{'name'};
+        } @{ $sprite->{'sequences'} } );
+        print $output_fh "\n};\n\n";
+    }
 
     printf $output_fh "// End of Sprite '%s'\n\n", $sprite_name;
 }
@@ -1439,11 +1468,11 @@ EOF_SPRITES
     print $output_fh "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
     print $output_fh join( ",\n\n\t", map {
         my $sprite = $_;
-        sprintf "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = &sprite_%s_sequences[0] }",
+        sprintf "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = %s }",
             $_->{'cols'} * 8, $_->{'rows'} * 8,
             $_->{'frames'}, $_->{'name'},
-            1,	# number of animation sequences
-            $_->{'name'},
+            scalar( @{ $sprite->{'sequences'} } ),	# number of animation sequences
+            ( scalar( @{ $sprite->{'sequences'} } ) ? sprintf( "&sprite_%s_sequences[0]", $_->{'name'}) : 'NULL' ),
     } @sprites );
     print $output_fh "\n};\n\n";
 }

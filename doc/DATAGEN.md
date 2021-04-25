@@ -203,6 +203,11 @@ END_SPRITE
   horizontal or vertical mirror will be applied to the pixels and mask. 
   THis is very useful for defining multiple sprites from one graphic asset,
   going in all direction or the other.
+* `SEQUENCE`: defines an animation sequence for a sprite. Sequences can be
+  selected at different times during the sprite lifecycle. Arguments:
+  * `NAME`: the name for the sequence
+  * `FRAMES`: the sequence of frames, comma separated (no spaces). Frames
+  are numbered starting at 0 (e.g. FRAMES=0,1,2,3)
 
 A common arrangement for sprite graphics in PNG files is to draw the sprite
 in B/W (#000000, #ffffff), and the mask in red (#ff0000)
