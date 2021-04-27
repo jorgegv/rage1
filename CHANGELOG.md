@@ -13,6 +13,8 @@
   in text mode, similar to `PIXELS` directive for Tiles and Sprites (see
   `game_data/map/Screen03.gdata` for an example)
 
+- Quickstart and WIndows installation instructions
+
 ### General
 
 - Customizable game functions (menu, intro, game start, game loop, game end)
