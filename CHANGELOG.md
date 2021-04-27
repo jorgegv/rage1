@@ -4,13 +4,14 @@
 
 ### New features
 
-- Game scripting system (FLOWGEN tool, dozens of checks and actions
-  already defined, easily extensible)
+- Game scripting system: Flowgen tool, with dozens of checks and actions
+  already defined, easily extensible
 
-- Support for beepfx sound effect definitions
+- Support for BeepFX sound effect definitions
 
-- SCREEN_DATA Datagen directives for drawing a map screen with its tiles in
-  text mode (similar to PIXELS in Tiles)
+- `SCREEN_DATA` Datagen directives for drawing a map screen with its tiles
+  in text mode, similar to `PIXELS` directive for Tiles and Sprites (see
+  `game_data/map/Screen03.gdata` for an example)
 
 ### General
 
@@ -24,14 +25,14 @@
 
 - Tiles can be hidden/shown dynamically
 
-- BACKGROUND elements in screens, with PROBABILITY
+- `BACKGROUND` elements in screens, with `PROBABILITY`
 
-- Datagen support for fully reading pixels and attributes data from PNG
+- Datagen support for fully reading pixels _and_ attribute data from PNG
   files alone for sprites and tiles (added ZX-Spectrump GIMP palette for
   easier integration)
 
-- Support for HMIRROR and VMIRROR directives in sprite defitions, so that
-  you only need to draw animations once, then mirror them for different
+- Support for `HMIRROR` and `VMIRROR` directives in sprite defitions, so
+  that you only need to draw animations once, then mirror them for different
   movement directions
 
 ### Fixes and optimizations
@@ -47,7 +48,7 @@
 - Basic game definition:
   - Datagen tool and GDATA data format
   - Tile, sprite, hero and game definition in GDATA format
-  - Graphics data format defined by inline directives (PIXELS, MASK), or
+  - Graphics data format defined by inline directives (`PIXELS`, `MASK`), or
   loaded from PNG files
 
 - Basic game functionality:
@@ -58,4 +59,4 @@
   - Item grabbing
   - Global game loop and game state management
 
-- Working test game
+- Working but extrenely simple test game
