@@ -1,5 +1,8 @@
 # Tasks
 
+*This file is obsolete. Check the
+[GitHub issues](https://github.com/jorgegv/rage1/issues)
+
 ## General:
 
 - [x] Parameterize general game variables into game.gdata file and generate
