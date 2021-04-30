@@ -85,6 +85,10 @@ END_BTILE
   it will be preferred as the background color.
   * For best results, you can use the ZX-Spectrum palette definition for
   GIMP and use it for coloring your PNG file with the tiles.
+  * `HMIRROR`, `VMIRROR`: if these arguments exist and are set to 1, a
+  horizontal or vertical mirror will be applied to the pixels and mask. 
+  This is very useful for defining multiple sprites from one graphic asset,
+  going in all direction or the other.
 
 ### SPRITE data
 
@@ -194,15 +198,11 @@ END_SPRITE
   mask pixels for all frames
 * `PNG_DATA`: as in Btiles, selects pixel data from a PNG image.  The
   BGCOLOR argument is not used, only the FGCOLOR is used to select ink
-  pixels.
+  pixels. `HMIRROR` and `VMIRROR` can be used.
 * `PNG_MASK`: analogous to PNG_DATA, but selects sprite mask data instead.
   The new argument MASKCOLOR is used to specify the color that will be used
-  as the mask.
+  as the mask. `HMIRROR` and `VMIRROR` can be used.
 * `COLOR`: The color of the sprite. Must be an INK_* Spectrum constant
-* `HMIRROR`, `VMIRROR`: if these properties exist and are set to 1, a
-  horizontal or vertical mirror will be applied to the pixels and mask. 
-  This is very useful for defining multiple sprites from one graphic asset,
-  going in all direction or the other.
 * `SEQUENCE`: (optional) defines an animation sequence for a sprite. 
   Sequences can be changed at different times during the sprite lifecycle. 
   More than one sequence can be defined.  There is always a default 'Main'
@@ -246,7 +246,7 @@ BEGIN_SCREEN
 	DECORATION	NAME=Stairs	ROW=16 COL=10
 	HOTZONE		NAME=Stairs	ROW=17 COL=11 WIDTH=1 HEIGHT=2 ACTIVE=1
 
-	ENEMY  		NAME=Ghost1	SPRITE=Ghost01 MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1 SEQUENCE_A=Left SEQUENCE_B=Right CHANGE_SEQUENCE_HORIZ=1
+	ENEMY  		NAME=Ghost1	SPRITE=Ghost01 MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1 SEQUENCE_A=Left SEQUENCE_B=Right INITIAL_SEQUENCE=Right CHANGE_SEQUENCE_HORIZ=1
 
 	HERO		STARTUP_XPOS=20 STARTUP_YPOS=20
 
@@ -314,6 +314,8 @@ this element (=obstacle) but s/he must move around. Arguments:
   specified, 'Main' is assumed
   * `SEQUENCE_B`: (optional) name of the second animation sequence. If not
   specified, 'Main' is assumed
+  * `INITIAL_SEQUENCE`: (optional) name of the initial animation sequence.
+  If not specified, 'Main' is assumed
   * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
   (screen frames)
   * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite

@@ -188,9 +188,12 @@ sub read_input_data {
                 my $fgcolor = uc( $vars->{'fgcolor'} );
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
                     $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
+                    ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 push @{$cur_sprite->{'png_attr'}}, @{ attr_data_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'} ) };
+                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
+                    ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
+                    ) };
                 next;
             }
             if ( $line =~ /^PNG_MASK\s+(.*)$/ ) {
@@ -207,14 +210,6 @@ sub read_input_data {
             }
             if ( $line =~ /^ATTR\s+(.+)$/ ) {
                 push @{$cur_sprite->{'attr'}}, $1;
-                next;
-            }
-            if ( $line =~ /^HMIRROR\s+(.+)$/ ) {
-                $cur_sprite->{'hmirror'} = $1;
-                next;
-            }
-            if ( $line =~ /^VMIRROR\s+(.+)$/ ) {
-                $cur_sprite->{'vmirror'} = $1;
                 next;
             }
             if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
@@ -500,7 +495,7 @@ sub load_png_file {
 
 # extracts pixel data from a PNG file
 sub pick_pixel_data_by_color_from_png {
-    my ( $file, $xpos, $ypos, $width, $height, $hex_fgcolor ) = @_;
+    my ( $file, $xpos, $ypos, $width, $height, $hex_fgcolor, $hmirror, $vmirror ) = @_;
     my $png = load_png_file( $file );
     my @pixels = map {
         join( "",
@@ -509,6 +504,14 @@ sub pick_pixel_data_by_color_from_png {
                 } @$_[ $xpos .. ( $xpos + $width - 1 ) ]	# select cols
         )
     } @$png[ $ypos .. ( $ypos + $height - 1 ) ];		# select rows
+    if ( $hmirror ) {
+        my @tmp = map { scalar reverse } @pixels;
+        @pixels = @tmp;
+    }
+    if ( $vmirror ) {
+        my @tmp = reverse @pixels;
+        @pixels = @tmp;
+    }
     return \@pixels;
 }
 
@@ -568,7 +571,7 @@ sub extract_attr_from_cell {
 }
 
 sub attr_data_from_png {
-    my ( $file, $xpos, $ypos, $width, $height ) = @_;
+    my ( $file, $xpos, $ypos, $width, $height, $hmirror, $vmirror ) = @_;
     my $png = load_png_file( $file );
     my @attrs;
     # extract attr from cells left-right, top-bottom order
@@ -740,14 +743,6 @@ sub validate_and_compile_sprite {
             die "Sprite '$sprite->{name}': MASK line should be of length ".( $sprite->{'rows'} * 2 * 8 );
     }
 
-    # execute the H/V mirror if needed
-    if ( $sprite->{'hmirror'} && 1 ) {
-        @{ $sprite->{'pixels'} } = map { join( '', reverse split( //, $_ ) ) } @{ $sprite->{'pixels'} };
-    }
-    if ( $sprite->{'vmirror'} && 1 ) {
-        @{ $sprite->{'pixels'} } = reverse @{ $sprite->{'pixels'} };
-    }
-
     # compile PIXELS string data to numeric data for output
     my $cur_row = 0;
     my $byte_count = 0;
@@ -901,6 +896,9 @@ sub validate_and_compile_screen {
         }
         if ( not defined( $s->{'sequence_b'} ) ) {
             $s->{'sequence_b'} = 'Main';
+        }
+        if ( not defined( $s->{'initial_sequence'} ) ) {
+            $s->{'initial_sequence'} = 'Main';
         }
     }
 
@@ -1107,7 +1105,7 @@ sub output_screen {
                     $_->{'animation_delay'}, ( $_->{'sequence_delay'} || 0 ),
                     # animation_data: current values (initial)
                     # sequence number
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'initial_sequence'} },
                     0,0,0, # sequence_counter, frame_delay_counter, sequence_delay_counter: will be initialized later
 
                     # position_data
