@@ -584,6 +584,26 @@ sub attr_data_from_png {
         }
         $y += 8;
     }
+    my $c_width = $width / 8;
+    my $c_height = $height / 8;
+    if ( $hmirror ) {
+        my @tmp;
+        foreach my $c ( ( $c_width - 1 ) .. 0 ) {	# columns: reverse order
+            foreach my $r ( 0 .. ( $c_height - 1 ) ) {	# rows: direct order
+                push @tmp, $attrs[ $r * $c_width + $c ];
+            }
+        }
+        @attrs = @tmp;
+    }
+    if ( $vmirror ) {
+        my @tmp;
+        foreach my $c ( 0 .. ( $c_width - 1 ) ) {	# columns: direct order
+            foreach my $r ( ( $c_height - 1 ) .. 0 ) {	# rows: reverse order
+                push @tmp, $attrs[ $r * $c_width + $c ];
+            }
+        }
+        @attrs = @tmp;
+    }
     return \@attrs;
 }
 
