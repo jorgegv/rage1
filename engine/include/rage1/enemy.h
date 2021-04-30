@@ -16,16 +16,17 @@
 
 #define ENEMY_MOVE_LINEAR		0x00
 struct  enemy_movement_data_s {
-    uint8_t type;			// LINEAR, etc.
-    uint8_t delay;			// dx,dy are added every 'delay' calls
-    uint8_t delay_counter;		// current movement delay counter
-    union {				// this union must be the last struct component
+    uint8_t type;				// LINEAR, etc.
+    uint8_t delay;				// dx,dy are added every 'delay' calls
+    uint8_t delay_counter;			// current movement delay counter
+    union {					// this union must be the last struct component
         struct {
-            uint8_t xmin,xmax;		// enemy moves bouncing in a rectangle
-            uint8_t ymin,ymax;		// (xmin,ymin)-(xmax,ymax)
-            int8_t dx,dy;		// current position increments
-            uint8_t initx,inity;	// reset positions
-            int8_t initdx,initdy;	// reset increments
+            uint8_t xmin,xmax;			// enemy moves bouncing in a rectangle
+            uint8_t ymin,ymax;			// (xmin,ymin)-(xmax,ymax)
+            int8_t dx,dy;			// current position increments
+            uint8_t initx,inity;		// reset positions
+            int8_t initdx,initdy;		// reset increments
+            uint8_t sequence_a, sequence_b;	// sprite animation sequences (see FLAGS)
         } linear;
     } data;
 };
@@ -44,11 +45,15 @@ struct enemy_info_s {
 #define SET_ENEMY_FLAG(s,f)	( (s).flags |= (f) )
 #define RESET_ENEMY_FLAG(s,f)	( (s).flags &= ~(f) )
 
-#define F_ENEMY_ACTIVE	0x0001
-#define F_ENEMY_BOUNCE	0x0002
+#define F_ENEMY_ACTIVE			0x0001
+#define F_ENEMY_BOUNCE			0x0002
+#define F_ENEMY_CHANGE_SEQUENCE_VERT	0x0004
+#define F_ENEMY_CHANGE_SEQUENCE_HORIZ	0x0008
 
-#define IS_ENEMY_ACTIVE(s)	(GET_ENEMY_FLAG((s),F_ENEMY_ACTIVE))
-#define ENEMY_MUST_BOUNCE(s)	(GET_ENEMY_FLAG((s),F_ENEMY_BOUNCE))
+#define IS_ENEMY_ACTIVE(s)			(GET_ENEMY_FLAG((s),F_ENEMY_ACTIVE))
+#define ENEMY_MUST_BOUNCE(s)			(GET_ENEMY_FLAG((s),F_ENEMY_BOUNCE))
+#define ENEMY_CHANGES_SEQUENCE_VERT(s)		(GET_ENEMY_FLAG((s),F_ENEMY_CHANGE_SEQUENCE_VERT))
+#define ENEMY_CHANGES_SEQUENCE_HORIZ(s)		(GET_ENEMY_FLAG((s),F_ENEMY_CHANGE_SEQUENCE_HORIZ))
 
 // sets all enemies in a enemy set to initial positions and frames
 void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies );

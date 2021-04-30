@@ -205,9 +205,10 @@ END_SPRITE
   going in all direction or the other.
 * `SEQUENCE`: (optional) defines an animation sequence for a sprite. 
   Sequences can be changed at different times during the sprite lifecycle. 
-  More than one sequence can be defined.  If no sequences are defined and
-  the sprite has FRAMES > 1, a default 'Main' sequence is defined with all
-  frames in order.  Arguments:
+  More than one sequence can be defined.  There is always a default 'Main'
+  sequence (even if it onoy has one frame), with all frames in order. This
+  name is reserved, and no 'Main' sequence should be defined in user data.
+  Arguments:
   * `NAME`: the name for the sequence
   * `FRAMES`: the sequence of frames, comma separated (no spaces). Frames
   are numbered starting at 0 (e.g. FRAMES=0,1,2,3)
@@ -245,7 +246,7 @@ BEGIN_SCREEN
 	DECORATION	NAME=Stairs	ROW=16 COL=10
 	HOTZONE		NAME=Stairs	ROW=17 COL=11 WIDTH=1 HEIGHT=2 ACTIVE=1
 
-	ENEMY  		NAME=Ghost1	SPRITE=Ghost01 MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1
+	ENEMY  		NAME=Ghost1	SPRITE=Ghost01 MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=1 ANIMATION_DELAY=25 BOUNCE=1 SEQUENCE_A=Left SEQUENCE_B=Right CHANGE_SEQUENCE_HORIZ=1
 
 	HERO		STARTUP_XPOS=20 STARTUP_YPOS=20
 
@@ -309,10 +310,21 @@ this element (=obstacle) but s/he must move around. Arguments:
   the speed of the enemy). Specified in 1/50s (screen frames)
   * `ANIMATION_DELAY`: delay between different sprites frames to be used for drawing
   the enemy, specified in 1/50s (screen frames)
-  * `ANIMATION_SEQUENCE`: (optional) name of the animation sequence. If not
+  * `SEQUENCE_A`: (optional) name of the first animation sequence. If not
+  specified, 'Main' is assumed
+  * `SEQUENCE_B`: (optional) name of the second animation sequence. If not
   specified, 'Main' is assumed
   * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
   (screen frames)
+  * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
+  will switch from animation sequence A to B and viceversa when bouncing
+  horizontally: sequence A for incrementing X, sequence B for decrementing X
+  * `CHANGE_SEQUENCE_VERT`: (optional) if this flag is 1, the enemy sprite
+  will switch from animation sequence A to B and viceversa when bouncing
+  vertically: sequence A for incrementing Y, sequence B for decrementing Y
+
+`CHANGE_SEQUENCE_HORIZ` and `CHANGE_SEQUENCE_VERT` animations should be
+used separately and never together in the same enemy.
 
 * `BACKGROUND`: defines a background as a rectangle of repeated tiles.
 Arguments:

@@ -733,11 +733,11 @@ sub validate_and_compile_sprite {
         die "Sprite should have ".( $sprite->{'rows'} * 8 * $sprite->{'frames'} )." MASK elements\n";
     foreach my $p ( @{$sprite->{'pixels'}} ) {
         ( length( $p ) == $sprite->{'cols'} * 2 * 8 ) or
-            die "Sprite PIXELS line should be of length ".( $sprite->{'rows'} * 2 * 8 );
+            die "Sprite '$sprite->{name}': PIXELS line should be of length ".( $sprite->{'rows'} * 2 * 8 );
     }
     foreach my $p ( @{$sprite->{'mask'}} ) {
         ( length( $p ) == $sprite->{'cols'} * 2 * 8 ) or
-            die "Sprite MASK line should be of length ".( $sprite->{'rows'} * 2 * 8 );
+            die "Sprite '$sprite->{name}': MASK line should be of length ".( $sprite->{'rows'} * 2 * 8 );
     }
 
     # execute the H/V mirror if needed
@@ -774,14 +774,14 @@ sub validate_and_compile_sprite {
         }
     }
 
-    # if the sprite has more than one frame but there are no sequences
-    # defined, define a default sequence with all frames from first to last
-    if ( ( $sprite->{'frames'} > 1 ) and not defined( $sprite->{'sequences'} ) ) {
-        $sprite->{'sequences'} = [
-            { 'name' => 'Main', 'frames' => join( ',', 0 .. ( $sprite->{'frames'} - 1 ) ) }
-        ];
-        $sprite->{'sequence_name_to_index'}{'Main'} = 0;
+    # Always define the sequence 'Main', with all frames in order, first to last
+    my $index = ( defined( $sprite->{'sequences'} ) ? scalar( @{ $sprite->{'sequences'} } ) : 0 );
+    push @{ $sprite->{'sequences'} },
+        { 'name' => 'Main', 'frames' => join( ',', 0 .. ( $sprite->{'frames'} - 1 ) ) };
+    if ( scalar( grep { $_->{'name'} eq 'Main' } @{ $sprite->{'sequences'} } ) != 1 ) {
+        die "Sprite '$sprite->{name}': SEQUENCE name 'Main' is reserved and should not be used\n";
     }
+    $sprite->{'sequence_name_to_index'}{'Main'} = $index;
 
     # if the sprite has no 'sequence_delay' parameter, define as 0
     if ( not defined( $sprite->{'sequence_delay'} ) ) {
@@ -887,13 +887,21 @@ sub validate_and_compile_screen {
     defined( $screen->{'hero'} ) or
         die "Screen '$screen->{name}' has no Hero\n";
 
-    # compile initial flags for each enemy
+    # check each enemy
     foreach my $s ( @{$screen->{'enemies'}} ) {
+        # set initial flags
         $s->{'initial_flags'} = join( " | ", 0,
             map { "F_ENEMY_" . uc($_) }
             grep { $s->{$_} }
-            qw( bounce )
+            qw( bounce change_sequence_horiz change_sequence_vert )
             );
+        # define default animation sequences if none given
+        if ( not defined( $s->{'sequence_a'} ) ) {
+            $s->{'sequence_a'} = 'Main';
+        }
+        if ( not defined( $s->{'sequence_b'} ) ) {
+            $s->{'sequence_b'} = 'Main';
+        }
     }
 
     # compile SCREEN_DATA lines
@@ -1088,18 +1096,18 @@ sub output_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} );
         print $output_fh join( ",\n", map {
-                sprintf("\t{ %s, %d, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
+                sprintf("\t{ %s, %d, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
                     # index into global sprite graphics table
                     $sprite_name_to_index{ $_->{'sprite'} },
 
-                    # animation_data: delay_data
+                    # animation_data: delay_data values
                     $_->{'animation_delay'}, ( $_->{'sequence_delay'} || 0 ),
-                    # animation_data: current
+                    # animation_data: current values (initial)
                     # sequence number
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ ( $_->{'animation_sequence'} || 'Main' ) },
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
                     0,0,0, # sequence_counter, frame_delay_counter, sequence_delay_counter: will be initialized later
 
                     # position_data
@@ -1115,6 +1123,8 @@ sub output_screen {
                     $_->{'dx'}, $_->{'dy'},
                     $_->{'initx'}, $_->{'inity'},
                     $_->{'dx'}, $_->{'dy'},
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
+                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_b'} },
 
                     # initial flags
                     $_->{'initial_flags'},

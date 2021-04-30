@@ -127,6 +127,15 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                             ) )
                         ) { // then
                         move->data.linear.dx = -move->data.linear.dx;
+                        // adjust animation sequence if the enemy is configured for it
+                        // sequence_a if dx > 0, sequence_b if dx < 0
+                        if ( ENEMY_CHANGES_SEQUENCE_HORIZ(*e) ) {
+                            anim->current.sequence = ( move->data.linear.dx > 0 ?
+                                move->data.linear.sequence_a :
+                                move->data.linear.sequence_b );
+                            // always reset the sequence frame index
+                            anim->current.sequence_counter = 0;
+                        }
                     }
                     pos->y += move->data.linear.dy;
                     if (
@@ -140,6 +149,15 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                             ) )
                         ) { // then
                         move->data.linear.dy = -move->data.linear.dy;
+                        // adjust animation sequence if the enemy is configured for it
+                        // sequence_a if dy > 0, sequence_b if dy < 0
+                        if ( ENEMY_CHANGES_SEQUENCE_VERT(*e) ) {
+                            anim->current.sequence = ( move->data.linear.dy > 0 ?
+                                move->data.linear.sequence_a :
+                                move->data.linear.sequence_b );
+                            // always reset the sequence frame index
+                            anim->current.sequence_counter = 0;
+                        }
                     }
                 }
                 break;

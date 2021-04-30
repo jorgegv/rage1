@@ -75,4 +75,7 @@ BEGIN_SPRITE
 	MASK	......##......##......##......##
 	MASK	##..######..######..######..####
 
+        SEQUENCE        NAME=Right FRAMES=0
+        SEQUENCE        NAME=Left FRAMES=1
+
 END_SPRITE
