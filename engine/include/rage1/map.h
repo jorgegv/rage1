@@ -60,6 +60,9 @@ struct map_screen_s {
         uint8_t probability;
         struct sp1_Rect box;
     } background_data;
+    struct {
+        uint16_t flags;
+    } state_data;
 
     // code
     void (*allocate_sprites)(struct map_screen_s *m);	// called on ENTER_SCREEN by map_enter_screen
@@ -78,5 +81,9 @@ void map_exit_screen( struct map_screen_s *s );
 void map_generic_free_sprites_function( struct map_screen_s *s );
 
 // utility macros and definitions
+// screen flags macros and definitions
+#define GET_SCREEN_FLAG(s,f)	( (s).state_data.flags & (f) )
+#define SET_SCREEN_FLAG(s,f)	( (s).state_data.flags |= (f) )
+#define RESET_SCREEN_FLAG(s,f)	( (s).state_data.flags &= ~(f) )
 
 #endif // _MAP_H

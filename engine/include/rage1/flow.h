@@ -39,14 +39,16 @@
 #define RULE_CHECK_CALL_CUSTOM_FUNCTION		15
 #define RULE_CHECK_ITEM_IS_OWNED		16
 #define RULE_CHECK_HERO_OVER_HOTZONE		17
+#define RULE_CHECK_SCREEN_FLAG_IS_SET		18
+#define RULE_CHECK_SCREEN_FLAG_IS_RESET		19
 
-#define RULE_CHECK_MAX				17
+#define RULE_CHECK_MAX				19
 
 struct flow_rule_check_s {
     uint8_t type;
     union {
         uint16_t					unused;		// for checks that do not need data
-        struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*
+        struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*, SCREEN_FLAG
         struct { uint8_t	count; }		lives;		// INC_LIVES
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
@@ -76,8 +78,10 @@ struct flow_rule_check_s {
 #define RULE_ACTION_DISABLE_BTILE		10
 #define RULE_ACTION_ADD_TO_INVENTORY		11
 #define RULE_ACTION_REMOVE_FROM_INVENTORY	12
+#define RULE_ACTION_SET_SCREEN_FLAG		13
+#define RULE_ACTION_RESET_SCREEN_FLAG		14
 
-#define RULE_ACTION_MAX				12
+#define RULE_ACTION_MAX				14
 
 struct flow_rule_action_s {
     uint8_t type;
@@ -97,6 +101,10 @@ struct flow_rule_action_s {
             uint8_t	flags;
             }						warp_to_screen;	// WARP_TO_SCREEN
         struct { uint16_t	item_id; }		item;		// ADD_TO/REMOVE_FROM_INVENTORY
+        struct {
+            uint8_t	num_screen;
+            uint16_t	flag;
+            }						screen_flag;	// SET/RESET_SCREEN_FLAG
     } data;
 };
 
