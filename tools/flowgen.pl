@@ -233,6 +233,20 @@ sub validate_and_compile_rule {
             $do = sprintf "%s\t%d", $action, $action_data;
         }
 
+        # set/reset screen flag filtering
+        if ( $action =~ /^(SET|RESET)_SCREEN_FLAG$/ ) {
+            my $vars = { 
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $action_data )
+            };
+            $action_data = sprintf( "{ .num_screen = %d, .flag = %s }",
+                $all_state->{'screen_name_to_index'}{ $vars->{'screen'} },
+                ( $vars->{'flag'} || 0 ),
+            );
+            # regenerate the value with the filtered data
+            $do = sprintf "%s\t%s", $action, $action_data;
+        }
+
     }
 
     1;
@@ -258,6 +272,8 @@ my $check_data_output_format = {
     CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
     ITEM_IS_OWNED		=> ".data.item.item_id = %s",
     HERO_OVER_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
+    SCREEN_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    SCREEN_FLAG_IS_RESET	=> ".data.flag_state.flag = %s",
 };
 
 my $action_data_output_format = {
@@ -274,6 +290,8 @@ my $action_data_output_format = {
     DISABLE_BTILE		=> ".data.btile.num_btile = %d",
     ADD_TO_INVENTORY		=> ".data.item.item_id = %s",
     REMOVE_FROM_INVENTORY	=> ".data.item.item_id = %s",
+    SET_SCREEN_FLAG		=> ".data.screen_flag = %s",
+    RESET_SCREEN_FLAG		=> ".data.screen_flag = %s",
 };
 
 sub output_rule_checks {

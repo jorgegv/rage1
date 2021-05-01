@@ -86,6 +86,8 @@ check is successful. Options:
   - [x] ENEMIES_KILLED_LESS_THAN <value>
   - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `uint8_t my_custom_check(void)`
   - [x] HERO_OVER_HOTZONE <hotzone_name>
+  - [x] SCREEN_FLAG_IS_SET <flag>
+  - [x] SCREEN_FLAG_IS_RESET <flag>
 
 * ACTION_TO_EXECUTE:
   - [x] SET_USER_FLAG <flag>
@@ -101,6 +103,8 @@ check is successful. Options:
   - [x] WARP_TO_SCREEN DEST_SCREEN=<screen_name> [DEST_HERO_X=<xxx>] [DEST_HERO_Y=<yyy>]
   - [x] ADD_TO_INVENTORY <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
   - [x] REMOVE_FROM_INVENTORY <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
+  - [x] SET_SCREEN_FLAG SCREEN=<screen_name> FLAG=<flag>
+  - [x] RESET_SCREEN_FLAG SCREEN=<screen_name> FLAG=<flag>
 
 ## FLOWGEN Gdata file syntax
 
