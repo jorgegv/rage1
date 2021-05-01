@@ -61,6 +61,16 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
 void check_flow_rules(void) {
 
     ////////////////////////////////////////////////////////
+    // WHEN_GAME_LOOP rules
+    ////////////////////////////////////////////////////////
+
+    // current_screen and previous_screen may change here, be aware of it!
+    if ( map[ game_state.current_screen ].flow_data.rule_tables.game_loop.num_rules )
+        run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.game_loop );
+
+    // current_screen and previous_screen may have changed here, be aware of it"
+
+    ////////////////////////////////////////////////////////
     // WHEN_ENTER_SCREEN and WHEN_EXIT_SCREEN rules
     ////////////////////////////////////////////////////////
     
@@ -68,20 +78,13 @@ void check_flow_rules(void) {
         // run EXIT_SCREEN rules for the previous screen
         // but skip if game just started and this is the first game loop run
         if ( ! GET_GAME_FLAG( F_GAME_START ) )
-            run_flow_rule_table( &map[ game_state.previous_screen ].flow_data.rule_tables.exit_screen );
+            if ( map[ game_state.previous_screen ].flow_data.rule_tables.exit_screen.num_rules )
+                run_flow_rule_table( &map[ game_state.previous_screen ].flow_data.rule_tables.exit_screen );
+
         // run ENTER_SCREEN rules
-        run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.enter_screen );
+        if ( map[ game_state.current_screen ].flow_data.rule_tables.enter_screen.num_rules )
+            run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.enter_screen );
     }
-
-    ////////////////////////////////////////////////////////
-    // WHEN_GAME_LOOP rules
-    ////////////////////////////////////////////////////////
-
-    run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.game_loop );
-
-    // beware!!  make sure no function calls come after this one!  This rule
-    // run can change the current screen, so game_state.current_screen may
-    // not be the same as before calling run_flow_rule_table!
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -164,7 +167,14 @@ uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88
     return ( GET_HOTZONE_FLAG( *hz, F_HOTZONE_ACTIVE ) &&
         collision_check( &game_state.hero.position, &hz->position )
     );
+}
 
+uint8_t do_rule_check_screen_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( GET_SCREEN_FLAG( map[ game_state.current_screen ], check->data.flag_state.flag ) ? 1 : 0 );
+}
+
+uint8_t do_rule_check_screen_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( GET_SCREEN_FLAG( map[ game_state.current_screen ], check->data.flag_state.flag ) ? 0 : 1 );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -239,6 +249,14 @@ void do_rule_action_remove_from_inventory( struct flow_rule_action_s *action ) _
     inventory_show();
 }
 
+void do_rule_action_set_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    SET_SCREEN_FLAG( map[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
+}
+
+void do_rule_action_reset_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    RESET_SCREEN_FLAG( map[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
+}
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -262,6 +280,8 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     do_rule_check_call_custom_function,
     do_rule_check_item_is_owned,
     do_rule_check_hero_over_hotzone,
+    do_rule_check_screen_flag_set,
+    do_rule_check_screen_flag_reset,
 };
 
 // Table of action functions.  The 'action' value from the rule is used to
@@ -280,4 +300,6 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     do_rule_action_disable_btile,
     do_rule_action_add_to_inventory,
     do_rule_action_remove_from_inventory,
+    do_rule_action_set_screen_flag,
+    do_rule_action_reset_screen_flag,
 };

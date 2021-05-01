@@ -1558,6 +1558,10 @@ EOF_MAP
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
                 ) :
                 "\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
+            "\t\t.flow_data.rule_tables.enter_screen = { 0, NULL },\n" .
+            "\t\t.flow_data.rule_tables.exit_screen = { 0, NULL },\n" .
+            "\t\t.flow_data.rule_tables.game_loop = { 0, NULL },\n" .
+            "\t\t // sprite alloc/free functions\n" .
             sprintf( "\t\t.allocate_sprites = %s,\n",
                 ( scalar( @{$_->{'enemies'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
                 ) .
