@@ -61,6 +61,16 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
 void check_flow_rules(void) {
 
     ////////////////////////////////////////////////////////
+    // WHEN_GAME_LOOP rules
+    ////////////////////////////////////////////////////////
+
+    // current_screen and previous_screen may change here, be aware of it!
+    if ( map[ game_state.current_screen ].flow_data.rule_tables.game_loop.num_rules )
+        run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.game_loop );
+
+    // current_screen and previous_screen may have changed here, be aware of it"
+
+    ////////////////////////////////////////////////////////
     // WHEN_ENTER_SCREEN and WHEN_EXIT_SCREEN rules
     ////////////////////////////////////////////////////////
     
@@ -72,22 +82,9 @@ void check_flow_rules(void) {
                 run_flow_rule_table( &map[ game_state.previous_screen ].flow_data.rule_tables.exit_screen );
 
         // run ENTER_SCREEN rules
-        if ( map[ game_state.current_screen ].flow_data.rule_tables.enter_screen.num_rules ) {
-            debug_out("\nhere!");
+        if ( map[ game_state.current_screen ].flow_data.rule_tables.enter_screen.num_rules )
             run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.enter_screen );
-        }
     }
-
-    ////////////////////////////////////////////////////////
-    // WHEN_GAME_LOOP rules
-    ////////////////////////////////////////////////////////
-
-    if ( map[ game_state.current_screen ].flow_data.rule_tables.game_loop.num_rules )
-        run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.game_loop );
-
-    // beware!!  make sure no function calls come after this one!  This rule
-    // run can change the current screen, so game_state.current_screen may
-    // not be the same as before calling run_flow_rule_table!
 }
 
 ////////////////////////////////////////////////////////////////////
