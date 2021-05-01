@@ -75,7 +75,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
         // the animation is constantly switching from counting with sequence_delay_counter to counting with frame_delay_counter and back
         anim = &e->animation;
 
-        // only animate if the sprite has frames > 1; quickly skip if not
+        // optimization: only animate if the sprite has frames > 1; quickly skip if not
         if ( g->frame_data.num_frames > 1 ) {
             if ( anim->current.sequence_delay_counter ) {
                 // sequence_delay_counter is active, animation is waiting for next cycle
@@ -113,50 +113,63 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
         move = &e->movement;
         switch ( move->type ) {
             case ENEMY_MOVE_LINEAR:
-                if ( ++move->delay_counter == move->delay ) {
-                    move->delay_counter = 0;
-                    pos->x += move->data.linear.dx;
-                    if (
-                            ( pos->x >= move->data.linear.xmax ) ||
-                            ( pos->x <= move->data.linear.xmin ) ||
-                            ( ENEMY_MUST_BOUNCE(*e) && (
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE )
-                            ) )
-                        ) { // then
-                        move->data.linear.dx = -move->data.linear.dx;
-                        // adjust animation sequence if the enemy is configured for it
-                        // sequence_a if dx > 0, sequence_b if dx < 0
-                        if ( ENEMY_CHANGES_SEQUENCE_HORIZ(*e) ) {
-                            anim->current.sequence = ( move->data.linear.dx > 0 ?
-                                move->data.linear.sequence_a :
-                                move->data.linear.sequence_b );
-                            // always reset the sequence frame index
-                            anim->current.sequence_counter = 0;
+                // optimization: only do the move if dx or dy are != 0
+                if ( move->data.linear.dx || move->data.linear.dy ) {
+                    if ( ++move->delay_counter == move->delay ) {
+                        move->delay_counter = 0;
+
+                        // optimization: only calculate horizontal movement if dx != 0
+                        if ( move->data.linear.dx ) {
+                            pos->x += move->data.linear.dx;
+                            pos->xmax = pos->x + g->width - 1;
+                            if (
+                                    ( pos->x >= move->data.linear.xmax ) ||
+                                    ( pos->x <= move->data.linear.xmin ) ||
+                                    ( ENEMY_MUST_BOUNCE(*e) && (
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE ) ||
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE )
+                                    ) )
+                                ) { // then
+                                move->data.linear.dx = -move->data.linear.dx;
+                                // adjust animation sequence if the enemy is configured for it
+                                // sequence_a if dx > 0, sequence_b if dx < 0
+                                if ( ENEMY_CHANGES_SEQUENCE_HORIZ(*e) ) {
+                                    anim->current.sequence = ( move->data.linear.dx > 0 ?
+                                        move->data.linear.sequence_a :
+                                        move->data.linear.sequence_b );
+                                    // always reset the sequence frame index
+                                    anim->current.sequence_counter = 0;
+                                }
+                            }
                         }
-                    }
-                    pos->y += move->data.linear.dy;
-                    if (
-                            ( pos->y >= move->data.linear.ymax ) ||
-                            ( pos->y <= move->data.linear.ymin ) ||
-                            ( ENEMY_MUST_BOUNCE(*e) && (
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1 ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x + g->width - 1) ) == TT_OBSTACLE ) ||
-                                ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1), PIXEL_TO_CELL_COORD( pos->x + g->width - 1 ) ) == TT_OBSTACLE )
-                            ) )
-                        ) { // then
-                        move->data.linear.dy = -move->data.linear.dy;
-                        // adjust animation sequence if the enemy is configured for it
-                        // sequence_a if dy > 0, sequence_b if dy < 0
-                        if ( ENEMY_CHANGES_SEQUENCE_VERT(*e) ) {
-                            anim->current.sequence = ( move->data.linear.dy > 0 ?
-                                move->data.linear.sequence_a :
-                                move->data.linear.sequence_b );
-                            // always reset the sequence frame index
-                            anim->current.sequence_counter = 0;
+
+                        // optimization: only calculate vertical movement if dy != 0
+                        if ( move->data.linear.dy ) {
+                            pos->y += move->data.linear.dy;
+                            pos->ymax = pos->y + g->height - 1;
+                            if (
+                                    ( pos->y >= move->data.linear.ymax ) ||
+                                    ( pos->y <= move->data.linear.ymin ) ||
+                                    ( ENEMY_MUST_BOUNCE(*e) && (
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1 ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x + g->width - 1) ) == TT_OBSTACLE ) ||
+                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1), PIXEL_TO_CELL_COORD( pos->x + g->width - 1 ) ) == TT_OBSTACLE )
+                                    ) )
+                                ) { // then
+                                move->data.linear.dy = -move->data.linear.dy;
+                                // adjust animation sequence if the enemy is configured for it
+                                // sequence_a if dy > 0, sequence_b if dy < 0
+                                if ( ENEMY_CHANGES_SEQUENCE_VERT(*e) ) {
+                                    anim->current.sequence = ( move->data.linear.dy > 0 ?
+                                        move->data.linear.sequence_a :
+                                        move->data.linear.sequence_b );
+                                    // always reset the sequence frame index
+                                    anim->current.sequence_counter = 0;
+                                }
+                            }
                         }
                     }
                 }
@@ -165,9 +178,8 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                 break;
         }
 
-        // adjust xmax, ymax and move sprite to new position
-        pos->xmax = pos->x + g->width - 1;
-        pos->ymax = pos->y + g->height - 1;
+        // move/animate sprite into new position
+        // sprite may need update either because of animation, movement, or both
         sp1_MoveSprPix( e->sprite, &game_area,
             g->frame_data.frames[ g->sequence_data.sequences[ anim->current.sequence ].frame_numbers[ anim->current.sequence_counter ] ],
             pos->x, pos->y );
