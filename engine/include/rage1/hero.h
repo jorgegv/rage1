@@ -26,12 +26,12 @@
 // there are 4 animation sequences, for up, down, left and right movements
 // They may point to the same frame sets, of course
 struct hero_animation_data_s {
-    uint8_t num_frames;		// number of frames on each frame sequence
-    uint8_t **frames_up;		// frame sequences for all directions
-    uint8_t **frames_down;
-    uint8_t **frames_left;
-    uint8_t **frames_right;
+    uint8_t sequence_up;	// frame sequences for all directions
+    uint8_t sequence_down;
+    uint8_t sequence_left;
+    uint8_t sequence_right;
     uint8_t delay;		// frames are rotated every 'delay' calls
+    uint8_t current_sequence;	// current sequence
     uint8_t current_frame;	// current sprite frame
     uint8_t delay_counter;	// current frame delay counter
     uint8_t *last_frame_ptr;	// last used frame
@@ -51,7 +51,7 @@ struct hero_movement_data_s {
 
 struct hero_info_s {
     struct sp1_ss *sprite;                      // ptr to SP1 sprite struct
-    uint8_t width,height;			// dimensions in pixels ( rows,cols * 8 )
+    uint8_t num_graphic;			// index in global sprite table
     struct hero_animation_data_s animation;	// animation data	
     struct position_data_s position;	// position data
     struct hero_movement_data_s movement;	// movement data

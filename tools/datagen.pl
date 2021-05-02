@@ -362,20 +362,24 @@ sub read_input_data {
                 $hero->{'animation_delay'} = $1;
                 next;
             }
-            if ( $line =~ /^SPRITE_UP\s+(\w+)$/ ) {
-                $hero->{'sprite_up'} = $1;
+            if ( $line =~ /^SPRITE\s+(\w+)$/ ) {
+                $hero->{'sprite'} = $1;
                 next;
             }
-            if ( $line =~ /^SPRITE_DOWN\s+(\w+)$/ ) {
-                $hero->{'sprite_down'} = $1;
+            if ( $line =~ /^SEQUENCE_UP\s+(\w+)$/ ) {
+                $hero->{'sequence_up'} = $1;
                 next;
             }
-            if ( $line =~ /^SPRITE_LEFT\s+(\w+)$/ ) {
-                $hero->{'sprite_left'} = $1;
+            if ( $line =~ /^SEQUENCE_DOWN\s+(\w+)$/ ) {
+                $hero->{'sequence_down'} = $1;
                 next;
             }
-            if ( $line =~ /^SPRITE_RIGHT\s+(\w+)$/ ) {
-                $hero->{'sprite_right'} = $1;
+            if ( $line =~ /^SEQUENCE_LEFT\s+(\w+)$/ ) {
+                $hero->{'sequence_left'} = $1;
+                next;
+            }
+            if ( $line =~ /^SEQUENCE_RIGHT\s+(\w+)$/ ) {
+                $hero->{'sequence_right'} = $1;
                 next;
             }
             if ( $line =~ /^BULLET\s+(\w.*)$/ ) {
@@ -1217,14 +1221,16 @@ sub validate_and_compile_hero {
     my $hero = shift;
     defined( $hero->{'name'} ) or
         die "Hero has no NAME\n";
-    defined( $hero->{'sprite_up'} ) or
-        die "Hero has no SPRITE_UP\n";
-    defined( $hero->{'sprite_down'} ) or
-        die "Hero has no SPRITE_DOWN\n";
-    defined( $hero->{'sprite_left'} ) or
-        die "Hero has no SPRITE_LEFT\n";
-    defined( $hero->{'sprite_right'} ) or
-        die "Hero has no SPRITE_RIGHT\n";
+    defined( $hero->{'sprite'} ) or
+        die "Hero has no SPRITE\n";
+    defined( $hero->{'sequence_up'} ) or
+        die "Hero has no SEQUENCE_UP\n";
+    defined( $hero->{'sequence_down'} ) or
+        die "Hero has no SEQUENCE_DOWN\n";
+    defined( $hero->{'sequence_left'} ) or
+        die "Hero has no SEQUENCE_LEFT\n";
+    defined( $hero->{'sequence_right'} ) or
+        die "Hero has no SEQUENCE_RIGHT\n";
     defined( $hero->{'animation_delay'} ) or
         die "Hero has no ANIMATION_DELAY\n";
     defined( $hero->{'lives'} ) or
@@ -1233,34 +1239,17 @@ sub validate_and_compile_hero {
         die "Hero has no HSTEP\n";
     defined( $hero->{'vstep'} ) or
         die "Hero has no VSTEP\n";
-    # all sprites must be the same size and have the same number of frames
-    my $sprite_up = $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ];
-    my $rows = $sprite_up->{'rows'};
-    my $cols = $sprite_up->{'cols'};
-    my $frames = $sprite_up->{'frames'};
-    my @sprites = map {
-        $sprites[ $sprite_name_to_index{ $hero->{ $_ } } ]
-    } qw( sprite_up sprite_down sprite_left sprite_right);
-    foreach my $s ( @sprites ) {
-        ( $s->{'rows'}  == $rows ) or
-            die "Hero sprites must all have the same number of ROWS\n";
-        ( $s->{'cols'}  == $cols ) or
-            die "Hero sprites must all have the same number of COLS\n";
-        ( $s->{'frames'}  == $frames ) or
-            die "Hero sprites must all have the same number of FRAMES\n";
-    }
 }
 
 sub output_hero {
     my $num_lives 	= $hero->{'lives'}{'num_lives'};
     my $lives_tile	= $hero->{'lives'}{'btile'};
-    my $num_frames	= $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ]{'frames'};
-    my $width		= $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ]{'cols'} * 8;
-    my $height		= $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ]{'rows'} * 8;
-    my $sprite_up	= $hero->{'sprite_up'};
-    my $sprite_down	= $hero->{'sprite_down'};
-    my $sprite_left	= $hero->{'sprite_left'};
-    my $sprite_right	= $hero->{'sprite_right'};
+    my $sprite		= $hero->{'sprite'};
+    my $num_sprite	= $sprite_name_to_index{ $hero->{'sprite'} };
+    my $sequence_up	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
+    my $sequence_down	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_down'} };
+    my $sequence_left	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_left'} };
+    my $sequence_right	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_right'} };
     my $delay		= $hero->{'animation_delay'};
     my $hstep		= $hero->{'hstep'};
     my $vstep		= $hero->{'vstep'};
@@ -1271,12 +1260,11 @@ sub output_hero {
 
 struct hero_info_s hero_startup_data = {
     NULL,		// sprite ptr - will be initialized at program startup
-    $width, $height,	// width, height
-    { 	$num_frames,
-        &sprite_${sprite_up}_frames[0],
-        &sprite_${sprite_down}_frames[0],
-        &sprite_${sprite_left}_frames[0],
-        &sprite_${sprite_right}_frames[0],
+    $num_sprite,
+    { 	$sequence_up,
+        $sequence_down,
+        $sequence_left,
+        $sequence_right,
         $delay, 0, 0
         },	// animation
     { 0,0,0,0 },	// position - will be reset when entering a screen, including the first one
@@ -1573,7 +1561,7 @@ EOF_MAP
 }
 
 sub output_hero_sprites_initialization {
-    my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'sprite_up'} } ];
+    my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'sprite'} } ];
 
     # output hero sprite creation code
     print $output_fh <<EOF_HERO2
