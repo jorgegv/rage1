@@ -89,7 +89,10 @@ foreach my $i ( 0 .. $#sections_in_order ) {
 # OK processing, now with the output...
 
 # this sections will be ignored i reports and calculations
-my @sections_to_ignore = ( 'data_threads', 'code_l', 'code_l_sdcc' );
+my @sections_to_ignore = (
+    'data_threads', 'code_l', 'code_l_sdcc', 'code_math', 'code_stdlib',
+    'code_temp_sp1', 'code_threads_mutex', 'code_z80',
+);
 
 # section/symbol mode
 if ( defined( $opt_s ) ) {
