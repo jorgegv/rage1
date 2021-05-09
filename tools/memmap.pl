@@ -42,19 +42,28 @@ while (<>) {
         # if this is the first time we see this section, set initial top value
         if ( not exists $sections->{ $section } ) {
             $sections->{ $section }{'top'} = 0;
+            $sections->{ $section }{'base'} = 0xffff;
         }
+
         # store data into section
         push @{ $sections->{ $section }{'symbols'} }, {
             name	=> $symbol,
             address	=> $address,
         };
+
         # if this is the first symbol in this section, adjust base
         if ( scalar( @{ $sections->{ $section }{'symbols'} } ) == 1 ) {
             $sections->{ $section }{'base'} = $address;
         }
+
         # if this symbol is higher than the current top value, adjust top
         if ( $address > $sections->{ $section }{'top'} ) {
             $sections->{ $section }{'top'} = $address;
+        }
+
+        # if this symbol is lower than the current base value, adjust base
+        if ( $address < $sections->{ $section }{'base'} ) {
+            $sections->{ $section }{'base'} = $address;
         }
 
         if ( $address > $highest ) {
@@ -63,27 +72,48 @@ while (<>) {
     }
 }
 
-# fix the top values of all sections but the last
-# ...TO DO
-
 # about these predefined sections, see doc/MEMORY-MAP.doc
-$sections->{'FREE'}	= { 'base' => $highest,	'top' => 0xcfff };
-$sections->{'RESERVED'}	= { 'base' => 0xd000,	'top' => 0xffff };
+$sections->{'FREE'}		= { 'base' => $highest,	'top' => 0xcfff, size => 0xcfff - $highest + 1 };
+$sections->{'RESERVED_SP1'}	= { 'base' => 0xd000,	'top' => 0xffff, size => 0xffff - 0xd000 + 1 };
+
+# fix the top values of all sections but the last
+my @sections_in_order = sort { $sections->{ $a }{'base'} <=> $sections->{ $b }{'base'} } keys %$sections;
+foreach my $i ( 0 .. $#sections_in_order ) {
+    my $sec = $sections_in_order[ $i ];
+    if ( ( $sec !~ '^RESERVED' ) and ( $sec ne 'FREE' ) ) {
+        my $next_sec = $sections_in_order[ $i + 1 ];
+        $sections->{ $sec }{'size'} = $sections->{ $sec }{'top'} - $sections->{ $sec }{'base'} + 1;
+    }
+}
+
+# OK processing, now with the output...
+
+# this sections will be ignored i reports and calculations
+my @sections_to_ignore = ( 'data_threads', 'code_l', 'code_l_sdcc' );
 
 # section/symbol mode
 if ( defined( $opt_s ) ) {
-    foreach my $sec ( sort { $sections->{ $a }{'base'} <=> $sections->{ $b }{'base'} } keys %$sections ) {
+    say '-'x90;
+    printf "%-20s  %-60s  %-5s\n", "SECTION NAME", "SYMBOL NAME", "ADDR";
+    say '-'x90;
+    foreach my $sec ( @sections_in_order ) {
+        next if ( scalar grep { $_ eq $sec } @sections_to_ignore );
         foreach my $sym ( sort { $a->{'address'} <=> $b->{'address'} } @{ $sections->{ $sec }{'symbols'} } ) {
             printf "%-20s  %-60s  \$%04X\n", $sec, $sym->{'name'}, $sym->{'address'};
         }
     }
+    say '-'x90;
 }
 
 # map mode
 if ( defined( $opt_m ) ) {
     my ( $code, $data, $bss, $free, $reserved ) = ( 0,0,0,0,0 );
-    foreach my $sec ( sort { $sections->{ $a }{'base'} <=> $sections->{ $b }{'base'} } keys %$sections ) {
-        my $size = $sections->{ $sec }{'top'} - $sections->{ $sec }{'base'};
+    say '-'x70;
+    printf "SECTION NAME          BASE           TOP            SIZE\n";
+    say '-'x70;
+    foreach my $sec ( @sections_in_order ) {
+        next if ( scalar grep { $_ eq $sec } @sections_to_ignore );
+        my $size = $sections->{ $sec }{'size'};
         printf "%-20s  \$%04X (%-5d)  \$%04X (%-5d)  %d\n",
             $sec,
             $sections->{ $sec }{'base'}, $sections->{ $sec }{'base'},
@@ -105,10 +135,10 @@ if ( defined( $opt_m ) ) {
             $reserved += $size;
         }
     }
-    say "";
-    printf "TOTAL CODE: %d bytes\nTOTAL DATA: %d bytes\nTOTAL BSS : %d bytes\nTOTAL RESV: %d bytes\nTOTAL FREE: %d bytes\nTOTAL     : %d bytes\n",
+    say '-'x70;
+    printf "TOTAL CODE     : %d bytes\nTOTAL DATA     : %d bytes\nTOTAL BSS      : %d bytes\nTOTAL RESERVED : %d bytes\nTOTAL FREE     : %d bytes\n",
         $code, $data, $bss, $reserved, $free,
-        $code + $data + $bss + $reserved + $free,
         ;
+    say '-'x70;
 
 }
