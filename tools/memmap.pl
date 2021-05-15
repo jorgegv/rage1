@@ -139,7 +139,7 @@ if ( defined( $opt_m ) ) {
         }
     }
     say '-'x70;
-    printf "TOTAL CODE     : %d bytes\nTOTAL DATA     : %d bytes\nTOTAL BSS      : %d bytes\nTOTAL RESERVED : %d bytes\nTOTAL FREE     : %d bytes\n",
+    printf "TOTAL CODE     : %6d bytes\nTOTAL DATA     : %6d bytes\nTOTAL BSS      : %6d bytes\nTOTAL RESERVED : %6d bytes\nTOTAL FREE     : %6d bytes\n",
         $code, $data, $bss, $reserved, $free,
         ;
     say '-'x70;
