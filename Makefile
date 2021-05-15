@@ -173,3 +173,7 @@ update-game:
 	@rsync -ap --delete $(LIB_ENGINE_FILES) "$(target)"
 	@-for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done 2>/dev/null
 	@echo "Done!"
+
+# tools
+mem:
+	./tools/memmap.pl game.map
