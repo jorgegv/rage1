@@ -135,3 +135,23 @@ The Makefile is prepared to compile anything in that directory and add it to
 your main program.  This can be used to include the Game Functions in
 GAME_CONFIG structure, for example.
 
+## Controlling memory use
+
+When you are about to exhaust the available resources (memory, stack, heap,
+BSS...), problems frequently show up as sudden crashes or hangs in your
+program.
+
+It's very useful to be aware of the memory layout of your program, and also
+the occupation level of each of the memory areas.  The .MAP file which is
+generated during compilation has all the needed information about this, but
+it's some of a massive data dump.
+
+The tool `memmap.pl` in the `tools` directory chews up all this data and
+outputs a simple report about the different sections of code and data, their
+bases and sizes.
+
+This report, together with the [MEMORY-MAP.md](MEMORY-MAP.md) document can
+guide you when debugging memory problems.
+
+If you are using the stock RAGE1 Makefile for your game, you can just run
+`make mem` to get the report.
