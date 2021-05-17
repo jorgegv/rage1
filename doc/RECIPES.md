@@ -1,0 +1,152 @@
+# RECIPES
+
+The following describes common behaviours which are commonly used in
+adventure games, and how you would implement within RAGE1.  It is not an
+exhaustive guide with cut-and-paste examples, it is more of a reminder of
+how those behaviours can be accomplished by using the library.
+
+## Putting an item on a map screen
+
+Item definition in the code, and detection, grabbing and showing in the
+inventory while in the game, is automatic.
+
+- Make sure the BTILE for the item has been defined
+
+- Just add an ITEM line to the SCREEN definition in the map.  You'll need to
+  reserve an item ID (a 0-15 integer) and decide its position on the screen.
+
+(Check DATAGEN docs for the correct syntax and parameters)
+
+## Jumping from one screen to another
+
+Typical behaviour for going from the current screen to the next: when the
+hero touches a special "exit screen" area, it swicthes to the screen that is
+conected to that area
+
+This is accomplished by using HOTZONES and FLOWGEN rules.  Let's assume you
+want to implement the switching from Screen A to Screen B and vice versa.
+
+- First, you would define a hotzone in Screen A, with a name and pixel
+  coordinates (x,y,width and height).  This is the area in SCreen A that
+  takes you to Screen B
+
+- Then you would do the same in Screen B, for the area that takes you back
+  into Screen A
+
+- Then you define a Game Loop FLOW rule in Screen A that checks if the hero
+  is running over the Screen A hotzone.  If it is, it executes an action of
+  type WARP_TO_SCREEN to switch into Screen B
+
+- Then again you define the reciprocal Game Loop ruls in Screen B for the
+  Screen B hotzone that takes you to Screen A
+
+- The hotzones can be decorated with some DECORATION btiles, in case they
+  are not the obvious exit places in the screens.  The decoration and the
+  hotzones are overlaid.
+
+The DATAGEN code would be similar to this:
+
+```
+BEGIN_SCREEN
+	NAME ScreenA
+(...)
+	// optional: decoration
+        DECORATION      NAME=Stairs     BTILE=Stairs ROW=16 COL=10 ACTIVE=1
+	// hotzone for screen warping
+        HOTZONE         NAME=WarpToScreenB     X=88 Y=136 PIX_WIDTH=8 PIX_HEIGHT=16 ACTIVE=1
+(...)
+END_SCREEN
+```
+
+And the FLOWGEN code would be like:
+
+```
+BEGIN_RULE
+        SCREEN  ScreenA
+        WHEN    GAME_LOOP
+        CHECK   HERO_OVER_HOTZONE WarpToScreenB
+        DO      WARP_TO_SCREEN DEST_SCREEN=ScreenB DEST_HERO_X=100 DEST_HERO_Y=136
+END_RULE
+```
+
+The reciprocal zone and rule from Screen B to SCreen A would be similar.
+
+(As always, check the exhaustive syntax guide in DATAGEN and FLOWGEN docs)
+
+## Automatically drop an item somewhere in the game
+
+Let's say you have an item in your game which appears on Screen A (and can
+be grabbed there), but it should be taken to some place in Screen B, in
+order to activate some game condition condition.
+
+When you grab the item in Screen A, it should disappear from the screen (and
+appear in your inventory), and when you take into the destination place, it
+should appear dropped there and disappear from the inventory.
+
+You would do it like this:
+
+- First you would define an item in Screen A using the procedure mentioned
+  in a previous recipe.  With this, you get the regular item management
+
+- Then you define a hotzone in Screen B (which we will call the "holder"
+  hotzone for that object)
+
+- Optionally, you can overlay a DECORATION btile over the holder hotzone, in
+  order to give the player some hint that something should be brought there.
+
+- Also, you define an OBSTACLE in Screen B, which overlaps with the holder
+  hotzone, and that has the same BTILE as the item you are managing.  But
+  you configure it in ACTIVE=0 initial state.
+
+- Then you define a Game Loop RULE in Screen B that does the following:
+  - IF:
+    - The hero is over the Holder hotzone
+    - AND it has the item in his/her inventory
+  - THEN:
+    - Activate the BTILE in Screen B (this makes the item appear where it
+      should be dropped - It is not the item, it is an obstacle with the
+      same tile, but the player does not know that :-) )
+    - AND Deactivate the (optional) holder decoration
+    - AND Remove the item from the inventory
+    - AND Set whatever flag you need to note that the iem has been dropped
+    in its place
+
+The DATAGEN code would be like:
+
+```
+BEGIN_SCREEN
+	NAME ScreenA
+(...)
+	// of course, ITEM and HOLDER need not be in the same screen
+        ITEM            NAME=Lapiz      BTILE=Lapiz     ROW=20 COL=2 ITEM_INDEX=4
+(...)
+END_SCREEN
+
+BEGIN_SCREEN
+	NAME ScreenB
+(...)
+        HOTZONE         NAME=LapizHolder        X=152 y=112 PIX_WIDTH=24 PIX_HEIGHT=16 ACTIVE=1
+        DECORATION      NAME=LapizHolder        BTILE=LapizHolder       ROW=14 COL=20 ACTIVE=1
+        OBSTACLE        NAME=Lapiz              BTILE=Lapiz             ROW=14 COL=20 ACTIVE=0
+(...)
+END_SCREEN
+```
+
+And the FLOWGEN code would be like:
+
+```
+BEGIN_RULE
+        SCREEN  ScreenB
+        WHEN    GAME_LOOP
+        CHECK   HERO_OVER_HOTZONE LapizHolder
+        CHECK   ITEM_IS_OWNED 0x10
+        DO      DISABLE_BTILE LapizHolder
+        DO      ENABLE_BTILE Lapiz
+        DO      REMOVE_FROM_INVENTORY 0x10
+END_RULE
+```
+
+Remember that ITEM_ID=bit_number and ITEM_MASK=bit_mask, so for ITEM_ID=4,
+ITEM_MASK=0x10 (the fourth bit is 1)
+
+(As always, check the exhaustive syntax guide in DATAGEN and FLOWGEN docs)
