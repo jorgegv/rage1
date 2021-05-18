@@ -150,3 +150,31 @@ Remember that ITEM_ID=bit_number and ITEM_MASK=bit_mask, so for ITEM_ID=4,
 ITEM_MASK=0x10 (the fourth bit is 1)
 
 (As always, check the exhaustive syntax guide in DATAGEN and FLOWGEN docs)
+
+## Action at a distance: enabling/disabling an element from another screen
+
+Acting (enabling/disabling) an element (btile/sprite, etc.) when the
+condition to check and the element are on the same screen is easy: it can be
+done with just a game loop FLOW rule check and the associated actions.
+
+But when the condition is checked on Screen A and the element to act upon is
+on Screen B, it is slightly more complicated: you need to pass a bit of
+information (= the condition that was met) from Screen A to Screen B.
+
+And this is exactly what SCREEN FLAGS are for.
+
+The procedure would be the following:
+
+- In Screen A, setup a GAME_LOOP rule to check for the condition to be met
+- If the condition is met, set a SCREEN FLAG in Screen B (where the element
+  to be acted upon resides). You can use a SET_SCREEN_FLAG action to do
+  this.
+- In Screen B, setup an ENTER_SCREEN rule that checks the SCREEN FLAG you
+  used in the previous rule in SCreen A (use a SCREEN_FLAG_IS_SET check)
+- If the flag is active, act upon the (now local) element (enable/disable
+  the btile, enemy, etc.), and also, RESET the screen flag to avoid further
+  processing (use a RESET_SCREEN_FLAG action)
+
+With this schema, you are passing 1 bit of information from Screen A to
+Screen B.  Both rules have to agree on using the same SCREEN FLAG number, of
+course.
