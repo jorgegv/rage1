@@ -16,7 +16,6 @@
 #include "rage1/game_loop.h"
 #include "rage1/hero.h"
 #include "rage1/game_state.h"
-#include "rage1/game_config.h"
 #include "rage1/debug.h"
 
 #include "game_data.h"
@@ -37,25 +36,30 @@ void main(void)
    init_program();
 
    // run one-time initialization, if any
-   if ( game_config.game_functions.run_user_init )
-      game_config.game_functions.run_user_init();
+#ifdef RUN_GAME_FUNC_USER_INIT
+   RUN_GAME_FUNC_USER_INIT();
+#endif
 
    while (1) {
 
-      if ( game_config.game_functions.run_menu )
-         game_config.game_functions.run_menu();
+#ifdef RUN_GAME_FUNC_MENU
+      RUN_GAME_FUNC_MENU();
+#endif
 
-      if ( game_config.game_functions.run_intro )
-         game_config.game_functions.run_intro();
+#ifdef RUN_GAME_FUNC_INTRO
+      RUN_GAME_FUNC_INTRO();
+#endif
 
       run_main_game_loop();
 
       if ( GET_GAME_FLAG( F_GAME_OVER ) ) {
-         if ( game_config.game_functions.run_game_over )
-            game_config.game_functions.run_game_over();
+#ifdef RUN_GAME_FUNC_GAME_OVER
+         RUN_GAME_FUNC_GAME_OVER();
+#endif
       } else {
-         if ( game_config.game_functions.run_game_end )
-            game_config.game_functions.run_game_end();
+#ifdef RUN_GAME_FUNC_GAME_END
+         RUN_GAME_FUNC_GAME_END();
+#endif
       }
    }
 }

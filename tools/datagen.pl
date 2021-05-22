@@ -1327,33 +1327,25 @@ EOF_ITEMS2
 
 }
 
-sub output_game_config {
+sub output_game_functions {
     print $output_fh "// game config\n";
 
     print $output_fh join( "\n", 
-        map { sprintf "void %s(void);", $game_config->{'game_functions'}{ $_ } } 
-        keys %{ $game_config->{'game_functions'} } );
+        map {
+            sprintf "void %s(void);", $game_config->{'game_functions'}{ $_ }
+        } keys %{ $game_config->{'game_functions'} } );
+    print $output_fh "\n\n";
 
-    print $output_fh <<EOF_GAME_CONFIG1
+    print $output_fh join( "\n", 
+        map {
+            sprintf "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ }
+        } keys %{ $game_config->{'game_functions'} }
+    );
 
-struct game_config_s game_config = {
-EOF_GAME_CONFIG1
-;
+    print $output_fh "\n\n";
+}
 
-    print $output_fh join( ",\n", 
-        map { sprintf "\t.game_functions.%-16s = %s", "run_" . $_ , $game_config->{'game_functions'}{ $_ } || 'NULL' } 
-        qw(
-            menu
-            intro
-            game_end
-            game_over
-            user_init
-            user_game_init
-            user_game_loop
-        ) );
-
-    print $output_fh "\n};\n\n";
-
+sub output_game_areas {
     # output game areas
     print $output_fh "// screen areas\n";
     print $output_fh "\n" . join( "\n", map {
@@ -1778,7 +1770,7 @@ sub output_generated_data {
     output_hero_sprites_initialization;
     output_bullet_sprites_initialization;
     output_items;
-    output_game_config;
+    output_game_areas;
 
     close $output_fh;
 
@@ -1786,7 +1778,8 @@ sub output_generated_data {
     open( $output_fh, ">", $h_file ) or
         die "Could not open $h_file for writing\n";
 
-    output_header_file;;
+    output_header_file;
+    output_game_functions;
 
     close $output_fh;
 

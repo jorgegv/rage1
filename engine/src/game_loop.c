@@ -26,7 +26,6 @@
 #include "rage1/btile.h"
 #include "rage1/game_loop.h"
 #include "rage1/flow.h"
-#include "rage1/game_config.h"
 #include "rage1/enemy.h"
 #include "rage1/hero.h"
 
@@ -134,8 +133,9 @@ void run_main_game_loop(void) {
    inventory_show();
 
    // run user game initialization, if any
-   if ( game_config.game_functions.run_user_game_init )
-      game_config.game_functions.run_user_game_init();
+#ifdef RUN_GAME_FUNC_USER_GAME_INIT
+   RUN_GAME_FUNC_USER_GAME_INIT();
+#endif
 
    // run main game loop
    while ( ! ( GET_GAME_FLAG( F_GAME_OVER ) || GET_GAME_FLAG( F_GAME_END ) ) ) {
@@ -178,8 +178,9 @@ void run_main_game_loop(void) {
       check_game_flags();
 
       // run user game loop function, if any
-      if ( game_config.game_functions.run_user_game_loop )
-         game_config.game_functions.run_user_game_loop();
+#ifdef RUN_GAME_FUNC_USER_GAME_LOOP
+      RUN_GAME_FUNC_USER_GAME_LOOP();
+#endif
 
       // update screen
       sp1_UpdateNow();
