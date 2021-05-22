@@ -1456,7 +1456,6 @@ sub output_header {
 #include "rage1/hero.h"
 #include "rage1/game_state.h"
 #include "rage1/bullet.h"
-#include "rage1/game_config.h"
 #include "rage1/enemy.h"
 
 #include "game_data.h"
