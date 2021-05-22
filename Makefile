@@ -148,12 +148,12 @@ LIB_ENGINE_FILES	= engine tools Makefile zpragma.inc .gitignore env.sh
 # these are game data directories that will be copied from the template when creating
 # a new game, but will _not_ be overwritten when updating the library. These contain
 # your game!
-LIB_GAME_DATA_DIRS	= game_data game_src
+LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
 
 # needed directories that will be created empty if they do not exist
 LIB_ENGINE_EMPTY_DIRS	= generated tests
 
-# create a game using the library
+# create a minimal game using the library
 new-game:
 	@if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
 	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, use 'make update-game' instead"; exit 2; fi
