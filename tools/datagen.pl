@@ -1342,7 +1342,15 @@ EOF_GAME_CONFIG1
 
     print $output_fh join( ",\n", 
         map { sprintf "\t.game_functions.%-16s = %s", "run_" . $_ , $game_config->{'game_functions'}{ $_ } || 'NULL' } 
-        keys %{ $game_config->{'game_functions'} } );
+        qw(
+            menu
+            intro
+            game_end
+            game_over
+            user_init
+            user_game_init
+            user_game_loop
+        ) );
 
     print $output_fh "\n};\n\n";
 
