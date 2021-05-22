@@ -5,7 +5,6 @@
 #include "rage1/controller.h"
 #include "rage1/debug.h"
 #include "rage1/flow.h"
-#include "rage1/game_config.h"
 #include "rage1/game_loop.h"
 #include "rage1/game_state.h"
 #include "rage1/hero.h"
