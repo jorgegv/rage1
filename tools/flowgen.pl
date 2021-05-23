@@ -340,6 +340,8 @@ sub output_h_file {
 #ifndef _FLOW_DATA_H
 #define _FLOW_DATA_H
 
+#include <sound.h>
+
 #include "rage1/flow.h"
 
 // FLOWGEN initialization function, called from main game initialization

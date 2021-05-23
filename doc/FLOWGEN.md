@@ -93,7 +93,7 @@ check is successful. Options:
   - [x] SET_USER_FLAG <flag>
   - [x] RESET_USER_FLAG <flag>
   - [x] INC_LIVES <num_lives>
-  - [x] PLAY_SOUND <fxid>
+  - [x] PLAY_SOUND <fxid> - IDs are the ones available in sound.h for bit_beepfx
   - [x] ENABLE_TILE <tile_name>
   - [x] DISABLE_TILE <tile_name>
   - [x] ENABLE_HOTZONE <hotzone_name>
