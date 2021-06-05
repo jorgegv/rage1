@@ -429,10 +429,12 @@ sub read_input_data {
             if ( $line =~ /^GAME_FUNCTIONS\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = $1;
-                $game_config->{'game_functions'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
+                foreach my $a ( split( /\s+/, $args ) ) {
+                    $a =~ s/^\s*//g;	# remove leading and trailing blanks
+                    $a =~ s/\s*$//g;
+                    my ($k,$v) = split( /=/, $a );
+                    $game_config->{'game_functions'}{ lc($k) } = $v;
+                }
                 next;
             }
             if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
