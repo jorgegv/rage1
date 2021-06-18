@@ -32,6 +32,7 @@ void run_main_game_loop(void);
 // this frame, it will return immediately; otherwise, it will update the
 // current frame number and continue with the rest of the function code
 
-#define RUN_ONLY_ONCE_PER_FRAME		static uint8_t __last_frame; if ( __last_frame == current_time.frame ) return; else __last_frame = current_time.frame
+#define SYSVAR_FRAMES			(*(uint8_t *)(23672))
+#define RUN_ONLY_ONCE_PER_FRAME		static uint8_t __last_frame; if ( __last_frame == SYSVAR_FRAMES ) return; else __last_frame = SYSVAR_FRAMES
 
 #endif // _GAME_LOOP_H

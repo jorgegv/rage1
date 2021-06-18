@@ -50,10 +50,10 @@ void init_interrupts(void) {
 
    intrinsic_di();
 
-   im2_init(IV_ADDR);
-   memset(IV_ADDR,IV_BYTE,257);
-   im2_create_generic_isr(5,ISR_ADDR);
-   im2_append_generic_callback(255, do_timer_tick );
+//   im2_init(IV_ADDR);
+//   memset(IV_ADDR,IV_BYTE,257);
+//   im2_create_generic_isr(5,ISR_ADDR);
+//   im2_append_generic_callback(255, do_timer_tick );
 
    intrinsic_ei();
 }
