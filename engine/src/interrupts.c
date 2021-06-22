@@ -18,6 +18,7 @@
 #include <im2.h>
 #include <string.h>
 #include <intrinsic.h>
+#include <z80.h>
 
 #include "rage1/debug.h"
 
@@ -42,19 +43,17 @@ IM2_DEFINE_ISR(do_timer_tick)
 }
 
 // Initialize interrupts in IM2 mode
-#define IV_ADDR		((void*)0xd000)
-#define ISR_ADDR	((void *)0xd1d1)
-#define IV_BYTE		(0xd1)
+#define IV_ADDR		( ( unsigned char * ) 0xd000 )
+#define ISR_ADDR	( ( unsigned char * ) 0xd1d1 )
+#define IV_BYTE		( 0xd1 )
+#define Z80_OPCODE_JP	( 0xc3 )
 
 void init_interrupts(void) {
-
    intrinsic_di();
-
    im2_init(IV_ADDR);
    memset(IV_ADDR,IV_BYTE,257);
-   im2_create_generic_isr(5,ISR_ADDR);
-   im2_append_generic_callback(255, do_timer_tick );
-
+   z80_bpoke( ISR_ADDR, Z80_OPCODE_JP );
+   z80_wpoke( ISR_ADDR + 1, (uint16_t) do_timer_tick );
+   im2_init( IV_ADDR );
    intrinsic_ei();
 }
-
