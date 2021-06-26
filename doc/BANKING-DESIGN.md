@@ -22,13 +22,13 @@ purpose.
 
 ## Design points
 
-- All of the game code must reside in low memory (below 0xc00), as a genear
-  rule.  Code that is used in exceptional situations (menu, start, game end,
+- All of the game code must reside in low memory (below 0xc00), as a rule of
+  thumb. Code that is used in exceptional situations (menu, start, game end,
   game over conditions) can be in other banks provided that it does not call
   anything outside its own bank or the main bank.
 
 - There are some assets that are used all the time and must reside in low
-  memory: hero and bullet sprites, character set, game state, etc.
+  memory: character set, game state, etc.
 
 - There are other assets that are used only at given times, and that can be
   loaded and unloaded on-demand: sprites, tiles, screen rules, sounds, etc.
@@ -57,20 +57,99 @@ purpose.
 
 - Element sets need not be big.  In fact, they should be as small as
   possible, in order to fit in low RAM.  We can have a big number of sets
-  in high memory, up to 64 KB.
+  in high memory, up to 80 KB (5 x 16KB banks: 1,3,4,6,7)
+
+## Memory layout
+
+```
+0000-3FFF: ROM			(16384 BYTES)
+4000-5AFF: SCREEN$		( 6912 BYTES)
+5B00-7FFF: LOWMEM BUFFER	( 9472 BYTES)
+8000-8100: INT VECTOR TABLE	(  257 BYTES)
+8101-8180: STACK		(  128 BYTES)
+8181-8183: "jp <isr>" OPCODES	(    3 BYTES)
+8184-D1EC: C PROGRAM CODE	(20585 BYTES)
+D1ED-FFFF: SP1 LIBRARY DATA	(11795 BYTES)
+```
 
 ## Implementation
 
-In short:
+We need to distinguish two phases for our program: the loading phase, and
+the execution phase.
 
-- Compile the code for the different sections
+### Loading Phase
 
-- Create a trivial bank switcher routine
+The Loading phase starts by loading a BASIC loader that does the following:
 
-- Create a basic loader that calls that routine and loads each bank's
-  contents, then loads the main program in the home bank
+- Set RAMTOP to 0x6fff (that enough space to run the complete loader)
 
-- Convert the basic loader to TAP with BAS2TAP
+- Load a minimal bank switching routine at an address below 0x8184 (e.g.
+  0x7000)
+
+- For each of the banks 1, 3, 4 ,6 ,7:
+
+  - Switch page frame (0xc000) to bank N using the mentioned banking
+    routine (POKE + RAND USR)
+
+  - Load code to position 0xc000.  Data compiled for this section must be
+    ORG 0xc000
+
+- Switch page frame back to bank 0
+
+- Load the C program code to position 0x8184. This code should be at most
+  20585 bytes (from 0x8184 to 0xd1ec: 0xd1ed-0xffff is reserved for SP1
+  data structures)
+
+- Start program execution at 0x8184 (RAND USR)
+
+The BASIC loader can be compiled to TAP format with BAS2TAP
+
+### Execution phase
+
+- Program execution starts at 0x8184
+
+- Stack pointer is set to 0x8181 at startup
+
+- Interrupts are disabled at startup
+
+- The first thing the program does is setting up interrupts: 0x8000-0x8100
+  is the 257 byte interrupt vector table, which contains byte 0x81 at all
+  positions. It also patches "jp <isr>" into addresses 0x8181-0x8183. It
+  then sets IM2 mode and enables interrupts.
+
+- At this point, all the memory map is setup and the code is in place.  The
+  buffer at 0x5b00-0x7fff will be used as the LOW MEM buffer for copying
+  assets from high memory banks: when they are needed, page frame (0xc000)
+  is switched to the source bank, content is copied, then bank 0 is switched
+  back.
+
+- The memory area from 0x5b00 normally contains system variables and BASIC
+  program code, but since we are not returning to BASIC ever, we can freely
+  use this area for our own purposes.
+
+- The main bank switching routine (not to be confused with the BASIC loader
+  switching routine) must be based in memory below 0xc000, since it will
+  switch the memory range above that point.  This means it should be
+  included in main.c to ensure it is linked at the beginning of the memory
+  map.
+
+- From this moment, the program can follow the design points above to switch
+  banks and copy assets to the low memory buffer as needed during the game.
+
+- Since we are based in Bank 0, and we will be always switch a bank, copy
+  data, and switch again to bank 0, we will always know the bank we have
+  selected.  This means we don't need to keep track of the last value
+  written to port 0xfffd, and just write the bank we need to map into port
+  0xfffd:
+
+  - We will be always selecting banks 0-7, so we will be using bits 0-2 in
+    port 0xfffd
+
+  - Bit 3 = 0 selects normal screen
+
+  - Bit 4 = 0 selects 128K ROM (which is irrelevant for us)
+
+  - Bit 5 = 0 means memory banking is kept enabled (which is what we want)
 
 ## References
 
