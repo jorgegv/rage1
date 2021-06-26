@@ -7,7 +7,7 @@ quite a lot of memory, there is fewer memory dedicated to game assets
 (screens, sprites, tiles, rules, etc.).
 
 There are a few memory optimizations pending, but the real one would be to
-switch to 128K compatible games, so that we can use the other 64K for those
+switch to 128K compatible games, so that we can use the other 96K for those
 assets.
 
 The main problem with that is that paging in the 128K model takes place in
