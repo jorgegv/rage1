@@ -162,5 +162,4 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
 
 - https://worldofspectrum.org/faq/reference/128kreference.htm
 
-- https://github.com/andybalaam/bas2tap
- 
+- https://github.com/speccyorg/bas2tap
