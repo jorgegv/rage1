@@ -1,5 +1,43 @@
 # RAGE1 ChangeLog
 
+## 0.3.0 (2021-06-27)
+
+### New features
+
+- flowgen: enable setting/resetting flags for one screen from a different
+  one
+
+- tools: added new memmap.pl tool for better memory map output from game.map
+
+- Makefile: made new-game target generate a really minimal game which you
+  can start expanding right away without deleting anything
+
+
+### Graphics
+
+- hero: refactored sprite animation to single sprite with multiple sequences
+
+- enemy: added dual animation sequence, changing when bouncing horizontally
+  or vertically
+
+### Fixes and optimizations
+
+- game: remove game functions runtime checks, instead #defined them and
+  removed game_config structure
+
+- interrupts: optimized ISR code
+
+- enemy: optimized animation and redrawing sequence
+
+### Documentation
+
+- doc: Addec RECIPES.md for commonly used game behaviours and how to do them
+  with RAGE1
+
+- doc: Added complete memory bank design, linking issues analysis and
+  solution, and possible design for a paged minimal memory manager.  This is
+  very important, it lays the way to games with fully working 128K RAM
+
 ## 0.2.0 (2021-04-27)
 
 ### New features
@@ -21,7 +59,7 @@
 
 - Configurable screen areas (Game, Lives, Inventory, Debug)
 
-## Graphics
+### Graphics
 
 - Sprites with multiple animation sequences
 
@@ -61,4 +99,4 @@
   - Item grabbing
   - Global game loop and game state management
 
-- Working but extrenely simple test game
+- Working but extremely simple test game
