@@ -99,23 +99,179 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
   included in main.c to ensure it is linked at the beginning of the memory
   map.
 
-- From this moment, the program can follow the design points above to switch
-  banks and copy assets to the low memory buffer as needed during the game.
-
 - Since we are based in Bank 0, and we will be always switch a bank, copy
   data, and switch again to bank 0, we will always know the bank we have
   selected.  This means we don't need to keep track of the last value
-  written to port 0xfffd, and just write the bank we need to map into port
-  0xfffd:
+  written to port 0xfffd: if we just write the bank number to port 0xfffd,
+  we get the behaviour we want (but see the following sections for a
+  followup):
 
-  - We will be always selecting banks 0-7, so we will be using bits 0-2 in
-    port 0xfffd
+  - Bits 0,1,2 will be always used for selecting banks 0-7
 
   - Bit 3 = 0 selects normal screen
 
   - Bit 4 = 0 selects 128K ROM (which is irrelevant for us)
 
   - Bit 5 = 0 means memory banking is kept enabled (which is what we want)
+
+  - Bits 6,7 are unused
+
+From this moment, the program can follow the design points above to switch
+banks and copy assets to the low memory buffer as needed during the game.
+
+## Linking Issues
+
+When copying a block of data/code from one memory address to another,
+there is one critical thing that we must take into consideration: pointers.
+
+### Code Pointers
+
+Code pointers are mainly used as the destination for CALL and JP
+instructions.
+
+If the destination address is outside the memory block that we are copying,
+then everything is fine: the address is valid and will not be overwritten
+(hopefully!) when moving our code around.
+
+If the destination is inside the memory block that we are copying, things
+change substantially: the code was originally compiled and placed on a given
+base address, and the JP's and CALL's into code that falls inside this
+memory range match the ORG directive that was used for the compilation of
+that code.
+
+When copying that code elsewhere, we are essentially changing the ORG for
+it, and for this reason we need to fix the destination addresses in all
+those calls, so that they match the new base address where the code is being
+copied.  Typically, these fixes would be as easy as substracting the
+original ORG address and then adding the new base address to the pointer
+which is being fixed.
+
+There is a problem with that: we need a list of the byte positions in our
+code where pointers need to be fixed, i.e. a _relocation table_. This means
+some overhead for our code.
+
+Adding to that problem, the relocation table will need to be processed at
+runtime, so we also need the code to do it and patch the code accordingly
+after copying it...which is more code overhead.
+
+### Data Pointers
+
+With data pointers the situation is similar: if the data contains pointers
+that point to addresses outside the range that is being copied, everything
+is fine. But if the data pointers point to some addresses inside our range,
+those pointers also need to be fixed in the same way as described for the
+code pointers.
+
+This means those pointers need to be added to the relocation table described
+before, which means more overhead.
+
+### Possible solutions
+
+The issues analyzed above are exactly the ones that are solved by a specific
+program: the linker.
+
+Without going into much details: when the compiler generates code and data
+and they contain memory addresses, these addresses are generated as if the
+code and data was going to be loaded at address 0x0000, and a relocation
+table is generated alongside with the code, with the list of pointers that
+would need to be fixed. All that info (code, data and relocation table) is
+included in the object (`*.o`) file.
+
+A linker knows precisely the final memory map for our program, and using the
+information from the object files, it arranges them in memory and patches
+code and data using the relocation tables in order to match the final
+address where everything will be loaded.
+
+So one possible solution would be to implement this schema in the code/data
+that will be paged in our program: relocation tables and a "linker" function
+that moves code around and fixes pointers.
+
+But there is other possible solution: if what we have described here is the
+work done by a linker, why not use the standard Z88DK linker to do this job?
+Obviously our Z88DK linker, which runs on Linux/Windows, is not going to run
+directly on the Spectrum, but we can make it do the work for us and arrange
+everything so that we can just move things around in the Spectrum and know
+that everything works.
+
+So we will do the following setup:
+
+- The code/data that will be paged will be included in separate code
+  sections.  Arbitrary sections can be defined by using #pragmas in C code,
+  and they will be output as separate `.bin` or `.tap` files by the
+  compiler/linker.
+
+- Those sections will have an ORG 0x5B00 (also selectable by #pragmas),
+  which is the base address of our LOWMEM area (i.e.  where all that
+  code/data will be copied when needed at runtime).  This means that
+  code/data will _already_ be prepared to run at that address.  _This_ is
+  the job that the Z88DK linker will do for us.
+
+- Since the sections will need to fit in the LOWMEM area (which is ~9 kB), a
+  good maximum size would be 8 KB.  This allows for 2 sections to fit in a high
+  BANK, and we do not waste too much of the LOWMEM area.
+
+- Each 8 kB section will be loaded at the proper BANK address (0xC000 or 0xE000)
+  by the BASIC loader.
+
+- When the section is needed at runtime, it will be copied to base address
+  0x5B00, which matches the ORG used for compiling the section, and so
+  everything will work fine without further fixes.
+
+- A small Memory Mapping Table (MMT) will be needed within the main section
+  (non-paged) code, that will map each section to the physical bank (0-7)
+  and the top or bottom half of the bank that will be copied into LOWMEM. 
+  The structure for each entry could be:
+
+  - Bits 0-2: physical bank (0-7)
+
+  - Bit 3: bank half (0: low 0xC000; 1: high 0xE000)
+
+### Possible enhancement
+
+There is one implicit assumption in all the above analysis and design: that
+the data/code in the paged sections is immutable and does not need to change
+during the game.
+
+But what if we wanted to be able to make modifications in tha section while
+running, and _keep_ those modifications?  It would be interesting that after
+paging the memory area out and back in later, the changes are still there. 
+I.e.  make the section a READ/WRITE section, and not a READ ONLY one.
+
+There are two small changes to the design in previous sections that would
+allow us to do this:
+
+- Add an additional R/W bit to each MMT entry, which would be as follows:
+
+  - Bits 0-2: physical bank (0-7)
+
+  - Bit 3: bank half (0: low 0xC000; 1: high 0xE000)
+
+  - Bit 4: RO/RW (0: readonly; 1: read/write)
+
+- Depending on bit 4 of the MMT entry, the section would be treated
+  differently when paging: it would only be copied to LOWMEM when paging it
+  in (for RO sections); or it would be copied to LOWMEM when paging it in
+  and _back_ to the bank when paging it out (for RW sections)
+
+- For this to work, now we _do need_ to know which of the physical banks is
+  currently selected (since we may need to copy data back to it).  So we
+  need to keep it somewhere.
+
+- There are performance considerations, since each time a section is paged
+  in/out, a whole block of data might need to be copied back and forth (once
+  for a RO section, and twice for a RW section).  So this is definitely not
+  a mechanism to be used frequently, or inside loops, but sporadically.
+
+- It would be interesting to explore reducing the section size (to e.g. 
+  4kB).  It would make it easier to use it more often during the game (since
+  copying data would be faster, less data involved), but it would make it
+  more inconvenient since code in a section cannot call code in other
+  sections (only code in the main section).
+
+- It would also be interesting to explore copying functions different from
+  LDIR based ones.  Copying 8 kB with an LDIR instruction takes around 50ms.
+
+This is indeed a paging memory manager design :-)
 
 ## Design Keys for Game Data
 
