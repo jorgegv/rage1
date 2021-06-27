@@ -25,17 +25,19 @@ purpose.
 We have tried to have a memory map as packed as possible, and using all of
 the memory holes for the game, if possible.
 
-The low memory map for our game is as follows:
+The basic (non-paged) memory map for our game is as follows:
 
 ```
-0000-3FFF: ROM			(16384 BYTES)
-4000-5AFF: SCREEN$		( 6912 BYTES)
-5B00-7FFF: LOWMEM BUFFER	( 9472 BYTES)
-8000-8100: INT VECTOR TABLE	(  257 BYTES)
-8101-8180: STACK		(  128 BYTES)
-8181-8183: "jp <isr>" OPCODES	(    3 BYTES)
-8184-D1EC: C PROGRAM CODE	(20585 BYTES)
-D1ED-FFFF: SP1 LIBRARY DATA	(11795 BYTES)
+0000-3FFF: ROM                  (16384 BYTES)
+4000-5AFF: SCREEN$              ( 6912 BYTES)
+5B00-7FFF: LOWMEM BUFFER        ( 9472 BYTES)
+8000-8100: INT VECTOR TABLE     (  257 BYTES)
+8101-8180: STACK                (  128 BYTES)
+8181-8183: "jp <isr>" OPCODES   (    3 BYTES)
+8184-D1EC: C PROGRAM CODE       (20585 BYTES)
+D1ED-FFFF: SP1 LIBRARY DATA     (11795 BYTES)
+---------------------------------------------
+TOTAL                           (65536 bytes)
 ```
 
 ## Implementation
@@ -47,10 +49,9 @@ the execution phase.
 
 The Loading phase starts by loading a BASIC loader that does the following:
 
-- Set RAMTOP to 0x6fff (that's enough space to run the complete loader)
+- Set RAMTOP to 0x6fff (that's about 5kB to run the complete loader, seems enough)
 
-- Load a minimal bank switching ASM routine at an address below 0x8184 (e.g. 
-  0x7000)
+- Load a minimal bank switching ASM routine at an address below 0x8184 but above the RAMTOP(e.g. 0x7000)
 
 - For each of the banks 1, 3, 4 ,6 ,7:
 
@@ -68,7 +69,7 @@ The Loading phase starts by loading a BASIC loader that does the following:
 
 - Start program execution at 0x8184 (RAND USR)
 
-The BASIC loader can be compiled to TAP format with BAS2TAP.
+The BASIC loader can be compiled to TAP format with BAS2TAP (see the "References" section at the end of this document)
 
 ### Execution phase
 
@@ -80,7 +81,7 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
 
 - The first thing the program does is setting up interrupts: 0x8000-0x8100
   is the 257 byte interrupt vector table, which contains byte 0x81 at all
-  positions. It also patches "jp <isr>" into addresses 0x8181-0x8183. It
+  positions. It also patches `jp <isr>` opcodes into addresses 0x8181-0x8183. It
   then sets IM2 mode and enables interrupts.
 
 - At this point, all the memory map is setup and the code is in place.  The
@@ -104,7 +105,7 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
   selected.  This means we don't need to keep track of the last value
   written to port 0xfffd: if we just write the bank number to port 0xfffd,
   we get the behaviour we want (but see the following sections for a
-  followup):
+  followup on this):
 
   - Bits 0,1,2 will be always used for selecting banks 0-7
 
@@ -232,7 +233,7 @@ There is one implicit assumption in all the above analysis and design: that
 the data/code in the paged sections is immutable and does not need to change
 during the game.
 
-But what if we wanted to be able to make modifications in tha section while
+But what if we wanted to be able to make modifications in that section while
 running, and _keep_ those modifications?  It would be interesting that after
 paging the memory area out and back in later, the changes are still there. 
 I.e.  make the section a READ/WRITE section, and not a READ ONLY one.
@@ -253,9 +254,7 @@ allow us to do this:
   in (for RO sections); or it would be copied to LOWMEM when paging it in
   and _back_ to the bank when paging it out (for RW sections)
 
-- For this to work, now we _do need_ to know which of the physical banks is
-  currently selected (since we may need to copy data back to it).  So we
-  need to keep it somewhere.
+- For this to work, now we _do need_ to know which of the physical banks was the one selected for the data that is currently in LOWMEM (since we may need to copy data back to it).  So we  need to track it somewhere.
 
 - There are performance considerations, since each time a section is paged
   in/out, a whole block of data might need to be copied back and forth (once
