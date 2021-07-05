@@ -27,7 +27,7 @@ ZCC		= zcc
 # compiler flags
 INC		= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
 CFLAGS		= +zx -vn -SO3 -m -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include zpragma.inc $(INC)
-CFLAGS_TO_ASM	= -a --c-code-in-asm
+CFLAGS_TO_ASM	= -a --c-code-in-asm --list
 
 # generic rules
 %.o: %.c
