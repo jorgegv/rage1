@@ -30,7 +30,8 @@ The basic (non-paged) memory map for our game is as follows:
 ```
 0000-3FFF: ROM                  (16384 BYTES)
 4000-5AFF: SCREEN$              ( 6912 BYTES)
-5B00-7FFF: LOWMEM BUFFER        ( 9472 BYTES)
+5B00-7AFF: LOWMEM BUFFER        ( 8192 BYTES)
+7B00-7FFF: HEAP                 ( 1280 BYTES)
 8000-8100: INT VECTOR TABLE     (  257 BYTES)
 8101-8180: STACK                (  128 BYTES)
 8181-8183: "jp <isr>" OPCODES   (    3 BYTES)
@@ -83,6 +84,8 @@ The BASIC loader can be compiled to TAP format with BAS2TAP (see the "References
   is the 257 byte interrupt vector table, which contains byte 0x81 at all
   positions. It also patches `jp <isr>` opcodes into addresses 0x8181-0x8183. It
   then sets IM2 mode and enables interrupts.
+
+- After that, the heap is initialized at 0x7B00-0x7FFF (~1.2 kB)
 
 - At this point, all the memory map is setup and the code is in place.  The
   buffer at 0x5b00-0x7fff will be used as the LOW MEM buffer for copying
