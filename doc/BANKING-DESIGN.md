@@ -7,7 +7,7 @@ quite a lot of memory, there is fewer memory dedicated to game assets
 (screens, sprites, tiles, rules, etc.).
 
 There are a few memory optimizations pending, but the real one would be to
-switch to 128K compatible games, so that we can use the other 96K for those
+switch to 128K compatible games, so that we can use the other 80K for those
 assets.
 
 The main problem with that is that paging in the 128K model takes place in
@@ -20,6 +20,64 @@ they are needed (entering, exiting screen) they must be loaded into "low"
 memory: a chunk of memory below 0xc000 which will be reserved for this
 purpose.
 
+## Memory Notes
+
+Here are some hints that I have collected/deduced by testing different
+setups.  Beware: validity of these may change over time!
+
+### SDCC memory allocation in standard library
+
+* When using SDCC with newlib (SDCC_IY), standard malloc/free functions are
+  linked, and the heap setup is controlled by pragmas:
+
+```
+#pragma output CLIB_MALLOC_HEAP_SIZE  = 0      // no auto heap, we will set it up manually
+```
+
+and then:
+
+```
+#define MALLOC_HEAP_ADDR     0xbc00
+#define MALLOC_HEAP_SIZE     4096
+unsigned char *_malloc_heap = MALLOC_HEAP_ADDR;
+
+(...)
+
+heap_init( (unsigned char *) MALLOC_HEAP_ADDR, MALLOC_HEAP_SIZE );
+
+```
+
+The memory address for the heap can be fixed as indicated above.
+
+### SP1 memory allocation
+
+* In regular SP1 documentation, it written everywhere that you should setup
+  SP1 memory management with the following code:
+
+```
+void *u_malloc, *u_free;
+u_malloc = malloc;
+u_free = free;
+```
+
+* When using SDCC_IY, this does not apply.  In the SP1 version for SDCC_IY
+  the use of the system malloc/free functions is hardcoded and cannot be
+  trivially changed. Also, the u_malloc/u_free dance seems unneeded.
+
+* SP1 makes a malloc call for each of the sp1_cs structs of a given sprite
+  (when calling sp1_AddColSpr) and also one single call for the sp1_ss
+  struct (when calling ap1_CreateSpr).  This means that there can be several
+  dozen calls depending on the number of on-screen active sprites (assuming
+  that you create the sprites on screen enter and free them on screen exit).
+
+* Example for RAGE1: 4 3x3-sprites for the hero, 4 2x2-sprites for the
+  bullets, and 4 3x3-sprites for the enemies = (36 + 16 + 36) struct sp1_cs
+  (at 24 bytes each); and (4+4+4) struct sp1_ss (at 20 bytes each) = 100 malloc
+  calls, and a minimum of 2352 bytes used, not counting the memory block
+  overhead.
+
+* So for a RAGE1 game, a minimum heap size of 3K seems quite reasonable.
+
 ## Memory layout
 
 We have tried to have a memory map as packed as possible, and using all of
@@ -30,8 +88,8 @@ The basic (non-paged) memory map for our game is as follows:
 ```
 0000-3FFF: ROM                  (16384 BYTES)
 4000-5AFF: SCREEN$              ( 6912 BYTES)
-5B00-7AFF: LOWMEM BUFFER        ( 8192 BYTES)
-7B00-7FFF: HEAP                 ( 1280 BYTES)
+5B00-6AFF: LOWMEM BUFFER        ( 4096 BYTES)
+6B00-7FFF: HEAP                 ( 5376 BYTES)
 8000-8100: INT VECTOR TABLE     (  257 BYTES)
 8101-8180: STACK                (  128 BYTES)
 8181-8183: "jp <isr>" OPCODES   (    3 BYTES)
@@ -85,13 +143,13 @@ The BASIC loader can be compiled to TAP format with BAS2TAP (see the "References
   positions. It also patches `jp <isr>` opcodes into addresses 0x8181-0x8183. It
   then sets IM2 mode and enables interrupts.
 
-- After that, the heap is initialized at 0x7B00-0x7FFF (~1.2 kB)
+- After that, the heap is initialized at 0x6B00-0x7FFF (~5.2 kB)
 
 - At this point, all the memory map is setup and the code is in place.  The
   buffer at 0x5b00-0x7fff will be used as the LOW MEM buffer for copying
   assets from high memory banks: when they are needed, page frame (0xc000)
   is switched to the source bank, content is copied, then bank 0 is switched
-  back.
+  back. Also, the remaining will be used as the heap.
 
 - The memory area from 0x5b00 normally contains system variables and BASIC
   program code, but since we are not returning to BASIC ever, we can freely
@@ -210,12 +268,12 @@ So we will do the following setup:
   code/data will _already_ be prepared to run at that address.  _This_ is
   the job that the Z88DK linker will do for us.
 
-- Since the sections will need to fit in the LOWMEM area (which is ~9 kB), a
-  good maximum size would be 8 KB.  This allows for 2 sections to fit in a high
-  BANK, and we do not waste too much of the LOWMEM area.
+- Since the sections will need to fit in the LOWMEM area (which is 4 kB),
+  their size should be 4 KB.  This allows for 4 sections to fit in a high
+  BANK.
 
-- Each 8 kB section will be loaded at the proper BANK address (0xC000 or 0xE000)
-  by the BASIC loader.
+- Each 4 kB section will be loaded at the proper BANK address
+  (0xC000, 0xD000, 0xE000 or 0xF000) by the BASIC loader.
 
 - When the section is needed at runtime, it will be copied to base address
   0x5B00, which matches the ORG used for compiling the section, and so
@@ -223,12 +281,12 @@ So we will do the following setup:
 
 - A small Memory Mapping Table (MMT) will be needed within the main section
   (non-paged) code, that will map each section to the physical bank (0-7)
-  and the top or bottom half of the bank that will be copied into LOWMEM. 
+  and the page num ber (0-3) inside the bank that will be copied into LOWMEM. 
   The structure for each entry could be:
 
   - Bits 0-2: physical bank (0-7)
 
-  - Bit 3: bank half (0: low 0xC000; 1: high 0xE000)
+  - Bit 3-4: page number (0-3)
 
 ### Possible enhancement
 
@@ -248,36 +306,32 @@ allow us to do this:
 
   - Bits 0-2: physical bank (0-7)
 
-  - Bit 3: bank half (0: low 0xC000; 1: high 0xE000)
+  - Bit 3-4: page number (0-3)
 
-  - Bit 4: RO/RW (0: readonly; 1: read/write)
+  - Bit 5: RO/RW (0: readonly; 1: read/write)
 
-- Depending on bit 4 of the MMT entry, the section would be treated
+- Depending on bit 5 of the MMT entry, the section would be treated
   differently when paging: it would only be copied to LOWMEM when paging it
   in (for RO sections); or it would be copied to LOWMEM when paging it in
   and _back_ to the bank when paging it out (for RW sections)
 
-- For this to work, now we _do need_ to know which of the physical banks was the one selected for the data that is currently in LOWMEM (since we may need to copy data back to it).  So we  need to track it somewhere.
+- For this to work, now we _do need_ to know which of the physical banks was
+  the one selected for the data that is currently in LOWMEM (since we may
+  need to copy data back to it).  So we  need to track it somewhere.
 
 - There are performance considerations, since each time a section is paged
   in/out, a whole block of data might need to be copied back and forth (once
   for a RO section, and twice for a RW section).  So this is definitely not
   a mechanism to be used frequently, or inside loops, but sporadically.
 
-- It would be interesting to explore reducing the section size (to e.g. 
-  4kB).  It would make it easier to use it more often during the game (since
-  copying data would be faster, less data involved), but it would make it
-  more inconvenient since code in a section cannot call code in other
-  sections (only code in the main section).
-
 - It would also be interesting to explore copying functions different from
-  LDIR based ones.  Copying 8 kB with an LDIR instruction takes around 50ms.
+  LDIR based ones.  Copying 4 kB with an LDIR instruction takes around 25ms.
 
 This is indeed a paging memory manager design :-)
 
 ## Design Keys for Game Data
 
-- All of the game code must reside in low memory (below 0xc00), as a rule of
+- All of the game code must reside in low memory (below 0xc000), as a rule of
   thumb. Code that is used in exceptional situations (menu, start, game end,
   game over conditions) can be in other banks provided that it does not call
   anything outside its own bank or the main bank.
