@@ -108,9 +108,10 @@ void mm_page_out( void ) {
         // switch destination bank
         zx128_switch_bank( mm_default->pages[ mm_default->current_page ].bank );
 
-        // copy data
+        // copy data back
         // same calculation as above
-        memcpy( (void *) ( MM_ZX128_BANK_FRAME | ( mm_default->pages[ mm_default->current_page ].page << 12 ) ), (void *) MM_ZX128_PAGE_FRAME,
+        memcpy( (void *) ( MM_ZX128_BANK_FRAME | ( mm_default->pages[ mm_default->current_page ].page << 12 ) ),
+            (void *) MM_ZX128_PAGE_FRAME,
             MM_PAGE_SIZE
         );
 
