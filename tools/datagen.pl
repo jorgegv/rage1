@@ -34,10 +34,14 @@ my $game_config;
 
 my $c_file = 'game_data.c';
 my $h_file = 'game_data.h';
-my $output_fh;
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
+
+# output lines for each of the files
+my @c_lines;
+my @h_lines;
+my @asm_lines;
 
 ##########################################
 ## Input data parsing and state machine
@@ -483,7 +487,7 @@ sub load_png_file {
     }
 
     # ..else, build it...
-    my $command = sprintf "pngtopam '%s' | pamtable", $file;
+    my $command = sprintf( "pngtopam '%s' | pamtable", $file );
     my @pixel_lines = `$command`;
     chomp @pixel_lines;
     my @pixels = map {			# for each line...
@@ -701,36 +705,36 @@ sub output_btile {
     my $tile = shift;
     my $cur_char = 0;
     my @char_names;
-    printf $output_fh "// Big tile '%s'\n\n", $tile->{'name'};
-    printf $output_fh "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
+    push @c_lines, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
+    push @c_lines, sprintf( "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
         $tile->{'name'},
         scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ),
         join( ", ",
             map { '0x'.sprintf('%02x',$_) }
             map { @$_ }
             @{ $tile->{'pixel_bytes'} }
-        );
-    printf $output_fh "uint8_t *btile_%s_tiles[%d] = { %s };\n",
+        ) );
+    push @c_lines, sprintf( "uint8_t *btile_%s_tiles[%d] = { %s };\n",
         $tile->{'name'},
         scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ) / 8,
         join( ', ',
-            map { sprintf "&btile_%s_tile_data[%d]", $tile->{'name'}, $_ }
+            map { sprintf( "&btile_%s_tile_data[%d]", $tile->{'name'}, $_ ) }
             grep { ( $_ % 8 ) == 0 }
             ( 0 .. ( $tile->{'rows'} * $tile->{'cols'} * 8 - 1 ) )
-        );
+        ) );
     # manually specified attrs have preference over PNG ones
     my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
-    printf $output_fh "uint8_t btile_%s_attrs[%d] = { %s };\n",
+    push @c_lines, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
         $tile->{'name'},
         scalar( @{ $attrs } ),
-        join( ', ', @{ $attrs } );
-    printf $output_fh "struct btile_s btile_%s = { %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] };\n",
+        join( ', ', @{ $attrs } ) );
+    push @c_lines, sprintf( "struct btile_s btile_%s = { %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] };\n",
         $tile->{'name'},
         $tile->{'rows'},
         $tile->{'cols'},
         $tile->{'name'},
-        $tile->{'name'};
-    printf $output_fh "\n// End of Big tile '%s'\n\n", $tile->{'name'};
+        $tile->{'name'} );
+    push @c_lines, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 }
 
 #####################################
@@ -831,7 +835,7 @@ sub output_sprite {
 
     my $cur_char = 0;
     my @char_names;
-    printf $output_fh "// Sprite '%s'\n// Pixel and mask data ordered by column (required by SP1)\n\n", $sprite->{'name'};
+    push @c_lines, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (required by SP1)\n\n", $sprite->{'name'} );
 
     # prepare mask and bytes lists
     my @col_bytes;
@@ -862,9 +866,9 @@ sub output_sprite {
     }
 
     # output mask/pixel lines
-    printf $output_fh "uint8_t sprite_%s_data[] = {\n%s\n};\n",
+    push @c_lines, sprintf( "uint8_t sprite_%s_data[] = {\n%s\n};\n",
         $sprite->{'name'},
-        join( ",\n", map { join( ", ", map { sprintf "0x%02x", $_ } @{$_} ) } @groups_of_2m );
+        join( ",\n", map { join( ", ", map { sprintf( "0x%02x", $_ ) } @{$_} ) } @groups_of_2m ) );
 
     # output list of pointers to frames
     my @frame_offsets;
@@ -873,28 +877,28 @@ sub output_sprite {
         push @frame_offsets, $ptr;
         $ptr += 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
     }
-    printf $output_fh "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
+    push @c_lines, sprintf( "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
         $sprite_name,
         join( ",\n", 
-            map { sprintf "\t&sprite_%s_data[%d]", $sprite_name, $_ }
+            map { sprintf( "\t&sprite_%s_data[%d]", $sprite_name, $_ ) }
             @frame_offsets
-        );
+        ) );
 
     # output list of animation sequences
     if ( scalar( @{ $sprite->{'sequences'} } ) ) {
-        print $output_fh join( "\n", map {
-            sprintf "uint8_t sprite_%s_sequence_%s[%d] = { %s };\n",
-                $sprite_name, $_->{'name'}, scalar( @{ $_->{'frame_list'} } ), join( ',', @{ $_->{'frame_list'} } );
+        push @c_lines, join( "\n", map {
+            sprintf( "uint8_t sprite_%s_sequence_%s[%d] = { %s };\n",
+                $sprite_name, $_->{'name'}, scalar( @{ $_->{'frame_list'} } ), join( ',', @{ $_->{'frame_list'} } ) );
         } @{ $sprite->{'sequences'} } );
-        printf $output_fh "struct animation_sequence_s sprite_%s_sequences[%d] = {\n\t",
-            $sprite_name, scalar( @{ $sprite->{'sequences'} } );
-        print $output_fh join( ",\n\t", map {
-            sprintf "{ %d, &sprite_%s_sequence_%s[0] }", scalar( @{ $_->{'frame_list'} } ), $sprite_name, $_->{'name'};
+        push @c_lines, sprintf( "struct animation_sequence_s sprite_%s_sequences[%d] = {\n\t",
+            $sprite_name, scalar( @{ $sprite->{'sequences'} } ) );
+        push @c_lines, join( ",\n\t", map {
+            sprintf( "{ %d, &sprite_%s_sequence_%s[0] }", scalar( @{ $_->{'frame_list'} } ), $sprite_name, $_->{'name'} );
         } @{ $sprite->{'sequences'} } );
-        print $output_fh "\n};\n\n";
+        push @c_lines, "\n};\n\n";
     }
 
-    printf $output_fh "// End of Sprite '%s'\n\n", $sprite_name;
+    push @c_lines, sprintf( "// End of Sprite '%s'\n\n", $sprite_name );
 }
 
 ######################################
@@ -1047,54 +1051,54 @@ sub compile_screen_data {
 sub output_screen_sprite_initialization_code {
     my $screen = shift;
     my $enemies = $screen->{'enemies'};
-    printf $output_fh "\t// Screen '%s' - Enemy sprite initialization\n", $screen->{'name'};
+    push @c_lines, sprintf( "\t// Screen '%s' - Enemy sprite initialization\n", $screen->{'name'} );
     my $enemy_num = 0;
     foreach my $enemy ( @$enemies ) {
         my $sprite = $sprites[ $sprite_name_to_index{ $enemy->{'sprite'} } ];
 
-        printf $output_fh "\t// Sprite '%s'\n", $sprite->{'name'};
+        push @c_lines, sprintf( "\t// Sprite '%s'\n", $sprite->{'name'} );
 
         # generate code for initializing SP1 structure
-        printf $output_fh "\tm->enemy_data.enemies[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
+        push @c_lines, sprintf( "\tm->enemy_data.enemies[%d].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
             $enemy_num,
             $sprite->{'rows'} + 1,	# height in chars including blank bottom row
             0,				# left column graphic offset
             0,				# plane
-        ;
+        );
         foreach my $ac ( 1 .. ($sprite->{'cols'} - 1) ) {
-            printf $output_fh "\tsp1_AddColSpr(s, SP1_DRAW_MASK2, %d, %d, %d );\n",
+            push @c_lines, sprintf( "\tsp1_AddColSpr(s, SP1_DRAW_MASK2, %d, %d, %d );\n",
                 0,					# type
                 ( $sprite->{'rows'} + 1 ) * 16 * $ac,	# nth column graphic offset
                 0,					# plane
-            ;
+            );
         }
-        printf $output_fh "\tsp1_AddColSpr(s, SP1_DRAW_MASK2RB, 0, 0, 0);\n";	# empty rightmost column
+        push @c_lines, sprintf( "\tsp1_AddColSpr(s, SP1_DRAW_MASK2RB, 0, 0, 0);\n" );	# empty rightmost column
 
         # optimize SP1 for xthresh and vthresh
         if ( defined( $sprite->{'real_pixel_width'} ) ) {
             my $xthresh = ( 8 - ( $sprite->{'real_pixel_width'} % 8 ) + 1 ) % 8;
             if ( $xthresh > 1 ) {
-                printf $output_fh "\ts->xthresh = %d;\n", $xthresh;
+                push @c_lines, sprintf( "\ts->xthresh = %d;\n", $xthresh );
             }
         }
         if ( defined( $sprite->{'real_pixel_height'} ) ) {
             my $ythresh = ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8;
             if ( $ythresh > 1 ) {
-                printf $output_fh "\ts->ythresh = %d;\n", $ythresh;
+                push @c_lines, sprintf( "\ts->ythresh = %d;\n", $ythresh );
             }
         }
 
         # if there is a COLOR element in the enemy, set enemy color
         if ( defined( $enemy->{'color'} ) ) {
-            printf $output_fh "\tsprite_attr_param.attr = %s;\n", $enemy->{'color'};
-            printf $output_fh "\tsprite_attr_param.attr_mask = 0xF8;\n";
-            printf $output_fh "\tsp1_IterateSprChar( s, sprite_set_cell_attributes );\n";
+            push @c_lines, sprintf( "\tsprite_attr_param.attr = %s;\n", $enemy->{'color'} );
+            push @c_lines, sprintf( "\tsprite_attr_param.attr_mask = 0xF8;\n" );
+            push @c_lines, sprintf( "\tsp1_IterateSprChar( s, sprite_set_cell_attributes );\n" );
         }
 
-        printf $output_fh "\t// End of Sprite '%s'\n\n", $sprite->{'name'};
+        push @c_lines, sprintf( "\t// End of Sprite '%s'\n\n", $sprite->{'name'} );
         $enemy_num++;
     }
-    printf $output_fh "\t// Screen '%s' - End of Sprite initialization\n\n", $screen->{'name'};
+    push @c_lines, sprintf( "\t// Screen '%s' - End of Sprite initialization\n\n", $screen->{'name'} );
 }
 
 sub output_screen {
@@ -1103,24 +1107,24 @@ sub output_screen {
 
     # screen tiles
     if ( scalar( @{$screen->{'btiles'}} ) ) {
-        printf $output_fh "// Screen '%s' btile data\n", $screen->{'name'};
-        printf $output_fh "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
+        push @c_lines, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
+        push @c_lines, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
             $screen->{'name'},
-            scalar( @{$screen->{'btiles'}});
-        print $output_fh join( ",\n", map {
+            scalar( @{$screen->{'btiles'}} ) );
+        push @c_lines, join( ",\n", map {
                 sprintf("\t{ TT_%s, %d, %d, &btile_%s, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $_->{'btile'}, ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
             } @{$screen->{'btiles'}} );
-        print $output_fh "\n};\n\n";
+        push @c_lines, "\n};\n\n";
     }
 
     # screen enemies
     if ( scalar( @{$screen->{'enemies'}} ) ) {
-        printf $output_fh "// Screen '%s' enemy data\n", $screen->{'name'};
-        printf $output_fh "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
+        push @c_lines, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
+        push @c_lines, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
             $screen->{'name'},
-            scalar( @{$screen->{'enemies'}} );
-        print $output_fh join( ",\n", map {
-                sprintf("\t{ %s, %d, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
+            scalar( @{$screen->{'enemies'}} ) );
+        push @c_lines, join( ",\n", map {
+                sprintf( "\t{ %s, %d, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
@@ -1154,28 +1158,28 @@ sub output_screen {
                     $_->{'initial_flags'},
                  )
             } @{$screen->{'enemies'}} );
-        print $output_fh "\n};\n\n";
+        push @c_lines, "\n};\n\n";
     }
 
     # screen items
     if ( scalar( @{$screen->{'items'}} ) ) {
-        printf $output_fh "// Screen '%s' item data\n", $screen->{'name'};
-        printf $output_fh "struct item_location_s screen_%s_items[ %d ] = {\n",
+        push @c_lines, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
+        push @c_lines, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
             $screen->{'name'},
-            scalar( @{$screen->{'items'}});
-        print $output_fh join( ",\n", map {	# real item id is 0x1 << item_index
+            scalar( @{$screen->{'items'}} ) );
+        push @c_lines, join( ",\n", map {	# real item id is 0x1 << item_index
                 sprintf( "\t{ %d, %d, %d }", $_->{'item_index'}, $_->{'row'}, $_->{'col'} )
             } @{$screen->{'items'}} );
-        print $output_fh "\n};\n\n";
+        push @c_lines, "\n};\n\n";
     }
 
     # hot zones
     if ( scalar( @{$screen->{'hotzones'}} ) ) {
-        printf $output_fh "// Screen '%s' hot zone data\n", $screen->{'name'};
-        printf $output_fh "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
+        push @c_lines, sprintf( "// Screen '%s' hot zone data\n", $screen->{'name'} );
+        push @c_lines, sprintf( "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
             $screen->{'name'},
-            scalar( @{$screen->{'hotzones'}});
-        print $output_fh join( ",\n", map {
+            scalar( @{$screen->{'hotzones'}} ) );
+        push @c_lines, join( ",\n", map {
                 my $x    = ( defined( $_->{'x'} ) ? $_->{'x'} : $_->{'col'} * 8 );
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
@@ -1185,22 +1189,22 @@ sub output_screen {
                     ( $_->{'active'} ? 'F_HOTZONE_ACTIVE' : 0 ),
                 )
             } @{ $screen->{'hotzones'} } );
-        print $output_fh "\n};\n\n";
+        push @c_lines, "\n};\n\n";
     }
 
     # functions for allocating/freeing sprites
     if ( scalar( @{$screen->{'enemies'}} ) ) {
         my $screen_name = $screen->{'name'};
 
-        printf $output_fh "// Screen '%s' functions\n", $screen_name;
+        push @c_lines, sprintf( "// Screen '%s' functions\n", $screen_name );
 
-        print $output_fh <<EOF_MAP_ALLOC_FN
+        push @c_lines, <<EOF_MAP_ALLOC_FN
 void screen_${screen_name}_allocate_sprites( struct map_screen_s *m ) {
 \tstruct sp1_ss *s;     // temporary storage
 EOF_MAP_ALLOC_FN
 ;
         output_screen_sprite_initialization_code( $screen );
-        print $output_fh "}\n\n";
+        push @c_lines, "}\n\n";
 
 # we do not need to output a private sprite-freeing function, since we can
 # use the generic one provided in engine/src/map.c:
@@ -1255,7 +1259,7 @@ sub output_hero {
     my $delay		= $hero->{'animation_delay'};
     my $hstep		= $hero->{'hstep'};
     my $vstep		= $hero->{'vstep'};
-    print $output_fh <<EOF_HERO1
+    push @c_lines, <<EOF_HERO1
 /////////////////////////////
 // Hero definition
 /////////////////////////////
@@ -1282,7 +1286,7 @@ EOF_HERO1
 
 sub output_bullets {
     my $max_bullets = $hero->{'bullet'}{'max_bullets'};
-    print $output_fh <<EOF_BULLET4
+    push @c_lines, <<EOF_BULLET4
 //////////////////////////////
 // Bullets definition
 //////////////////////////////
@@ -1291,8 +1295,8 @@ struct bullet_state_data_s bullet_state_data[ $max_bullets ] = {
 EOF_BULLET4
 ;
 
-    print $output_fh join( ",\n", ( "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 }" ) x 4 );
-    print $output_fh "\n};\n\n";
+    push @c_lines, join( ",\n", ( "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 }" ) x 4 );
+    push @c_lines, "\n};\n\n";
 }
 
 ########################
@@ -1300,7 +1304,7 @@ EOF_BULLET4
 ########################
 
 sub output_items {
-    print $output_fh <<EOF_ITEMS1
+    push @c_lines, <<EOF_ITEMS1
 ///////////////////////
 // Global items table
 ///////////////////////
@@ -1308,7 +1312,7 @@ sub output_items {
 struct item_info_s all_items[16] = {
 EOF_ITEMS1
 ;
-    print $output_fh join( ",\n",
+    push @c_lines, join( ",\n",
         map {
             exists( $all_items->{ $_ } ) ?
                 sprintf( "\t{ \"%s\", &btile_%s, 0x%04x, F_ITEM_ACTIVE }",
@@ -1320,7 +1324,7 @@ EOF_ITEMS1
             } ( 0 .. 15 )
     );
 
-    print $output_fh <<EOF_ITEMS2
+    push @c_lines, <<EOF_ITEMS2
 
 };
 
@@ -1330,27 +1334,27 @@ EOF_ITEMS2
 }
 
 sub output_game_functions {
-    print $output_fh "// game config\n";
+    push @h_lines, "// game config\n";
 
-    print $output_fh join( "\n", 
+    push @h_lines, join( "\n", 
         map {
-            sprintf "void %s(void);", $game_config->{'game_functions'}{ $_ }
+            sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ } )
         } keys %{ $game_config->{'game_functions'} } );
-    print $output_fh "\n\n";
+    push @h_lines, "\n\n";
 
-    print $output_fh join( "\n", 
+    push @h_lines, join( "\n", 
         map {
-            sprintf "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ }
+            sprintf( "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ } )
         } keys %{ $game_config->{'game_functions'} }
     );
 
-    print $output_fh "\n\n";
+    push @h_lines, "\n\n";
 }
 
 sub output_game_areas {
     # output game areas
-    print $output_fh "// screen areas\n";
-    print $output_fh "\n" . join( "\n", map {
+    push @c_lines, "// screen areas\n";
+    push @c_lines, "\n" . join( "\n", map {
         sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )
         } qw( game_area lives_area inventory_area debug_area )
@@ -1381,7 +1385,7 @@ sub check_screen_sprites_are_valid {
     foreach my $screen ( @screens ) {
         foreach my $sprite ( @{ $screen->{'sprites'} } ) {
             if ( not $is_valid_sprite{ $sprite->{'name'} } ) {
-                warn sprintf "Screen '%s': undefined sprite '%s'\n", $screen->{'name'}, $sprite->{'name'};
+                warn sprintf( "Screen '%s': undefined sprite '%s'\n", $screen->{'name'}, $sprite->{'name'} );
                 $errors++;
             }
         }
@@ -1395,12 +1399,12 @@ sub check_screen_btiles_are_valid {
     foreach my $screen ( @screens ) {
         foreach my $btile ( @{ $screen->{'btiles'} } ) {
             if ( not defined( $btile->{'btile'} ) ) {
-                warn sprintf "Screen '%s': %s has no associated btile attribute\n", $screen->{'name'}, $btile->{'type'};
+                warn sprintf( "Screen '%s': %s has no associated btile attribute\n", $screen->{'name'}, $btile->{'type'} );
                 $errors++;
                 next;
             }
             if ( not $is_valid_btile{ $btile->{'btile'} } ) {
-                warn sprintf "Screen '%s': undefined btile '%s'\n", $screen->{'name'}, $btile->{'btile'};
+                warn sprintf( "Screen '%s': undefined btile '%s'\n", $screen->{'name'}, $btile->{'btile'} );
                 $errors++;
             }
         }
@@ -1415,7 +1419,7 @@ sub check_screen_items_are_valid {
     foreach my $screen ( @screens ) {
         foreach my $item ( @{ $screen->{'items'} } ) {
             if ( not $is_valid_btile{ $item->{'name'} } ) {
-                warn sprintf "Screen '%s': undefined btile for item '%s'\n", $screen->{'name'}, $item->{'name'};
+                warn sprintf( "Screen '%s': undefined btile for item '%s'\n", $screen->{'name'}, $item->{'name'} );
                 $errors++;
             }
         }
@@ -1434,7 +1438,7 @@ sub run_consistency_checks {
     $errors += check_screen_sprites_are_valid;
     $errors += check_screen_btiles_are_valid;
     $errors += check_screen_items_are_valid;
-    die sprintf("*** %d errors were found in configuration\n", $errors )
+    die sprintf( "*** %d errors were found in configuration\n", $errors )
         if ( $errors );
 }
 
@@ -1443,7 +1447,7 @@ sub run_consistency_checks {
 #############################
 
 sub output_header {
-    print $output_fh <<EOF_HEADER
+    push @c_lines, <<EOF_HEADER
 ///////////////////////////////////////////////////////////
 //
 // Game data - automatically generated with datagen.pl
@@ -1467,7 +1471,7 @@ EOF_HEADER
 }
 
 sub output_tiles {
-    print $output_fh <<EOF_TILES
+    push @c_lines, <<EOF_TILES
 ////////////////////////////
 // Big Tile definitions
 ////////////////////////////
@@ -1479,7 +1483,7 @@ EOF_TILES
 }
 
 sub output_sprites {
-    print $output_fh <<EOF_SPRITES
+    push @c_lines, <<EOF_SPRITES
 ////////////////////////////
 // Sprite definitions
 ////////////////////////////
@@ -1490,21 +1494,21 @@ EOF_SPRITES
 
     # output global sprite graphics table
     my $num_sprites = scalar( @sprites );
-    print $output_fh "// Global sprite graphics table\n";
-    print $output_fh "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
-    print $output_fh join( ",\n\n\t", map {
+    push @c_lines, "// Global sprite graphics table\n";
+    push @c_lines, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
+    push @c_lines, join( ",\n\n\t", map {
         my $sprite = $_;
-        sprintf "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = %s }",
+        sprintf( "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = %s }",
             $_->{'cols'} * 8, $_->{'rows'} * 8,
             $_->{'frames'}, $_->{'name'},
             scalar( @{ $sprite->{'sequences'} } ),	# number of animation sequences
-            ( scalar( @{ $sprite->{'sequences'} } ) ? sprintf( "&sprite_%s_sequences[0]", $_->{'name'}) : 'NULL' ),
+            ( scalar( @{ $sprite->{'sequences'} } ) ? sprintf( "&sprite_%s_sequences[0]", $_->{'name'}) : 'NULL' ) ),
     } @sprites );
-    print $output_fh "\n};\n\n";
+    push @c_lines, "\n};\n\n";
 }
 
 sub output_screens {
-    print $output_fh <<EOF_SCREENS
+    push @c_lines, <<EOF_SCREENS
 ////////////////////////////
 // Screen definitions
 ////////////////////////////
@@ -1517,7 +1521,7 @@ EOF_SCREENS
 
 sub output_map {
     # output global map data structure
-    print $output_fh <<EOF_MAP
+    push @c_lines, <<EOF_MAP
 ////////////////////////////
 // Map definition
 ////////////////////////////
@@ -1525,9 +1529,9 @@ sub output_map {
 // main game map
 EOF_MAP
 ;
-    printf $output_fh "struct map_screen_s map[ MAP_NUM_SCREENS ] = {\n";
+    push @c_lines, sprintf( "struct map_screen_s map[ MAP_NUM_SCREENS ] = {\n" );
 
-    print $output_fh join( ",\n", map {
+    push @c_lines, join( ",\n", map {
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
@@ -1558,14 +1562,14 @@ EOF_MAP
             sprintf( "\t\t.free_sprites = %s\n", "map_generic_free_sprites_function" ) .
             "\t}"
         } @screens );
-    print $output_fh "\n};\n\n";
+    push @c_lines, "\n};\n\n";
 }
 
 sub output_hero_sprites_initialization {
     my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'sprite'} } ];
 
     # output hero sprite creation code
-    print $output_fh <<EOF_HERO2
+    push @c_lines, <<EOF_HERO2
 //////////////////////////////////////
 // Hero Sprites initialization function
 //////////////////////////////////////
@@ -1582,20 +1586,20 @@ void init_hero_sprites(void) {
     // SP1 sprite data
 EOF_HERO2
 ;
-    printf $output_fh "\th->sprite = hero_sprite = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
+    push @c_lines, sprintf( "\th->sprite = hero_sprite = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
         $sprite->{'rows'} + 1,	# height in chars including blank bottom row
         0,				# left column graphic offset
         0,				# plane
-    ;
+    );
     foreach my $ac ( 1 .. ($sprite->{'cols'} - 1) ) {
-        printf $output_fh "\tsp1_AddColSpr(hero_sprite, SP1_DRAW_MASK2, %d, %d, %d );\n",
+        push @c_lines, sprintf( "\tsp1_AddColSpr(hero_sprite, SP1_DRAW_MASK2, %d, %d, %d );\n",
             0,					# type
             ( $sprite->{'rows'} + 1 ) * 16 * $ac,	# nth column graphic offset
             0,					# plane
-        ;
+        );
     }
-    printf $output_fh "\tsp1_AddColSpr(hero_sprite, SP1_DRAW_MASK2RB, 0, 0, 0);\n";	# empty rightmost column
-    print $output_fh <<EOF_HERO3
+    push @c_lines, sprintf( "\tsp1_AddColSpr(hero_sprite, SP1_DRAW_MASK2RB, 0, 0, 0);\n" );	# empty rightmost column
+    push @c_lines, <<EOF_HERO3
 
 }
 
@@ -1615,7 +1619,7 @@ sub output_bullet_sprites_initialization {
     my $reload_delay = $hero->{'bullet'}{'reload_delay'};
 
     # output bullet sprite creation code
-    print $output_fh <<EOF_BULLET1
+    push @c_lines, <<EOF_BULLET1
 //////////////////////////////////////
 // Bullet Sprites initialization function
 //////////////////////////////////////
@@ -1630,35 +1634,35 @@ void init_bullet_sprites(void) {
     while ( i-- ) {
 EOF_BULLET1
 ;
-    printf $output_fh "\tbullet_state_data[i].sprite = bs = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
+    push @c_lines, sprintf( "\tbullet_state_data[i].sprite = bs = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
         $sprite->{'rows'} + 1,	# height in chars including blank bottom row
         0,				# left column graphic offset
         0,				# plane
-    ;
+    );
     foreach my $ac ( 1 .. ($sprite->{'cols'} - 1) ) {
-        printf $output_fh "\tsp1_AddColSpr(bs, SP1_DRAW_MASK2, %d, %d, %d );\n",
+        push @c_lines, sprintf( "\tsp1_AddColSpr(bs, SP1_DRAW_MASK2, %d, %d, %d );\n",
             0,					# type
             ( $sprite->{'rows'} + 1 ) * 16 * $ac,	# nth column graphic offset
             0,					# plane
-        ;
+        );
     }
-    printf $output_fh "\tsp1_AddColSpr(bs, SP1_DRAW_MASK2RB, 0, 0, 0);\n";	# empty rightmost column
+    push @c_lines, sprintf( "\tsp1_AddColSpr(bs, SP1_DRAW_MASK2RB, 0, 0, 0);\n" );	# empty rightmost column
 
     # optimize SP1 for xthresh and vthresh
     if ( defined( $sprite->{'real_pixel_width'} ) ) {
         my $xthresh = ( 8 - ( $sprite->{'real_pixel_width'} % 8 ) + 1 ) % 8;
         if ( $xthresh > 1 ) {
-            printf $output_fh "\tbs->xthresh = %d;\n", $xthresh;
+            push @c_lines, sprintf( "\tbs->xthresh = %d;\n", $xthresh );
         }
     }
     if ( defined( $sprite->{'real_pixel_height'} ) ) {
         my $ythresh = ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8;
         if ( $ythresh > 1 ) {
-            printf $output_fh "\tbs->ythresh = %d;\n", $ythresh;
+            push @c_lines, sprintf( "\tbs->ythresh = %d;\n", $ythresh );
         }
     }
 
-    print $output_fh <<EOF_BULLET6
+    push @c_lines, <<EOF_BULLET6
     }
 
     // initialize remaining game_state.bullet struct fields
@@ -1689,7 +1693,7 @@ sub output_header_file {
         $mask <<= 1;
     }
 
-    print $output_fh <<GAME_DATA_H_1
+    push @h_lines, <<GAME_DATA_H_1
 #ifndef _GAME_DATA_H
 #define _GAME_DATA_H
 
@@ -1721,24 +1725,24 @@ GAME_DATA_H_1
 
     # output auxiliary data pointers
     foreach my $btile ( @btiles ) {
-        printf $output_fh "extern struct btile_s btile_%s;\n", $btile->{'name'};
+        push @h_lines, sprintf( "extern struct btile_s btile_%s;\n", $btile->{'name'} );
     }
     foreach my $sprite ( @sprites ) {
-        printf $output_fh "extern uint8_t sprite_%s_data[];\n", $sprite->{'name'};
-        printf $output_fh "extern uint8_t *sprite_%s_frames[];\n", $sprite->{'name'};
+        push @h_lines, sprintf( "extern uint8_t sprite_%s_data[];\n", $sprite->{'name'} );
+        push @h_lines, sprintf( "extern uint8_t *sprite_%s_frames[];\n", $sprite->{'name'} );
     }
 
-    print $output_fh "\n// game configuration data\n";
-    printf $output_fh "#define MAP_INITIAL_SCREEN %d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} };
-    printf $output_fh "#define DEFAULT_BG_ATTR ( %s )\n", $game_config->{'default_bg_attr'};
+    push @h_lines, "\n// game configuration data\n";
+    push @h_lines, sprintf( "#define MAP_INITIAL_SCREEN %d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} } );
+    push @h_lines, sprintf( "#define DEFAULT_BG_ATTR ( %s )\n", $game_config->{'default_bg_attr'} );
 
-    print $output_fh "\n// sound effect constants\n";
+    push @h_lines, "\n// sound effect constants\n";
     foreach my $effect ( keys %{$game_config->{'sounds'}} ) {
-        printf $output_fh "#define SOUND_%s %s\n", uc( $effect ), $game_config->{'sounds'}{ $effect };
+        push @h_lines, sprintf( "#define SOUND_%s %s\n", uc( $effect ), $game_config->{'sounds'}{ $effect } );
     }
 
     # output definitions for screen areas
-    print $output_fh "\n" . join( "\n", map {
+    push @h_lines, "\n" . join( "\n", map {
             "// " .uc( $_ ). " definitions\n" .
             sprintf( "#define %s_TOP	%d\n", uc( $_ ), $game_config->{ $_ }{'top'} ) .
             sprintf( "#define %s_LEFT	%d\n", uc( $_ ), $game_config->{ $_ }{'left'} ) .
@@ -1751,16 +1755,15 @@ GAME_DATA_H_1
     );
 
     # end of header file
-    print $output_fh "\n#endif // _GAME_DATA_H\n";
+    push @h_lines, "\n#endif // _GAME_DATA_H\n";
 
 }
 
 # this function is called from main
 sub output_generated_data {
-    # output .c file
-    open( $output_fh, ">", $c_file ) or
-        die "Could not open $c_file for writing\n";
+    my $output_fh;
 
+    # .c file data
     output_header;
     output_tiles;
     output_sprites;
@@ -1773,15 +1776,20 @@ sub output_generated_data {
     output_items;
     output_game_areas;
 
+    # .h file data
+    output_header_file;
+    output_game_functions;
+
+    # output .c file
+    open( $output_fh, ">", $c_file ) or
+        die "Could not open $c_file for writing\n";
+    print $output_fh join( "\n", @c_lines );
     close $output_fh;
 
     # output .h file
     open( $output_fh, ">", $h_file ) or
         die "Could not open $h_file for writing\n";
-
-    output_header_file;
-    output_game_functions;
-
+    print $output_fh join( "\n", @h_lines );
     close $output_fh;
 
 }
