@@ -701,7 +701,7 @@ sub validate_and_compile_btile {
     }
 }
 
-sub output_btile {
+sub generate_btile {
     my $tile = shift;
     my $cur_char = 0;
     my @char_names;
@@ -826,7 +826,7 @@ sub validate_and_compile_sprite {
 #    * 8 x (mask,byte) pairs x M chars of the column
 #    * 8 x (0xff,0x00) pairs (blank last row)
 #  * Repeat for N columns
-sub output_sprite {
+sub generate_sprite {
     my $sprite = shift;
     my $sprite_rows = $sprite->{'rows'};
     my $sprite_cols = $sprite->{'cols'};
@@ -1048,7 +1048,7 @@ sub compile_screen_data {
 }
 
 
-sub output_screen_sprite_initialization_code {
+sub generate_screen_sprite_initialization_code {
     my $screen = shift;
     my $enemies = $screen->{'enemies'};
     push @c_lines, sprintf( "\t// Screen '%s' - Enemy sprite initialization\n", $screen->{'name'} );
@@ -1101,7 +1101,7 @@ sub output_screen_sprite_initialization_code {
     push @c_lines, sprintf( "\t// Screen '%s' - End of Sprite initialization\n\n", $screen->{'name'} );
 }
 
-sub output_screen {
+sub generate_screen {
     my $screen_num = shift;
     my $screen = $screens[ $screen_num ];
 
@@ -1203,7 +1203,7 @@ void screen_${screen_name}_allocate_sprites( struct map_screen_s *m ) {
 \tstruct sp1_ss *s;     // temporary storage
 EOF_MAP_ALLOC_FN
 ;
-        output_screen_sprite_initialization_code( $screen );
+        generate_screen_sprite_initialization_code( $screen );
         push @c_lines, "}\n\n";
 
 # we do not need to output a private sprite-freeing function, since we can
@@ -1247,7 +1247,7 @@ sub validate_and_compile_hero {
         die "Hero has no VSTEP\n";
 }
 
-sub output_hero {
+sub generate_hero {
     my $num_lives 	= $hero->{'lives'}{'num_lives'};
     my $lives_tile	= $hero->{'lives'}{'btile'};
     my $sprite		= $hero->{'sprite'};
@@ -1284,7 +1284,7 @@ EOF_HERO1
 ;
 }
 
-sub output_bullets {
+sub generate_bullets {
     my $max_bullets = $hero->{'bullet'}{'max_bullets'};
     push @c_lines, <<EOF_BULLET4
 //////////////////////////////
@@ -1303,7 +1303,7 @@ EOF_BULLET4
 ## Item functions
 ########################
 
-sub output_items {
+sub generate_items {
     push @c_lines, <<EOF_ITEMS1
 ///////////////////////
 // Global items table
@@ -1333,7 +1333,7 @@ EOF_ITEMS2
 
 }
 
-sub output_game_functions {
+sub generate_game_functions {
     push @h_lines, "// game config\n";
 
     push @h_lines, join( "\n", 
@@ -1351,7 +1351,7 @@ sub output_game_functions {
     push @h_lines, "\n\n";
 }
 
-sub output_game_areas {
+sub generate_game_areas {
     # output game areas
     push @c_lines, "// screen areas\n";
     push @c_lines, "\n" . join( "\n", map {
@@ -1446,7 +1446,7 @@ sub run_consistency_checks {
 ## General Output Functions
 #############################
 
-sub output_header {
+sub generate_c_header {
     push @c_lines, <<EOF_HEADER
 ///////////////////////////////////////////////////////////
 //
@@ -1470,7 +1470,7 @@ EOF_HEADER
 ;
 }
 
-sub output_tiles {
+sub generate_tiles {
     push @c_lines, <<EOF_TILES
 ////////////////////////////
 // Big Tile definitions
@@ -1478,11 +1478,11 @@ sub output_tiles {
 
 EOF_TILES
 ;
-    foreach my $tile ( @btiles ) { output_btile( $tile ); }
+    foreach my $tile ( @btiles ) { generate_btile( $tile ); }
 
 }
 
-sub output_sprites {
+sub generate_sprites {
     push @c_lines, <<EOF_SPRITES
 ////////////////////////////
 // Sprite definitions
@@ -1490,7 +1490,7 @@ sub output_sprites {
 
 EOF_SPRITES
 ;
-    foreach my $sprite ( @sprites ) { output_sprite( $sprite ); }
+    foreach my $sprite ( @sprites ) { generate_sprite( $sprite ); }
 
     # output global sprite graphics table
     my $num_sprites = scalar( @sprites );
@@ -1507,7 +1507,7 @@ EOF_SPRITES
     push @c_lines, "\n};\n\n";
 }
 
-sub output_screens {
+sub generate_screens {
     push @c_lines, <<EOF_SCREENS
 ////////////////////////////
 // Screen definitions
@@ -1515,11 +1515,11 @@ sub output_screens {
 
 EOF_SCREENS
 ;
-    foreach my $screen_num ( 0 .. ( scalar( @screens ) - 1 ) ) { output_screen( $screen_num ); }
+    foreach my $screen_num ( 0 .. ( scalar( @screens ) - 1 ) ) { generate_screen( $screen_num ); }
     
 }
 
-sub output_map {
+sub generate_map {
     # output global map data structure
     push @c_lines, <<EOF_MAP
 ////////////////////////////
@@ -1565,7 +1565,7 @@ EOF_MAP
     push @c_lines, "\n};\n\n";
 }
 
-sub output_hero_sprites_initialization {
+sub generate_hero_sprites_initialization {
     my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'sprite'} } ];
 
     # output hero sprite creation code
@@ -1607,7 +1607,7 @@ EOF_HERO3
 ;
 }
 
-sub output_bullet_sprites_initialization {
+sub generate_bullet_sprites_initialization {
     my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
     my $sprite_name = $hero->{'bullet'}{'sprite'};
     my $width = $sprite->{'cols'} * 8;
@@ -1683,7 +1683,7 @@ EOF_BULLET6
 ;
 }
 
-sub output_header_file {
+sub generate_header_file {
     my $num_screens = scalar( @screens );
     my $max_items = scalar( keys %$all_items );
     my $all_items_mask = 0;
@@ -1760,25 +1760,29 @@ GAME_DATA_H_1
 }
 
 # this function is called from main
-sub output_generated_data {
-    my $output_fh;
+sub generate_game_data {
 
     # .c file data
-    output_header;
-    output_tiles;
-    output_sprites;
-    output_screens;
-    output_map;
-    output_hero;
-    output_bullets;
-    output_hero_sprites_initialization;
-    output_bullet_sprites_initialization;
-    output_items;
-    output_game_areas;
+    generate_c_header;
+    generate_tiles;
+    generate_sprites;
+    generate_screens;
+    generate_map;
+    generate_hero;
+    generate_bullets;
+    generate_hero_sprites_initialization;
+    generate_bullet_sprites_initialization;
+    generate_items;
+    generate_game_areas;
 
     # .h file data
-    output_header_file;
-    output_game_functions;
+    generate_header_file;
+    generate_game_functions;
+
+}
+
+sub output_game_data {
+    my $output_fh;
 
     # output .c file
     open( $output_fh, ">", $c_file ) or
@@ -1834,7 +1838,8 @@ read_input_data;
 run_consistency_checks;
 
 # generate output
-output_generated_data;
+generate_game_data;
+output_game_data;
 
 # dump internal data if required to do so
 dump_internal_data
