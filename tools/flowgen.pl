@@ -22,6 +22,9 @@ my $c_file = 'flow_data.c';
 my $h_file = 'flow_data.h';
 my $output_fh;
 
+my @c_lines;
+my @h_lines;
+
 # internal state variables
 
 # all rules (CHECK-DO pairs)
@@ -186,7 +189,7 @@ sub validate_and_compile_rule {
         if ( $check =~ /^HERO_OVER_HOTZONE$/ ) {
             $check_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
             # regenerate the value with the filtered data
-            $chk = sprintf "%s\t%d", $check, $check_data;
+            $chk = sprintf( "%s\t%d", $check, $check_data );
         }
 
     }
@@ -200,7 +203,7 @@ sub validate_and_compile_rule {
         if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
             $action_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
             # regenerate the value with the filtered data
-            $do = sprintf "%s\t%d", $action, $action_data;
+            $do = sprintf( "%s\t%d", $action, $action_data );
         }
 
         # warp_to_screen filtering
@@ -223,14 +226,14 @@ sub validate_and_compile_rule {
                 $flags,
             );
             # regenerate the value with the filtered data
-            $do = sprintf "%s\t%s", $action, $action_data;
+            $do = sprintf( "%s\t%s", $action, $action_data );
         }
 
         # btile filtering
         if ( $action =~ /^(ENABLE|DISABLE)_BTILE$/ ) {
             $action_data = $all_state->{'screens'}[ $all_state->{'screen_name_to_index'}{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
             # regenerate the value with the filtered data
-            $do = sprintf "%s\t%d", $action, $action_data;
+            $do = sprintf( "%s\t%d", $action, $action_data );
         }
 
         # set/reset screen flag filtering
@@ -244,7 +247,7 @@ sub validate_and_compile_rule {
                 ( $vars->{'flag'} || 0 ),
             );
             # regenerate the value with the filtered data
-            $do = sprintf "%s\t%s", $action, $action_data;
+            $do = sprintf( "%s\t%s", $action, $action_data );
         }
 
     }
@@ -297,8 +300,8 @@ my $action_data_output_format = {
 sub output_rule_checks {
     my ( $rule, $index ) = @_;
     my $num_checks = scalar( @{ $rule->{'check'} } );
-    my $output = sprintf "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
-        $index, $num_checks;
+    my $output = sprintf( "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
+        $index, $num_checks );
     foreach my $ch ( @{ $rule->{'check'} } ) {
         my ( $check, $check_data ) = split( /\s+/, $ch );
         $output .= sprintf( "\t{ .type = RULE_CHECK_%s, %s },\n",
@@ -313,8 +316,8 @@ sub output_rule_checks {
 sub output_rule_actions {
     my ( $rule, $index ) = @_;
     my $num_actions = scalar( @{ $rule->{'do'} } );
-    my $output = sprintf "struct flow_rule_action_s flow_rule_actions_%05d[%d] = {\n",
-        $index, $num_actions;
+    my $output = sprintf( "struct flow_rule_action_s flow_rule_actions_%05d[%d] = {\n",
+        $index, $num_actions );
     foreach my $ac ( @{ $rule->{'do'} } ) {
         $ac =~ m/^(\w+)\s*(.*)$/;
         my ( $action, $action_data ) = ( $1, $2 );
@@ -331,12 +334,8 @@ sub output_rule_actions {
 ## General Output Functions
 #############################
 
-sub output_h_file {
-    # output .h file
-    open( $output_fh, ">", $h_file ) or
-        die "Could not open $h_file for writing\n";
-
-    print $output_fh <<FLOW_DATA_H_1
+sub generate_h_file {
+    push @h_lines, <<FLOW_DATA_H_1
 #ifndef _FLOW_DATA_H
 #define _FLOW_DATA_H
 
@@ -350,18 +349,13 @@ void init_flowgen(void);
 FLOW_DATA_H_1
 ;
 
-    print $output_fh "\n#endif // _FLOW_DATA_H\n";
-
-    close $output_fh;
+    push @h_lines, "\n#endif // _FLOW_DATA_H\n";
 }
 
-sub output_c_file {
-    # output .c file
-    open( $output_fh, ">", $c_file ) or
-        die "Could not open $c_file for writing\n";
+sub generate_c_file {
 
     # file header comments
-    print $output_fh <<FLOW_DATA_C_1
+    push @c_lines, <<FLOW_DATA_C_1
 ///////////////////////////////////////////////////////////
 //
 // Flow data - automatically generated with flowgen.pl
@@ -378,49 +372,49 @@ FLOW_DATA_C_1
 ;
 
     # output check and action tables for each rule
-    printf $output_fh "// check tables for all rules\n";
+    push @c_lines, sprintf( "// check tables for all rules\n" );
     foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        print $output_fh output_rule_checks( $all_rules[ $i ], $i );
+        push @c_lines, output_rule_checks( $all_rules[ $i ], $i );
     }
-    printf $output_fh "// action tables for all rules\n";
+    push @c_lines, sprintf( "// action tables for all rules\n" );
     foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        print $output_fh output_rule_actions( $all_rules[ $i ], $i );
+        push @c_lines, output_rule_actions( $all_rules[ $i ], $i );
     }
 
     # output global rule table
     if ( scalar( @all_rules ) ) {
-        printf $output_fh "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
-            scalar( @all_rules );
-        print $output_fh "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
+        push @c_lines, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
+            scalar( @all_rules ) );
+        push @c_lines, "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
         foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-            print $output_fh "\t{";
-            printf $output_fh " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
-                scalar( @{ $all_rules[ $i ]{'check'} } ), $i;
-            printf $output_fh " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
-                scalar( @{ $all_rules[ $i ]{'do'} } ), $i;
-            print $output_fh " },\n";
+            push @c_lines, "\t{";
+            push @c_lines, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
+                scalar( @{ $all_rules[ $i ]{'check'} } ), $i );
+            push @c_lines, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
+                scalar( @{ $all_rules[ $i ]{'do'} } ), $i );
+            push @c_lines, " },\n";
         }
-        print $output_fh "\n};\n\n";
+        push @c_lines, "\n};\n\n";
     }
 
     # output rule tables for each screen
-    print $output_fh "// rule tables for each screen\n";
+    push @c_lines, "// rule tables for each screen\n";
     foreach my $screen (sort keys %$screen_rules ) {
-        printf $output_fh "\n// rules for screen '%s'\n", $screen;
+        push @c_lines, sprintf( "\n// rules for screen '%s'\n", $screen );
         foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
             if ( defined( $screen_rules->{ $screen } ) and defined( $screen_rules->{ $screen }{ $table } ) ) {
                 my $num_rules = scalar( @{ $screen_rules->{ $screen }{ $table } } );
                 if ( $num_rules ) {
-                    printf $output_fh "\n// screen '%s', table '%s' (%d rules)\n",
-                        $screen, $table, $num_rules;
-                    printf $output_fh "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
-                        $screen, $table, $num_rules;
-                    print $output_fh join( ",\n\t",
+                    push @c_lines, sprintf( "\n// screen '%s', table '%s' (%d rules)\n",
+                        $screen, $table, $num_rules );
+                    push @c_lines, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
+                        $screen, $table, $num_rules );
+                    push @c_lines, join( ",\n\t",
                         map { 
-                            sprintf "&flow_all_rules[ %d ]", $_
+                            sprintf( "&flow_all_rules[ %d ]", $_ )
                         } @{ $screen_rules->{ $screen }{ $table } }
                     );
-                    print $output_fh "\n};\n";
+                    push @c_lines, "\n};\n";
                 }
             }
         }
@@ -428,7 +422,7 @@ FLOW_DATA_C_1
 
     # output initialization code to set the table pointers for each screen
     # that has rules in any table
-    print $output_fh <<FLOW_DATA_C_2
+    push @c_lines, <<FLOW_DATA_C_2
 
 void init_flowgen(void) {
 FLOW_DATA_C_2
@@ -438,37 +432,49 @@ FLOW_DATA_C_2
             if ( defined( $screen_rules->{ $screen } ) and defined( $screen_rules->{ $screen }{ $table } ) ) {
                 my $num_rules = scalar( @{ $screen_rules->{ $screen }{ $table } } );
                 if ( $num_rules ) {
-                    printf $output_fh "\t// screen '%s', table '%s' (%d rules)\n",
-                        $screen, $table, $num_rules;
-                    printf $output_fh "\tmap[ %d ].flow_data.rule_tables.%s.num_rules = %d, \n",
+                    push @c_lines, sprintf( "\t// screen '%s', table '%s' (%d rules)\n",
+                        $screen, $table, $num_rules );
+                    push @c_lines, sprintf( "\tmap[ %d ].flow_data.rule_tables.%s.num_rules = %d, \n",
                         $all_state->{'screen_name_to_index'}{ $screen },
                         $table,
-                        $num_rules;
-                    printf $output_fh "\tmap[ %d ].flow_data.rule_tables.%s.rules = &screen_%s_%s_rules[0];\n",
+                        $num_rules,
+                    );
+                    push @c_lines, sprintf( "\tmap[ %d ].flow_data.rule_tables.%s.rules = &screen_%s_%s_rules[0];\n",
                         $all_state->{'screen_name_to_index'}{ $screen },
                         $table,
                         $screen,
-                        $table;
+                        $table,
+                    );
                 }
             }
         }
     }
 
-
-    print $output_fh <<FLOW_DATA_C_3
-}
-
-FLOW_DATA_C_3
-;
-
-    close $output_fh;
+    push @c_lines, "}\n\n";
 
 }
 
 # this function is called from main
-sub output_generated_data {
-    output_c_file;
-    output_h_file;
+sub generate_flow_data {
+    generate_h_file;
+    generate_c_file;
+}
+
+sub output_flow_data {
+    my $output_fh;
+
+    # output .c file
+    open( $output_fh, ">", $c_file ) or
+        die "Could not open $c_file for writing\n";
+    print $output_fh join( "\n", @c_lines );
+    close $output_fh;
+
+    # output .h file
+    open( $output_fh, ">", $h_file ) or
+        die "Could not open $h_file for writing\n";
+    print $output_fh join( "\n", @h_lines );
+    close $output_fh;
+
 }
 
 # creates a dump of internal data so that other tools (e.g.  FLOWGEN) can
@@ -506,7 +512,8 @@ read_input_data;
 #run_consistency_checks;
 
 # generate output
-output_generated_data;
+generate_flow_data;
+output_flow_data;
 
 # dump internal data if required to do so
 dump_internal_data
