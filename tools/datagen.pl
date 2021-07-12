@@ -1124,12 +1124,15 @@ sub generate_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
         push @c_lines, join( ",\n", map {
-                sprintf( "\t{ %s, %d, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
+                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
                     # index into global sprite graphics table
                     $sprite_name_to_index{ $_->{'sprite'} },
+
+                    # color for the sprite
+                    $_->{'color'},
 
                     # animation_data: delay_data values
                     $_->{'animation_delay'}, ( $_->{'sequence_delay'} || 0 ),
