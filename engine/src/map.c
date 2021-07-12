@@ -121,39 +121,17 @@ void map_exit_screen( struct map_screen_s *s ) {
 }
 
 void map_allocate_sprites( struct map_screen_s *m ) {
-    static uint8_t i, c, nc, nr;
+    static uint8_t i;
     struct sp1_ss *s;
 
     i = m->enemy_data.num_enemies;
     while ( i-- ) {
-        // precalculate row and col count
-        nr = all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].height >> 3;		// divided by 8
-        nc = all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].width >> 3;		// divided by 8
-
-        // create the sprite and first column
-        m->enemy_data.enemies[ i ].sprite = s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE,
-            nc + 1,	// number of columns including the blank right one
-            0,		// left colun graphic offset
-            0		// z-plane
+        s = sprite_allocate(
+            all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].height >> 3,
+            all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].width >> 3
         );
-
-        // add all remaining columns
-        for ( c = 1; c <= nc - 1; c++ ) {
-            sp1_AddColSpr(s,
-                SP1_DRAW_MASK2,		// drawing function
-                0,			// sprite type
-                ( nr + 1 ) * 16 * c,	// nth column graphic offset - 16 is because type is 2BYTE (mask+graphic)
-                0			// z-plane
-            );
-        }
-
-        // add final empty column
-        sp1_AddColSpr(s, SP1_DRAW_MASK2RB, 0, 0, 0);
-
-        // add color
-        sprite_attr_param.attr = m->enemy_data.enemies[ i ].color;
-        sprite_attr_param.attr_mask = 0xF8;
-        sp1_IterateSprChar( s, sprite_set_cell_attributes );
+        sprite_set_color( s, m->enemy_data.enemies[ i ].color );
+        m->enemy_data.enemies[ i ].sprite = s;
     }
 }
 

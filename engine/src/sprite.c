@@ -29,3 +29,42 @@ void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c ) {
     c->attr		= sprite_attr_param.attr;
     c->attr_mask	= sprite_attr_param.attr_mask;
 }
+
+struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
+    static uint8_t c;
+    struct sp1_ss *s;
+
+    // create the sprite and first column
+    s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE,
+        cols + 1,	// number of columns including the blank right one
+        0,		// left colun graphic offset
+        0		// z-plane
+    );
+
+    // add all remaining columns
+    for ( c = 1; c <= cols - 1; c++ ) {
+        sp1_AddColSpr(s,
+            SP1_DRAW_MASK2,		// drawing function
+            0,				// sprite type
+            ( rows + 1 ) * 16 * c,	// nth column graphic offset - 16 is because type is 2BYTE (mask+graphic)
+            0				// z-plane
+        );
+    }
+
+    // add final empty column
+    sp1_AddColSpr(s, SP1_DRAW_MASK2RB, 0, 0, 0);
+
+    // return the sprite
+    return s;
+}
+
+void sprite_free( struct sp1_ss *s ) {
+        sp1_DeleteSpr( s );
+}
+
+void sprite_set_color( struct sp1_ss *s, uint8_t color ) {
+    // add color
+    sprite_attr_param.attr = color;
+    sprite_attr_param.attr_mask = 0xF8;
+    sp1_IterateSprChar( s, sprite_set_cell_attributes );
+}

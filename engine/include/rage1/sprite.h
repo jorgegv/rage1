@@ -65,6 +65,13 @@ struct  sprite_animation_data_s {
 // move sprite off screen
 void sprite_move_offscreen( struct sp1_ss *s );
 
+// allocate/free a sprite
+struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols);
+void sprite_free( struct sp1_ss *s );
+
+// set a sprite color
+void sprite_set_color( struct sp1_ss *s, uint8_t color );
+
 // callback function and static params to set a sprite attributes
 struct attr_param_s {
     uint8_t attr;
