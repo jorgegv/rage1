@@ -1195,31 +1195,6 @@ sub generate_screen {
         push @c_lines, "\n};\n\n";
     }
 
-    # functions for allocating/freeing sprites
-    if ( scalar( @{$screen->{'enemies'}} ) ) {
-        my $screen_name = $screen->{'name'};
-
-        push @c_lines, sprintf( "// Screen '%s' functions\n", $screen_name );
-
-        push @c_lines, <<EOF_MAP_ALLOC_FN
-void screen_${screen_name}_allocate_sprites( struct map_screen_s *m ) {
-\tstruct sp1_ss *s;     // temporary storage
-EOF_MAP_ALLOC_FN
-;
-        generate_screen_sprite_initialization_code( $screen );
-        push @c_lines, "}\n\n";
-
-# we do not need to output a private sprite-freeing function, since we can
-# use the generic one provided in engine/src/map.c:
-#   void map_generic_free_sprites_function( struct map_screen_s *s );
-
-#        print $output_fh <<EOF_MAP_FREE_FN
-#void screen_${screen_name}_free_sprites( struct map_screen_s *m ) {
-#EOF_MAP_FREE_FN
-#;
-#        print $output_fh "}\n\n";
-    }
-
 }
 
 ###################################
@@ -1557,12 +1532,6 @@ EOF_MAP
             "\t\t.flow_data.rule_tables.enter_screen = { 0, NULL },\n" .
             "\t\t.flow_data.rule_tables.exit_screen = { 0, NULL },\n" .
             "\t\t.flow_data.rule_tables.game_loop = { 0, NULL },\n" .
-            "\t\t // sprite alloc/free functions\n" .
-            sprintf( "\t\t.allocate_sprites = %s,\n",
-                ( scalar( @{$_->{'enemies'}} ) ? sprintf( "screen_%s_allocate_sprites", $_->{'name'} ) : "NULL" ),
-                ) .
-            # use generic sprite freeing function
-            sprintf( "\t\t.free_sprites = %s\n", "map_generic_free_sprites_function" ) .
             "\t}"
         } @screens );
     push @c_lines, "\n};\n\n";

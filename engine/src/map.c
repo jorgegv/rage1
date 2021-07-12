@@ -113,12 +113,11 @@ uint16_t map_count_enemies_all(void) {
 }
 
 void map_enter_screen( struct map_screen_s *s ) {
-//    if ( s->allocate_sprites ) s->allocate_sprites( s );
     map_allocate_sprites( s );
 }
 
 void map_exit_screen( struct map_screen_s *s ) {
-    if ( s->free_sprites ) s->free_sprites( s );
+    map_free_sprites( s );
 }
 
 void map_allocate_sprites( struct map_screen_s *m ) {
@@ -161,7 +160,7 @@ void map_allocate_sprites( struct map_screen_s *m ) {
 // this function can be used generically, since the only data needed for
 // free is the pointer itself, and we know the number of sprites from
 // map_screen_s struct
-void map_generic_free_sprites_function( struct map_screen_s *s ) {
+void map_free_sprites( struct map_screen_s *s ) {
     static uint8_t i;
     i = s->enemy_data.num_enemies;
     while ( i-- )

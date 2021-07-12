@@ -63,10 +63,6 @@ struct map_screen_s {
     struct {
         uint16_t flags;
     } state_data;
-
-    // code
-    void (*allocate_sprites)(struct map_screen_s *m);	// called on ENTER_SCREEN by map_enter_screen
-    void (*free_sprites)(struct map_screen_s *m);	// called on EXIT_SCREEN by map_exit_screen
 };
 
 // with a generic function to draw a screen passed by pointer we can
@@ -79,7 +75,7 @@ uint16_t map_count_enemies_all(void);
 void map_enter_screen( struct map_screen_s *s );
 void map_exit_screen( struct map_screen_s *s );
 void map_allocate_sprites( struct map_screen_s *m );
-void map_generic_free_sprites_function( struct map_screen_s *s );
+void map_free_sprites( struct map_screen_s *s );
 
 // utility macros and definitions
 // screen flags macros and definitions
