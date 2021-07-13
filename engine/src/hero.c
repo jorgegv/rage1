@@ -29,7 +29,7 @@
 #include "game_data.h"
 
 void init_hero(void) {
-    init_hero_sprites();
+    hero_init_sprites();
     init_bullet_sprites();
 }
 
@@ -63,6 +63,9 @@ void hero_set_position_y( struct hero_info_s *h, uint8_t y ) {
     h->position.y = y;
     h->position.ymax = h->position.y + all_sprite_graphics[ h->num_graphic ].height - 1;
 }
+
+// this is initialized on startup, it is used when resetting the hero state
+struct sp1_ss *hero_sprite;
 
 // resets hero state at game startup
 void hero_reset_all(void) {
@@ -336,4 +339,12 @@ void hero_update_lives_display(void) {
 
 void hero_move_offscreen(void) {
     sprite_move_offscreen( game_state.hero.sprite );
+}
+
+// Hero Sprites initialization function
+void hero_init_sprites(void) {
+    game_state.hero.sprite = hero_sprite = sprite_allocate(
+        all_sprite_graphics[ game_state.hero.num_graphic ].height >> 3,
+        all_sprite_graphics[ game_state.hero.num_graphic ].width >> 3
+    );
 }
