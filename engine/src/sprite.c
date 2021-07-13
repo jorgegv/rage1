@@ -37,7 +37,7 @@ struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
     // create the sprite and first column
     s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE,
         cols + 1,	// number of columns including the blank right one
-        0,		// left colun graphic offset
+        0,		// left column graphic offset
         0		// z-plane
     );
 
@@ -46,7 +46,7 @@ struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
         sp1_AddColSpr(s,
             SP1_DRAW_MASK2,		// drawing function
             0,				// sprite type
-            ( rows + 1 ) * 16 * c,	// nth column graphic offset - 16 is because type is 2BYTE (mask+graphic)
+            ( rows + 1 ) * 16 * c,	// nth column graphic offset; 16 is because type is 2BYTE (mask+graphic)
             0				// z-plane
         );
     }
