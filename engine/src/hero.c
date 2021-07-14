@@ -29,6 +29,8 @@
 #include "game_data.h"
 
 void init_hero(void) {
+    // we need to prepopulate this
+    memcpy( &game_state.hero, &hero_startup_data, sizeof( hero_startup_data ) );
     hero_init_sprites();
     init_bullet_sprites();
 }
