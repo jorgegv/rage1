@@ -27,6 +27,7 @@ void init_program(void) {
    init_interrupts();
    init_controllers();
    init_hero();
+   init_bullets();
    init_flowgen();
 }
 

@@ -1258,18 +1258,39 @@ EOF_HERO1
 }
 
 sub generate_bullets {
+    my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
+    my $sprite_name = $hero->{'bullet'}{'sprite'};
+    my $width = $sprite->{'cols'} * 8;
+    my $height = $sprite->{'rows'} * 8;
     my $max_bullets = $hero->{'bullet'}{'max_bullets'};
-    push @c_lines, <<EOF_BULLET4
+    my $dx = $hero->{'bullet'}{'dx'};
+    my $dy = $hero->{'bullet'}{'dy'};
+    my $delay = $hero->{'bullet'}{'delay'};
+    my $reload_delay = $hero->{'bullet'}{'reload_delay'};
+    my $xthresh = ( defined( $sprite->{'real_pixel_width'} ) ?
+        ( 8 - ( $sprite->{'real_pixel_width'} % 8 ) + 1 ) % 8 :
+        1 );
+    my $ythresh = ( defined( $sprite->{'real_pixel_height'} ) ?
+        ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8 :
+        1 );
+
+    push @h_lines, <<EOF_BULLET4
 //////////////////////////////
 // Bullets definition
 //////////////////////////////
 
-struct bullet_state_data_s bullet_state_data[ $max_bullets ] = {
+#define	BULLET_MAX_BULLETS	$max_bullets
+#define	BULLET_SPRITE_WIDTH	$width
+#define	BULLET_SPRITE_HEIGHT	$height
+#define	BULLET_SPRITE_FRAMES	(sprite_${sprite_name}_frames[0])
+#define	BULLET_SPRITE_XTHRESH	$xthresh
+#define	BULLET_SPRITE_YTHRESH	$ythresh
+#define	BULLET_MOVEMENT_DX	$dx
+#define	BULLET_MOVEMENT_DY	$dy
+#define	BULLET_MOVEMENT_DELAY	$delay
+#define	BULLET_RELOAD_DELAY	$reload_delay
 EOF_BULLET4
 ;
-
-    push @c_lines, join( ",\n", ( "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 }" ) x 4 );
-    push @c_lines, "\n};\n\n";
 }
 
 ########################
@@ -1532,82 +1553,6 @@ EOF_MAP
     push @c_lines, "\n};\n\n";
 }
 
-sub generate_bullet_sprites_initialization {
-    my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
-    my $sprite_name = $hero->{'bullet'}{'sprite'};
-    my $width = $sprite->{'cols'} * 8;
-    my $height = $sprite->{'rows'} * 8;
-    my $max_bullets = $hero->{'bullet'}{'max_bullets'};
-    my $dx = $hero->{'bullet'}{'dx'};
-    my $dy = $hero->{'bullet'}{'dy'};
-    my $delay = $hero->{'bullet'}{'delay'};
-    my $reload_delay = $hero->{'bullet'}{'reload_delay'};
-
-    # output bullet sprite creation code
-    push @c_lines, <<EOF_BULLET1
-//////////////////////////////////////
-// Bullet Sprites initialization function
-//////////////////////////////////////
-
-void init_bullet_sprites(void) {
-    struct bullet_info_s *bi;
-    struct sp1_ss *bs;
-    uint8_t i;
-
-    // SP1 sprite data
-    i = $max_bullets;
-    while ( i-- ) {
-EOF_BULLET1
-;
-    push @c_lines, sprintf( "\tbullet_state_data[i].sprite = bs = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE, %d, %d, %d );\n",
-        $sprite->{'rows'} + 1,	# height in chars including blank bottom row
-        0,				# left column graphic offset
-        0,				# plane
-    );
-    foreach my $ac ( 1 .. ($sprite->{'cols'} - 1) ) {
-        push @c_lines, sprintf( "\tsp1_AddColSpr(bs, SP1_DRAW_MASK2, %d, %d, %d );\n",
-            0,					# type
-            ( $sprite->{'rows'} + 1 ) * 16 * $ac,	# nth column graphic offset
-            0,					# plane
-        );
-    }
-    push @c_lines, sprintf( "\tsp1_AddColSpr(bs, SP1_DRAW_MASK2RB, 0, 0, 0);\n" );	# empty rightmost column
-
-    # optimize SP1 for xthresh and vthresh
-    if ( defined( $sprite->{'real_pixel_width'} ) ) {
-        my $xthresh = ( 8 - ( $sprite->{'real_pixel_width'} % 8 ) + 1 ) % 8;
-        if ( $xthresh > 1 ) {
-            push @c_lines, sprintf( "\tbs->xthresh = %d;\n", $xthresh );
-        }
-    }
-    if ( defined( $sprite->{'real_pixel_height'} ) ) {
-        my $ythresh = ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8;
-        if ( $ythresh > 1 ) {
-            push @c_lines, sprintf( "\tbs->ythresh = %d;\n", $ythresh );
-        }
-    }
-
-    push @c_lines, <<EOF_BULLET6
-    }
-
-    // initialize remaining game_state.bullet struct fields
-    bi = &game_state.bullet;
-    bi->width = $width;
-    bi->height = $height;
-    bi->frames = &sprite_${sprite_name}_frames[0];
-    bi->movement.dx = $dx;
-    bi->movement.dy = $dy;
-    bi->movement.delay = $delay;
-    bi->num_bullets = $max_bullets;
-    bi->bullets = &bullet_state_data[0];
-    bi->reload_delay = $reload_delay;
-    bi->reloading = 0;
-}
-
-EOF_BULLET6
-;
-}
-
 sub generate_h_header {
     push @h_lines, <<GAME_DATA_H_1
 #ifndef _GAME_DATA_H
@@ -1706,7 +1651,6 @@ sub generate_game_data {
     generate_map;
     generate_hero;
     generate_bullets;
-    generate_bullet_sprites_initialization;
     generate_items;
     generate_game_areas;
 
