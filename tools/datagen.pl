@@ -737,6 +737,9 @@ sub generate_btile {
         $tile->{'name'},
         $tile->{'name'} );
     push @c_banked_lines, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
+
+    # output auxiliary data pointers
+    push @h_lines, sprintf( "extern struct btile_s btile_%s;\n", $tile->{'name'} );
 }
 
 #####################################
@@ -904,6 +907,9 @@ sub generate_sprite {
     }
 
     push @c_banked_lines, sprintf( "// End of Sprite '%s'\n\n", $sprite_name );
+
+    push @h_lines, sprintf( "extern uint8_t sprite_%s_data[];\n", $sprite_name );
+    push @h_lines, sprintf( "extern uint8_t *sprite_%s_frames[];\n", $sprite_name );
 }
 
 ######################################
@@ -1489,11 +1495,6 @@ sub generate_tiles {
 EOF_TILES
 ;
     foreach my $tile ( @btiles ) { generate_btile( $tile ); }
-
-    # output auxiliary data pointers
-    foreach my $btile ( @btiles ) {
-        push @h_lines, sprintf( "extern struct btile_s btile_%s;\n", $btile->{'name'} );
-    }
 }
 
 sub generate_sprites {
@@ -1505,11 +1506,6 @@ sub generate_sprites {
 EOF_SPRITES
 ;
     foreach my $sprite ( @sprites ) { generate_sprite( $sprite ); }
-
-    foreach my $sprite ( @sprites ) {
-        push @h_lines, sprintf( "extern uint8_t sprite_%s_data[];\n", $sprite->{'name'} );
-        push @h_lines, sprintf( "extern uint8_t *sprite_%s_frames[];\n", $sprite->{'name'} );
-    }
 
     # output global sprite graphics table
     my $num_sprites = scalar( @sprites );
