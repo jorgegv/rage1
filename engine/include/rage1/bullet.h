@@ -40,6 +40,10 @@ struct bullet_info_s {
     uint8_t reloading;
 };
 
+// bullet initialization
+void init_bullets( void );
+void bullet_init_sprites( void );
+
 // call this when the hero has pressed fire
 void bullet_add( void );
 // move all shot sprites
