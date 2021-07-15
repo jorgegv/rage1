@@ -31,15 +31,18 @@ CFLAGS_TO_ASM	= -a --c-code-in-asm --list
 
 # generic rules
 %.o: %.c
-	$(ZCC) $(CFLAGS) -c $*.c
+	@echo Compiling $*.c ...
+	@$(ZCC) $(CFLAGS) -c $*.c
 
 %.o: %.asm
-	$(ZCC) $(CFLAGS) -c $*.asm
+	@echo Assembling $*.asm ...
+	@$(ZCC) $(CFLAGS) -c $*.asm
 
 # rule for inspecting generated asm code - run 'make myfile.c.asm' to
 # get the .c.asm assembler generated from C file, with C code as comments
 %.c.asm: %.c
-	$(ZCC) $(CFLAGS) $(CFLAGS_TO_ASM) -c $*.c
+	@echo Generating ASM for $*.c ...
+	@$(ZCC) $(CFLAGS) $(CFLAGS_TO_ASM) -c $*.c
 
 # build targets
 .PHONY: data flow all build clean data_depend flow_depend build-data help
@@ -71,17 +74,22 @@ clean:
 		2>/dev/null
 
 game.tap: $(OBJS)
-	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
+	@echo Bulding game.tap ...
+	@$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
+	@echo Build completed SUCCESSFULLY
 
 ##
 ## Generated source code targets
 ##
 
-$(GENERATED_DIR)/game_data.c: $(GENERATED_DIR)/game_data.dep
-	$(MAKE) -s data
+$(GENERATED_DIR)/game_data_home.c: $(GENERATED_DIR)/game_data.dep
+	@$(MAKE) -s data
+
+$(GENERATED_DIR)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
+	@$(MAKE) -s data
 
 $(GENERATED_DIR)/flow_data.c: $(GENERATED_DIR)/flow_data.dep
-	$(MAKE) -s flow
+	@$(MAKE) -s flow
 
 data:
 	@./tools/datagen.pl -c -d $(GENERATED_DIR) game_data/{game_config,btiles,sprites,map,heroes}/*.gdata
@@ -103,7 +111,7 @@ flow_depend:
 ## Run options and target
 ##
 
-FUSE_RUN_OPTS=--machine 48
+FUSE_RUN_OPTS=--machine 128
 run: game.tap
 	@fuse $(FUSE_RUN_OPTS) game.tap
 
