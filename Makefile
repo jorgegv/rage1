@@ -132,7 +132,7 @@ flow_depend:
 ## Run options and target
 ##
 
-FUSE_RUN_OPTS=--machine 128
+FUSE_RUN_OPTS=--machine 48
 run: game.tap
 	@fuse $(FUSE_RUN_OPTS) game.tap
 
