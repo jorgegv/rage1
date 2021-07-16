@@ -43,9 +43,9 @@ IM2_DEFINE_ISR(do_timer_tick)
 }
 
 // Initialize interrupts in IM2 mode
-#define IV_ADDR		( ( unsigned char * ) 0xd000 )
-#define ISR_ADDR	( ( unsigned char * ) 0xd1d1 )
-#define IV_BYTE		( 0xd1 )
+#define IV_ADDR		( ( unsigned char * ) 0x8000 )
+#define ISR_ADDR	( ( unsigned char * ) 0x8181 )
+#define IV_BYTE		( 0x81 )
 #define Z80_OPCODE_JP	( 0xc3 )
 
 void init_interrupts(void) {

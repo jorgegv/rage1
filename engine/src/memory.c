@@ -126,8 +126,8 @@ void mm_page_out( void ) {
 //
 /////////////////////////////////////
 
-#define MALLOC_HEAP_ADDRESS	0xbc00
-#define MALLOC_HEAP_SIZE	4096
+#define MALLOC_HEAP_ADDRESS	0x6b00
+#define MALLOC_HEAP_SIZE	(0x8000 - MALLOC_HEAP_ADDRESS)
 
 unsigned char *_malloc_heap = MALLOC_HEAP_ADDRESS;
 
