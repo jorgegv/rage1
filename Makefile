@@ -63,8 +63,29 @@ help:
 
 all: data_depend flow_depend game.tap
 
-build: clean data flow
-	make -j8 all
+build: config-game-test
+	@make clean
+	@make data
+	@make flow
+	@make -j8 all
+
+build-minimal: config-game-minimal
+	@make clean
+	@make data
+	@make flow
+	@make -j8 all
+
+config-game-test:
+	@rm -rf game_src/* game_data/*
+	@cp -r test_game/game_src/* game_src
+	@cp -r test_game/game_data/* game_data
+	@echo "Build config: TEST GAME"
+
+config-game-minimal:
+	@rm -rf game_src/* game_data/*
+	@cp -r minimal_game/game_src/* game_src
+	@cp -r minimal_game/game_data/* game_data
+	@echo "Build config: MINIMAL GAME"
 
 clean:
 	@-rm *.{lis,bin,tap,c.asm,map,log} \
