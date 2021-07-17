@@ -28,9 +28,9 @@ uint8_t collision_check( struct position_data_s *a,struct position_data_s *b ) {
 }
 
 void collision_check_hero_with_sprites(void) {
-    static struct position_data_s *hero_pos,*enemy_pos;
-    static struct enemy_info_s *s;
-    static uint8_t i;
+    struct position_data_s *hero_pos,*enemy_pos;
+    struct enemy_info_s *s;
+    uint8_t i;
     struct map_screen_s *sc;
 
     hero_pos = &game_state.hero.position;
@@ -51,9 +51,9 @@ void collision_check_hero_with_sprites(void) {
 }
 
 void collision_check_bullets_with_sprites( void ) {
-    static struct bullet_state_data_s *b;
-    static struct enemy_info_s *s;
-    static uint8_t si,bi;
+    struct bullet_state_data_s *b;
+    struct enemy_info_s *s;
+    uint8_t si,bi;
     struct map_screen_s *sc;
 
     sc = &map[game_state.current_screen];

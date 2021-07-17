@@ -21,9 +21,9 @@
 
 // draw a given screen
 void map_draw_screen(struct map_screen_s *s) {
-    static uint8_t i,r,c, maxr, maxc, btwidth, btheight;
-    static struct btile_pos_s *t;
-    static struct item_location_s *it;
+    uint8_t i,r,c, maxr, maxc, btwidth, btheight;
+    struct btile_pos_s *t;
+    struct item_location_s *it;
 
     // clear screen
     sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
@@ -71,8 +71,8 @@ void map_draw_screen(struct map_screen_s *s) {
 }
 
 struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col ) {
-    static uint8_t i, rmax, cmax;
-    static struct item_location_s *it;
+    uint8_t i, rmax, cmax;
+    struct item_location_s *it;
 
     i = s->item_data.num_items;
     while ( i-- ) {
@@ -87,22 +87,22 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
 }
 
 void map_screen_reset_all_sprites( struct map_screen_s *s ) {
-    static uint8_t i;
+    uint8_t i;
     i = s->enemy_data.num_enemies;
     while ( i-- )
         SET_ENEMY_FLAG( s->enemy_data.enemies[ i ], F_ENEMY_ACTIVE );
 }
 
 void map_sprites_reset_all(void) {
-    static uint8_t i;
+    uint8_t i;
     i = MAP_NUM_SCREENS;
     while ( i-- )
         map_screen_reset_all_sprites ( &map[ i ] );
 }
 
 uint16_t map_count_enemies_all(void) {
-    static uint16_t count;
-    static uint8_t i;
+    uint16_t count;
+    uint8_t i;
 
     count = 0;
     i = MAP_NUM_SCREENS;
@@ -121,7 +121,7 @@ void map_exit_screen( struct map_screen_s *s ) {
 }
 
 void map_allocate_sprites( struct map_screen_s *m ) {
-    static uint8_t i;
+    uint8_t i;
     struct sp1_ss *s;
 
     i = m->enemy_data.num_enemies;
@@ -139,7 +139,7 @@ void map_allocate_sprites( struct map_screen_s *m ) {
 // free is the pointer itself, and we know the number of sprites from
 // map_screen_s struct
 void map_free_sprites( struct map_screen_s *s ) {
-    static uint8_t i;
+    uint8_t i;
     i = s->enemy_data.num_enemies;
     while ( i-- )
         sp1_DeleteSpr( s->enemy_data.enemies[ i ].sprite );

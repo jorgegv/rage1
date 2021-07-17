@@ -31,7 +31,7 @@ void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c ) {
 }
 
 struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
-    static uint8_t c;
+    uint8_t c;
     struct sp1_ss *s;
 
     // create the sprite and first column

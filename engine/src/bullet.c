@@ -35,11 +35,11 @@ void init_bullets( void ) {
 }
 
 void bullet_add( void ) {
-    static struct bullet_state_data_s *bs;
-    static uint8_t i;
-    static uint8_t h_dy, v_dx;
-    static struct bullet_info_s *bi;
-    static struct hero_info_s *hero;
+    struct bullet_state_data_s *bs;
+    uint8_t i;
+    uint8_t h_dy, v_dx;
+    struct bullet_info_s *bi;
+    struct hero_info_s *hero;
 
     bi = &game_state.bullet;   
     hero = &game_state.hero;
@@ -89,9 +89,9 @@ void bullet_add( void ) {
 }
 
 void bullet_animate_and_move_all(void) {
-    static uint8_t i;
-    static struct bullet_info_s *bi;
-    static struct bullet_state_data_s *bs;
+    uint8_t i;
+    struct bullet_info_s *bi;
+    struct bullet_state_data_s *bs;
 
     bi = &game_state.bullet;   
 
@@ -151,8 +151,8 @@ void bullet_animate_and_move_all(void) {
 }
 
 void bullet_reset_all(void) {
-    static uint8_t i;
-    static struct sp1_ss *save;
+    uint8_t i;
+    struct sp1_ss *save;
 
     i = game_state.bullet.num_bullets;
     while ( i-- ) {
@@ -164,7 +164,7 @@ void bullet_reset_all(void) {
 }
 
 void bullet_move_offscreen_all(void) {
-    static uint8_t i;
+    uint8_t i;
 
     i = game_state.bullet.num_bullets;
     while ( i-- )

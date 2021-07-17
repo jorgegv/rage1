@@ -36,8 +36,8 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
     // beware Z80 optimizations!  The rule table is an ordered list, so it
     // has to be run in order from 0 to (num_rules-1)
     uint8_t i,j;
-    static struct flow_rule_check_s *check;
-    static struct flow_rule_action_s *action;
+    struct flow_rule_check_s *check;
+    struct flow_rule_action_s *action;
     for ( i = 0; i < t->num_rules; i++ ) {
         struct flow_rule_s *r = t->rules[i];
         // run the checks in order, return as soon as one returns false
@@ -162,7 +162,7 @@ uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) __z88dk_f
 }
 
 uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    static struct hotzone_info_s *hz;
+    struct hotzone_info_s *hz;
     hz = &map[ game_state.current_screen ].hotzone_data.hotzones[ check->data.hotzone.num_hotzone ];
     return ( GET_HOTZONE_FLAG( *hz, F_HOTZONE_ACTIVE ) &&
         collision_check( &game_state.hero.position, &hz->position )
