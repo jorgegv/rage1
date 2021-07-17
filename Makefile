@@ -12,6 +12,7 @@
 ENGINE_DIR	= engine
 GENERATED_DIR	= generated
 GAME_SRC_DIR	= game_src
+GAME_DATA_DIR	= game_data
 
 # Sources
 CSRC 		= $(wildcard $(GAME_SRC_DIR)/*.c)   $(wildcard $(ENGINE_DIR)/src/*.c)   $(wildcard $(GENERATED_DIR)/*.c)
@@ -76,22 +77,23 @@ build-minimal: config-game-minimal
 	@make -j8 all
 
 config-game-test:
-	@rm -rf game_src/* game_data/*
-	@cp -r test_game/game_src/* game_src
-	@cp -r test_game/game_data/* game_data
+	@rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/*
+	@cp -r test_game/game_src/* $(GAME_SRC_DIR)
+	@cp -r test_game/game_data/* $(GAME_DATA_DIR)
 	@echo "Build config: TEST GAME"
 
 config-game-minimal:
-	@rm -rf game_src/* game_data/*
-	@cp -r minimal_game/game_src/* game_src
-	@cp -r minimal_game/game_data/* game_data
+	@rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/*
+	@cp -r minimal_game/game_src/* $(GAME_SRC_DIR)
+	@cp -r minimal_game/game_data/* $(GAME_DATA_DIR)
 	@echo "Build config: MINIMAL GAME"
 
 clean:
-	@-rm *.{lis,bin,tap,c.asm,map,log} \
+	@-rm -rf *.{lis,bin,tap,c.asm,map,log} \
 		$(GENERATED_DIR)/*.{c,h,map,lis,o,c.asm,dep,dmp} \
 		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm} \
-		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm} \
+		$(GAME_SRC_DIR)/* \
+		$(GAME_DATA_DIR)/* \
 		2>/dev/null
 
 game.tap: $(OBJS)
