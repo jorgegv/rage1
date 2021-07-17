@@ -4,14 +4,14 @@ In general, follow advice from https://github.com/z88dk/z88dk/wiki/WritingOptima
 
 The following sections explain the most interesting techniques mentioned there.
 
-## Use static local variables
+## Use static local variables if needed
 
 * Stack allocated vars (i.e.  local vars) are normally accessed by using a
   base pointer (e.g.  `ld a, (ix+7)` ).  But in Z80 this load type is way
   slower than direct address loading (e.g.  `ld hl, 23000` + `ld a,(hl)`).
 
-* Use local variables in functions, but declare them with "static", which
-  makes them use a fixed address, instead of being dynamically stack
+* You can use local variables in functions, but declare them with "static",
+  which makes them use a fixed address, instead of being dynamically stack
   allocated.  This makes the program slightly bigger in memory, but faster. 
   Local scope in vars declared this way is not affected.
 
@@ -19,6 +19,9 @@ The following sections explain the most interesting techniques mentioned there.
   same declaration.  Always initialize after declaring it i the function, so
   that initialization runs in all function invocations, and not only on the
   first.
+
+* As with all optimizations, use them where they make sense and be aware of
+  the memory/speed trade off
 
 Example:
 
