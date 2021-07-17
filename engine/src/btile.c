@@ -25,8 +25,8 @@ uint8_t screen_pos_tile_type[ SCREEN_SIZE ];
 
 // draw a given btile
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
-    static uint8_t dr, dc, r, c, n, rmax, cmax;
-    static uint8_t brmin, brmax, bcmin, bcmax;
+    uint8_t dr, dc, r, c, n, rmax, cmax;
+    uint8_t brmin, brmax, bcmin, bcmax;
 
     brmin = box->row;
     bcmin = box->col;
@@ -48,7 +48,7 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, stru
 }
 
 void btile_remove( uint8_t row, uint8_t col, struct btile_s *b ) {
-    static uint8_t dr, dc, rmax, cmax;
+    uint8_t dr, dc, rmax, cmax;
 
     rmax = b->num_rows;
     cmax = b->num_cols;

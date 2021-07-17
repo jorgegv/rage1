@@ -19,9 +19,9 @@
 #include "game_data.h"
 
 void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
-    static struct enemy_info_s *e;
-    static struct sprite_graphic_data_s *g;
-    static uint8_t n;
+    struct enemy_info_s *e;
+    struct sprite_graphic_data_s *g;
+    uint8_t n;
 
     n = num_enemies;
     while( n-- ) {
@@ -53,12 +53,12 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
 }
 
 void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
-    static struct enemy_info_s *e;
-    static struct sprite_animation_data_s *anim;
-    static struct position_data_s *pos;
-    static struct enemy_movement_data_s *move;
-    static struct sprite_graphic_data_s *g;
-    static uint8_t n;
+    struct enemy_info_s *e;
+    struct sprite_animation_data_s *anim;
+    struct position_data_s *pos;
+    struct enemy_movement_data_s *move;
+    struct sprite_graphic_data_s *g;
+    uint8_t n;
 
     n = num_enemies;
     while( n-- ) {
@@ -187,7 +187,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
 }
 
 void enemy_move_offscreen_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
-    static uint8_t i;
+    uint8_t i;
     i = num_enemies;
     while ( i-- ) sprite_move_offscreen( enemies[i].sprite );
 }

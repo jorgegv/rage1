@@ -57,9 +57,9 @@ void init_hero(void) {
 
 // resets hero position after being killed
 void hero_reset_position(void) {
-    static struct hero_info_s *h;
-    static struct hero_animation_data_s *anim;
-    static uint8_t *animation_frame;
+    struct hero_info_s *h;
+    struct hero_animation_data_s *anim;
+    uint8_t *animation_frame;
 
     h = &game_state.hero;
     anim = &h->animation;
@@ -91,11 +91,11 @@ struct sp1_ss *hero_sprite;
 
 // resets hero state at game startup
 void hero_reset_all(void) {
-    static struct hero_info_s *h;
+    struct hero_info_s *h;
 
     h = &game_state.hero;
 
-    // bulk copy from static data. Sprite ptr gets trashed
+    // bulk copy from data. Sprite ptr gets trashed
     memcpy( h, &hero_startup_data, sizeof( hero_startup_data ) );
     // ...but we saved it in initialization, so restore it
     h->sprite = hero_sprite;
@@ -109,8 +109,8 @@ void hero_reset_all(void) {
 }
 
 uint8_t hero_can_move_in_direction( uint8_t direction ) {
-    static struct hero_info_s *h;
-    static uint8_t x,y,dx,dy,i,r,c;
+    struct hero_info_s *h;
+    uint8_t x,y,dx,dy,i,r,c;
 
     h = &game_state.hero;
     x = h->position.x;
@@ -168,14 +168,14 @@ void hero_draw( void ) {
 }
 
 void hero_animate_and_move( void ) {
-    static struct hero_info_s *h;
-    static struct hero_animation_data_s *anim;
-    static struct position_data_s *pos;
-    static struct hero_movement_data_s *move;
-    static uint8_t controller;
-    static uint8_t newx,newy,x,y,oldx,oldy;
-    static uint8_t *animation_frame;
-    static uint8_t allowed;
+    struct hero_info_s *h;
+    struct hero_animation_data_s *anim;
+    struct position_data_s *pos;
+    struct hero_movement_data_s *move;
+    uint8_t controller;
+    uint8_t newx,newy,x,y,oldx,oldy;
+    uint8_t *animation_frame;
+    uint8_t allowed;
 
 
     h = &game_state.hero;	// efficiency matters ;-)
@@ -300,9 +300,9 @@ void hero_shoot_bullet( void ) {
 }
 
 void hero_pickup_items(void) {
-    static struct sp1_ss *s;
-    static uint8_t i,j,cols,r,c,item;
-    static struct item_location_s *item_loc;
+    struct sp1_ss *s;
+    uint8_t i,j,cols,r,c,item;
+    struct item_location_s *item_loc;
 
     s = game_state.hero.sprite;
 
@@ -344,8 +344,8 @@ struct sp1_pss lives_display_ctx = {
 };
 
 void hero_update_lives_display(void) {
-    static uint8_t col;
-    static uint8_t n;
+    uint8_t col;
+    uint8_t n;
 
     // clear the area
     sp1_ClearRectInv( &lives_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );

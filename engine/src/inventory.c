@@ -24,7 +24,7 @@
 #include "game_data.h"
 
 void inventory_reset_all(void) {
-    static uint8_t i;
+    uint8_t i;
 
     // reset item state in all screens
     i = 16;
@@ -36,7 +36,7 @@ void inventory_reset_all(void) {
 }
 
 void inventory_show(void) {
-    static uint8_t col, item_index;
+    uint8_t col, item_index;
     struct inventory_info_s *inv;
     struct btile_s *tile;
 
@@ -57,8 +57,8 @@ void inventory_show(void) {
 }
 
 void inventory_add_item( struct inventory_info_s *inv, uint8_t item ) {
-    static uint8_t num_items, c;
-    static uint16_t id;
+    uint8_t num_items, c;
+    uint16_t id;
 
     // add item to inventory
     ADD_TO_INVENTORY( inv, all_items[ item ].item_id );
