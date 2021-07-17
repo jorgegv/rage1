@@ -92,9 +92,12 @@ clean:
 	@-rm -rf *.{lis,bin,tap,c.asm,map,log} \
 		$(GENERATED_DIR)/*.{c,h,map,lis,o,c.asm,dep,dmp} \
 		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm} \
-		$(GAME_SRC_DIR)/* \
-		$(GAME_DATA_DIR)/* \
+		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm} \
+		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm} \
 		2>/dev/null
+
+clean-config:
+	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* 2>/dev/null
 
 game.tap: $(OBJS)
 	@echo Bulding game.tap ...
