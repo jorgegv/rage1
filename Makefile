@@ -64,29 +64,16 @@ help:
 
 all: data_depend flow_depend game.tap
 
-build: config-game-test
+build:
 	@make clean
 	@make data
 	@make flow
 	@make -j8 all
 
-build-minimal: config-game-minimal
-	@make clean
-	@make data
-	@make flow
-	@make -j8 all
-
-config-game-test:
-	@rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/*
-	@cp -r test_game/game_src/* $(GAME_SRC_DIR)
-	@cp -r test_game/game_data/* $(GAME_DATA_DIR)
-	@echo "Build config: TEST GAME"
-
-config-game-minimal:
-	@rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/*
-	@cp -r minimal_game/game_src/* $(GAME_SRC_DIR)
-	@cp -r minimal_game/game_data/* $(GAME_DATA_DIR)
-	@echo "Build config: MINIMAL GAME"
+# include minimal game configuration.  If the Makefile has been copied to a
+# Game directory 'make build' works as usual.  If it is the Makefile on the
+# RAGE1 directory, it will include minimal-game config and allow to use it
+-include minimal-game.mk
 
 clean:
 	@-rm -rf *.{lis,bin,tap,c.asm,map,log} \
