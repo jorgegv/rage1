@@ -45,6 +45,9 @@ my @c_banked_lines;
 my @h_lines;
 my @asm_lines;
 
+# RAGE1 used features, for conditional compilation
+my $rage1_features = { };
+
 ##########################################
 ## Input data parsing and state machine
 ##########################################
