@@ -14,5 +14,6 @@ serial.log
 gen_*.c
 gen_*.h
 *.dmp
-game_data/*
-game_src/*
+build/generated
+build/game_data
+build/game_src

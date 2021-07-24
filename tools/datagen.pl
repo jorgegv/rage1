@@ -47,6 +47,7 @@ my @c_home_lines;
 my @c_banked_lines;
 my @h_lines;
 my @asm_lines;
+my $build_dir;
 
 ######################################################
 ## Configuration syntax definitions and lists
@@ -150,7 +151,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $data = png_to_pixels_and_attrs(
-                    $vars->{'file'},
+                    $build_dir . '/' . $vars->{'file'},
                     $vars->{'xpos'}, $vars->{'ypos'},
                     $vars->{'width'}, $vars->{'height'},
                 );
@@ -210,11 +211,11 @@ sub read_input_data {
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
+                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 push @{$cur_sprite->{'png_attr'}}, @{ attr_data_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
+                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 next;
@@ -227,7 +228,7 @@ sub read_input_data {
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
                 push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
+                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
                 next;
             }
@@ -2047,14 +2048,15 @@ sub dump_internal_data {
 ## Main loop
 #########################
 
-our ( $opt_d, $opt_c );
-getopts("d:c");
+our ( $opt_b, $opt_d, $opt_c );
+getopts("b:d:c");
 if ( defined( $opt_d ) ) {
     $c_file_home = "$opt_d/$c_file_home";
     $c_file_banked = "$opt_d/$c_file_banked";
     $h_file = "$opt_d/$h_file";
     $dump_file = "$opt_d/$dump_file";
 }
+$build_dir = $opt_b || 'build';
 
 # read, validate and compile input
 read_input_data;

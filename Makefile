@@ -10,9 +10,10 @@
 
 # directory configurations
 ENGINE_DIR	= engine
-GENERATED_DIR	= generated
-GAME_SRC_DIR	= game_src
-GAME_DATA_DIR	= game_data
+BUILD_DIR	= build
+GENERATED_DIR	= $(BUILD_DIR)/generated
+GAME_SRC_DIR	= $(BUILD_DIR)/game_src
+GAME_DATA_DIR	= $(BUILD_DIR)/game_data
 
 # Sources
 CSRC 		= $(wildcard $(GAME_SRC_DIR)/*.c)   $(wildcard $(ENGINE_DIR)/src/*.c)   $(wildcard $(GENERATED_DIR)/*.c)
@@ -87,7 +88,7 @@ clean-config:
 
 config:
 	@$(MAKE) -s clean-config
-	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/
+	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/
 	@cp -r test_game/game_data/* $(GAME_DATA_DIR)/
 	@cp -r test_game/game_src/* $(GAME_SRC_DIR)/
 
@@ -109,11 +110,11 @@ $(GENERATED_DIR)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
 $(GENERATED_DIR)/game_data.dep: data_depend
 
 data:
-	@./tools/datagen.pl -c -d $(GENERATED_DIR) game_data/{game_config,btiles,sprites,map,heroes,flow}/*.gdata
+	@./tools/datagen.pl -c -d $(GENERATED_DIR) $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes,flow}/*.gdata
 
 data_depend:
-	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
-	@ls -1 game_data/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
+	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
+	@ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
 
 ##
@@ -168,7 +169,7 @@ LIB_ENGINE_FILES	= engine tools Makefile zpragma.inc .gitignore env.sh
 LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
 
 # needed directories that will be created empty if they do not exist
-LIB_ENGINE_EMPTY_DIRS	= generated tests
+LIB_ENGINE_EMPTY_DIRS	= build/generated tests
 
 # create a minimal game using the library
 new-game:
