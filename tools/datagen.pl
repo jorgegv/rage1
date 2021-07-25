@@ -2038,6 +2038,8 @@ sub dump_internal_data {
         hero			=> $hero,
         all_items		=> $all_items,
         game_config		=> $game_config,
+        all_rules		=> \@all_rules,
+        screen_rules		=> $screen_rules,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
