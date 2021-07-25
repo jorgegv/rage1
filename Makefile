@@ -91,6 +91,7 @@ config:
 	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/
 	@cp -r test_game/game_data/* $(GAME_DATA_DIR)/
 	@cp -r test_game/game_src/* $(GAME_SRC_DIR)/
+	@echo "Build config: REGULAR GAME"
 
 game.tap: $(OBJS)
 	@echo Bulding game.tap ...

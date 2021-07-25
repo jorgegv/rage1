@@ -57,9 +57,6 @@ void inventory_show(void) {
 }
 
 void inventory_add_item( struct inventory_info_s *inv, uint8_t item ) {
-    uint8_t num_items, c;
-    uint16_t id;
-
     // add item to inventory
     ADD_TO_INVENTORY( inv, all_items[ item ].item_id );
 
