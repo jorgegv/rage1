@@ -1232,6 +1232,24 @@ sub generate_screen {
         push @h_lines, sprintf("extern struct hotzone_info_s screen_%s_hotzones[] ;\n", $screen->{'name'} );
     }
 
+    # flow rules
+    push @c_banked_lines, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
+    foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
+        if ( defined( $screen_rules->{ $screen->{'name'} } ) and defined( $screen_rules->{ $screen->{'name'} }{ $table } ) ) {
+            my $num_rules = scalar( @{ $screen_rules->{ $screen->{'name'} }{ $table } } );
+            if ( $num_rules ) {
+                push @h_lines, sprintf( "extern struct flow_rule_s *screen_%s_%s_rules[];\n", $screen->{'name'}, $table );
+                push @c_banked_lines, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
+                    $screen->{'name'}, $table, $num_rules );
+                push @c_banked_lines, join( ",\n\t",
+                    map {
+                        sprintf( "&flow_all_rules[ %d ]", $_ )
+                    } @{ $screen_rules->{ $screen->{'name'} }{ $table } }
+                );
+                push @c_banked_lines, "\n};\n";
+            }
+        }
+    }
 }
 
 ###################################
@@ -1609,12 +1627,6 @@ sub generate_rule_actions {
 
 sub generate_flow_rules {
 
-    push @h_lines, <<FLOW_DATA_H_1
-// FLOWGEN initialization function, called from main game initialization
-void init_flowgen(void);
-FLOW_DATA_H_1
-;
-
     # file header comments
     push @c_home_lines, <<FLOW_DATA_C_1
 ///////////////////////////////////////////////////////////
@@ -1640,6 +1652,7 @@ FLOW_DATA_C_1
     if ( scalar( @all_rules ) ) {
         push @c_home_lines, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
             scalar( @all_rules ) );
+        push @h_lines, "extern struct flow_rule_s flow_all_rules[];\n";
         push @c_home_lines, "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
         foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
             push @c_home_lines, "\t{";
@@ -1651,61 +1664,6 @@ FLOW_DATA_C_1
         }
         push @c_home_lines, "\n};\n\n";
     }
-
-    # output rule tables for each screen
-    push @c_home_lines, "// rule tables for each screen\n";
-    foreach my $screen (sort keys %$screen_rules ) {
-        push @c_home_lines, sprintf( "\n// rules for screen '%s'\n", $screen );
-        foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
-            if ( defined( $screen_rules->{ $screen } ) and defined( $screen_rules->{ $screen }{ $table } ) ) {
-                my $num_rules = scalar( @{ $screen_rules->{ $screen }{ $table } } );
-                if ( $num_rules ) {
-                    push @c_home_lines, sprintf( "\n// screen '%s', table '%s' (%d rules)\n",
-                        $screen, $table, $num_rules );
-                    push @c_home_lines, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
-                        $screen, $table, $num_rules );
-                    push @c_home_lines, join( ",\n\t",
-                        map { 
-                            sprintf( "&flow_all_rules[ %d ]", $_ )
-                        } @{ $screen_rules->{ $screen }{ $table } }
-                    );
-                    push @c_home_lines, "\n};\n";
-                }
-            }
-        }
-    }
-
-    # output initialization code to set the table pointers for each screen
-    # that has rules in any table
-    push @c_home_lines, <<FLOW_DATA_C_2
-
-void init_flowgen(void) {
-FLOW_DATA_C_2
-;
-    foreach my $screen (sort keys %$screen_rules ) {
-        foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
-            if ( defined( $screen_rules->{ $screen } ) and defined( $screen_rules->{ $screen }{ $table } ) ) {
-                my $num_rules = scalar( @{ $screen_rules->{ $screen }{ $table } } );
-                if ( $num_rules ) {
-                    push @c_home_lines, sprintf( "\t// screen '%s', table '%s' (%d rules)\n",
-                        $screen, $table, $num_rules );
-                    push @c_home_lines, sprintf( "\tmap[ %d ].flow_data.rule_tables.%s.num_rules = %d, \n",
-                        $screen_name_to_index{ $screen },
-                        $table,
-                        $num_rules,
-                    );
-                    push @c_home_lines, sprintf( "\tmap[ %d ].flow_data.rule_tables.%s.rules = &screen_%s_%s_rules[0];\n",
-                        $screen_name_to_index{ $screen },
-                        $table,
-                        $screen,
-                        $table,
-                    );
-                }
-            }
-        }
-    }
-
-    push @c_home_lines, "}\n\n";
 
 }
 
@@ -1906,6 +1864,7 @@ EOF_MAP
     push @c_home_lines, sprintf( "struct map_screen_s map[ MAP_NUM_SCREENS ] = {\n" );
 
     push @c_home_lines, join( ",\n", map {
+            my $screen_name = $_->{'name'};
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
@@ -1925,10 +1884,20 @@ EOF_MAP
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
                 ) :
                 "\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
-            "\t\t.flow_data.rule_tables.enter_screen = { 0, NULL },\n" .
-            "\t\t.flow_data.rule_tables.exit_screen = { 0, NULL },\n" .
-            "\t\t.flow_data.rule_tables.game_loop = { 0, NULL },\n" .
-            "\t}"
+            join( ",\n", map {
+                sprintf( "\t\t.flow_data.rule_tables.%s = { %d, %s }",
+                    $_,
+                    ( scalar( @{ $screen_rules->{ $screen_name }{ $_ } } ) || 0 ),
+                    ( scalar( @{ $screen_rules->{ $screen_name }{ $_ } } ) ?
+                        sprintf( "&screen_%s_%s_rules[0]",
+                            $screen_name,
+                            $_
+                        ) :
+                        'NULL'
+                    )
+                )
+                } @{ $syntax->{'valid_whens'} } ) .
+            "\n\t}"
         } @screens );
     push @c_home_lines, "\n};\n\n";
 
