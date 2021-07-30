@@ -1628,7 +1628,7 @@ sub generate_rule_actions {
 sub generate_flow_rules {
 
     # file header comments
-    push @c_home_lines, <<FLOW_DATA_C_1
+    push @c_banked_lines, <<FLOW_DATA_C_1
 ///////////////////////////////////////////////////////////
 //
 // Flow data
@@ -1639,32 +1639,31 @@ FLOW_DATA_C_1
 ;
 
     # output check and action tables for each rule
-    push @c_home_lines, sprintf( "// check tables for all rules\n" );
+    push @c_banked_lines, sprintf( "// check tables for all rules\n" );
     foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        push @c_home_lines, generate_rule_checks( $all_rules[ $i ], $i );
+        push @c_banked_lines, generate_rule_checks( $all_rules[ $i ], $i );
     }
-    push @c_home_lines, sprintf( "// action tables for all rules\n" );
+    push @c_banked_lines, sprintf( "// action tables for all rules\n" );
     foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        push @c_home_lines, generate_rule_actions( $all_rules[ $i ], $i );
+        push @c_banked_lines, generate_rule_actions( $all_rules[ $i ], $i );
     }
 
     # output global rule table
     if ( scalar( @all_rules ) ) {
-        push @c_home_lines, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
+        push @c_banked_lines, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
             scalar( @all_rules ) );
         push @h_lines, "extern struct flow_rule_s flow_all_rules[];\n";
-        push @c_home_lines, "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
+        push @c_banked_lines, "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
         foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-            push @c_home_lines, "\t{";
-            push @c_home_lines, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
+            push @c_banked_lines, "\t{";
+            push @c_banked_lines, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
                 scalar( @{ $all_rules[ $i ]{'check'} } ), $i );
-            push @c_home_lines, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
+            push @c_banked_lines, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
                 scalar( @{ $all_rules[ $i ]{'do'} } ), $i );
-            push @c_home_lines, " },\n";
+            push @c_banked_lines, " },\n";
         }
-        push @c_home_lines, "\n};\n\n";
+        push @c_banked_lines, "\n};\n\n";
     }
-
 }
 
 ###################################
@@ -1951,19 +1950,21 @@ sub generate_game_data {
 
     # generate data - each function is free to add lines to the .c or .h
     # file
+
+    # banked items
     generate_tiles;
     generate_sprites;
     generate_screens;
+    generate_flow_rules;
+
+    # home bank items
     generate_map;
     generate_hero;
     generate_bullets;
     generate_items;
     generate_game_areas;
-
     generate_game_config;
     generate_game_functions;
-
-    generate_flow_rules;
 
     # generate ending lines if needed
     generate_h_ending;
