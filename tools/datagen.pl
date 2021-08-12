@@ -1759,6 +1759,7 @@ sub generate_c_home_header {
 //////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
+#include <sound/bit.h>
 
 #include "rage1/map.h"
 #include "rage1/sprite.h"
@@ -1784,6 +1785,7 @@ sub generate_c_banked_header {
 ////////////////////////////////&//////////////////////////////////////////
 
 #include <arch/spectrum.h>
+#include <sound/bit.h>
 
 #include "rage1/map.h"
 #include "rage1/sprite.h"
