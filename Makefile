@@ -177,10 +177,10 @@ new-game:
 	@if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
 	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, use 'make update-game' instead"; exit 2; fi
 	@echo "Creating game directory $(target)..."
-	@mkdir -p "$(target)"
+	@mkdir -p "$(target)/game"
 	@echo -n "Syncing library and game template files... "
 	@rsync -ap $(LIB_ENGINE_FILES) "$(target)"
-	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)"
+	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)/game"
 	@for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done
 	@echo "Done!"
 
