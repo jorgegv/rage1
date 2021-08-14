@@ -19,7 +19,6 @@
 #include "rage1/debug.h"
 
 #include "game_data.h"
-#include "flow_data.h"
 
 void init_program(void) {
    init_memory();
@@ -28,7 +27,6 @@ void init_program(void) {
    init_controllers();
    init_hero();
    init_bullets();
-   init_flowgen();
 }
 
 

@@ -8,7 +8,7 @@ TOTAL_BSS=0
 
 printf "%-20s  %5s  %5s  %5s\n" "Object file" "CODE" "DATA" "BSS"
 echo "-------------------------------------------"
-for ofile in engine/src/*.o; do
+for ofile in engine/src/*.o build/generated/*.o build/game_src/*.o; do
 	CODE_SIZE=$( z88dk-z80nm "$ofile" | grep "Section code_compiler:" | awk '{print $3}' )
 	DATA_SIZE=$( z88dk-z80nm "$ofile" | grep "Section data_compiler:" | awk '{print $3}' )
 	BSS_SIZE=$(  z88dk-z80nm "$ofile" | grep "Section bss_compiler:"  | awk '{print $3}' )

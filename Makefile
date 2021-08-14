@@ -10,9 +10,10 @@
 
 # directory configurations
 ENGINE_DIR	= engine
-GENERATED_DIR	= generated
-GAME_SRC_DIR	= game_src
-GAME_DATA_DIR	= game_data
+BUILD_DIR	= build
+GENERATED_DIR	= $(BUILD_DIR)/generated
+GAME_SRC_DIR	= $(BUILD_DIR)/game_src
+GAME_DATA_DIR	= $(BUILD_DIR)/game_data
 
 # Sources
 CSRC 		= $(wildcard $(GAME_SRC_DIR)/*.c)   $(wildcard $(ENGINE_DIR)/src/*.c)   $(wildcard $(GENERATED_DIR)/*.c)
@@ -46,7 +47,7 @@ CFLAGS_TO_ASM	= -a --c-code-in-asm --list
 	@$(ZCC) $(CFLAGS) $(CFLAGS_TO_ASM) -c $*.c
 
 # build targets
-.PHONY: data flow all build clean data_depend flow_depend build-data help
+.PHONY: data all build clean data_depend build-data help
 
 help:
 	@echo "============================================================"
@@ -62,13 +63,13 @@ help:
 	@echo "* Use 'make update-game' for updating library code in an existing game"
 	@echo ""
 
-all: data_depend flow_depend game.tap
+all: data_depend game.tap
 
 build:
-	@make clean
-	@make data
-	@make flow
-	@make -j8 all
+	@$(MAKE) -s clean
+	@$(MAKE) -s config
+	@$(MAKE) -s data
+	@$(MAKE) -s -j8 all
 
 # include minimal game configuration.  If the Makefile has been copied to a
 # Game directory 'make build' works as usual.  If it is the Makefile on the
@@ -82,9 +83,15 @@ clean:
 		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm} \
 		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm} \
 		2>/dev/null
-
 clean-config:
 	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* 2>/dev/null
+
+config:
+	@$(MAKE) -s clean-config
+	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/
+	@cp -r game/game_data/* $(GAME_DATA_DIR)/
+	@cp -r game/game_src/* $(GAME_SRC_DIR)/
+	@echo "Build config: REGULAR GAME"
 
 game.tap: $(OBJS)
 	@echo Bulding game.tap ...
@@ -101,24 +108,15 @@ $(GENERATED_DIR)/game_data_home.c: $(GENERATED_DIR)/game_data.dep
 $(GENERATED_DIR)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
 	@$(MAKE) -s data
 
-$(GENERATED_DIR)/flow_data.c: $(GENERATED_DIR)/flow_data.dep
-	@$(MAKE) -s flow
+$(GENERATED_DIR)/game_data.dep: data_depend
 
 data:
-	@./tools/datagen.pl -c -d $(GENERATED_DIR) game_data/{game_config,btiles,sprites,map,heroes}/*.gdata
-
-flow:
-	@./tools/flowgen.pl -c -d $(GENERATED_DIR) game_data/flow/*.gdata
+	@./tools/datagen.pl -c -d $(GENERATED_DIR) $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes,flow}/*.gdata
 
 data_depend:
-	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 game_data/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
-	@ls -1 game_data/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
+	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
+	@ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
-
-flow_depend:
-	@if [ ! -f $(GENERATED_DIR)/flow_data.dep ]; then ls -1 game_data/flow/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/flow_data.dep; fi
-	@ls -1 game_data/flow/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/flow_data.dep
-	@if ( ! cmp -s $(GENERATED_DIR)/flow_data.dep /tmp/flow_data.dep ) then rm $(GENERATED_DIR)/flow_data.dep; mv /tmp/flow_data.dep $(GENERATED_DIR)/flow_data.dep; fi
 
 ##
 ## Run options and target
@@ -172,17 +170,17 @@ LIB_ENGINE_FILES	= engine tools Makefile zpragma.inc .gitignore env.sh
 LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
 
 # needed directories that will be created empty if they do not exist
-LIB_ENGINE_EMPTY_DIRS	= generated tests
+LIB_ENGINE_EMPTY_DIRS	= build/generated tests
 
 # create a minimal game using the library
 new-game:
 	@if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
 	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, use 'make update-game' instead"; exit 2; fi
 	@echo "Creating game directory $(target)..."
-	@mkdir -p "$(target)"
+	@mkdir -p "$(target)/game"
 	@echo -n "Syncing library and game template files... "
 	@rsync -ap $(LIB_ENGINE_FILES) "$(target)"
-	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)"
+	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)/game"
 	@for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done
 	@echo "Done!"
 

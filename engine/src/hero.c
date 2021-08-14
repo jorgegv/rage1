@@ -35,13 +35,14 @@
 struct hero_info_s hero_startup_data = {
     NULL,		// sprite ptr - will be initialized at program startup
     HERO_SPRITE_NUM_GRAPHIC,
-    { 	HERO_SPRITE_SEQUENCE_UP,
+    {
+        HERO_SPRITE_SEQUENCE_UP,
         HERO_SPRITE_SEQUENCE_DOWN,
         HERO_SPRITE_SEQUENCE_LEFT,
         HERO_SPRITE_SEQUENCE_RIGHT,
         HERO_SPRITE_ANIMATION_DELAY,
-        0, 0
-        },	// animation
+        0, 0, 0, NULL
+    },	// animation
     { 0,0,0,0 },	// position - will be reset when entering a screen, including the first one
     { MOVE_NONE, HERO_MOVE_HSTEP, HERO_MOVE_VSTEP },	// movement
     0,		// flags

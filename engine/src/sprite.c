@@ -36,7 +36,7 @@ struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
 
     // create the sprite and first column
     s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE,
-        cols + 1,	// number of columns including the blank right one
+        rows + 1,	// number of rows including the blank bottom one
         0,		// left column graphic offset
         0		// z-plane
     );

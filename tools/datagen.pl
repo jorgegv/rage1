@@ -17,6 +17,7 @@ use utf8;
 use Data::Dumper;
 use List::MoreUtils qw( zip );
 use Getopt::Std;
+use Data::Compare;
 
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
@@ -31,6 +32,8 @@ my %sprite_name_to_index;
 my $hero;
 my $all_items;
 my $game_config;
+my @all_rules;
+my $screen_rules;
 
 my $c_file_home = 'game_data_home.c';
 my $c_file_banked = 'game_data_banked.c';
@@ -44,18 +47,28 @@ my @c_home_lines;
 my @c_banked_lines;
 my @h_lines;
 my @asm_lines;
+my $build_dir;
+
+######################################################
+## Configuration syntax definitions and lists
+######################################################
+
+my $syntax = {
+    valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
+};
 
 ##########################################
 ## Input data parsing and state machine
 ##########################################
 
 sub read_input_data {
-    # possible states: NONE, BTILE, SCREEN, SPRITE, HERO, GAME_CONFIG
+    # possible states: NONE, BTILE, SCREEN, SPRITE, HERO, GAME_CONFIG, RULE
     # initial state
     my $state = 'NONE';
     my $cur_btile = undef;
     my $cur_screen = undef;
     my $cur_sprite = undef;
+    my $cur_rule = undef;
 
     # read and process input
     my $num_line = 0;
@@ -102,6 +115,11 @@ sub read_input_data {
                 $state = 'GAME_CONFIG';
                 next;
             }
+            if ( $line =~ /^BEGIN_RULE$/ ) {
+                $state = 'RULE';
+                $cur_rule = undef;
+                next;
+            }
             die "Syntax error:line $num_line: '$line' not recognized (global section)\n";
 
         } elsif ( $state eq 'BTILE' ) {
@@ -133,7 +151,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $data = png_to_pixels_and_attrs(
-                    $vars->{'file'},
+                    $build_dir . '/' . $vars->{'file'},
                     $vars->{'xpos'}, $vars->{'ypos'},
                     $vars->{'width'}, $vars->{'height'},
                 );
@@ -193,11 +211,11 @@ sub read_input_data {
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
+                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 push @{$cur_sprite->{'png_attr'}}, @{ attr_data_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
+                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 next;
@@ -210,7 +228,7 @@ sub read_input_data {
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
                 push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
-                    $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
+                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
                 next;
             }
@@ -469,6 +487,55 @@ sub read_input_data {
                 next;
             }
             die "Syntax error:line $num_line: '$line' not recognized (GAME_CONFIG section)\n";
+
+        } elsif ( $state eq 'RULE' ) {
+            if ( $line =~ /^SCREEN\s+(\w+)$/ ) {
+                $cur_rule->{'screen'} = $1;
+                next;
+            }
+            if ( $line =~ /^WHEN\s+(\w+)$/ ) {
+                $cur_rule->{'when'} = lc( $1 );
+                next;
+            }
+            if ( $line =~ /^CHECK\s+(.+)$/ ) {
+                push @{$cur_rule->{'check'}}, $1;
+                next;
+            }
+            if ( $line =~ /^DO\s+(.+)$/ ) {
+                push @{$cur_rule->{'do'}}, $1;
+                next;
+            }
+            if ( $line =~ /^END_RULE$/ ) {
+                # validate rule before deduplicating it
+                validate_and_compile_rule( $cur_rule );
+
+                # we must delete WHEN and SCREEN for deduplicating rules,
+                # bt we must keep them for properly storing the rule
+                my $when = $cur_rule->{'when'};
+                delete $cur_rule->{'when'};
+                my $screen = $cur_rule->{'screen'};
+                delete $cur_rule->{'screen'};
+
+                # find an identical rule if it exists
+                my $found = find_existing_rule_index( $cur_rule );
+                my $index;
+                # use it if found, otherwise add the new one to the global rule list
+                if ( defined( $found ) ) {
+                    $index = $found;
+                } else {
+                    $index = scalar( @all_rules );
+                    push @all_rules, $cur_rule;
+                }
+
+                # add the rule index to the proper screen rule table
+                push @{ $screen_rules->{ $screen }{ $when } }, $index;
+
+                # clean up for next rule
+                $cur_rule = undef;
+                $state = 'NONE';
+                next;
+            }
+            die "Syntax error:line $num_line: '$line' not recognized (RULE section)\n";
 
         } else {
             die "Unknown state '$state'\n";
@@ -1165,6 +1232,24 @@ sub generate_screen {
         push @h_lines, sprintf("extern struct hotzone_info_s screen_%s_hotzones[] ;\n", $screen->{'name'} );
     }
 
+    # flow rules
+    push @c_banked_lines, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
+    foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
+        if ( defined( $screen_rules->{ $screen->{'name'} } ) and defined( $screen_rules->{ $screen->{'name'} }{ $table } ) ) {
+            my $num_rules = scalar( @{ $screen_rules->{ $screen->{'name'} }{ $table } } );
+            if ( $num_rules ) {
+                push @h_lines, sprintf( "extern struct flow_rule_s *screen_%s_%s_rules[];\n", $screen->{'name'}, $table );
+                push @c_banked_lines, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
+                    $screen->{'name'}, $table, $num_rules );
+                push @c_banked_lines, join( ",\n\t",
+                    map {
+                        sprintf( "&flow_all_rules[ %d ]", $_ )
+                    } @{ $screen_rules->{ $screen->{'name'} }{ $table } }
+                );
+                push @c_banked_lines, "\n};\n";
+            }
+        }
+    }
 }
 
 ###################################
@@ -1355,6 +1440,233 @@ sub generate_game_areas {
 }
 
 ###################################
+## flowgen rule functions
+###################################
+
+sub find_existing_rule_index {
+    my $rule = shift;
+    foreach my $i ( 0 .. ( scalar( @all_rules ) - 1 ) ) {
+        return $i if Compare( $rule, $all_rules[ $i ] );
+    }
+    return undef;
+}
+
+
+sub validate_and_compile_rule {
+    my $rule = shift;
+
+    # validate rule
+    defined( $rule->{'screen'} ) or
+        die "Rule has no SCREEN\n";
+    my $screen = $rule->{'screen'};
+    exists( $screen_name_to_index{ $screen } ) or
+        die "Screen '$screen' is not defined\n";
+
+    defined( $rule->{'when'} ) or
+        die "Rule has no WHEN clause\n";
+    my $when = $rule->{'when'};
+    grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
+        die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
+
+    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
+        die "At least one CHECK clause must be specified\n";
+
+    defined( $rule->{'do'} ) and scalar( @{ $rule->{'do'} } ) or
+        die "At least one DO clause must be specified\n";
+
+    # do any special filtering of values
+
+    # check filtering
+    foreach my $chk ( @{ $rule->{'check'} } ) {
+        my ( $check, $check_data ) = split( /\s+/, $chk );
+
+        # hotzone filtering
+        if ( $check =~ /^HERO_OVER_HOTZONE$/ ) {
+            $check_data = $screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
+            # regenerate the value with the filtered data
+            $chk = sprintf( "%s\t%d", $check, $check_data );
+        }
+
+    }
+
+    # action filtering
+    foreach my $do ( @{ $rule->{'do'} } ) {
+        $do =~ m/^(\w+)\s*(.*)$/;
+        my ( $action, $action_data ) = ( $1, $2 );
+
+        # hotzone filtering
+        if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
+            $action_data = $screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
+            # regenerate the value with the filtered data
+            $do = sprintf( "%s\t%d", $action, $action_data );
+        }
+
+        # warp_to_screen filtering
+        if ( $action =~ /^WARP_TO_SCREEN$/ ) {
+            my $vars = { 
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $action_data )
+            };
+            my @flag_list;
+            if ( not defined( $vars->{'dest_hero_x'} ) ) {
+                push @flag_list, 'ACTION_WARP_TO_SCREEN_KEEP_HERO_X';
+            }
+            if ( not defined( $vars->{'dest_hero_y'} ) ) {
+                push @flag_list, 'ACTION_WARP_TO_SCREEN_KEEP_HERO_Y';
+            }
+            my $flags = ( scalar( @flag_list ) ? join( " | ", @flag_list ) : 0 );
+            $action_data = sprintf( "{ .num_screen = %d, .hero_x = %d, .hero_y = %d, .flags = %s }",
+                $screen_name_to_index{ $vars->{'dest_screen'} },
+                ( $vars->{'dest_hero_x'} || 0 ), ( $vars->{'dest_hero_y'} || 0 ),
+                $flags,
+            );
+            # regenerate the value with the filtered data
+            $do = sprintf( "%s\t%s", $action, $action_data );
+        }
+
+        # btile filtering
+        if ( $action =~ /^(ENABLE|DISABLE)_BTILE$/ ) {
+            $action_data = $screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
+            # regenerate the value with the filtered data
+            $do = sprintf( "%s\t%d", $action, $action_data );
+        }
+
+        # set/reset screen flag filtering
+        if ( $action =~ /^(SET|RESET)_SCREEN_FLAG$/ ) {
+            my $vars = { 
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $action_data )
+            };
+            $action_data = sprintf( "{ .num_screen = %d, .flag = %s }",
+                $screen_name_to_index{ $vars->{'screen'} },
+                ( $vars->{'flag'} || 0 ),
+            );
+            # regenerate the value with the filtered data
+            $do = sprintf( "%s\t%s", $action, $action_data );
+        }
+
+    }
+
+    1;
+}
+
+# struct initializer formats depending on the check and action names
+my $check_data_output_format = {
+    GAME_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    GAME_FLAG_IS_RESET		=> ".data.flag_state.flag = %s",
+    LOOP_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    LOOP_FLAG_IS_RESET		=> ".data.flag_state.flag = %s",
+    USER_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    USER_FLAG_IS_RESET		=> ".data.flag_state.flag = %s",
+    LIVES_EQUAL			=> ".data.lives.count = %d",
+    LIVES_MORE_THAN		=> ".data.lives.count = %d",
+    LIVES_LESS_THAN		=> ".data.lives.count = %d",
+    ENEMIES_ALIVE_EQUAL		=> ".data.enemies.count = %d",
+    ENEMIES_ALIVE_MORE_THAN	=> ".data.enemies.count = %d",
+    ENEMIES_ALIVE_LESS_THAN	=> ".data.enemies.count = %d",
+    ENEMIES_KILLED_EQUAL	=> ".data.enemies.count = %d",
+    ENEMIES_KILLED_MORE_THAN	=> ".data.enemies.count = %d",
+    ENEMIES_KILLED_LESS_THAN	=> ".data.enemies.count = %d",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    ITEM_IS_OWNED		=> ".data.item.item_id = %s",
+    HERO_OVER_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
+    SCREEN_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
+    SCREEN_FLAG_IS_RESET	=> ".data.flag_state.flag = %s",
+};
+
+my $action_data_output_format = {
+    SET_USER_FLAG		=> ".data.user_flag.flag = %s",
+    RESET_USER_FLAG		=> ".data.user_flag.flag = %s",
+    INC_LIVES			=> ".data.lives.count = %s",
+    PLAY_SOUND			=> ".data.play_sound.sound_id = %s",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    END_OF_GAME			=> ".data.unused = %d",
+    WARP_TO_SCREEN		=> ".data.warp_to_screen = %s",
+    ENABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
+    DISABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
+    ENABLE_BTILE		=> ".data.btile.num_btile = %d",
+    DISABLE_BTILE		=> ".data.btile.num_btile = %d",
+    ADD_TO_INVENTORY		=> ".data.item.item_id = %s",
+    REMOVE_FROM_INVENTORY	=> ".data.item.item_id = %s",
+    SET_SCREEN_FLAG		=> ".data.screen_flag = %s",
+    RESET_SCREEN_FLAG		=> ".data.screen_flag = %s",
+};
+
+sub generate_rule_checks {
+    my ( $rule, $index ) = @_;
+    my $num_checks = scalar( @{ $rule->{'check'} } );
+    my $output = sprintf( "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
+        $index, $num_checks );
+    foreach my $ch ( @{ $rule->{'check'} } ) {
+        my ( $check, $check_data ) = split( /\s+/, $ch );
+        $output .= sprintf( "\t{ .type = RULE_CHECK_%s, %s },\n",
+            $check,
+            sprintf( $check_data_output_format->{ $check }, $check_data || 0 )
+        );
+    }
+    $output .= "};\n\n";
+    return $output;
+}
+
+sub generate_rule_actions {
+    my ( $rule, $index ) = @_;
+    my $num_actions = scalar( @{ $rule->{'do'} } );
+    my $output = sprintf( "struct flow_rule_action_s flow_rule_actions_%05d[%d] = {\n",
+        $index, $num_actions );
+    foreach my $ac ( @{ $rule->{'do'} } ) {
+        $ac =~ m/^(\w+)\s*(.*)$/;
+        my ( $action, $action_data ) = ( $1, $2 );
+        $output .= sprintf( "\t{ .type = RULE_ACTION_%s, %s },\n",
+            $action,
+            sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
+        );
+    }
+    $output .= "};\n\n";
+    return $output;
+}
+
+sub generate_flow_rules {
+
+    # file header comments
+    push @c_banked_lines, <<FLOW_DATA_C_1
+///////////////////////////////////////////////////////////
+//
+// Flow data
+//
+///////////////////////////////////////////////////////////
+
+FLOW_DATA_C_1
+;
+
+    # output check and action tables for each rule
+    push @c_banked_lines, sprintf( "// check tables for all rules\n" );
+    foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
+        push @c_banked_lines, generate_rule_checks( $all_rules[ $i ], $i );
+    }
+    push @c_banked_lines, sprintf( "// action tables for all rules\n" );
+    foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
+        push @c_banked_lines, generate_rule_actions( $all_rules[ $i ], $i );
+    }
+
+    # output global rule table
+    if ( scalar( @all_rules ) ) {
+        push @c_banked_lines, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
+            scalar( @all_rules ) );
+        push @h_lines, "extern struct flow_rule_s flow_all_rules[];\n";
+        push @c_banked_lines, "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
+        foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
+            push @c_banked_lines, "\t{";
+            push @c_banked_lines, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
+                scalar( @{ $all_rules[ $i ]{'check'} } ), $i );
+            push @c_banked_lines, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
+                scalar( @{ $all_rules[ $i ]{'do'} } ), $i );
+            push @c_banked_lines, " },\n";
+        }
+        push @c_banked_lines, "\n};\n\n";
+    }
+}
+
+###################################
 ## Utility functions
 ###################################
 
@@ -1447,6 +1759,7 @@ sub generate_c_home_header {
 //////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
+#include <sound/bit.h>
 
 #include "rage1/map.h"
 #include "rage1/sprite.h"
@@ -1455,6 +1768,7 @@ sub generate_c_home_header {
 #include "rage1/game_state.h"
 #include "rage1/bullet.h"
 #include "rage1/enemy.h"
+#include "rage1/flow.h"
 
 #include "game_data.h"
 
@@ -1471,6 +1785,7 @@ sub generate_c_banked_header {
 ////////////////////////////////&//////////////////////////////////////////
 
 #include <arch/spectrum.h>
+#include <sound/bit.h>
 
 #include "rage1/map.h"
 #include "rage1/sprite.h"
@@ -1479,6 +1794,7 @@ sub generate_c_banked_header {
 #include "rage1/game_state.h"
 #include "rage1/bullet.h"
 #include "rage1/enemy.h"
+#include "rage1/flow.h"
 
 #include "game_data.h"
 
@@ -1549,6 +1865,7 @@ EOF_MAP
     push @c_home_lines, sprintf( "struct map_screen_s map[ MAP_NUM_SCREENS ] = {\n" );
 
     push @c_home_lines, join( ",\n", map {
+            my $screen_name = $_->{'name'};
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
@@ -1568,10 +1885,20 @@ EOF_MAP
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
                 ) :
                 "\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
-            "\t\t.flow_data.rule_tables.enter_screen = { 0, NULL },\n" .
-            "\t\t.flow_data.rule_tables.exit_screen = { 0, NULL },\n" .
-            "\t\t.flow_data.rule_tables.game_loop = { 0, NULL },\n" .
-            "\t}"
+            join( ",\n", map {
+                sprintf( "\t\t.flow_data.rule_tables.%s = { %d, %s }",
+                    $_,
+                    ( scalar( @{ $screen_rules->{ $screen_name }{ $_ } } ) || 0 ),
+                    ( scalar( @{ $screen_rules->{ $screen_name }{ $_ } } ) ?
+                        sprintf( "&screen_%s_%s_rules[0]",
+                            $screen_name,
+                            $_
+                        ) :
+                        'NULL'
+                    )
+                )
+                } @{ $syntax->{'valid_whens'} } ) .
+            "\n\t}"
         } @screens );
     push @c_home_lines, "\n};\n\n";
 
@@ -1625,15 +1952,19 @@ sub generate_game_data {
 
     # generate data - each function is free to add lines to the .c or .h
     # file
+
+    # banked items
     generate_tiles;
     generate_sprites;
     generate_screens;
+    generate_flow_rules;
+
+    # home bank items
     generate_map;
     generate_hero;
     generate_bullets;
     generate_items;
     generate_game_areas;
-
     generate_game_config;
     generate_game_functions;
 
@@ -1679,6 +2010,8 @@ sub dump_internal_data {
         hero			=> $hero,
         all_items		=> $all_items,
         game_config		=> $game_config,
+        all_rules		=> \@all_rules,
+        screen_rules		=> $screen_rules,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
@@ -1689,14 +2022,15 @@ sub dump_internal_data {
 ## Main loop
 #########################
 
-our ( $opt_d, $opt_c );
-getopts("d:c");
+our ( $opt_b, $opt_d, $opt_c );
+getopts("b:d:c");
 if ( defined( $opt_d ) ) {
     $c_file_home = "$opt_d/$c_file_home";
     $c_file_banked = "$opt_d/$c_file_banked";
     $h_file = "$opt_d/$h_file";
     $dump_file = "$opt_d/$dump_file";
 }
+$build_dir = $opt_b || 'build';
 
 # read, validate and compile input
 read_input_data;
