@@ -1,6 +1,6 @@
 // Compile with:
 //
-//   zcc +zx -vn -SO3 -m -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 --no-crt data.c -o data.bin
+//   zcc +zx -vn -SO3 -m -Cl -reloc-info -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 --no-crt data.c -o data.bin
 //
 // Dump binary in hex with:
 //

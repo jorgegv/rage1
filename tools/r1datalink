@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use utf8;
+
+use Data::Dumper;
+use Getopt::Std;
+use File::Basename;
+
+my $verbose;
+
+# reads relocation records from a file, returns them in a listref
+sub read_relocations {
+    my $file = shift;
+    my @relocations;
+
+    open my $reloc, $file or
+        die "Could not open $file for reading\n";
+    binmode $reloc;
+
+    my $bindata;
+
+    # relocation records are just 16-bit positions in the binary file,
+    # pointing to the 16-bit addresses that need to be patched (adding the
+    # base address)
+    while ( read( $reloc, $bindata, 2 ) ) {
+        push @relocations, unpack("S", $bindata )
+    }
+
+    printf STDERR "Read %d relocation records from file %s\n", scalar( @relocations ), $file
+        if $verbose;
+
+    close $reloc;
+    return \@relocations;
+}
+
+# returns the file bytes as an array
+sub read_file_bytes {
+    my $file = shift;
+    my @bytes;
+
+    open my $binfile, $file or
+        die "Could not open $file for reading\n";
+    binmode $binfile;
+
+    my $bindata;
+    while ( read( $binfile, $bindata, 1024 ) ) {
+        push @bytes, unpack("C*", $bindata )
+    }
+
+    close $binfile;
+    return \@bytes;
+}
+
+# patches binary data with relocation info
+sub patch_binary_data {
+    my ( $data, $relocations, $base ) = @_;
+    
+    printf STDERR "Relocated base address: 0x%04x\n", $base
+        if $verbose;
+    foreach my $rel ( @$relocations ) {
+        my $old_l = $data->[ $rel ];
+        my $old_h = $data->[ $rel + 1 ];
+        my $old = ( $old_h << 8 ) + $old_l;
+        my $new = $old + $base;
+        my $new_h = ( $new & 0xff00 ) >> 8;
+        my $new_l = $new & 0xff;
+        $data->[ $rel ] = $new_l;
+        $data->[ $rel + 1 ] = $new_h;
+        printf STDERR "Patching address 0x%04x: 0x%04x -> 0x%04x\n", $rel, $old, $new
+            if $verbose;
+    }
+}
+
+# writes an array of bytes to a file
+sub write_file_bytes {
+    my ( $file, $bytes ) = @_;
+
+    open my $binfile, ">$file" or
+        die "Could not open $file for writing\n";
+    binmode $binfile;
+
+    my $bindata = pack( "C*", @$bytes );
+    print $binfile $bindata;
+
+    close $binfile;
+}
+
+##
+## Main loop
+##
+
+our ( $opt_f, $opt_b, $opt_o, $opt_v );
+getopts("f:b:o:v");
+( defined( $opt_f ) and defined( $opt_o ) and defined( $opt_b ) ) or
+    die "Usage: $0 -f <input_file.bin> -o <output_file> -b <base_address> [-v]\n";
+
+my $base_address = $opt_b || 0;
+if ( $opt_b =~ m/^0x/i ) {
+    $base_address = hex( $opt_b );
+}
+
+my $bin_file = $opt_f;
+my $reloc_file = basename( $opt_f, '.bin' ) . '.reloc';
+my $output_file = $opt_o;
+$verbose = defined( $opt_v ) ? 1 : 0;
+
+my $relocations = read_relocations( $reloc_file );
+my $bin_data = read_file_bytes( $bin_file );
+patch_binary_data( $bin_data, $relocations, $base_address );
+write_file_bytes( $output_file, $bin_data );
