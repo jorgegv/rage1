@@ -11,7 +11,11 @@
 
 #include <stdint.h>
 
-#pragma output CRT_ORG_DATA = 0x5B00
+static void orgit() __naked {
+__asm
+        org     0x5b00
+__endasm;
+}
 
 struct my_data {
     uint8_t	f1,f2;
