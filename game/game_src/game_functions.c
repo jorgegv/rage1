@@ -54,17 +54,17 @@ void my_menu_screen(void) {
 
    // draw external border
    for ( i=1; i<31; i++ ) {
-      btile_draw( BORDER_TOP, i, 	&btile_BorderH, TT_DECORATION, &full_screen);
-      btile_draw( BORDER_BOTTOM, i,	&btile_BorderH, TT_DECORATION, &full_screen );
+      btile_draw( BORDER_TOP, i, 	BTILE_BORDERH, TT_DECORATION, &full_screen);
+      btile_draw( BORDER_BOTTOM, i,	BTILE_BORDERH, TT_DECORATION, &full_screen );
    }
    for ( i=1; i<23; i++ ) {
-      btile_draw( i, BORDER_LEFT,	&btile_BorderV, TT_DECORATION, &full_screen );
-      btile_draw( i, BORDER_RIGHT,	&btile_BorderV, TT_DECORATION, &full_screen );
+      btile_draw( i, BORDER_LEFT,	BTILE_BORDERV, TT_DECORATION, &full_screen );
+      btile_draw( i, BORDER_RIGHT,	BTILE_BORDERV, TT_DECORATION, &full_screen );
    }
-   btile_draw( BORDER_TOP, BORDER_LEFT,		&btile_BorderTL, TT_DECORATION, &full_screen );
-   btile_draw( BORDER_TOP, BORDER_RIGHT,	&btile_BorderTR, TT_DECORATION, &full_screen );
-   btile_draw( BORDER_BOTTOM, BORDER_LEFT,	&btile_BorderBL, TT_DECORATION, &full_screen );
-   btile_draw( BORDER_BOTTOM, BORDER_RIGHT,	&btile_BorderBR, TT_DECORATION, &full_screen );
+   btile_draw( BORDER_TOP, BORDER_LEFT,		BTILE_BORDERTL, TT_DECORATION, &full_screen );
+   btile_draw( BORDER_TOP, BORDER_RIGHT,	BTILE_BORDERTR, TT_DECORATION, &full_screen );
+   btile_draw( BORDER_BOTTOM, BORDER_LEFT,	BTILE_BORDERBL, TT_DECORATION, &full_screen );
+   btile_draw( BORDER_BOTTOM, BORDER_RIGHT,	BTILE_BORDERBR, TT_DECORATION, &full_screen );
 
    // draw menu
    sp1_PrintString( &print_ctx, "\x13\x01" );		// bright 1
@@ -130,22 +130,22 @@ void draw_text_box( struct sp1_Rect *box, char *msg ) {
    // draw external border
    i = box->col + box->width - 2;
    while ( i > box->col ) {
-      btile_draw( box->row, i, &btile_BorderH, TT_DECORATION, &full_screen );
-      btile_draw( box->row + box->height - 1, i, &btile_BorderH, TT_DECORATION, &full_screen );
+      btile_draw( box->row, i, BTILE_BORDERH, TT_DECORATION, &full_screen );
+      btile_draw( box->row + box->height - 1, i, BTILE_BORDERH, TT_DECORATION, &full_screen );
       i--;
    }
 
    i = box->row + box->height - 2;
    while ( i > box->row ) {
-      btile_draw( i, box->col, &btile_BorderV, TT_DECORATION, &full_screen );
-      btile_draw( i, box->col + box->width - 1, &btile_BorderV, TT_DECORATION, &full_screen );
+      btile_draw( i, box->col, BTILE_BORDERV, TT_DECORATION, &full_screen );
+      btile_draw( i, box->col + box->width - 1, BTILE_BORDERV, TT_DECORATION, &full_screen );
       i--;
    }
 
-   btile_draw( box->row, box->col, &btile_BorderTL, TT_DECORATION, &full_screen );
-   btile_draw( box->row, box->col + box->width - 1, &btile_BorderTR, TT_DECORATION, &full_screen );
-   btile_draw( box->row + box->height - 1, box->col, &btile_BorderBL, TT_DECORATION, &full_screen );
-   btile_draw( box->row + box->height - 1, box->col + box->width - 1, &btile_BorderBR, TT_DECORATION, &full_screen );
+   btile_draw( box->row, box->col, BTILE_BORDERTL, TT_DECORATION, &full_screen );
+   btile_draw( box->row, box->col + box->width - 1, BTILE_BORDERTR, TT_DECORATION, &full_screen );
+   btile_draw( box->row + box->height - 1, box->col, BTILE_BORDERBL, TT_DECORATION, &full_screen );
+   btile_draw( box->row + box->height - 1, box->col + box->width - 1, BTILE_BORDERBR, TT_DECORATION, &full_screen );
 
    // clear interior rectangle
    if ( ( interior.width > 0 ) && ( interior.height > 0 ) ) {

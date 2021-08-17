@@ -47,7 +47,7 @@ struct hero_info_s hero_startup_data = {
     { MOVE_NONE, HERO_MOVE_HSTEP, HERO_MOVE_VSTEP },	// movement
     0,		// flags
     HERO_NUM_LIVES,	// lives
-    &HERO_LIVES_BTILE	// btile
+    HERO_LIVES_BTILE	// btile
 };
 
 void init_hero(void) {

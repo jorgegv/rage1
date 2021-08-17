@@ -29,7 +29,7 @@ struct btile_s {
 struct btile_pos_s {
     uint8_t type;
     uint8_t row, col;
-    struct btile_s *btile;
+    uint8_t btile_id;	// index into global btile table
     uint16_t flags;
 };
 

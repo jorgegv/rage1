@@ -189,7 +189,7 @@ void bullet_init_sprites(void) {
     bi = &game_state.bullet;
     bi->width = BULLET_SPRITE_WIDTH;
     bi->height = BULLET_SPRITE_HEIGHT;
-    bi->frames = &BULLET_SPRITE_FRAMES;
+    bi->frames = BULLET_SPRITE_FRAMES;
     bi->movement.dx = BULLET_MOVEMENT_DX;
     bi->movement.dy = BULLET_MOVEMENT_DY;
     bi->movement.delay = BULLET_MOVEMENT_DELAY;

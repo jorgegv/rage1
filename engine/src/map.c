@@ -57,7 +57,7 @@ void map_draw_screen(struct map_screen_s *s) {
         t = &s->btile_data.btiles_pos[i];
         if ( ! IS_BTILE_ACTIVE( *t ) )
             continue;
-        btile_draw( t->row, t->col, t->btile, t->type, &game_area );
+        btile_draw( t->row, t->col, &all_btiles[ t->btile_id ], t->type, &game_area );
     }
 
     // draw items

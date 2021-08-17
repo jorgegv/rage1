@@ -797,16 +797,13 @@ sub generate_btile {
         $tile->{'name'},
         scalar( @{ $attrs } ),
         join( ', ', @{ $attrs } ) );
-    push @c_banked_lines, sprintf( "struct btile_s btile_%s = { %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] };\n",
-        $tile->{'name'},
-        $tile->{'rows'},
-        $tile->{'cols'},
-        $tile->{'name'},
-        $tile->{'name'} );
     push @c_banked_lines, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 
-    # output auxiliary data pointers
-    push @h_lines, sprintf( "extern struct btile_s btile_%s;\n", $tile->{'name'} );
+    # output auxiliary definitions
+    push @h_lines, sprintf( "#define BTILE_%s\t( &all_btiles[ %d ] )\n",
+        uc( $tile->{'name'} ),
+        $btile_name_to_index{ $tile->{'name'} },
+    );
 }
 
 #####################################
@@ -969,14 +966,9 @@ sub generate_sprite {
         } @{ $sprite->{'sequences'} } );
         push @c_banked_lines, "\n};\n\n";
 
-        # output the prototype
-        push @h_lines, sprintf( "extern struct animation_sequence_s sprite_%s_sequences[];\n", $sprite_name );
     }
 
     push @c_banked_lines, sprintf( "// End of Sprite '%s'\n\n", $sprite_name );
-
-    push @h_lines, sprintf( "extern uint8_t sprite_%s_data[];\n", $sprite_name );
-    push @h_lines, sprintf( "extern uint8_t *sprite_%s_frames[];\n", $sprite_name );
 }
 
 ######################################
@@ -1136,8 +1128,9 @@ sub generate_screen {
         push @c_banked_lines, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'btiles'}} ) );
+
         push @c_banked_lines, join( ",\n", map {
-                sprintf("\t{ TT_%s, %d, %d, &btile_%s, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $_->{'btile'}, ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
+                sprintf("\t{ TT_%s, %d, %d, %d, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $btile_name_to_index{ $_->{'btile'} }, ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
             } @{$screen->{'btiles'}} );
         push @c_banked_lines, "\n};\n\n";
 
@@ -1282,7 +1275,7 @@ sub validate_and_compile_hero {
 
 sub generate_hero {
     my $num_lives 	= $hero->{'lives'}{'num_lives'};
-    my $lives_tile	= $hero->{'lives'}{'btile'};
+    my $lives_tile	= 'BTILE_' . uc( $hero->{'lives'}{'btile'} );
     my $sprite		= $hero->{'sprite'};
     my $num_sprite	= $sprite_name_to_index{ $hero->{'sprite'} };
     my $sequence_up	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
@@ -1306,7 +1299,7 @@ sub generate_hero {
 #define	HERO_MOVE_HSTEP			$hstep
 #define	HERO_MOVE_VSTEP			$vstep
 #define	HERO_NUM_LIVES			$num_lives
-#define	HERO_LIVES_BTILE		(btile_${lives_tile})
+#define	HERO_LIVES_BTILE		$lives_tile
 
 EOF_HERO1
 ;
@@ -1315,6 +1308,7 @@ EOF_HERO1
 sub generate_bullets {
     my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
     my $sprite_name = $hero->{'bullet'}{'sprite'};
+    my $sprite_index = $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
     my $width = $sprite->{'cols'} * 8;
     my $height = $sprite->{'rows'} * 8;
     my $max_bullets = $hero->{'bullet'}{'max_bullets'};
@@ -1337,7 +1331,8 @@ sub generate_bullets {
 #define	BULLET_MAX_BULLETS	$max_bullets
 #define	BULLET_SPRITE_WIDTH	$width
 #define	BULLET_SPRITE_HEIGHT	$height
-#define	BULLET_SPRITE_FRAMES	(sprite_${sprite_name}_frames[0])
+#define BULLET_SPRITE_ID	$sprite_index
+#define	BULLET_SPRITE_FRAMES	( all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
 #define	BULLET_SPRITE_XTHRESH	$xthresh
 #define	BULLET_SPRITE_YTHRESH	$ythresh
 #define	BULLET_MOVEMENT_DX	$dx
@@ -1381,8 +1376,8 @@ EOF_ITEMS1
     push @c_home_lines, join( ",\n",
         map {
             exists( $all_items->{ $_ } ) ?
-                sprintf( "\t{ &btile_%s, 0x%04x, F_ITEM_ACTIVE }",
-                    $all_items->{ $_ }{'btile'},
+                sprintf( "\t{ BTILE_%s, 0x%04x, F_ITEM_ACTIVE }",
+                    uc( $all_items->{ $_ }{'btile'} ),
                     ( 0x1 << $all_items->{ $_ }{'item_index'} ),
                 ) :
                 "\t{ NULL, 0, 0 }"
@@ -1813,8 +1808,10 @@ EOF_TILES
     # generate the tiles
     foreach my $tile ( @btiles ) { generate_btile( $tile ); }
 
-    # generate the global tile table
-    push @c_banked_lines, "// Global Tile table\n";
+    # generate the global btile table
+    push @h_lines, "\nextern struct btile_s all_btiles[];\n";
+
+    push @c_banked_lines, "// Global BTile table\n";
     push @c_banked_lines, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @btiles ) );
     foreach my $tile ( @btiles ) {
         push @c_banked_lines, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
@@ -1824,12 +1821,12 @@ EOF_TILES
             $tile->{'name'} );
     }
     push @c_banked_lines, "};\n";
-    push @c_banked_lines, "// End of Global Tile table\n\n";
+    push @c_banked_lines, "// End of Global BTile table\n\n";
 
 }
 
 sub generate_sprites {
-    push @c_home_lines, <<EOF_SPRITES
+    push @c_banked_lines, <<EOF_SPRITES
 ////////////////////////////
 // Sprite definitions
 ////////////////////////////
@@ -1840,9 +1837,9 @@ EOF_SPRITES
 
     # output global sprite graphics table
     my $num_sprites = scalar( @sprites );
-    push @c_home_lines, "// Global sprite graphics table\n";
-    push @c_home_lines, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
-    push @c_home_lines, join( ",\n\n\t", map {
+    push @c_banked_lines, "// Global sprite graphics table\n";
+    push @c_banked_lines, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
+    push @c_banked_lines, join( ",\n\n\t", map {
         my $sprite = $_;
         sprintf( "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = %s }",
             $_->{'cols'} * 8, $_->{'rows'} * 8,
@@ -1850,7 +1847,7 @@ EOF_SPRITES
             scalar( @{ $sprite->{'sequences'} } ),	# number of animation sequences
             ( scalar( @{ $sprite->{'sequences'} } ) ? sprintf( "&sprite_%s_sequences[0]", $_->{'name'}) : 'NULL' ) ),
     } @sprites );
-    push @c_home_lines, "\n};\n\n";
+    push @c_banked_lines, "\n};\n\n";
 }
 
 sub generate_screens {
@@ -1894,7 +1891,7 @@ EOF_MAP
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
             ( defined( $_->{'background'} ) ?
                 sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
-                    sprintf( "&btile_%s", $_->{'background'}{'btile'} ),
+                    sprintf( "BTILE_%s", uc( $_->{'background'}{'btile'} ) ),
                     ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
                     $_->{'background'}{'row'}, $_->{'background'}{'col'},
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
