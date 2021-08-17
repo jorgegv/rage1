@@ -1810,7 +1810,22 @@ sub generate_tiles {
 
 EOF_TILES
 ;
+    # generate the tiles
     foreach my $tile ( @btiles ) { generate_btile( $tile ); }
+
+    # generate the global tile table
+    push @c_banked_lines, "// Global Tile table\n";
+    push @c_banked_lines, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @btiles ) );
+    foreach my $tile ( @btiles ) {
+        push @c_banked_lines, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
+            $tile->{'rows'},
+            $tile->{'cols'},
+            $tile->{'name'},
+            $tile->{'name'} );
+    }
+    push @c_banked_lines, "};\n";
+    push @c_banked_lines, "// End of Global Tile table\n\n";
+
 }
 
 sub generate_sprites {
