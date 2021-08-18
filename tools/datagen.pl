@@ -1753,6 +1753,11 @@ EOF_HEADER
 }
 
 sub generate_c_banked_header {
+    my $num_btiles	= scalar( @btiles );
+    my $num_sprites	= scalar( @sprites );
+    my $num_flow_rules	= scalar( @all_rules );
+    my $num_screens	= scalar( @screens );
+
     push @c_banked_lines, <<EOF_HEADER
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -1771,8 +1776,26 @@ sub generate_c_banked_header {
 #include "rage1/bullet.h"
 #include "rage1/enemy.h"
 #include "rage1/flow.h"
+#include "rage1/asset.h"
 
 #include "game_data.h"
+
+//////////////////////////////////////////////////////////////////////////////
+// Asset index for this bank - This structure must be the first data item
+// generated in the bank: it contains pointers to the rest of the bank data
+// items!
+//////////////////////////////////////////////////////////////////////////////
+
+struct asset_data_s all_assets = {
+    .num_btiles			= $num_btiles,
+    .all_btiles			= &all_btiles[0],
+    .num_sprite_graphics	= $num_sprites,
+    .all_sprite_graphics	= &all_sprite_graphics[0],
+    .num_flow_rules		= $num_flow_rules,
+    .all_flow_rules		= &flow_all_rules[0],
+    .num_screens		= $num_screens,
+    .all_screens		= &map[0],
+};
 
 EOF_HEADER
 ;
