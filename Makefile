@@ -78,7 +78,7 @@ build:
 
 clean:
 	@-rm -rf *.{lis,bin,tap,c.asm,map,log} \
-		$(GENERATED_DIR)/*.{c,h,map,lis,o,c.asm,dep,dmp} \
+		$(BUILD_DIR)/{game_src,game_data,generated} \
 		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm} \
 		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm} \
 		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm} \
