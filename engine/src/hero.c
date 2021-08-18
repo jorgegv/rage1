@@ -34,7 +34,7 @@
 
 struct hero_info_s hero_startup_data = {
     NULL,		// sprite ptr - will be initialized at program startup
-    HERO_SPRITE_NUM_GRAPHIC,
+    HERO_SPRITE_ID,
     {
         HERO_SPRITE_SEQUENCE_UP,
         HERO_SPRITE_SEQUENCE_DOWN,
