@@ -1818,6 +1818,8 @@ EOF_SPRITES
 
     # output global sprite graphics table
     my $num_sprites = scalar( @sprites );
+    push @h_lines, "// Global sprite graphics table\n";
+    push @h_lines, "extern struct sprite_graphic_data_s all_sprite_graphics[];\n";
     push @c_banked_lines, "// Global sprite graphics table\n";
     push @c_banked_lines, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
     push @c_banked_lines, join( ",\n\n\t", map {
