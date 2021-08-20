@@ -275,16 +275,17 @@ This is indeed a paging memory manager design :-)
 
 ## Design Keys for Game Data
 
-- All of the game code must reside in low memory (below 0xc00), as a rule of
+- All of the game code must reside in low memory (below 0xc000), as a rule of
   thumb. Code that is used in exceptional situations (menu, start, game end,
   game over conditions) can be in other banks provided that it does not call
   anything outside its own bank or the main bank.
 
-- There are some assets that are used all the time and must reside in low
-  memory: character set, game state, etc.
+- There are some assets that are used all the time and must reside in the
+  home bank: character set, game state, etc.
 
 - There are other assets that are used only at given times, and that can be
-  loaded and unloaded on-demand: sprites, tiles, screen rules, sounds, etc.
+  loaded and unloaded on-demand: sprites, tiles, screens, flow rules,
+  sounds, etc.
 
 - For the loadable assets that are reusable, a simple optimization is to
   have them organized in SETS.  I.e.  sprite sets, btile sets, sound
@@ -311,6 +312,37 @@ This is indeed a paging memory manager design :-)
 - Element sets need not be big.  In fact, they should be as small as
   possible, in order to fit in low RAM.  We can have a big number of sets
   in high memory, up to 80 KB (5 x 16KB banks: 1,3,4,6,7)
+
+## Banked Game Data Implementation
+
+- A game DATASET (sprites, map, rules, btiles, etc.) must be self contained:
+  pointers can only reference data that is either inside the same DATASET or
+  the home memory bank.  This allows to compile a game DATASET to a single
+  binary with no external dependencies.
+
+- An ASSET RECORD structure is generated as the first element in the DATASET
+  source file generated.  It contains pointers to the asset tables inside
+  the DATASET.
+
+- The DATASET binary file is compiled at a fixed ORG address of 0x5B00 (this
+  is the address where it will be loaded at runtime).  Since the ASSET
+  RECORD structure is the first data item in the DATASET, and the address is
+  known, we can access all the internal game data assets from the main code
+  by using this structure and its internal pointers.
+
+- DATASETs are compressed after being compiled, and inserted as named binary
+  data (a byte array) in a BANKED DATA SOURCE FILE, which is compiled with a
+  "#pragma BANK N" directive.  This generates a TAP file which loads the
+  contents of extra memory banks and makes them available at runtime.
+
+- The DATASET REFERENCE TABLE (DRT) must be generated and included in main
+  (non-banked) memory.  This table contains triplets of (dataset, memory bank,
+  source address), which are used to decompress the dataset into the final
+  0x5B00 runtime address.
+
+- The data in the DRT is used at runtime to select the proper DATASET and
+  switch to the neded memory bank when starting the game, switching screens,
+  ending game, etc.
 
 ## References
 
