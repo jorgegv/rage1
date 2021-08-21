@@ -325,30 +325,33 @@ This is indeed a paging memory manager design :-)
   the DATASET.
 
 - The DATASET binary file is compiled at a fixed ORG address of 0x5B00 (this
-  is the address where it will be loaded at runtime).  Since the ASSET
-  RECORD structure is the first data item in the DATASET, and the address is
-  known, we can access all the internal game data assets from the main code
-  by using this structure and its internal pointers.
+  is the address where it will be loaded at runtime).  It is generated with
+  the "__orgit" trick by Dom
+  (https://z88dk.org/forum/viewtopic.php?p=19796#p19796) so that it is
+  compiled to the desired base address 0x5B00.  Since the ASSET RECORD
+  structure is the first data item in the DATASET, and the address is known,
+  we can access all the internal game data assets from the main code by
+  using this structure and its internal pointers.  It is also linked as
+  standalone binary files with no CRT.
+  Example commands:
+
+~~~
+zcc +zx -compiler=sdcc -clib=sdcc_iy dataset1.c -o dataset1.bin --no-crt
+~~~
 
 - DATASETs are compressed after being compiled, and inserted as binary data
   (a named byte array) in a BANKED DATA SOURCE FILE.
 
-- BANKED DATA SOURCE FILEs are generated with the "__orgit" trick by Dom
-  (https://z88dk.org/forum/viewtopic.php?p=19796#p19796) so that they are
-  compiled to base address 0xC000 (the address where they will be loaded and
-  accessed at runtime). They are also linked as standalone binary files with
-  no CRT, and a TAP file is created with no loader, only the CODE section.
-  Example commands:
-
-~~~
-zcc +zx -compiler=sdcc -clib=sdcc_iy bank3.c -o bank3 --no-crt
-z88dk-appmake +zx --org 0xC000  --noloader -b bank3_code_compiler.bin -o bank3.tap
-~~~
+- BANKED DATA SOURCE FILEs are ASM files with an ORG directive to 0xC000, a
+  public reference to the binary data and a BINARY directive to include the
+  compiled DATASET binary file data.
 
 - The DATASET REFERENCE TABLE (DRT) must be generated and included in main
   (non-banked) memory.  This table contains triplets of (dataset, memory bank,
   source address), which are used to decompress the dataset into the final
-  0x5B00 runtime address.
+  0x5B00 runtime address. THe source address is the public reference in the
+  banked data source file, so that several datasets can be included in the
+  same bank.
 
 - The data in the DRT is used at runtime to select the proper DATASET and
   switch to the neded memory bank when starting the game, switching screens,
