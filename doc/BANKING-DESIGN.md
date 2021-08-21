@@ -330,10 +330,20 @@ This is indeed a paging memory manager design :-)
   known, we can access all the internal game data assets from the main code
   by using this structure and its internal pointers.
 
-- DATASETs are compressed after being compiled, and inserted as named binary
-  data (a byte array) in a BANKED DATA SOURCE FILE, which is compiled with a
-  "#pragma BANK N" directive.  This generates a TAP file which loads the
-  contents of extra memory banks and makes them available at runtime.
+- DATASETs are compressed after being compiled, and inserted as binary data
+  (a named byte array) in a BANKED DATA SOURCE FILE.
+
+- BANKED DATA SOURCE FILEs are generated with the "__orgit" trick by Dom
+  (https://z88dk.org/forum/viewtopic.php?p=19796#p19796) so that they are
+  compiled to base address 0xC000 (the address where they will be loaded and
+  accessed at runtime). They are also linked as standalone binary files with
+  no CRT, and a TAP file is created with no loader, only the CODE section.
+  Example commands:
+
+~~~
+zcc +zx -compiler=sdcc -clib=sdcc_iy bank3.c -o bank3 --no-crt
+z88dk-appmake +zx --org 0xC000  --noloader -b bank3_code_compiler.bin -o bank3.tap
+~~~
 
 - The DATASET REFERENCE TABLE (DRT) must be generated and included in main
   (non-banked) memory.  This table contains triplets of (dataset, memory bank,
