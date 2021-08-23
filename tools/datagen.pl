@@ -36,7 +36,7 @@ my @all_rules;
 my $screen_rules;
 
 my $c_file_home = 'game_data_home.c';
-my $c_file_banked = 'game_data_banked.c';
+my $c_file_dataset_0 = 'datasets/dataset_0.c';
 my $h_file = 'game_data.h';
 
 # dump file for internal state
@@ -2000,8 +2000,8 @@ sub output_game_data {
     close $output_fh;
 
     # output .c file for banked data
-    open( $output_fh, ">", $c_file_banked ) or
-        die "Could not open $c_file_banked for writing\n";
+    open( $output_fh, ">", $c_file_dataset_0 ) or
+        die "Could not open $c_file_dataset_0 for writing\n";
     print $output_fh join( "", @c_banked_lines );
     close $output_fh;
 
@@ -2044,7 +2044,7 @@ our ( $opt_b, $opt_d, $opt_c );
 getopts("b:d:c");
 if ( defined( $opt_d ) ) {
     $c_file_home = "$opt_d/$c_file_home";
-    $c_file_banked = "$opt_d/$c_file_banked";
+    $c_file_dataset_0 = "$opt_d/$c_file_dataset_0";
     $h_file = "$opt_d/$h_file";
     $dump_file = "$opt_d/$dump_file";
 }

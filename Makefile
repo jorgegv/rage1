@@ -9,19 +9,25 @@
 ################################################################################
 
 # directory configurations
-ENGINE_DIR	= engine
-BUILD_DIR	= build
-GENERATED_DIR	= $(BUILD_DIR)/generated
-GAME_SRC_DIR	= $(BUILD_DIR)/game_src
-GAME_DATA_DIR	= $(BUILD_DIR)/game_data
+ENGINE_DIR		= engine
+BUILD_DIR		= build
+GENERATED_DIR		= $(BUILD_DIR)/generated
+GENERATED_DIR_DATASETS	= $(GENERATED_DIR)/datasets
+GAME_SRC_DIR		= $(BUILD_DIR)/game_src
+GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
 # Sources
 CSRC 		= $(wildcard $(GAME_SRC_DIR)/*.c)   $(wildcard $(ENGINE_DIR)/src/*.c)   $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC		= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
 SRC		= $(CSRC) $(ASMSRC)
 
+CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
+ASMSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.asm)
+SRC_DATASETS	= $(CSRC_DATASETS) $(ASMSRC_DATASETS)
+
 # Objs:
 OBJS		= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
+OBJS_DATASETS	= $(CSRC_DATASETS:.c=.o) $(ASMSRC_DATASETS:.asm=.o)
 
 # compiler
 ZCC		= zcc
@@ -88,14 +94,14 @@ clean-config:
 
 config:
 	@$(MAKE) -s clean-config
-	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/
+	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/
 	@cp -r game/game_data/* $(GAME_DATA_DIR)/
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
 	@echo "Build config: REGULAR GAME"
 
-game.tap: $(OBJS)
+game.tap: $(OBJS) $(OBJS_DATASETS)
 	@echo Bulding game.tap ...
-	@$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) $(OBJS_DATASETS) -startup=31 -create-app -o game.bin
 	@echo Build completed SUCCESSFULLY
 
 ##
@@ -105,7 +111,7 @@ game.tap: $(OBJS)
 $(GENERATED_DIR)/game_data_home.c: $(GENERATED_DIR)/game_data.dep
 	@$(MAKE) -s data
 
-$(GENERATED_DIR)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
+$(GENERATED_DIR_DATASETS)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
 	@$(MAKE) -s data
 
 $(GENERATED_DIR)/game_data.dep: data_depend
