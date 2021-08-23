@@ -26,6 +26,7 @@ OBJS		= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
 SRC_DATASETS	= $(CSRC_DATASETS)
 BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
+DATASET_MAXSIZE	= 9472
 
 # compiler
 ZCC		= zcc
@@ -133,6 +134,8 @@ dataset_%.bin: dataset_%.c
 	@echo Compiling DATASET $< ...
 	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
 	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; \
+		else echo "  DATASET $$( basename $@ ) size is $$( stat -c%s $@ ) bytes - Fine!"; fi
 
 ## Banks
 
