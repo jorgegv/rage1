@@ -19,6 +19,9 @@ use List::MoreUtils qw( zip );
 use Getopt::Std;
 use Data::Compare;
 
+# final destination address for compilation of datasets
+my $dataset_base_address = 0x5b00;
+
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
 # also in $all_state variable in dump_internal_state function at the end of
@@ -1780,11 +1783,24 @@ sub generate_c_banked_header {
 
 #include "game_data.h"
 
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+// Forced ORG address trick by Dom - The following does not generate any
+// code but forces the linking to be at the indicated base address.  This is
+// needed because SDCC does not allow relocating the DATA section.  See:
+// https://z88dk.org/forum/viewtopic.php?p=19796#p19796
+///////////////////////////////////////////////////////////////////////////////
+
+static void __orgit(void) __naked {
+__asm
+    org $dataset_base_address
+__endasm;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Asset index for this bank - This structure must be the first data item
 // generated in the bank: it contains pointers to the rest of the bank data
 // items!
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 struct asset_data_s all_assets = {
     .num_btiles			= $num_btiles,

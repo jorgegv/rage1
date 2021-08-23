@@ -16,18 +16,16 @@ GENERATED_DIR_DATASETS	= $(GENERATED_DIR)/datasets
 GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
-# Sources
+# Main sources and objs
 CSRC 		= $(wildcard $(GAME_SRC_DIR)/*.c)   $(wildcard $(ENGINE_DIR)/src/*.c)   $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC		= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
 SRC		= $(CSRC) $(ASMSRC)
-
-CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
-ASMSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.asm)
-SRC_DATASETS	= $(CSRC_DATASETS) $(ASMSRC_DATASETS)
-
-# Objs:
 OBJS		= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
-OBJS_DATASETS	= $(CSRC_DATASETS:.c=.o) $(ASMSRC_DATASETS:.asm=.o)
+
+# Dataset sources and binaries
+CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
+SRC_DATASETS	= $(CSRC_DATASETS)
+BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
 
 # compiler
 ZCC		= zcc
@@ -75,6 +73,7 @@ build:
 	@$(MAKE) -s clean
 	@$(MAKE) -s config
 	@$(MAKE) -s data
+	@$(MAKE) -s datasets
 	@$(MAKE) -s -j8 all
 
 # include minimal game configuration.  If the Makefile has been copied to a
@@ -101,7 +100,7 @@ config:
 
 game.tap: $(OBJS) $(OBJS_DATASETS)
 	@echo Bulding game.tap ...
-	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) $(OBJS_DATASETS) -startup=31 -create-app -o game.bin
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
 	@echo Build completed SUCCESSFULLY
 
 ##
@@ -123,6 +122,21 @@ data_depend:
 	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
 	@ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
+
+##
+## Dataset compilation to standalone binaries org'ed at 0x5C00
+##
+
+datasets: $(BIN_DATASETS)
+
+dataset_%.bin: dataset_%.c
+	@echo Compiling DATASET $< ...
+	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
+	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+
+## Banks
+
+## TBC...
 
 ##
 ## Run options and target
