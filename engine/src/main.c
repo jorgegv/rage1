@@ -17,6 +17,7 @@
 #include "rage1/hero.h"
 #include "rage1/game_state.h"
 #include "rage1/debug.h"
+#include "rage1/asset.h"
 
 #include "game_data.h"
 
@@ -24,6 +25,7 @@ void init_program(void) {
    init_memory();
    init_sp1();
    init_interrupts();
+   init_assets();
    init_controllers();
    init_hero();
    init_bullets();

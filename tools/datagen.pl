@@ -803,7 +803,11 @@ sub generate_btile {
     push @c_banked_lines, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 
     # output auxiliary definitions
-    push @h_lines, sprintf( "#define BTILE_%s\t( &all_btiles[ %d ] )\n",
+    push @h_lines, sprintf( "#define BTILE_%s\t( &current_assets.all_btiles[ %d ] )\n",
+        uc( $tile->{'name'} ),
+        $btile_name_to_index{ $tile->{'name'} },
+    );
+    push @h_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
         uc( $tile->{'name'} ),
         $btile_name_to_index{ $tile->{'name'} },
     );
@@ -1226,7 +1230,7 @@ sub generate_screen {
                     $screen->{'name'}, $table, $num_rules );
                 push @c_banked_lines, join( ",\n\t",
                     map {
-                        sprintf( "&flow_all_rules[ %d ]", $_ )
+                        sprintf( "&all_flow_rules[ %d ]", $_ )
                     } @{ $screen_rules->{ $screen->{'name'} }{ $table } }
                 );
                 push @c_banked_lines, "\n};\n";
@@ -1265,7 +1269,7 @@ sub validate_and_compile_hero {
 
 sub generate_hero {
     my $num_lives 	= $hero->{'lives'}{'num_lives'};
-    my $lives_tile	= 'BTILE_' . uc( $hero->{'lives'}{'btile'} );
+    my $lives_btile_num	= 'BTILE_ID_' . uc( $hero->{'lives'}{'btile'} );
     my $sprite		= $hero->{'sprite'};
     my $num_sprite	= $sprite_name_to_index{ $hero->{'sprite'} };
     my $sequence_up	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
@@ -1289,7 +1293,7 @@ sub generate_hero {
 #define	HERO_MOVE_HSTEP			$hstep
 #define	HERO_MOVE_VSTEP			$vstep
 #define	HERO_NUM_LIVES			$num_lives
-#define	HERO_LIVES_BTILE		$lives_tile
+#define	HERO_LIVES_BTILE_NUM		$lives_btile_num
 
 EOF_HERO1
 ;
@@ -1322,7 +1326,7 @@ sub generate_bullets {
 #define	BULLET_SPRITE_WIDTH	$width
 #define	BULLET_SPRITE_HEIGHT	$height
 #define BULLET_SPRITE_ID	$sprite_index
-#define	BULLET_SPRITE_FRAMES	( all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
+#define	BULLET_SPRITE_FRAMES	( current_assets.all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
 #define	BULLET_SPRITE_XTHRESH	$xthresh
 #define	BULLET_SPRITE_YTHRESH	$ythresh
 #define	BULLET_MOVEMENT_DX	$dx
@@ -1366,11 +1370,11 @@ EOF_ITEMS1
     push @c_home_lines, join( ",\n",
         map {
             exists( $all_items->{ $_ } ) ?
-                sprintf( "\t{ BTILE_%s, 0x%04x, F_ITEM_ACTIVE }",
+                sprintf( "\t{ BTILE_ID_%s, 0x%04x, F_ITEM_ACTIVE }",
                     uc( $all_items->{ $_ }{'btile'} ),
                     ( 0x1 << $all_items->{ $_ }{'item_index'} ),
                 ) :
-                "\t{ NULL, 0, 0 }"
+                "\t{ 0, 0, 0 }"
             } ( 0 .. 15 )
     );
 
@@ -1637,8 +1641,7 @@ FLOW_DATA_C_1
     if ( scalar( @all_rules ) ) {
         push @c_banked_lines, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
             scalar( @all_rules ) );
-        push @h_lines, "extern struct flow_rule_s flow_all_rules[];\n";
-        push @c_banked_lines, "struct flow_rule_s flow_all_rules[ FLOW_NUM_RULES ] = {\n";
+        push @c_banked_lines, "struct flow_rule_s all_flow_rules[ FLOW_NUM_RULES ] = {\n";
         foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
             push @c_banked_lines, "\t{";
             push @c_banked_lines, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
@@ -1790,11 +1793,11 @@ sub generate_c_banked_header {
 // https://z88dk.org/forum/viewtopic.php?p=19796#p19796
 ///////////////////////////////////////////////////////////////////////////////
 
-static void __orgit(void) __naked {
-__asm
-    org $dataset_base_address
-__endasm;
-}
+//static void __orgit(void) __naked {
+//__asm
+//    org $dataset_base_address
+//__endasm;
+//}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Asset index for this bank - This structure must be the first data item
@@ -1802,15 +1805,15 @@ __endasm;
 // items!
 ///////////////////////////////////////////////////////////////////////////////
 
-struct asset_data_s all_assets = {
+struct asset_data_s all_assets_dataset_0 = {
     .num_btiles			= $num_btiles,
     .all_btiles			= &all_btiles[0],
     .num_sprite_graphics	= $num_sprites,
     .all_sprite_graphics	= &all_sprite_graphics[0],
     .num_flow_rules		= $num_flow_rules,
-    .all_flow_rules		= &flow_all_rules[0],
+    .all_flow_rules		= &all_flow_rules[0],
     .num_screens		= $num_screens,
-    .all_screens		= &map[0],
+    .all_screens		= &all_screens[0],
 };
 
 EOF_HEADER
@@ -1818,6 +1821,15 @@ EOF_HEADER
 }
 
 sub generate_tiles {
+
+    push @h_lines, <<EOF_TILES_H
+////////////////////////////
+// Big Tile definitions
+////////////////////////////
+
+EOF_TILES_H
+;
+
     push @c_banked_lines, <<EOF_TILES
 ////////////////////////////
 // Big Tile definitions
@@ -1829,7 +1841,6 @@ EOF_TILES
     foreach my $tile ( @btiles ) { generate_btile( $tile ); }
 
     # generate the global btile table
-    push @h_lines, "\nextern struct btile_s all_btiles[];\n";
 
     push @c_banked_lines, "// Global BTile table\n";
     push @c_banked_lines, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @btiles ) );
@@ -1857,8 +1868,6 @@ EOF_SPRITES
 
     # output global sprite graphics table
     my $num_sprites = scalar( @sprites );
-    push @h_lines, "// Global sprite graphics table\n";
-    push @h_lines, "extern struct sprite_graphic_data_s all_sprite_graphics[];\n";
     push @c_banked_lines, "// Global sprite graphics table\n";
     push @c_banked_lines, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
     push @c_banked_lines, join( ",\n\n\t", map {
@@ -1896,7 +1905,7 @@ sub generate_map {
 // main game map
 EOF_MAP
 ;
-    push @c_banked_lines, sprintf( "struct map_screen_s map[ MAP_NUM_SCREENS ] = {\n" );
+    push @c_banked_lines, sprintf( "struct map_screen_s all_screens[ MAP_NUM_SCREENS ] = {\n" );
 
     push @c_banked_lines, join( ",\n", map {
             my $screen_name = $_->{'name'};
@@ -1913,7 +1922,7 @@ EOF_MAP
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
             ( defined( $_->{'background'} ) ?
                 sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
-                    sprintf( "BTILE_%s", uc( $_->{'background'}{'btile'} ) ),
+                    sprintf( "BTILE_ID_%s", uc( $_->{'background'}{'btile'} ) ),
                     ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
                     $_->{'background'}{'row'}, $_->{'background'}{'col'},
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
@@ -1937,10 +1946,13 @@ EOF_MAP
     push @c_banked_lines, "\n};\n\n";
 
     push @h_lines, <<GAME_DATA_H_2
-// global map data structure - autogenerated by datagen tool into
-// game_data.c
+
+////////////////////
+// map definitions
+////////////////////
+
 #define MAP_NUM_SCREENS $num_screens
-extern struct map_screen_s map[];
+
 GAME_DATA_H_2
 ;
 }
@@ -1952,6 +1964,10 @@ sub generate_h_header {
 
 #include <stdint.h>
 #include <games/sp1.h>
+
+#include "rage1/asset.h"
+
+extern struct asset_data_s all_assets_dataset_0;
 
 GAME_DATA_H_1
 ;

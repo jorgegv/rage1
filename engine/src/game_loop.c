@@ -46,10 +46,10 @@ void check_game_flags( void ) {
       if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
 
          // draw screen and reset sprites
-         map_draw_screen( &map[ game_state.current_screen ] );
+         map_draw_screen( &current_assets.all_screens[ game_state.current_screen ] );
          enemy_reset_position_all( 
-            map[ game_state.current_screen ].enemy_data.num_enemies, 
-            map[ game_state.current_screen ].enemy_data.enemies
+            current_assets.all_screens[ game_state.current_screen ].enemy_data.num_enemies, 
+            current_assets.all_screens[ game_state.current_screen ].enemy_data.enemies
          );
          bullet_reset_all();
          RESET_GAME_FLAG( F_GAME_START );
@@ -62,8 +62,8 @@ void check_game_flags( void ) {
             SET_GAME_FLAG( F_GAME_OVER );
          else {
             enemy_reset_position_all(
-               map[ game_state.current_screen ].enemy_data.num_enemies, 
-               map[ game_state.current_screen ].enemy_data.enemies
+               current_assets.all_screens[ game_state.current_screen ].enemy_data.num_enemies, 
+               current_assets.all_screens[ game_state.current_screen ].enemy_data.enemies
             );
             hero_reset_position();
             bullet_reset_all();
@@ -79,8 +79,8 @@ void move_enemies(void) {
 
    // move enemies
    enemy_animate_and_move_all(
-      map[ game_state.current_screen ].enemy_data.num_enemies, 
-      map[ game_state.current_screen ].enemy_data.enemies
+      current_assets.all_screens[ game_state.current_screen ].enemy_data.num_enemies, 
+      current_assets.all_screens[ game_state.current_screen ].enemy_data.enemies
    );
 }
 
@@ -201,12 +201,12 @@ void run_main_game_loop(void) {
    // cleanup
 
    // free sprites in the current screen
-   map_exit_screen( &map[ game_state.current_screen ] );
+   map_exit_screen( &current_assets.all_screens[ game_state.current_screen ] );
 
    // move all moving things off-screen:
    hero_move_offscreen();
-   enemy_move_offscreen_all( map[ game_state.current_screen ].enemy_data.num_enemies,
-      map[ game_state.current_screen ].enemy_data.enemies );
+   enemy_move_offscreen_all( current_assets.all_screens[ game_state.current_screen ].enemy_data.num_enemies,
+      current_assets.all_screens[ game_state.current_screen ].enemy_data.enemies );
    bullet_move_offscreen_all();
 
 }

@@ -65,8 +65,8 @@ void check_flow_rules(void) {
     ////////////////////////////////////////////////////////
 
     // current_screen and previous_screen may change here, be aware of it!
-    if ( map[ game_state.current_screen ].flow_data.rule_tables.game_loop.num_rules )
-        run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.game_loop );
+    if ( current_assets.all_screens[ game_state.current_screen ].flow_data.rule_tables.game_loop.num_rules )
+        run_flow_rule_table( &current_assets.all_screens[ game_state.current_screen ].flow_data.rule_tables.game_loop );
 
     // current_screen and previous_screen may have changed here, be aware of it"
 
@@ -78,12 +78,12 @@ void check_flow_rules(void) {
         // run EXIT_SCREEN rules for the previous screen
         // but skip if game just started and this is the first game loop run
         if ( ! GET_GAME_FLAG( F_GAME_START ) )
-            if ( map[ game_state.previous_screen ].flow_data.rule_tables.exit_screen.num_rules )
-                run_flow_rule_table( &map[ game_state.previous_screen ].flow_data.rule_tables.exit_screen );
+            if ( current_assets.all_screens[ game_state.previous_screen ].flow_data.rule_tables.exit_screen.num_rules )
+                run_flow_rule_table( &current_assets.all_screens[ game_state.previous_screen ].flow_data.rule_tables.exit_screen );
 
         // run ENTER_SCREEN rules
-        if ( map[ game_state.current_screen ].flow_data.rule_tables.enter_screen.num_rules )
-            run_flow_rule_table( &map[ game_state.current_screen ].flow_data.rule_tables.enter_screen );
+        if ( current_assets.all_screens[ game_state.current_screen ].flow_data.rule_tables.enter_screen.num_rules )
+            run_flow_rule_table( &current_assets.all_screens[ game_state.current_screen ].flow_data.rule_tables.enter_screen );
     }
 }
 
@@ -163,18 +163,18 @@ uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) __z88dk_f
 
 uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88dk_fastcall {
     struct hotzone_info_s *hz;
-    hz = &map[ game_state.current_screen ].hotzone_data.hotzones[ check->data.hotzone.num_hotzone ];
+    hz = &current_assets.all_screens[ game_state.current_screen ].hotzone_data.hotzones[ check->data.hotzone.num_hotzone ];
     return ( GET_HOTZONE_FLAG( *hz, F_HOTZONE_ACTIVE ) &&
         collision_check( &game_state.hero.position, &hz->position )
     );
 }
 
 uint8_t do_rule_check_screen_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( GET_SCREEN_FLAG( map[ game_state.current_screen ], check->data.flag_state.flag ) ? 1 : 0 );
+    return ( GET_SCREEN_FLAG( current_assets.all_screens[ game_state.current_screen ], check->data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_screen_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( GET_SCREEN_FLAG( map[ game_state.current_screen ], check->data.flag_state.flag ) ? 0 : 1 );
+    return ( GET_SCREEN_FLAG( current_assets.all_screens[ game_state.current_screen ], check->data.flag_state.flag ) ? 0 : 1 );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -218,25 +218,25 @@ void do_rule_action_warp_to_screen( struct flow_rule_action_s *action ) __z88dk_
 }
 
 void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    SET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
+    SET_HOTZONE_FLAG( current_assets.all_screens[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
         F_HOTZONE_ACTIVE );
 }
 
 void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    RESET_HOTZONE_FLAG( map[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
+    RESET_HOTZONE_FLAG( current_assets.all_screens[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
         F_HOTZONE_ACTIVE );
 }
 
 void do_rule_action_enable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    struct btile_pos_s *t = &map[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
+    struct btile_pos_s *t = &current_assets.all_screens[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
     SET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
-    btile_draw( t->row, t->col, &all_btiles[ t->btile_id ] , t->type, &game_area);
+    btile_draw( t->row, t->col, &current_assets.all_btiles[ t->btile_id ] , t->type, &game_area);
 }
 
 void do_rule_action_disable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    struct btile_pos_s *t = &map[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
+    struct btile_pos_s *t = &current_assets.all_screens[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
     RESET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
-    btile_remove( t->row, t->col, &all_btiles[ t->btile_id ] );
+    btile_remove( t->row, t->col, &current_assets.all_btiles[ t->btile_id ] );
 }
 
 void do_rule_action_add_to_inventory( struct flow_rule_action_s *action ) __z88dk_fastcall {
@@ -250,11 +250,11 @@ void do_rule_action_remove_from_inventory( struct flow_rule_action_s *action ) _
 }
 
 void do_rule_action_set_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    SET_SCREEN_FLAG( map[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
+    SET_SCREEN_FLAG( current_assets.all_screens[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
 }
 
 void do_rule_action_reset_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    RESET_SCREEN_FLAG( map[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
+    RESET_SCREEN_FLAG( current_assets.all_screens[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
 }
 
 // dispatch tables for check and action functions

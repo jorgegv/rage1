@@ -56,7 +56,7 @@ struct map_screen_s {
         } rule_tables;
     } flow_data;
     struct {
-        struct btile_s *btile;
+        uint8_t btile_num;
         uint8_t probability;
         struct sp1_Rect box;
     } background_data;

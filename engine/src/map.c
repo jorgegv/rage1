@@ -32,11 +32,11 @@ void map_draw_screen(struct map_screen_s *s) {
     btile_clear_type_all_screen();
 
     // draw background if present
-    if ( s->background_data.btile ) {
+    if ( s->background_data.probability ) {
         maxr = s->background_data.box.row + s->background_data.box.height - 1;
         maxc = s->background_data.box.col + s->background_data.box.width - 1;
-        btwidth = s->background_data.btile->num_cols;
-        btheight = s->background_data.btile->num_rows;
+        btwidth = current_assets.all_btiles[ s->background_data.btile_num ].num_cols;
+        btheight = current_assets.all_btiles[ s->background_data.btile_num ].num_rows;
 
         r = s->background_data.box.row;
         while ( r <= maxr ) {
@@ -44,7 +44,7 @@ void map_draw_screen(struct map_screen_s *s) {
             while ( c <= maxc ) {
                 // draw the btile with probability (s->background_data.probability / 255)
                 if ( (uint8_t) rand() <= s->background_data.probability )
-                    btile_draw( r, c, s->background_data.btile, TT_DECORATION, &s->background_data.box );
+                    btile_draw( r, c, &current_assets.all_btiles[ s->background_data.btile_num ], TT_DECORATION, &s->background_data.box );
                 c += btwidth;
             }
             r += btheight;
@@ -57,7 +57,7 @@ void map_draw_screen(struct map_screen_s *s) {
         t = &s->btile_data.btiles_pos[i];
         if ( ! IS_BTILE_ACTIVE( *t ) )
             continue;
-        btile_draw( t->row, t->col, &all_btiles[ t->btile_id ], t->type, &game_area );
+        btile_draw( t->row, t->col, &current_assets.all_btiles[ t->btile_id ], t->type, &game_area );
     }
 
     // draw items
@@ -66,7 +66,7 @@ void map_draw_screen(struct map_screen_s *s) {
         it = &s->item_data.items[i];
         if ( ! IS_ITEM_ACTIVE( all_items[ it->item_num ] ) )
             continue;
-        btile_draw( it->row, it->col, all_items[ it->item_num ].btile, TT_ITEM, &game_area );
+        btile_draw( it->row, it->col, &current_assets.all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
     }
 }
 
@@ -77,8 +77,8 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     i = s->item_data.num_items;
     while ( i-- ) {
         it = &s->item_data.items[i];
-        rmax = it->row + all_items[ it->item_num ].btile->num_rows - 1;
-        cmax = it->col + all_items[ it->item_num ].btile->num_cols - 1;
+        rmax = it->row + current_assets.all_btiles[ all_items[ it->item_num ].btile_num ].num_rows - 1;
+        cmax = it->col + current_assets.all_btiles[ all_items[ it->item_num ].btile_num ].num_cols - 1;
         if ( ( row >= it->row ) && ( row <= rmax ) &&
              ( col >= it->col ) && ( col <= cmax ) )
             return it;
@@ -97,7 +97,7 @@ void map_sprites_reset_all(void) {
     uint8_t i;
     i = MAP_NUM_SCREENS;
     while ( i-- )
-        map_screen_reset_all_sprites ( &map[ i ] );
+        map_screen_reset_all_sprites ( &current_assets.all_screens[ i ] );
 }
 
 uint16_t map_count_enemies_all(void) {
@@ -107,7 +107,7 @@ uint16_t map_count_enemies_all(void) {
     count = 0;
     i = MAP_NUM_SCREENS;
     while ( i-- )
-        count += map[ i ].enemy_data.num_enemies;
+        count += current_assets.all_screens[ i ].enemy_data.num_enemies;
 
     return count;
 }
@@ -127,8 +127,8 @@ void map_allocate_sprites( struct map_screen_s *m ) {
     i = m->enemy_data.num_enemies;
     while ( i-- ) {
         s = sprite_allocate(
-            all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].height >> 3,
-            all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].width >> 3
+            current_assets.all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].height >> 3,
+            current_assets.all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].width >> 3
         );
         sprite_set_color( s, m->enemy_data.enemies[ i ].color );
         m->enemy_data.enemies[ i ].sprite = s;

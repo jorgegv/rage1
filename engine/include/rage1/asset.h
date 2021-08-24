@@ -44,4 +44,16 @@ struct asset_data_s {
     struct map_screen_s			*all_screens;
 };
 
+// global struct that holds the current assets table
+extern struct asset_data_s current_assets;
+
+// asset tables for dataset_0
+extern struct asset_data_s all_assets;
+
+// initial game assets initialization
+void init_assets( void );
+
+// switches asset tables (e.g. when loading a new dataset)
+void asset_set_tables( struct asset_data_s *s );
+
 #endif // _ASSET_H

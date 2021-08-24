@@ -26,6 +26,7 @@ OBJS		= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
 SRC_DATASETS	= $(CSRC_DATASETS)
 BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
+OBJS_DATASETS	= $(CSRC_DATASETS:.c=.o)
 DATASET_MAXSIZE	= 9472
 
 # compiler
@@ -74,7 +75,7 @@ build:
 	@$(MAKE) -s clean
 	@$(MAKE) -s config
 	@$(MAKE) -s data
-	@$(MAKE) -s datasets
+#	@$(MAKE) -s datasets
 	@$(MAKE) -s -j8 all
 
 # include minimal game configuration.  If the Makefile has been copied to a
@@ -101,7 +102,7 @@ config:
 
 game.tap: $(OBJS) $(OBJS_DATASETS)
 	@echo Bulding game.tap ...
-	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) $(OBJS_DATASETS) -startup=31 -create-app -o game.bin
 	@echo Build completed SUCCESSFULLY
 
 ##
