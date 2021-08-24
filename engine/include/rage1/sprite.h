@@ -39,7 +39,6 @@ struct  sprite_graphic_data_s {
         struct animation_sequence_s *sequences;
     } sequence_data;
 };
-extern struct sprite_graphic_data_s all_sprite_graphics[];
 
 //////////////////////////////////////////////////////////////////////////
 // animation data structs which can be included in others (e.g. enemy, hero, etc.)
@@ -78,7 +77,7 @@ struct attr_param_s {
     uint8_t attr_mask;
 };
 
-extern struct attr_param_s sprite_attr_param;
+//extern struct attr_param_s sprite_attr_param;
 void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c );
 
 #endif // _SPRITE_H
