@@ -47,9 +47,6 @@ struct asset_data_s {
 // global struct that holds the current assets table
 extern struct asset_data_s current_assets;
 
-// asset tables for dataset_0
-extern struct asset_data_s all_assets;
-
 // initial game assets initialization
 void init_assets( void );
 
