@@ -26,7 +26,6 @@ OBJS		= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
 SRC_DATASETS	= $(CSRC_DATASETS)
 BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
-OBJS_DATASETS	= $(CSRC_DATASETS:.c=.o)
 DATASET_MAXSIZE	= 9472
 
 # compiler
@@ -100,9 +99,9 @@ config:
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
 	@echo "Build config: REGULAR GAME"
 
-game.tap: $(OBJS) $(OBJS_DATASETS)
+game.tap: $(BIN_DATASETS) $(OBJS)
 	@echo Bulding game.tap ...
-	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) $(OBJS_DATASETS) -startup=31 -create-app -o game.bin
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
 	@echo Build completed SUCCESSFULLY
 
 ##

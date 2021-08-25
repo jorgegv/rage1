@@ -20,6 +20,9 @@
 
 #include "game_data.h"
 
+// Banking settings
+#define BANKED_DATASET_BASE_ADDRESS     0x5B00
+
 // The following structure contains pointers to asset tables.  It is
 // intended to be generated as the first element in a banked game_data.c
 // file, so that it is the first structure in the generated binary.

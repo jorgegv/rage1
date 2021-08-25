@@ -21,5 +21,6 @@ void asset_set_tables( struct asset_data_s *s ) {
 }
 
 void init_assets(void) {
-    asset_set_tables( &all_assets_dataset_0 );
+//    asset_set_tables( &all_assets_dataset_0 );
+    asset_set_tables( (struct asset_data_s *)BANKED_DATASET_BASE_ADDRESS );
 }

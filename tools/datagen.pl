@@ -1793,11 +1793,11 @@ sub generate_c_banked_header {
 // https://z88dk.org/forum/viewtopic.php?p=19796#p19796
 ///////////////////////////////////////////////////////////////////////////////
 
-//static void __orgit(void) __naked {
-//__asm
-//    org $dataset_base_address
-//__endasm;
-//}
+static void __orgit(void) __naked {
+__asm
+    org $dataset_base_address
+__endasm;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Asset index for this bank - This structure must be the first data item

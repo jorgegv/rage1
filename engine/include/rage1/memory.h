@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 // Memory allocator settings
-#define MALLOC_HEAP_SIZE        2048
+#define MALLOC_HEAP_SIZE        5000
 
 void init_memory(void);
 #endif // _MEMORY_H
