@@ -118,7 +118,7 @@ sub generate_bank_config {
 
     open my $bankcfg_h, ">", $bankcfg
         or die "\n** Error: could not open $bankcfg for writing\n";
-    print $bankcfg_h join("\n", sort keys %$layout );
+    print $bankcfg_h join(",", sort keys %$layout );
     print $bankcfg_h "\n";
     close $bankcfg_h;
     print "OK\n";

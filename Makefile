@@ -28,9 +28,29 @@ SRC_DATASETS	= $(CSRC_DATASETS)
 BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
 DATASET_MAXSIZE	= 9472
 
-# Bank switcher routine for BASIC
+# Bank binaries and taps
+BANKS_CFG	= $(GENERATED_DIR)/banks.cfg
+BANK_BINS	= $(wildcard $(GENERATED_DIR)/bank_*.bin)
+BANK_TAPS	= $(BANK_BINS:.bin=.tap)
+
+# Bank switcher routine for BASIC and tap
 BSWITCH_SRC	= $(ENGINE_DIR)/bank/bswitch.asm
 BSWITCH_BIN	= $(GENERATED_DIR)/bswitch.bin
+BSWITCH_TAP	= $(BSWITCH_BIN:.bin=.tap)
+
+# BASIC Loder and tap
+BAS_LOADER	= $(GENERATED_DIR)/loader.bas
+BAS_LOADER_TAP	= $(BAS_LOADER:.bas=.tap)
+
+# Taps
+TAPS		= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP)
+
+# General game tap
+GAME_BIN	= game.bin
+GAME_TAP	= $(GAME_BIN:.bin=.tap)
+
+# All taps
+TAPS		= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP)
 
 # compiler
 ZCC		= zcc
@@ -72,7 +92,7 @@ help:
 	@echo "* Use 'make update-game' for updating library code in an existing game"
 	@echo ""
 
-all: data_depend game.tap
+all: data_depend $(GAME_TAP)
 
 build:
 	@$(MAKE) -s clean
@@ -81,6 +101,7 @@ build:
 	@$(MAKE) -s datasets
 	@$(MAKE) -s banks
 	@$(MAKE) -s bank_switcher
+	@$(MAKE) -s taps
 	@$(MAKE) -s -j8 all
 
 # include minimal game configuration.  If the Makefile has been copied to a
@@ -105,9 +126,12 @@ config:
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
 	@echo "Build config: REGULAR GAME"
 
-game.tap: $(OBJS)
-	@echo Bulding game.tap ...
-	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
+$(GAME_BIN): $(OBJS)
+	@echo Bulding game.bin....
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(GAME_BIN)
+
+$(GAME_TAP): $(GAME_BIN) $(TAPS)
+	# Unfinished...
 	@echo Build completed SUCCESSFULLY
 
 ##
@@ -154,6 +178,19 @@ bank_switcher: $(BSWITCH_BIN)
 $(BSWITCH_BIN):
 	@echo "Assemblying bank switch routine..."
 	@$(ZCC) $(CFLAGS) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
+
+## Taps
+
+taps: $(TAPS)
+
+# we set org at 0x0000, the real load address is set in the BASIC loader
+%.tap: %.bin
+	@echo "Creating TAP $@..."
+	@z88dk-appmake +zx --noloader --org 0x0000 -b $<
+
+%.tap: %.bas
+	@echo "Creating TAP $@..."
+	@bas2tap -sLOADER -a10 -q $<
 
 ##
 ## Run options and target
