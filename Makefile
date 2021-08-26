@@ -28,6 +28,10 @@ SRC_DATASETS	= $(CSRC_DATASETS)
 BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
 DATASET_MAXSIZE	= 9472
 
+# Bank switcher routine for BASIC
+BSWITCH_SRC	= $(ENGINE_DIR)/bank/bswitch.asm
+BSWITCH_BIN	= $(GENERATED_DIR)/bswitch.bin
+
 # compiler
 ZCC		= zcc
 
@@ -74,7 +78,9 @@ build:
 	@$(MAKE) -s clean
 	@$(MAKE) -s config
 	@$(MAKE) -s data
-#	@$(MAKE) -s datasets
+	@$(MAKE) -s datasets
+	@$(MAKE) -s banks
+	@$(MAKE) -s bank_switcher
 	@$(MAKE) -s -j8 all
 
 # include minimal game configuration.  If the Makefile has been copied to a
@@ -99,7 +105,7 @@ config:
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
 	@echo "Build config: REGULAR GAME"
 
-game.tap: $(BIN_DATASETS) $(OBJS)
+game.tap: $(OBJS)
 	@echo Bulding game.tap ...
 	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -create-app -o game.bin
 	@echo Build completed SUCCESSFULLY
@@ -139,7 +145,15 @@ dataset_%.bin: dataset_%.c
 
 ## Banks
 
-## TBC...
+banks:
+	@echo "Building bank configuration, binaries and BASIC loader..."
+	@./tools/r1banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -b .bin
+
+bank_switcher: $(BSWITCH_BIN)
+
+$(BSWITCH_BIN):
+	@echo "Assemblying bank switch routine..."
+	@$(ZCC) $(CFLAGS) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
 
 ##
 ## Run options and target
