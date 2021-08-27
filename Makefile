@@ -30,7 +30,7 @@ DATASET_MAXSIZE	= 9472
 
 # Bank binaries and taps
 BANKS_CFG	= $(GENERATED_DIR)/banks.cfg
-BANK_BINS	= $(wildcard $(GENERATED_DIR)/bank_*.bin)
+BANK_BINS	= $(wildcard $(GENERATED_DIR)/bank_{$(shell cat $(BANKS_CFG) 2>/dev/null )}.bin)
 BANK_TAPS	= $(BANK_BINS:.bin=.tap)
 
 # Bank switcher routine for BASIC and tap
@@ -38,19 +38,19 @@ BSWITCH_SRC	= $(ENGINE_DIR)/bank/bswitch.asm
 BSWITCH_BIN	= $(GENERATED_DIR)/bswitch.bin
 BSWITCH_TAP	= $(BSWITCH_BIN:.bin=.tap)
 
-# BASIC Loder and tap
+# BASIC Loader and tap
 BAS_LOADER	= $(GENERATED_DIR)/loader.bas
 BAS_LOADER_TAP	= $(BAS_LOADER:.bas=.tap)
 
-# Taps
-TAPS		= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP)
-
-# General game tap
-GAME_BIN	= game.bin
-GAME_TAP	= $(GAME_BIN:.bin=.tap)
+# Main binary and tap
+MAIN_BIN	= main.bin
+MAIN_TAP	= $(MAIN_BIN:.bin=.tap)
 
 # All taps
-TAPS		= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP)
+TAPS		= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP) $(MAIN_TAP)
+
+# Final game TAP
+FINAL_TAP	= game.tap
 
 # compiler
 ZCC		= zcc
@@ -92,7 +92,7 @@ help:
 	@echo "* Use 'make update-game' for updating library code in an existing game"
 	@echo ""
 
-all: data_depend $(GAME_TAP)
+final: $(FINAL_TAP)
 
 build:
 	@$(MAKE) -s clean
@@ -101,8 +101,9 @@ build:
 	@$(MAKE) -s datasets
 	@$(MAKE) -s banks
 	@$(MAKE) -s bank_switcher
+	@$(MAKE) -s -j8 main
 	@$(MAKE) -s taps
-	@$(MAKE) -s -j8 all
+	@$(MAKE) -s final
 
 # include minimal game configuration.  If the Makefile has been copied to a
 # Game directory 'make build' works as usual.  If it is the Makefile on the
@@ -126,13 +127,14 @@ config:
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
 	@echo "Build config: REGULAR GAME"
 
-$(GAME_BIN): $(OBJS)
-	@echo Bulding game.bin....
-	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(GAME_BIN)
+$(MAIN_BIN): $(OBJS)
+	@echo "Bulding $(MAIN_BIN)...."
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
 
-$(GAME_TAP): $(GAME_BIN) $(TAPS)
-	# Unfinished...
-	@echo Build completed SUCCESSFULLY
+$(FINAL_TAP): $(TAPS)
+	@echo "Building final TAP $(FINAL_TAP)..."
+	@cat $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP) > $(FINAL_TAP)
+	@echo "Build completed SUCCESSFULLY"
 
 ##
 ## Generated source code targets
@@ -161,7 +163,7 @@ data_depend:
 datasets: $(BIN_DATASETS)
 
 dataset_%.bin: dataset_%.c
-	@echo Compiling DATASET $< ...
+	@echo "Compiling DATASET $< ..."
 	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
 	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
 	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; \
@@ -170,13 +172,13 @@ dataset_%.bin: dataset_%.c
 ## Banks
 
 banks:
-	@echo "Building bank configuration, binaries and BASIC loader..."
+	@echo "Building bank binaries and BASIC loader..."
 	@./tools/r1banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -b .bin
 
 bank_switcher: $(BSWITCH_BIN)
 
 $(BSWITCH_BIN):
-	@echo "Assemblying bank switch routine..."
+	@echo "Assembling bank switch routine..."
 	@$(ZCC) $(CFLAGS) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
 
 ## Taps
@@ -192,16 +194,20 @@ taps: $(TAPS)
 	@echo "Creating TAP $@..."
 	@bas2tap -sLOADER -a10 -q $<
 
+## Main game
+
+main: $(MAIN_BIN)
+
 ##
 ## Run options and target
 ##
 
-FUSE_RUN_OPTS=--machine 48
-run: game.tap
-	@fuse $(FUSE_RUN_OPTS) game.tap
+FUSE_RUN_OPTS=--machine 128
+run: $(FINAL_TAP)
+	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP)
 
-runz: game.tap
-	@../zesarux/src/zesarux game.tap
+runz: $(FINAL_TAP)
+	@../zesarux/src/zesarux $(FINAL_TAP)
 
 ##
 ## Tests

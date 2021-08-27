@@ -171,9 +171,8 @@ sub generate_basic_loader {
     # generate the lines first, we'll number them later
     my @lines;
 
-    # Program starts at address 0x8184, CLEAR to the byte before
-    my $main_code_start = 0x8184;
-    push @lines, sprintf( 'CLEAR %d', $main_code_start - 1 );
+    # Bank switch routine loads at address 0x8000, CLEAR to the byte before
+    push @lines, sprintf( 'CLEAR %d', 0x7FFF );
 
     # load bank switching code at 0x8000 (32768)
     # bank variable is at 0x8000, code switching entry point at 0x8001
@@ -188,7 +187,8 @@ sub generate_basic_loader {
     push @lines, sprintf( 'POKE %d,%d : RANDOMIZE USR %d', 0x8000, 0, 0x8001 );
 
     # load main program code at 0x8184 and start execution
-    push @lines, sprintf( 'LOAD "" CODE : RANDOMIZE USR %d', $main_code_start );
+    my $main_code_start = 0x8184;
+    push @lines, sprintf( 'LOAD "" CODE %d : RANDOMIZE USR %d', $main_code_start, $main_code_start );
 
     # that's it, output the BASIC program
     open my $bas_h, ">", $bas_loader
