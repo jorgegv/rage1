@@ -17,10 +17,12 @@ GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
 # Main sources and objs
-CSRC 		= $(wildcard $(GAME_SRC_DIR)/*.c)   $(wildcard $(ENGINE_DIR)/src/*.c)   $(wildcard $(GENERATED_DIR)/*.c)
-ASMSRC		= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
-SRC		= $(CSRC) $(ASMSRC)
-OBJS		= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
+LOWMEM_CSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.c)
+LOWMEM_ASMSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.asm)
+CSRC 		= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
+ASMSRC		= $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
+SRC		= $(LOWMEM_ASMSRC) $(LOWMEM_CSRC) $(CSRC) $(ASMSRC)
+OBJS		= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 
 # Dataset sources and binaries
 CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)

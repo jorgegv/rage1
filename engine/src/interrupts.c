@@ -20,12 +20,12 @@
 #include <intrinsic.h>
 #include <z80.h>
 
+#include "rage1/interrupts.h"
 #include "rage1/debug.h"
 
 // data struct and ISR hook for timekeeping
-struct time {
-   uint8_t hour, min, sec, frame;
-} current_time = { 0, 0, 0, 0 };
+// struct time_s current_time = { 0, 0, 0, 0 };
+// moved to lowmem/asmdata.asm to ensure it is placed in memory below 0xC000
 
 // timer tick routine
 IM2_DEFINE_ISR(do_timer_tick)

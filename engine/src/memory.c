@@ -30,6 +30,3 @@ void init_memory(void) {
 //   u_malloc = malloc;
 //   u_free = free;
 }
-
-void memory_select_bank( uint8_t bank_num ) {
-}

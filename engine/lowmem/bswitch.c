@@ -8,15 +8,9 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _MEMORY_H
-#define _MEMORY_H
-
 #include <stdint.h>
+#include <arch/zx.h>
 
-// Memory allocator settings
-#define MALLOC_HEAP_SIZE        1500
-
-void memory_switch_bank( uint8_t bank_num );
-
-void init_memory(void);
-#endif // _MEMORY_H
+void memory_switch_bank( uint8_t bank ) {
+    IO_7FFD = bank;
+}

@@ -18,8 +18,10 @@
 
 struct dataset_map_s {
     uint8_t	bank_num;	// bank number
+    uint16_t	size;		// dataset size
     uint16_t	offset;		// address offset from 0xC000
 };
+extern struct dataset_map_s dataset_map[];
 
 void dataset_activate( uint8_t ds );
 

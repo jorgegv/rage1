@@ -71,8 +71,8 @@ sub layout_binaries {
         }
 
         # add the bank and offset info to the dataset. Offset is the curent pos in the bank
-        $bins->{ $bk }{'bank'} = $valid_banks[ $current_bank_index ];
-        $bins->{ $bk }{'offset'} = $layout->{ $valid_banks[ $current_bank_index ] }{'size'} || 0;
+        $bin->{'bank'} = $valid_banks[ $current_bank_index ];
+        $bin->{'offset'} = $layout->{ $valid_banks[ $current_bank_index ] }{'size'} || 0;
 
         # then update the bank layout
         push @{ $layout->{ $valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
@@ -147,8 +147,9 @@ EOF_DSMAP_1
 
     print $dsmap_h join( ",\n",
         map {
-            sprintf( "\t{ .bank_num = %d, .offset = %d }",
+            sprintf( "\t{ .bank_num = %d, .size = %d, .offset = %d }",
                 $datasets->{ $_ }{'bank'},
+                $datasets->{ $_ }{'size'},
                 $datasets->{ $_ }{'offset'} );
         } sort keys %$datasets
     );

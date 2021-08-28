@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "rage1/asset.h"
+#include "rage1/dataset.h"
 
 // global struct that holds the current assets table
 struct asset_data_s current_assets;
@@ -22,5 +23,7 @@ void asset_set_tables( struct asset_data_s *s ) {
 
 void init_assets(void) {
 //    asset_set_tables( &all_assets_dataset_0 );
-    asset_set_tables( (struct asset_data_s *)BANKED_DATASET_BASE_ADDRESS );
+//    asset_set_tables( (struct asset_data_s *)BANKED_DATASET_BASE_ADDRESS );
+    // start game with dataset 0
+    dataset_activate( 0 );
 }
