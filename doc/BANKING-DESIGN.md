@@ -47,10 +47,10 @@ the execution phase.
 
 The Loading phase starts by loading a BASIC loader that does the following:
 
-- Set RAMTOP to 0x6fff (that's enough space to run the complete loader)
+- Set RAMTOP to 0x7fff (that's enough space to run the complete loader)
 
 - Load a minimal bank switching ASM routine at an address below 0x8184 (e.g. 
-  0x7000)
+  0x8000)
 
 - For each of the banks 1, 3, 4 ,6 ,7:
 

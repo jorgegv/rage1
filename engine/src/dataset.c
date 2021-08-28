@@ -8,15 +8,18 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _MEMORY_H
-#define _MEMORY_H
-
 #include <stdint.h>
+#include <intrinsic.h>
 
-// Memory allocator settings
-#define MALLOC_HEAP_SIZE        1500
+#include "rage1/dataset.h"
 
-void memory_select_bank( uint8_t bank_num );
+void dataset_activate( uint8_t ds ) {
+// interrupts need to be disabled because the timer tick routine accesses
+// data that may be over 0xC000
 
-void init_memory(void);
-#endif // _MEMORY_H
+    intrinsic_di();
+// select source memory bank for dataset ds
+// asset_set_tables( (struct asset_data_s *)BANKED_DATASET_BASE_ADDRESS );
+// select back memory bank 0
+    intrinsic_ei();
+}

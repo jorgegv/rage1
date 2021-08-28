@@ -21,4 +21,6 @@ struct dataset_map_s {
     uint16_t	offset;		// address offset from 0xC000
 };
 
+void dataset_activate( uint8_t ds );
+
 #endif // _DATASET_H
