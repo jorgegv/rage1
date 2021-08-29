@@ -14,7 +14,15 @@
 
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
-#include "rage1/asset.h"
+#include "rage1/dataset.h"
+
+// global struct that holds the current assets table
+struct dataset_assets_s current_assets;
+
+// switches asset tables (e.g. when loading a new dataset)
+void dataset_load_asset_tables( struct dataset_assets_s *s ) {
+    memcpy( &current_assets, s, sizeof( current_assets ) );
+}
 
 void dataset_activate( uint8_t ds ) {
 
@@ -32,6 +40,13 @@ void dataset_activate( uint8_t ds ) {
     // intrinsic_ei();	// not needed any more
 
     // setup asset tables, they are always at dataset offset 0
-    asset_set_tables( (struct asset_data_s *) BANKED_DATASET_BASE_ADDRESS );
+    dataset_load_asset_tables( (struct dataset_assets_s *) BANKED_DATASET_BASE_ADDRESS );
 
+}
+
+void init_datasets(void) {
+//    dataset_load_asset_tables( &all_assets_dataset_0 );
+//    dataset_loas_asset_tables( (struct dataset_assets_s *)BANKED_DATASET_BASE_ADDRESS );
+    // start game with dataset 0
+    dataset_activate( 0 );
 }

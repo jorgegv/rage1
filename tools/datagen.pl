@@ -1782,7 +1782,7 @@ sub generate_c_banked_header {
 #include "rage1/bullet.h"
 #include "rage1/enemy.h"
 #include "rage1/flow.h"
-#include "rage1/asset.h"
+#include "rage1/dataset.h"
 
 #include "game_data.h"
 
@@ -1805,7 +1805,7 @@ __endasm;
 // items!
 ///////////////////////////////////////////////////////////////////////////////
 
-struct asset_data_s all_assets_dataset_0 = {
+struct dataset_assets_s all_assets_dataset_0 = {
     .num_btiles			= $num_btiles,
     .all_btiles			= &all_btiles[0],
     .num_sprite_graphics	= $num_sprites,
@@ -1965,9 +1965,9 @@ sub generate_h_header {
 #include <stdint.h>
 #include <games/sp1.h>
 
-#include "rage1/asset.h"
+#include "rage1/dataset.h"
 
-extern struct asset_data_s all_assets_dataset_0;
+extern struct dataset_assets_s all_assets_dataset_0;
 
 GAME_DATA_H_1
 ;
