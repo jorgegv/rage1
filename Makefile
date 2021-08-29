@@ -31,8 +31,8 @@ BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
 DATASET_MAXSIZE	= 9472
 
 # Bank binaries and taps
-BANKS_CFG	= $(GENERATED_DIR)/banks.cfg
-BANK_BINS	= $(wildcard $(GENERATED_DIR)/bank_{$(shell cat $(BANKS_CFG) 2>/dev/null )}.bin)
+BANK_BINS_FILE	= $(GENERATED_DIR)/bank_bins.cfg
+BANK_BINS	= $(shell cat $(BANK_BINS_FILE) 2>/dev/null )
 BANK_TAPS	= $(BANK_BINS:.bin=.tap)
 
 # Bank switcher routine for BASIC and tap
@@ -135,6 +135,8 @@ $(MAIN_BIN): $(OBJS)
 
 $(FINAL_TAP): $(TAPS)
 	@echo "Building final TAP $(FINAL_TAP)..."
+	@echo "BANK_BINS=$(BANK_BINS)"
+	@echo "BANK_TAPS=$(BANK_TAPS)"
 	@cat $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP) > $(FINAL_TAP)
 	@echo "Build completed SUCCESSFULLY"
 

@@ -22,7 +22,7 @@ my $max_bank_size = 16384;
 
 # config vars
 my $bank_binaries_name_format = 'bank_%d.bin';
-my $bank_config_name = 'banks.cfg';
+my $bank_config_name = 'bank_bins.cfg';
 my $dataset_map_name = 'dataset_map.c';
 my $basic_loader_name = 'loader.bas';
 
@@ -107,6 +107,7 @@ sub generate_bank_binaries {
         close $bank_out;
         my $bytes = (stat( $bank_binary ))[7];
         print "OK [$bytes bytes]\n";
+        $layout->{ $bank }{'binary'} = $bank_binary;
     }
 }
 
@@ -118,7 +119,7 @@ sub generate_bank_config {
 
     open my $bankcfg_h, ">", $bankcfg
         or die "\n** Error: could not open $bankcfg for writing\n";
-    print $bankcfg_h join(",", sort keys %$layout );
+    print $bankcfg_h join("\n", map { $layout->{ $_ }{'binary'} } sort keys %$layout );
     print $bankcfg_h "\n";
     close $bankcfg_h;
     print "OK\n";
