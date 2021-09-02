@@ -10,6 +10,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <alloc.h>
 
 #include "rage1/memory.h"
 #include "rage1/debug.h"
@@ -24,9 +25,11 @@
 // the sp1 library will call these functions
 //void *u_malloc, *u_free;
 
-uint8_t _malloc_heap[ MALLOC_HEAP_SIZE ];
+unsigned char *_malloc_heap;
+uint8_t heap[ MALLOC_HEAP_SIZE ];
 
 void init_memory(void) {
 //   u_malloc = malloc;
 //   u_free = free;
+    heap_init( heap, MALLOC_HEAP_SIZE );
 }

@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 // Memory allocator settings
-#define MALLOC_HEAP_SIZE        1500
+#define MALLOC_HEAP_SIZE        1000
 
 void memory_switch_bank( uint8_t bank_num );
 
