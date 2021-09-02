@@ -135,8 +135,6 @@ $(MAIN_BIN): $(OBJS)
 
 $(FINAL_TAP): $(TAPS)
 	@echo "Building final TAP $(FINAL_TAP)..."
-	@echo "BANK_BINS=$(BANK_BINS)"
-	@echo "BANK_TAPS=$(BANK_TAPS)"
 	@cat $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP) > $(FINAL_TAP)
 	@echo "Build completed SUCCESSFULLY"
 
@@ -209,6 +207,9 @@ main: $(MAIN_BIN)
 FUSE_RUN_OPTS=--machine 128
 run: $(FINAL_TAP)
 	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP)
+
+debug: $(FINAL_TAP)
+	@~/bin/run_scaled fuse $(FUSE_RUN_OPTS) $(FINAL_TAP)
 
 runz: $(FINAL_TAP)
 	@../zesarux/src/zesarux $(FINAL_TAP)
