@@ -83,8 +83,8 @@ while (<>) {
 }
 
 # about these predefined sections, see doc/MEMORY-MAP.doc
-$sections->{'FREE'}		= { 'base' => $highest,	'top' => 0xcfff, size => 0xcfff - $highest + 1 };
-$sections->{'RESERVED_SP1'}	= { 'base' => 0xd000,	'top' => 0xffff, size => 0xffff - 0xd000 + 1 };
+$sections->{'FREE'}		= { 'base' => $highest,	'top' => 0xd1ec, size => 0xd1ec - $highest + 1 };
+$sections->{'RESERVED_SP1'}	= { 'base' => 0xd1ed,	'top' => 0xffff, size => 0xffff - 0xd1ed + 1 };
 
 # fix the top values of all sections but the last
 my @sections_in_order = sort { $sections->{ $a }{'base'} <=> $sections->{ $b }{'base'} } keys %$sections;
