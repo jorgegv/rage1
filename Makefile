@@ -279,4 +279,4 @@ update-game:
 
 # tools
 mem:
-	./tools/memmap.pl game.map
+	./tools/memmap.pl main.map
