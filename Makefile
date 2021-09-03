@@ -206,10 +206,10 @@ main: $(MAIN_BIN)
 
 FUSE_RUN_OPTS=--machine 128
 run: $(FINAL_TAP)
-	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP)
+	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
 
 debug: $(FINAL_TAP)
-	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | sed '/^#.*$$/d' )"
+	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | sed '/^#.*$$/d' | ./tools/r1sym.pl -m main.map )"
 
 runz: $(FINAL_TAP)
 	@../zesarux/src/zesarux $(FINAL_TAP)

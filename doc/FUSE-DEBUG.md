@@ -16,3 +16,13 @@ br $8184
 # bank switching routine
 br 32769
 ```
+
+You can also use symbolic addresses (public symbols extracted from main.map file)
+if you quote them between curly braces; they will be translated to the
+corresponding addresses before passing them to the debugger. Like this:
+
+```
+# symbolic program start
+br {_main}
+br {_init_program}
+```

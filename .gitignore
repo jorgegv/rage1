@@ -17,4 +17,3 @@ gen_*.h
 build/generated
 build/game_data
 build/game_src
-debug_script.cfg
