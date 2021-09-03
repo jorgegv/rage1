@@ -17,7 +17,7 @@ bank_num:	db	0	; addr: ORG
 
 ; ...and call here
 bswitch:	ld	a,(bank_num)	; get desired new bank from BASIC
-		and	0x08		; get 3 low bits only
+		and	0x07		; get 3 low bits only
 		ld	b,a		; save for later
 		ld	a,(0x5b5c)	; get last value from SYS.BANKM
 		and	0xf8		; save 5 top bits
