@@ -38,10 +38,13 @@ close $map;
 
 # filter input replacing '{<symbol>}' sequences by their hex addresses
 while ( my $line = <STDIN> ) {
+    chomp $line;
+    $line =~ s/#.*$//g;		# remove comments
+    next if $line =~ /^$/;	# skip blank lines
     while ( $line =~ /\{([\w_]+)\}/ ) {
         my $sym = $1;
         my $addr = $address->{ $sym };
         $line =~ s/\{\Q$sym\E\}/\$\Q$addr\E/g;
     }
-    print $line;	# \n is kept from the source line
+    print $line,"\n";
 }

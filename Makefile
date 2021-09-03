@@ -209,7 +209,7 @@ run: $(FINAL_TAP)
 	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
 
 debug: $(FINAL_TAP)
-	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | sed '/^#.*$$/d' | ./tools/r1sym.pl -m main.map )"
+	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | ./tools/r1sym.pl -m main.map )"
 
 runz: $(FINAL_TAP)
 	@../zesarux/src/zesarux $(FINAL_TAP)
