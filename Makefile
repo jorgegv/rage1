@@ -209,7 +209,7 @@ run: $(FINAL_TAP)
 	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP)
 
 debug: $(FINAL_TAP)
-	@~/bin/run_scaled fuse $(FUSE_RUN_OPTS) $(FINAL_TAP)
+	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | sed '/^#.*$$/d' )"
 
 runz: $(FINAL_TAP)
 	@../zesarux/src/zesarux $(FINAL_TAP)
