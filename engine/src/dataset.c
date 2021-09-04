@@ -16,8 +16,9 @@
 #include "rage1/memory.h"
 #include "rage1/dataset.h"
 
-// global struct that holds the current assets table
-struct dataset_assets_s current_assets;
+// Global struct that holds the current assets table.  This must go in low
+// memory, so it is instead included in lowmem/asmdata.asm
+// struct dataset_assets_s current_assets;
 
 // switches asset tables (e.g. when loading a new dataset)
 void dataset_load_asset_tables( struct dataset_assets_s *s ) {
