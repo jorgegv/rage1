@@ -23,7 +23,7 @@ my $max_bank_size = 16384;
 # config vars
 my $bank_binaries_name_format = 'bank_%d.bin';
 my $bank_config_name = 'bank_bins.cfg';
-my $dataset_map_name = 'dataset_map.c';
+my $dataset_map_name = 'dataset_map.asm';
 my $basic_loader_name = 'loader.bas';
 
 # auxiliary functions
@@ -125,7 +125,7 @@ sub generate_bank_config {
     print "OK\n";
 }
 
-sub generate_dataset_map_code {
+sub generate_dataset_map_code_asm {
     my ( $layout, $datasets, $outdir ) = @_;
     my $dsmap = $outdir . '/' . $dataset_map_name;
 
@@ -134,32 +134,35 @@ sub generate_dataset_map_code {
     open my $dsmap_h, ">", $dsmap
         or die "\n** Error: could not open $dsmap for writing\n";
     my $num_datasets = scalar( keys %$datasets );
-    print $dsmap_h <<EOF_DSMAP_1
-#include "rage1/dataset.h"
+    print $dsmap_h <<EOF_DSMAP_3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Dataset Map: for a given dataset ID, maps the memory bank where it is
+;; stored, and the start address on that bank
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; struct dataset_map_s dataset_map[ $num_datasets ] = { ... }
+;;
 
-//////////////////////////////////////////////////////////////////////////
-// Dataset Map: for a given dataset ID, maps the memory bank where it is
-// stored, and the start address on that bank
-//////////////////////////////////////////////////////////////////////////
+section         code_crt_common
 
-struct dataset_map_s dataset_map[ $num_datasets ] = {
-EOF_DSMAP_1
+public		_dataset_map
+
+_dataset_map:	dw	dataset_map_data
+
+dataset_map_data:
+EOF_DSMAP_3
 ;
 
-    print $dsmap_h join( ",\n",
+    print $dsmap_h join( "\n",
         map {
-            sprintf( "\t{ .bank_num = %d, .size = %d, .offset = %d }",
+            sprintf( "\t\t;; dataset %d\n\t\tdb\t%d\n\t\tdw\t%d\n\t\tdw\t%d\n",
+                $_,
                 $datasets->{ $_ }{'bank'},
                 $datasets->{ $_ }{'size'},
                 $datasets->{ $_ }{'offset'} );
         } sort keys %$datasets
     );
-    print $dsmap_h <<EOF_DSMAP_2
 
-};
-
-EOF_DSMAP_2
-;
     close $dsmap_h;
     print "OK\n";
 }
@@ -208,12 +211,13 @@ sub generate_basic_loader {
 ##
 
 # parse command options
-our( $opt_i, $opt_o, $opt_b, $opt_s );
-getopts("i:o:b:s:");
+our( $opt_i, $opt_o, $opt_b, $opt_s, $opt_l );
+getopts("i:o:b:s:l:");
 ( defined( $opt_i ) and defined( $opt_o ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-b <.bin_ext>]\n";
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-b <.bin_ext>] [-l <lowmem_output_dir>]\n";
 
-my ( $input_dir, $output_dir ) = ( $opt_i, $opt_o );
+# if $lowmem_output_dir is not specified, use same as $output_dir
+my ( $input_dir, $output_dir, $lowmem_output_dir ) = ( $opt_i, $opt_o, $opt_l || $opt_o );
 my $bin_ext = $opt_b || '.bin';
 
 my $bank_switcher_binary = $opt_s;
@@ -230,6 +234,6 @@ generate_bank_binaries( $bank_layout, $input_dir, $output_dir );
 
 generate_bank_config( $bank_layout, $output_dir );
 
-generate_dataset_map_code( $bank_layout, $datasets, $output_dir );
+generate_dataset_map_code_asm( $bank_layout, $datasets, $lowmem_output_dir );
 
 generate_basic_loader( $bank_layout, $output_dir );

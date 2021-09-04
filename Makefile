@@ -13,12 +13,13 @@ ENGINE_DIR		= engine
 BUILD_DIR		= build
 GENERATED_DIR		= $(BUILD_DIR)/generated
 GENERATED_DIR_DATASETS	= $(GENERATED_DIR)/datasets
+GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
 GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
 # Main sources and objs
-LOWMEM_CSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.c)
-LOWMEM_ASMSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.asm)
+LOWMEM_CSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.c) $(wildcard $(GENERATED_DIR_LOWMEM)/*.c)
+LOWMEM_ASMSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.asm) $(wildcard $(GENERATED_DIR_LOWMEM)/*.asm)
 CSRC 		= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC		= $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
 SRC		= $(LOWMEM_ASMSRC) $(LOWMEM_CSRC) $(CSRC) $(ASMSRC)
@@ -124,7 +125,7 @@ clean-config:
 
 config:
 	@$(MAKE) -s clean-config
-	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/
+	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/ $(GENERATED_DIR_LOWMEM)/
 	@cp -r game/game_data/* $(GAME_DATA_DIR)/
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
 	@echo "Build config: REGULAR GAME"
@@ -174,8 +175,8 @@ dataset_%.bin: dataset_%.c
 ## Banks
 
 banks:
-	@echo "Building bank binaries and BASIC loader..."
-	@./tools/r1banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -b .bin
+	@echo "Building Bank binaries, BASIC loader and Dataset map..."
+	@./tools/r1banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM) -b .bin
 
 bank_switcher: $(BSWITCH_BIN)
 
