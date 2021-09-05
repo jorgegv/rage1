@@ -63,5 +63,20 @@ Initial diagnosis:
 
 -> Follow lead of some sprite corruption for the ' ' tile.
 
+- SP1's 512 byte array that specifies the pointers for each of the 256 basic
+  tiles (at $F000) should be filled with pointers to ROM character tables,
+  but instead it's filled with 0's. ????
+
+- SP1 initializes tiles 32-127 with pointers to the ROM chars...  but those
+  are stored on the 48K ROM (ROM 1), so this only works if ROM 1 is active! 
+  Our default value output to port $7FFD was mapping ROM 0, which is the
+  128K editor ROM (which we really don't care about), and this is the reason
+  for the corrupted graphics.  We should have ROM 1 (48K) always active.
+
+-> Modified function memory_switch_bank to add a default configuration
+  including the mapping of ROM 1 everytime that a new memory bank is
+  selected to be paged.
+
+- GAME FULLY WORKS NOW IN 128k MODE!!
+
 --------
-WIP: To be continued
