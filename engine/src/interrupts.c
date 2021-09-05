@@ -43,15 +43,22 @@ IM2_DEFINE_ISR(do_timer_tick)
 }
 
 // Initialize interrupts in IM2 mode
+
+
+// IV_ADDR must be 256-byte aligned
 #define IV_ADDR		( ( unsigned char * ) 0x8000 )
+
+// ISR_ADDR and IV_BYTE must match: if IV_BYTE is 0x81, ISR_ADDR must be
+// 0x8181
 #define ISR_ADDR	( ( unsigned char * ) 0x8181 )
 #define IV_BYTE		( 0x81 )
+
+// code to patch at ISR_ADDR: jp xxxx
 #define Z80_OPCODE_JP	( 0xc3 )
 
 void init_interrupts(void) {
    intrinsic_di();
-   im2_init(IV_ADDR);
-   memset(IV_ADDR,IV_BYTE,257);
+   memset( IV_ADDR, IV_BYTE, 257);
    z80_bpoke( ISR_ADDR, Z80_OPCODE_JP );
    z80_wpoke( ISR_ADDR + 1, (uint16_t) do_timer_tick );
    im2_init( IV_ADDR );
