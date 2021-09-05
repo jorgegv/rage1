@@ -41,6 +41,27 @@ Initial diagnosis:
   read!!  It should be placed in low memory!!  -> r1banktool modified to
   generate dataset_map data in lowmem asm.
 
+## Debug session 5/9/11
+
+- dataset_activate fixed, works OK
+- Game makes it to init_hero and hangs there
+- Step into that, hangs in call to sprite_allocate
+- Into sprite_allocate, sp1_CreateSpr works OK, hangs just after loop with
+  sp1_AddColSpr. Warning: the 's' pointer contains the sprite allocated via
+  malloc, but it contains 0xC407!! This is upper memory, but the heap is
+  supposedly located at 0x5B00 + 4000, so this is definitely wrong!
+
+-> Points to problems specifying the heap, follow that lead.
+
+- Changed memory.c: in addition to calling heap_init to initialize the heap
+  area, it is needed also to set the heap base address by direct assigment
+  to _malloc_heap variable.
+
+- With this change, the whole game works OK (menu, control selection, game
+  play, game end, sounds), but there is still a glitch with the background
+  tile: it shows the bitmap for the hero sprite.
+
+-> Follow lead of some sprite corruption for the ' ' tile.
 
 --------
 WIP: To be continued
