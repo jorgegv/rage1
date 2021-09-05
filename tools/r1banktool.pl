@@ -147,9 +147,7 @@ section         code_crt_common
 
 public		_dataset_map
 
-_dataset_map:	dw	dataset_map_data
-
-dataset_map_data:
+_dataset_map:
 EOF_DSMAP_3
 ;
 
