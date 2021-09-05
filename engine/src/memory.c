@@ -26,10 +26,11 @@
 //void *u_malloc, *u_free;
 
 unsigned char *_malloc_heap;
-uint8_t heap[ MALLOC_HEAP_SIZE ];
+//uint8_t heap[ MALLOC_HEAP_SIZE ];
 
 void init_memory(void) {
 //   u_malloc = malloc;
 //   u_free = free;
-    heap_init( heap, MALLOC_HEAP_SIZE );
+//    heap_init( heap, MALLOC_HEAP_SIZE );
+    heap_init( (unsigned char *)(0x5b00 + 4096), MALLOC_HEAP_SIZE );
 }
