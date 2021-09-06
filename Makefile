@@ -283,5 +283,5 @@ update-game:
 mem:
 	./tools/memmap.pl main.map
 
-linecount:
+linecount: clean
 	find . -type f |grep -v -E '^./.git'|xargs -l file|grep -E '(ASCII|Perl)'|cut -f1 -d:|xargs -l cat|wc -l
