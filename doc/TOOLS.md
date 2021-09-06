@@ -24,7 +24,8 @@ The following tools can be found in the `tools` directory:
   configuration and the BASIC loader that loads each bank where it belongs;
   and also it writes a `dataset_map` structure which is included in the main
   program section, which allows to map the banked datasets into main memory
-  for regular usage.
+  for regular usage. See [BANKING-DESIGN.md](BANKING-DESIGN.md) for
+  understanding the banking model used in RAGE1.
 
 * `r1datalink`: a tool to relocate a `.bin` file compiled with a $0000 ORG
   to any base address, using the relocation data output by the compiler. 
@@ -32,15 +33,16 @@ The following tools can be found in the `tools` directory:
   `__orgit` trick by Dom.
 
 * `r1size.sh`: analyzes the generated code in all sections of all object
-  files (`*.o`) after a build, and reports on code, data and bss usage per
+  files (`*.o`) after a build, and reports on CODE, DATA and BSS usage per
   file.  Very useful to identify optimization opportunities regarding code
   or data reduction.
 
 * `r1sym.pl`: parses a `.map` file getting compilation symbols and their
   addresses, and then filters its input replacing occurrences of
-  `{<symbol_name>}` with the hex addresses of the given symbol.  Very useful
-  for creating debug scripts with symbolic names instead of pure hex
-  addresses (see [FUSE-DEBUG.d](FUSE-DEBUG.md) for example use).
+  `{<symbol_name>}` sequences with the hex addresses of the given symbol. 
+  Very useful for writing debug scripts with symbolic names instead of pure
+  hex addresses that may change from build to build (see
+  [FUSE-DEBUG.md](FUSE-DEBUG.md) for example use).
 
 * `tapdump.pl`: dumps the detailed structure of a TAP file.  Useful to make
   sure you get what you want when creating TAP files.
