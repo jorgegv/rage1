@@ -18,10 +18,10 @@ TOTAL_BSS=0
 
 printf "%-20s  %5s  %5s  %5s\n" "Object file" "CODE" "DATA" "BSS"
 echo "-------------------------------------------"
-for ofile in engine/src/*.o build/generated/*.o build/game_src/*.o; do
-	CODE_SIZE=$( z88dk-z80nm "$ofile" | grep "Section code_compiler:" | awk '{print $3}' )
-	DATA_SIZE=$( z88dk-z80nm "$ofile" | grep "Section data_compiler:" | awk '{print $3}' )
-	BSS_SIZE=$(  z88dk-z80nm "$ofile" | grep "Section bss_compiler:"  | awk '{print $3}' )
+for ofile in engine/src/*.o engine/lowmem/*.o build/generated/*.o build/game_src/*.o build/generated/lowmem/*.o; do
+	CODE_SIZE=$( z88dk-z80nm "$ofile" | grep -P "Section code_.* \d+ bytes" | awk '{print $3}' | perl -ne 'BEGIN{$s=0;} $s+=$_; END{print $s;}' )
+	DATA_SIZE=$( z88dk-z80nm "$ofile" | grep -P "Section data_.* \d+ bytes" | awk '{print $3}' | perl -ne 'BEGIN{$s=0;} $s+=$_; END{print $s;}' )
+	BSS_SIZE=$(  z88dk-z80nm "$ofile" | grep -P "Section bss_.* \d+ bytes"  | awk '{print $3}' | perl -ne 'BEGIN{$s=0;} $s+=$_; END{print $s;}' )
 
 	TOTAL_CODE=$(( TOTAL_CODE + CODE_SIZE ))
 	TOTAL_DATA=$(( TOTAL_DATA + DATA_SIZE ))
