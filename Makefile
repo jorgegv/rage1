@@ -116,7 +116,7 @@ build:
 clean:
 	@-rm -rf *.{lis,bin,tap,c.asm,map,log} \
 		$(BUILD_DIR)/{game_src,game_data,generated} \
-		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm} \
+		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm} $(ENGINE_DIR)/lowmem/*.{map,lis,o,c.asm}\
 		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm} \
 		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm} \
 		2>/dev/null
@@ -282,3 +282,6 @@ update-game:
 # tools
 mem:
 	./tools/memmap.pl main.map
+
+linecount:
+	find . -type f |grep -v -E '^./.git'|xargs -l file|grep -E '(ASCII|Perl)'|cut -f1 -d:|xargs -l cat|wc -l
