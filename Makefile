@@ -29,7 +29,7 @@ OBJS		= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.as
 CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
 SRC_DATASETS	= $(CSRC_DATASETS)
 BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
-DATASET_MAXSIZE	= 9472
+DATASET_MAXSIZE	= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
 
 # Bank binaries and taps
 BANK_BINS_FILE	= $(GENERATED_DIR)/bank_bins.cfg

@@ -1990,6 +1990,60 @@ sub generate_game_config {
         push @h_lines, sprintf( "#define SOUND_%s %s\n", uc( $effect ), $game_config->{'sounds'}{ $effect } );
     }
 
+    # check maximum sprite usage
+    my $max_sprites = 0;
+    my $max_spritechars = 0;
+
+    # start with the screens
+    foreach my $screen ( @screens ) {
+        my $screen_sprites = 0;
+        my $screen_spritechars = 0;
+        foreach my $sprite ( map { $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ] } @{ $screen->{'enemies'} } ) {
+            $screen_sprites++;
+            # remember: SP1 sprites have 1 extra row and col
+            $screen_spritechars += ( $sprite->{'rows'} + 1 ) * ( $sprite->{'cols'} + 1 )
+        }
+        if ( $screen_sprites > $max_sprites ) {
+            $max_sprites = $screen_sprites;
+        }
+        if ( $screen_spritechars > $max_spritechars ) {
+            $max_spritechars = $screen_spritechars;
+        }
+    }
+
+    # add the hero sprite - just 1
+    $max_sprites++;
+    my $hs = $sprites[ $sprite_name_to_index{ $hero->{'sprite'} } ];
+    $max_spritechars += ( $hs->{'rows'} + 1 ) * ( $hs->{'cols'} + 1 );
+
+    # add the bullet sprites - the N bullets
+    $max_sprites += $hero->{'bullet'}{'max_bullets'};
+    my $bs = $sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
+    $max_spritechars += $hero->{'bullet'}{'max_bullets'} * ( $bs->{'rows'} + 1 ) * ( $bs->{'cols'} + 1 );
+
+    # 20 bytes for a safety margin, plus 6 bytes per allocation, plus 20
+    # bytes per sprite, plus 24 bytes per sprite char
+    my $max_heap_usage = 20 + $max_sprites * (20 + 6) + $max_spritechars * (24 + 6);
+
+    # max dataset size: memory from $5B00->$7FFF minus the heap
+    my $max_dataset_size = ( 0x8000 - 0x5B00 ) - $max_heap_usage;
+
+    push @h_lines, <<EOF_BLDCFG1
+
+// maximum sprite and heap usage
+#define BUILD_MAX_NUM_SPRITES_PER_SCREEN	$max_sprites
+#define BUILD_MAX_NUM_SPRITECHARS_PER_SCREEN	$max_spritechars
+
+// 20 bytes for a safety margin, plus 6 bytes per allocation, plus 20
+// bytes per sprite, plus 24 bytes per sprite char
+#define BUILD_MAX_HEAP_SPRITE_USAGE		$max_heap_usage
+
+// max dataset size when uncompressed to \$5B00
+#define	BUILD_MAX_DATASET_SIZE			$max_dataset_size
+
+EOF_BLDCFG1
+;
+
 }
 
 # this function is called from main
@@ -2015,8 +2069,8 @@ sub generate_game_data {
     generate_bullets;
     generate_items;
     generate_game_areas;
-    generate_game_config;
     generate_game_functions;
+    generate_game_config;
 
     # generate ending lines if needed
     generate_h_ending;

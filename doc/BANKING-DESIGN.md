@@ -84,10 +84,14 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
   then sets IM2 mode and enables interrupts.
 
 - At this point, all the memory map is setup and the code is in place.  The
-  buffer at 0x5b00-0x7fff will be used as the LOW MEM buffer for copying
+  buffer at 0x5b00-0x7fff will be used as the LOWMEM buffer for copying
   assets from high memory banks: when they are needed, page frame (0xc000)
   is switched to the source bank, content is copied, then bank 0 is switched
   back.
+
+- The upper part of the LOWMEM buffer is used as the heap. Since only SP1 is
+  using the heap for sprite allocation, its size is automatically calculated
+  by DATAGEN.
 
 - The memory area from 0x5b00 normally contains system variables and BASIC
   program code, but since we are not returning to BASIC ever, we can freely
@@ -110,7 +114,8 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
 
   - Bit 3 = 0 selects normal screen
 
-  - Bit 4 = 0 selects 128K ROM (which is irrelevant for us)
+  - Bit 4 = 1 selects 48K ROM (which is irrelevant for us - but we need to
+    select ROM1, the 48K ROM: SP1 uses the char definition data from there!)
 
   - Bit 5 = 0 means memory banking is kept enabled (which is what we want)
 
@@ -364,3 +369,5 @@ zcc +zx -compiler=sdcc -clib=sdcc_iy dataset1.c -o dataset1.bin --no-crt
 - https://worldofspectrum.org/faq/reference/128kreference.htm
 
 - https://github.com/speccyorg/bas2tap
+
+- https://www.z88dk.org/wiki/doku.php?id=libnew:examples:sp1_ex1

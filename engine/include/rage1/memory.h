@@ -13,8 +13,11 @@
 
 #include <stdint.h>
 
+#include "game_data.h"
+
 // Memory allocator settings
-#define MALLOC_HEAP_SIZE        5000
+#define MALLOC_HEAP_SIZE        BUILD_MAX_HEAP_SPRITE_USAGE
+#define MALLOC_HEAP_START       ((unsigned char *)(0x8000 - MALLOC_HEAP_SIZE))
 
 void memory_switch_bank( uint8_t bank_num );
 
