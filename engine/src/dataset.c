@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <intrinsic.h>
 #include <string.h>
+#include <compress/zx0.h>
 
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
@@ -32,8 +33,9 @@ void dataset_activate( uint8_t ds ) {
     // select source memory bank for dataset ds
     memory_switch_bank( dataset_map[ ds ].bank_num );
 
-    // copy dataset at (0xC000 + dataset.offset) to page frame at 0x5B00
-    memcpy( (void *) BANKED_DATASET_BASE_ADDRESS, (void *) ( 0xC000 + dataset_map[ ds ].offset ), dataset_map[ ds ].size );
+    // data is ZX0 compressed, so decompress to destination address
+    // beware: dzx0_* arguments are (source,dest), unlike memcpy and friends!
+    dzx0_standard( (void *) ( 0xC000 + dataset_map[ ds ].offset ), (void *) BANKED_DATASET_BASE_ADDRESS );
 
     // select back memory bank 0
     memory_switch_bank( 0 );

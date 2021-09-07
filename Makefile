@@ -29,6 +29,7 @@ OBJS		= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.as
 CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
 SRC_DATASETS	= $(CSRC_DATASETS)
 BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
+ZX0_DATASETS	= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE	= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
 
 # Bank binaries and taps
@@ -55,8 +56,9 @@ TAPS		= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP) $(MAIN_TAP)
 # Final game TAP
 FINAL_TAP	= game.tap
 
-# compiler
+# compiler and tools
 ZCC		= zcc
+ZX0		= z88dk-zx0
 
 # compiler flags
 INC		= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
@@ -101,11 +103,11 @@ build:
 	@$(MAKE) -s clean
 	@$(MAKE) -s config
 	@$(MAKE) -s data
-	@$(MAKE) -s datasets
-	@$(MAKE) -s banks
+	@$(MAKE) -s -j8 datasets
+	@$(MAKE) -s -j8 banks
 	@$(MAKE) -s bank_switcher
 	@$(MAKE) -s -j8 main
-	@$(MAKE) -s taps
+	@$(MAKE) -s -j8 taps
 	@$(MAKE) -s final
 
 # include minimal game configuration.  If the Makefile has been copied to a
@@ -163,20 +165,23 @@ data_depend:
 ## Dataset compilation to standalone binaries org'ed at 0x5C00
 ##
 
-datasets: $(BIN_DATASETS)
+datasets: $(ZX0_DATASETS)
 
 dataset_%.bin: dataset_%.c
 	@echo "Compiling DATASET $< ..."
 	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
 	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
-	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; \
-		else echo "  DATASET $$( basename $@ ) size is $$( stat -c%s $@ ) bytes - Fine!"; fi
+	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; fi
+
+dataset_%.zx0: dataset_%.bin
+	@echo "Compressing DATASET $< ..."
+	@$(ZX0) $< $@ >/dev/null 2>&1
 
 ## Banks
 
 banks:
 	@echo "Building Bank binaries, BASIC loader and Dataset map..."
-	@./tools/r1banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM) -b .bin
+	@./tools/r1banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM) -b .zx0
 
 bank_switcher: $(BSWITCH_BIN)
 
