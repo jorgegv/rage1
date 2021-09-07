@@ -8,7 +8,7 @@
 ; d1d1 - d1d3     -------   JP to im2 service routine (im2 table filled with 0xd1 bytes)
 ; d101 - d1d0     -STACK-   208 bytes
 ; d000 - d100     IM2.LIB   im 2 vector table (257 bytes)
-; 5f00 - cfff     -------   free - available for C programs
+; 5f00 - cfff     -------   free - available for C programs + HEAP (allow 5-7k)
 ; 5b00 - 5eff     -BASIC-   Loader program, give it some breathing :-)
 ```
 

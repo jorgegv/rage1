@@ -30,7 +30,7 @@ The low memory map for our game is as follows:
 ```
 0000-3FFF: ROM			(16384 BYTES)
 4000-5AFF: SCREEN$		( 6912 BYTES)
-5B00-7FFF: LOWMEM BUFFER	( 9472 BYTES)
+5B00-7FFF: LOWMEM BUFFER + HEAP	( 9472 BYTES)
 8000-8100: INT VECTOR TABLE	(  257 BYTES)
 8101-8180: STACK		(  128 BYTES)
 8181-8183: "jp <isr>" OPCODES	(    3 BYTES)
@@ -286,27 +286,24 @@ So we will do the following setup:
   we can access all the internal game data assets from the main code by
   using this structure and its internal pointers.  It is also linked as
   standalone binary files with no CRT.
+
   Example commands:
 
 ~~~
 zcc +zx -compiler=sdcc -clib=sdcc_iy dataset1.c -o dataset1.bin --no-crt
 ~~~
 
-- DATASETs are compressed after being compiled, and inserted as binary data
-  (a named byte array) in a BANKED DATA SOURCE FILE.
+- DATASETs are compressed with ZX0 after being compiled.  Compressed
+  datasets are then laid out in BANKs, and their coordinates (dataset
+  number, bank number, offset inside bank, size) are saved, so that several
+  datasets can be included in the same bank.
 
-- BANKED DATA SOURCE FILEs are ASM files with an ORG directive to 0xC000, a
-  public reference to the binary data and a BINARY directive to include the
-  compiled DATASET binary file data.
+- The DATASET MAP TABLE (DMT) must be generated and included in main
+  (non-banked) memory.  This table contains tuples of (dataset, memory bank,
+  address offset, size), which are used to decompress the dataset into the
+  final 0x5B00 runtime address.
 
-- The DATASET REFERENCE TABLE (DRT) must be generated and included in main
-  (non-banked) memory.  This table contains triplets of (dataset, memory bank,
-  source address), which are used to decompress the dataset into the final
-  0x5B00 runtime address. THe source address is the public reference in the
-  banked data source file, so that several datasets can be included in the
-  same bank.
-
-- The data in the DRT is used at runtime to select the proper DATASET and
+- The data in the DMT is used at runtime to select the proper DATASET and
   switch to the neded memory bank when starting the game, switching screens,
   ending game, etc.
 
