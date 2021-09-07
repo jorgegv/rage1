@@ -175,23 +175,23 @@ sub generate_basic_loader {
     my @lines;
 
     # Bank switch routine loads at address 0x8000, CLEAR to the byte before
-    push @lines, sprintf( 'CLEAR %d', 0x7FFF );
+    push @lines, sprintf( 'CLEAR VAL "%d"', 0x7FFF );
 
     # load bank switching code at 0x8000 (32768)
     # bank variable is at 0x8000, code switching entry point at 0x8001
-    push @lines, sprintf( 'LOAD "" CODE %d', 0x8000 );
+    push @lines, 'LOAD "" CODE';
 
     # switch to each bank with the bank switching routine and load each bank content at 0xC000
     foreach my $bank ( sort keys %$layout ) {
-        push @lines, sprintf( 'POKE %d,%d : RANDOMIZE USR %d : LOAD "" CODE %d', 0x8000, $bank, 0x8001, 0xC000 );
+        push @lines, sprintf( 'POKE VAL "%d", VAL "%d" : RANDOMIZE USR VAL "%d" : LOAD "" CODE', 0x8000, $bank, 0x8001 );
     }
 
     # switch back to bank 0
-    push @lines, sprintf( 'POKE %d,%d : RANDOMIZE USR %d', 0x8000, 0, 0x8001 );
+    push @lines, sprintf( 'POKE VAL "%d", VAL "%d" : RANDOMIZE USR VAL "%d"', 0x8000, 0, 0x8001 );
 
     # load main program code at 0x8184 and start execution
     my $main_code_start = 0x8184;
-    push @lines, sprintf( 'LOAD "" CODE %d : RANDOMIZE USR %d', $main_code_start, $main_code_start );
+    push @lines, sprintf( 'LOAD "" CODE : RANDOMIZE USR VAL "%d"', $main_code_start );
 
     # that's it, output the BASIC program
     open my $bas_h, ">", $bas_loader

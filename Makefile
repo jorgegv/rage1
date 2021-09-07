@@ -193,10 +193,20 @@ $(BSWITCH_BIN):
 
 taps: $(TAPS)
 
-# we set org at 0x0000, the real load address is set in the BASIC loader
-%.tap: %.bin
+# we set org at 0xC000 for the banks
+bank_%.tap: bank_%.bin
 	@echo "Creating TAP $@..."
-	@z88dk-appmake +zx --noloader --org 0x0000 -b $<
+	@z88dk-appmake +zx --noloader --org 0xC000 -b $<
+
+# we set org at 0x8184 for main
+$(MAIN_TAP): $(MAIN_BIN)
+	@echo "Creating TAP $@..."
+	@z88dk-appmake +zx --noloader --org 0x8184 -b $<
+
+# we set org at 0x8000 for bank switcher
+$(BSWITCH_TAP): $(BSWITCH_BIN)
+	@echo "Creating TAP $@..."
+	@z88dk-appmake +zx --noloader --org 0x8000 -b $<
 
 %.tap: %.bas
 	@echo "Creating TAP $@..."
