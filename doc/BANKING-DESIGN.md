@@ -307,6 +307,56 @@ zcc +zx -compiler=sdcc -clib=sdcc_iy dataset1.c -o dataset1.bin --no-crt
   switch to the neded memory bank when starting the game, switching screens,
   ending game, etc.
 
+## Single source compiling for 48/128 (banked/non-banked) mode
+
+- The current banked assets can be accessed via the `banked_assets` global
+  variable.  This a pointer that is initialized at program startup to a
+  fixed value of 0x5B00, since datasets are always loaded there and the
+  asset record for the dataset is always at that address.
+
+- Additionally to the regular banked datasets, we have a `home_dataset`
+  which is always placed at regular program memory (i.e.  it is not stored
+  on a memory bank and it is _not_ loaded at 0x5B00).
+
+- The global variable `home_assets` is also a pointer initialized at program
+  startup and it always points to the `home_dataset` asset record.
+
+- The `home_dataset` has the same structure of a banked dataset (but in
+  regular memory) and can have the same types of assets as a regular
+  dataset.
+
+- The `home_dataset` is used for assets that must be always present.  That
+  is at least:
+
+  - BTiles that are used for drawing the game menu
+  - Hero sprites
+  - Bullet sprites
+
+- The dataset where each asset is stored is specified in the GDATA files
+  (REVIEW?).
+
+- Dataset switches occur on enter_screen events, so there must be a global
+  map stored in regular (non-banked) memory, which maps the screen->dataset
+  relationship (global variable `screen_dataset_map`).  This is a simple
+  byte array, where the index is the screen number, and the value is the
+  dataset number.  It occupies at most 256 bytes, since that's the maximum
+  number of screens and datasets.
+
+- A `game_config` setting selects if the game is to be compiled in for a 48K
+  or 128K Spectrum (e.g.  `spectrum_target` directive, with values
+  `48/128`), and the game is compiled differently:
+
+  - If configured for 48K mode, the `home_assets` and `banked_assets` both
+    point to the `home_dataset`, which is expected to fit in the regular 48K
+    RAM,.  Also, a simplified BASIC loader is generated which does not load
+    anything in the memory banks, and bank switching routines are
+    conditionally compiled off the main program.
+
+  - If configured for 128K mode, `home_assets` points to the `home_dataset`
+    and `banked_assets` points to the currently selected dataset at 0x5B00. 
+    Also, the banking BASIC loader is used for loading bank data, and all
+    memory banking routines are compiled in and used.
+
 ## References
 
 - https://zxspectrumcoding.wordpress.com/2019/11/17/z88dk-bank-switching-part-1/
