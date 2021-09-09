@@ -38,18 +38,18 @@ my $game_config;
 my @all_rules;
 my $screen_rules;
 
-my $c_file_home = 'game_data_home.c';
-my $c_file_dataset_0 = 'datasets/dataset_0.c';
-my $h_file = 'game_data.h';
+my $c_file_game_data = 'game_data.c';
+my $c_file_dataset_format = 'datasets/dataset_%d.c';
+my $output_dest_dir;
+my $h_file_game_data = 'game_data.h';
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
 
 # output lines for each of the files
-my @c_home_lines;
-my @c_banked_lines;
-my @h_lines;
-my @asm_lines;
+my @c_game_data_lines;
+my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
+my @h_game_data_lines;
 my $build_dir;
 
 ######################################################
@@ -777,8 +777,8 @@ sub generate_btile {
     my $tile = shift;
     my $cur_char = 0;
     my @char_names;
-    push @c_banked_lines, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
-    push @c_banked_lines, sprintf( "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
         $tile->{'name'},
         scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ),
         join( ", ",
@@ -786,7 +786,7 @@ sub generate_btile {
             map { @$_ }
             @{ $tile->{'pixel_bytes'} }
         ) );
-    push @c_banked_lines, sprintf( "uint8_t *btile_%s_tiles[%d] = { %s };\n",
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t *btile_%s_tiles[%d] = { %s };\n",
         $tile->{'name'},
         scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ) / 8,
         join( ', ',
@@ -796,18 +796,18 @@ sub generate_btile {
         ) );
     # manually specified attrs have preference over PNG ones
     my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
-    push @c_banked_lines, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
         $tile->{'name'},
         scalar( @{ $attrs } ),
         join( ', ', @{ $attrs } ) );
-    push @c_banked_lines, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 
     # output auxiliary definitions
-    push @h_lines, sprintf( "#define BTILE_%s\t( &banked_assets->all_btiles[ %d ] )\n",
+    push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &banked_assets->all_btiles[ %d ] )\n",
         uc( $tile->{'name'} ),
         $btile_name_to_index{ $tile->{'name'} },
     );
-    push @h_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
+    push @h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
         uc( $tile->{'name'} ),
         $btile_name_to_index{ $tile->{'name'} },
     );
@@ -911,7 +911,7 @@ sub generate_sprite {
 
     my $cur_char = 0;
     my @char_names;
-    push @c_banked_lines, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (required by SP1)\n\n", $sprite->{'name'} );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (required by SP1)\n\n", $sprite->{'name'} );
 
     # prepare mask and bytes lists
     my @col_bytes;
@@ -942,7 +942,7 @@ sub generate_sprite {
     }
 
     # output mask/pixel lines
-    push @c_banked_lines, sprintf( "uint8_t sprite_%s_data[] = {\n%s\n};\n",
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t sprite_%s_data[] = {\n%s\n};\n",
         $sprite->{'name'},
         join( ",\n", map { join( ", ", map { sprintf( "0x%02x", $_ ) } @{$_} ) } @groups_of_2m ) );
 
@@ -953,7 +953,7 @@ sub generate_sprite {
         push @frame_offsets, $ptr;
         $ptr += 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
     }
-    push @c_banked_lines, sprintf( "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
         $sprite_name,
         join( ",\n", 
             map { sprintf( "\t&sprite_%s_data[%d]", $sprite_name, $_ ) }
@@ -962,20 +962,20 @@ sub generate_sprite {
 
     # output list of animation sequences
     if ( scalar( @{ $sprite->{'sequences'} } ) ) {
-        push @c_banked_lines, join( "", map {
+        push @{ $c_dataset_lines->{ 0 } }, join( "", map {
             sprintf( "uint8_t sprite_%s_sequence_%s[%d] = { %s };\n",
                 $sprite_name, $_->{'name'}, scalar( @{ $_->{'frame_list'} } ), join( ',', @{ $_->{'frame_list'} } ) );
         } @{ $sprite->{'sequences'} } );
-        push @c_banked_lines, sprintf( "struct animation_sequence_s sprite_%s_sequences[%d] = {\n\t",
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct animation_sequence_s sprite_%s_sequences[%d] = {\n\t",
             $sprite_name, scalar( @{ $sprite->{'sequences'} } ) );
-        push @c_banked_lines, join( ",\n\t", map {
+        push @{ $c_dataset_lines->{ 0 } }, join( ",\n\t", map {
             sprintf( "{ %d, &sprite_%s_sequence_%s[0] }", scalar( @{ $_->{'frame_list'} } ), $sprite_name, $_->{'name'} );
         } @{ $sprite->{'sequences'} } );
-        push @c_banked_lines, "\n};\n\n";
+        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
 
     }
 
-    push @c_banked_lines, sprintf( "// End of Sprite '%s'\n\n", $sprite_name );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// End of Sprite '%s'\n\n", $sprite_name );
 }
 
 ######################################
@@ -1131,24 +1131,24 @@ sub generate_screen {
 
     # screen tiles
     if ( scalar( @{$screen->{'btiles'}} ) ) {
-        push @c_banked_lines, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
-        push @c_banked_lines, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'btiles'}} ) );
 
-        push @c_banked_lines, join( ",\n", map {
+        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
                 sprintf("\t{ TT_%s, %d, %d, %d, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $btile_name_to_index{ $_->{'btile'} }, ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
             } @{$screen->{'btiles'}} );
-        push @c_banked_lines, "\n};\n\n";
+        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
     }
 
     # screen enemies
     if ( scalar( @{$screen->{'enemies'}} ) ) {
-        push @c_banked_lines, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
-        push @c_banked_lines, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
-        push @c_banked_lines, join( ",\n", map {
+        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
                 sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
@@ -1186,28 +1186,28 @@ sub generate_screen {
                     $_->{'initial_flags'},
                  )
             } @{$screen->{'enemies'}} );
-        push @c_banked_lines, "\n};\n\n";
+        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
     }
 
     # screen items
     if ( scalar( @{$screen->{'items'}} ) ) {
-        push @c_banked_lines, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
-        push @c_banked_lines, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'items'}} ) );
-        push @c_banked_lines, join( ",\n", map {	# real item id is 0x1 << item_index
+        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {	# real item id is 0x1 << item_index
                 sprintf( "\t{ %d, %d, %d }", $_->{'item_index'}, $_->{'row'}, $_->{'col'} )
             } @{$screen->{'items'}} );
-        push @c_banked_lines, "\n};\n\n";
+        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
     }
 
     # hot zones
     if ( scalar( @{$screen->{'hotzones'}} ) ) {
-        push @c_banked_lines, sprintf( "// Screen '%s' hot zone data\n", $screen->{'name'} );
-        push @c_banked_lines, sprintf( "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' hot zone data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'hotzones'}} ) );
-        push @c_banked_lines, join( ",\n", map {
+        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
                 my $x    = ( defined( $_->{'x'} ) ? $_->{'x'} : $_->{'col'} * 8 );
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
@@ -1217,23 +1217,23 @@ sub generate_screen {
                     ( $_->{'active'} ? 'F_HOTZONE_ACTIVE' : 0 ),
                 )
             } @{ $screen->{'hotzones'} } );
-        push @c_banked_lines, "\n};\n\n";
+        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
     }
 
     # flow rules
-    push @c_banked_lines, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
     foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
         if ( defined( $screen_rules->{ $screen->{'name'} } ) and defined( $screen_rules->{ $screen->{'name'} }{ $table } ) ) {
             my $num_rules = scalar( @{ $screen_rules->{ $screen->{'name'} }{ $table } } );
             if ( $num_rules ) {
-                push @c_banked_lines, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
+                push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
                     $screen->{'name'}, $table, $num_rules );
-                push @c_banked_lines, join( ",\n\t",
+                push @{ $c_dataset_lines->{ 0 } }, join( ",\n\t",
                     map {
                         sprintf( "&all_flow_rules[ %d ]", $_ )
                     } @{ $screen_rules->{ $screen->{'name'} }{ $table } }
                 );
-                push @c_banked_lines, "\n};\n";
+                push @{ $c_dataset_lines->{ 0 } }, "\n};\n";
             }
         }
     }
@@ -1279,7 +1279,7 @@ sub generate_hero {
     my $delay		= $hero->{'animation_delay'};
     my $hstep		= $hero->{'hstep'};
     my $vstep		= $hero->{'vstep'};
-    push @h_lines, <<EOF_HERO1
+    push @h_game_data_lines, <<EOF_HERO1
 /////////////////////////////
 // Hero definition
 /////////////////////////////
@@ -1317,7 +1317,7 @@ sub generate_bullets {
         ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8 :
         1 );
 
-    push @h_lines, <<EOF_BULLET4
+    push @h_game_data_lines, <<EOF_BULLET4
 //////////////////////////////
 // Bullets definition
 //////////////////////////////
@@ -1350,7 +1350,7 @@ sub generate_items {
         $mask <<= 1;
     }
 
-    push @h_lines, <<GAME_DATA_H_3
+    push @h_game_data_lines, <<GAME_DATA_H_3
 // global items table
 #define INVENTORY_MAX_ITEMS $max_items
 #define INVENTORY_ALL_ITEMS_MASK $all_items_mask
@@ -1359,7 +1359,7 @@ extern struct item_info_s all_items[];
 GAME_DATA_H_3
 ;
 
-    push @c_home_lines, <<EOF_ITEMS1
+    push @c_game_data_lines, <<EOF_ITEMS1
 ///////////////////////
 // Global items table
 ///////////////////////
@@ -1367,7 +1367,7 @@ GAME_DATA_H_3
 struct item_info_s all_items[16] = {
 EOF_ITEMS1
 ;
-    push @c_home_lines, join( ",\n",
+    push @c_game_data_lines, join( ",\n",
         map {
             exists( $all_items->{ $_ } ) ?
                 sprintf( "\t{ BTILE_ID_%s, 0x%04x, F_ITEM_ACTIVE }",
@@ -1378,7 +1378,7 @@ EOF_ITEMS1
             } ( 0 .. 15 )
     );
 
-    push @c_home_lines, <<EOF_ITEMS2
+    push @c_game_data_lines, <<EOF_ITEMS2
 
 };
 
@@ -1388,34 +1388,34 @@ EOF_ITEMS2
 }
 
 sub generate_game_functions {
-    push @h_lines, "// game config\n";
+    push @h_game_data_lines, "// game config\n";
 
-    push @h_lines, join( "\n", 
+    push @h_game_data_lines, join( "\n", 
         map {
             sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ } )
         } keys %{ $game_config->{'game_functions'} } );
-    push @h_lines, "\n\n";
+    push @h_game_data_lines, "\n\n";
 
-    push @h_lines, join( "\n", 
+    push @h_game_data_lines, join( "\n", 
         map {
             sprintf( "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ } )
         } keys %{ $game_config->{'game_functions'} }
     );
 
-    push @h_lines, "\n\n";
+    push @h_game_data_lines, "\n\n";
 }
 
 sub generate_game_areas {
     # output game areas
-    push @c_home_lines, "// screen areas\n";
-    push @c_home_lines, "\n" . join( "\n", map {
+    push @c_game_data_lines, "// screen areas\n";
+    push @c_game_data_lines, "\n" . join( "\n", map {
         sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )
         } qw( game_area lives_area inventory_area debug_area )
     ) . "\n";
 
     # output definitions for screen areas
-    push @h_lines, "\n" . join( "\n", map {
+    push @h_game_data_lines, "\n" . join( "\n", map {
             "// " .uc( $_ ). " definitions\n" .
             sprintf( "#define %s_TOP	%d\n", uc( $_ ), $game_config->{ $_ }{'top'} ) .
             sprintf( "#define %s_LEFT	%d\n", uc( $_ ), $game_config->{ $_ }{'left'} ) .
@@ -1617,7 +1617,7 @@ sub generate_rule_actions {
 sub generate_flow_rules {
 
     # file header comments
-    push @c_banked_lines, <<FLOW_DATA_C_1
+    push @{ $c_dataset_lines->{ 0 } }, <<FLOW_DATA_C_1
 ///////////////////////////////////////////////////////////
 //
 // Flow data
@@ -1628,29 +1628,29 @@ FLOW_DATA_C_1
 ;
 
     # output check and action tables for each rule
-    push @c_banked_lines, sprintf( "// check tables for all rules\n" );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// check tables for all rules\n" );
     foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        push @c_banked_lines, generate_rule_checks( $all_rules[ $i ], $i );
+        push @{ $c_dataset_lines->{ 0 } }, generate_rule_checks( $all_rules[ $i ], $i );
     }
-    push @c_banked_lines, sprintf( "// action tables for all rules\n" );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// action tables for all rules\n" );
     foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-        push @c_banked_lines, generate_rule_actions( $all_rules[ $i ], $i );
+        push @{ $c_dataset_lines->{ 0 } }, generate_rule_actions( $all_rules[ $i ], $i );
     }
 
     # output global rule table
     if ( scalar( @all_rules ) ) {
-        push @c_banked_lines, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
+        push @{ $c_dataset_lines->{ 0 } }, sprintf(  "// global rule table\n\n#define FLOW_NUM_RULES\t%d\n",
             scalar( @all_rules ) );
-        push @c_banked_lines, "struct flow_rule_s all_flow_rules[ FLOW_NUM_RULES ] = {\n";
+        push @{ $c_dataset_lines->{ 0 } }, "struct flow_rule_s all_flow_rules[ FLOW_NUM_RULES ] = {\n";
         foreach my $i ( 0 .. scalar( @all_rules )-1 ) {
-            push @c_banked_lines, "\t{";
-            push @c_banked_lines, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
+            push @{ $c_dataset_lines->{ 0 } }, "\t{";
+            push @{ $c_dataset_lines->{ 0 } }, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
                 scalar( @{ $all_rules[ $i ]{'check'} } ), $i );
-            push @c_banked_lines, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
+            push @{ $c_dataset_lines->{ 0 } }, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
                 scalar( @{ $all_rules[ $i ]{'do'} } ), $i );
-            push @c_banked_lines, " },\n";
+            push @{ $c_dataset_lines->{ 0 } }, " },\n";
         }
-        push @c_banked_lines, "\n};\n\n";
+        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
     }
 }
 
@@ -1739,7 +1739,7 @@ sub run_consistency_checks {
 #############################
 
 sub generate_c_home_header {
-    push @c_home_lines, <<EOF_HEADER
+    push @c_game_data_lines, <<EOF_HEADER
 //////////////////////////////////////////////////////////////////////////
 //
 // Game data for the Home bank - automatically generated with datagen.pl
@@ -1764,7 +1764,7 @@ sub generate_c_banked_header {
     my $num_flow_rules	= scalar( @all_rules );
     my $num_screens	= scalar( @screens );
 
-    push @c_banked_lines, <<EOF_HEADER
+    push @{ $c_dataset_lines->{ 0 } }, <<EOF_HEADER
 ///////////////////////////////////////////////////////////////////////////
 //
 // Game data for the High banks - automatically generated with datagen.pl
@@ -1822,7 +1822,7 @@ EOF_HEADER
 
 sub generate_tiles {
 
-    push @h_lines, <<EOF_TILES_H
+    push @h_game_data_lines, <<EOF_TILES_H
 ////////////////////////////
 // Big Tile definitions
 ////////////////////////////
@@ -1830,7 +1830,7 @@ sub generate_tiles {
 EOF_TILES_H
 ;
 
-    push @c_banked_lines, <<EOF_TILES
+    push @{ $c_dataset_lines->{ 0 } }, <<EOF_TILES
 ////////////////////////////
 // Big Tile definitions
 ////////////////////////////
@@ -1842,22 +1842,22 @@ EOF_TILES
 
     # generate the global btile table
 
-    push @c_banked_lines, "// Global BTile table\n";
-    push @c_banked_lines, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @btiles ) );
+    push @{ $c_dataset_lines->{ 0 } }, "// Global BTile table\n";
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @btiles ) );
     foreach my $tile ( @btiles ) {
-        push @c_banked_lines, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
+        push @{ $c_dataset_lines->{ 0 } }, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
             $tile->{'rows'},
             $tile->{'cols'},
             $tile->{'name'},
             $tile->{'name'} );
     }
-    push @c_banked_lines, "};\n";
-    push @c_banked_lines, "// End of Global BTile table\n\n";
+    push @{ $c_dataset_lines->{ 0 } }, "};\n";
+    push @{ $c_dataset_lines->{ 0 } }, "// End of Global BTile table\n\n";
 
 }
 
 sub generate_sprites {
-    push @c_banked_lines, <<EOF_SPRITES
+    push @{ $c_dataset_lines->{ 0 } }, <<EOF_SPRITES
 ////////////////////////////
 // Sprite definitions
 ////////////////////////////
@@ -1868,9 +1868,9 @@ EOF_SPRITES
 
     # output global sprite graphics table
     my $num_sprites = scalar( @sprites );
-    push @c_banked_lines, "// Global sprite graphics table\n";
-    push @c_banked_lines, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
-    push @c_banked_lines, join( ",\n\n\t", map {
+    push @{ $c_dataset_lines->{ 0 } }, "// Global sprite graphics table\n";
+    push @{ $c_dataset_lines->{ 0 } }, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
+    push @{ $c_dataset_lines->{ 0 } }, join( ",\n\n\t", map {
         my $sprite = $_;
         sprintf( "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = %s }",
             $_->{'cols'} * 8, $_->{'rows'} * 8,
@@ -1878,11 +1878,11 @@ EOF_SPRITES
             scalar( @{ $sprite->{'sequences'} } ),	# number of animation sequences
             ( scalar( @{ $sprite->{'sequences'} } ) ? sprintf( "&sprite_%s_sequences[0]", $_->{'name'}) : 'NULL' ) ),
     } @sprites );
-    push @c_banked_lines, "\n};\n\n";
+    push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
 }
 
 sub generate_screens {
-    push @c_banked_lines, <<EOF_SCREENS
+    push @{ $c_dataset_lines->{ 0 } }, <<EOF_SCREENS
 ////////////////////////////
 // Screen definitions
 ////////////////////////////
@@ -1897,7 +1897,7 @@ sub generate_map {
     my $num_screens = scalar( @screens );
 
     # output global map data structure
-    push @c_banked_lines, <<EOF_MAP
+    push @{ $c_dataset_lines->{ 0 } }, <<EOF_MAP
 ////////////////////////////
 // Map definition
 ////////////////////////////
@@ -1905,9 +1905,9 @@ sub generate_map {
 // main game map
 EOF_MAP
 ;
-    push @c_banked_lines, sprintf( "struct map_screen_s all_screens[ MAP_NUM_SCREENS ] = {\n" );
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct map_screen_s all_screens[ MAP_NUM_SCREENS ] = {\n" );
 
-    push @c_banked_lines, join( ",\n", map {
+    push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
             my $screen_name = $_->{'name'};
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
@@ -1943,9 +1943,9 @@ EOF_MAP
                 } @{ $syntax->{'valid_whens'} } ) .
             "\n\t}"
         } @screens );
-    push @c_banked_lines, "\n};\n\n";
+    push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
 
-    push @h_lines, <<GAME_DATA_H_2
+    push @h_game_data_lines, <<GAME_DATA_H_2
 
 ////////////////////
 // map definitions
@@ -1958,7 +1958,7 @@ GAME_DATA_H_2
 }
 
 sub generate_h_header {
-    push @h_lines, <<GAME_DATA_H_1
+    push @h_game_data_lines, <<GAME_DATA_H_1
 #ifndef _GAME_DATA_H
 #define _GAME_DATA_H
 
@@ -1974,20 +1974,20 @@ GAME_DATA_H_1
 }
 
 sub generate_h_ending {
-    push @h_lines, <<GAME_DATA_H_3
+    push @h_game_data_lines, <<GAME_DATA_H_3
 #endif // _GAME_DATA_H
 GAME_DATA_H_3
 ;
 }
 
 sub generate_game_config {
-    push @h_lines, "\n// game configuration data\n";
-    push @h_lines, sprintf( "#define MAP_INITIAL_SCREEN %d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} } );
-    push @h_lines, sprintf( "#define DEFAULT_BG_ATTR ( %s )\n", $game_config->{'default_bg_attr'} );
+    push @h_game_data_lines, "\n// game configuration data\n";
+    push @h_game_data_lines, sprintf( "#define MAP_INITIAL_SCREEN %d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} } );
+    push @h_game_data_lines, sprintf( "#define DEFAULT_BG_ATTR ( %s )\n", $game_config->{'default_bg_attr'} );
 
-    push @h_lines, "\n// sound effect constants\n";
+    push @h_game_data_lines, "\n// sound effect constants\n";
     foreach my $effect ( keys %{$game_config->{'sounds'}} ) {
-        push @h_lines, sprintf( "#define SOUND_%s %s\n", uc( $effect ), $game_config->{'sounds'}{ $effect } );
+        push @h_game_data_lines, sprintf( "#define SOUND_%s %s\n", uc( $effect ), $game_config->{'sounds'}{ $effect } );
     }
 
     # check maximum sprite usage
@@ -2028,7 +2028,7 @@ sub generate_game_config {
     # max dataset size: memory from $5B00->$7FFF minus the heap
     my $max_dataset_size = ( 0x8000 - 0x5B00 ) - $max_heap_usage;
 
-    push @h_lines, <<EOF_BLDCFG1
+    push @h_game_data_lines, <<EOF_BLDCFG1
 
 // maximum sprite and heap usage
 #define BUILD_MAX_NUM_SPRITES_PER_SCREEN	$max_sprites
@@ -2080,21 +2080,24 @@ sub output_game_data {
     my $output_fh;
 
     # output .c file for home bank data
-    open( $output_fh, ">", $c_file_home ) or
-        die "Could not open $c_file_home for writing\n";
-    print $output_fh join( "", @c_home_lines );
+    open( $output_fh, ">", $c_file_game_data ) or
+        die "Could not open $c_file_game_data for writing\n";
+    print $output_fh join( "", @c_game_data_lines );
     close $output_fh;
 
-    # output .c file for banked data
-    open( $output_fh, ">", $c_file_dataset_0 ) or
-        die "Could not open $c_file_dataset_0 for writing\n";
-    print $output_fh join( "", @c_banked_lines );
-    close $output_fh;
+    # output .c file for banked datasets
+    foreach my $i ( sort grep { /\d+/ } keys %$c_dataset_lines ) {
+        my $c_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_dataset_format, $i );
+        open( $output_fh, ">", $c_file_dataset ) or
+            die "Could not open $c_file_dataset for writing\n";
+        print $output_fh join( "", @{ $c_dataset_lines->{ $i } } );
+        close $output_fh;
+    }
 
     # output .h file
-    open( $output_fh, ">", $h_file ) or
-        die "Could not open $h_file for writing\n";
-    print $output_fh join( "", @h_lines );
+    open( $output_fh, ">", $h_file_game_data ) or
+        die "Could not open $h_file_game_data for writing\n";
+    print $output_fh join( "", @h_game_data_lines );
     close $output_fh;
 
 }
@@ -2129,10 +2132,10 @@ sub dump_internal_data {
 our ( $opt_b, $opt_d, $opt_c );
 getopts("b:d:c");
 if ( defined( $opt_d ) ) {
-    $c_file_home = "$opt_d/$c_file_home";
-    $c_file_dataset_0 = "$opt_d/$c_file_dataset_0";
-    $h_file = "$opt_d/$h_file";
+    $c_file_game_data = "$opt_d/$c_file_game_data";
+    $h_file_game_data = "$opt_d/$h_file_game_data";
     $dump_file = "$opt_d/$dump_file";
+    $output_dest_dir = $opt_d;
 }
 $build_dir = $opt_b || 'build';
 

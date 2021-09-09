@@ -65,6 +65,14 @@ struct map_screen_s {
     } state_data;
 };
 
+// struct for mapping a screen in the global map to a screen in a given dataset
+// the index for this array is the global screen number
+struct screen_dataset_map_s {
+    uint8_t	dataset_num;
+    uint8_t	dataset_screen_num;
+};
+extern struct screen_dataset_map_s screen_dataset_map[];
+
 // with a generic function to draw a screen passed by pointer we can
 // later modify the logic behind maps without touching the map display
 // code
