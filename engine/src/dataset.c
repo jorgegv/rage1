@@ -22,7 +22,14 @@
 // struct dataset_assets_s *banked_assets;
 // struct dataset_assets_s *home_assets;
 
+uint8_t dataset_currently_active = 0;
+
 void dataset_activate( uint8_t d ) {
+
+    // if the dataset is already active, do nothing
+    if ( d == dataset_currently_active )
+        return;
+
     // switch the proper memory bank for the given dataset
     memory_switch_bank( dataset_info[ d ].bank_num );
 
@@ -33,6 +40,10 @@ void dataset_activate( uint8_t d ) {
 
     // switch back to bank 0
     memory_switch_bank( 0 );
+
+    // Save the dataset that was activated - Beware!  This has to be done
+    // AFTER switching back to bank 0!
+    dataset_currently_active = d;
 }
 
 void init_datasets(void) {
