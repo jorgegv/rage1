@@ -22,7 +22,7 @@
 // struct dataset_assets_s *banked_assets;
 // struct dataset_assets_s *home_assets;
 
-uint8_t dataset_currently_active = 0;
+uint8_t dataset_currently_active = 255;
 
 void dataset_activate( uint8_t d ) {
 
