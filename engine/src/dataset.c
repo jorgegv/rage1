@@ -17,39 +17,31 @@
 #include "rage1/memory.h"
 #include "rage1/dataset.h"
 
-// Global struct that holds the current assets table.  This must go in low
-// memory, so it is instead included in lowmem/asmdata.asm
-// struct dataset_assets_s current_assets;
-
-// switches asset tables (e.g. when loading a new dataset)
-void dataset_load_asset_tables( struct dataset_assets_s *s ) {
-    memcpy( &current_assets, s, sizeof( current_assets ) );
-}
+// Global structs that hold the current banked and home asset tables.  They
+// must go in low memory, so they are instead included in lowmem/asmdata.asm
+// struct dataset_assets_s *banked_assets;
+// struct dataset_assets_s *home_assets;
 
 void dataset_activate( uint8_t ds ) {
-
-    // intrinsic_di();	// not needed any more
-
-    // select source memory bank for dataset ds
+    // switch the proper memory bank for the given dataset
     memory_switch_bank( dataset_map[ ds ].bank_num );
 
+    // copy dataset data into LOWMEM buffer
     // data is ZX0 compressed, so decompress to destination address
     // beware: dzx0_* arguments are (source,dest), unlike memcpy and friends!
     dzx0_standard( (void *) ( 0xC000 + dataset_map[ ds ].offset ), (void *) BANKED_DATASET_BASE_ADDRESS );
 
-    // select back memory bank 0
+    // switch back to bank 0
     memory_switch_bank( 0 );
-
-    // intrinsic_ei();	// not needed any more
-
-    // setup asset tables, they are always at dataset offset 0
-    dataset_load_asset_tables( (struct dataset_assets_s *) BANKED_DATASET_BASE_ADDRESS );
-
 }
 
 void init_datasets(void) {
-//    dataset_load_asset_tables( &all_assets_dataset_0 );
-//    dataset_loas_asset_tables( (struct dataset_assets_s *)BANKED_DATASET_BASE_ADDRESS );
-    // start game with dataset 0
+    // setup home dataset
+//    home_assets = &dataset_home;
+
+    // setup banked dataset; it is always at the same address
+    banked_assets = (struct dataset_assets_s *) BANKED_DATASET_BASE_ADDRESS;
+
+    // activate dataset
     dataset_activate( 0 );
 }

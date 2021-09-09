@@ -803,7 +803,7 @@ sub generate_btile {
     push @c_banked_lines, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 
     # output auxiliary definitions
-    push @h_lines, sprintf( "#define BTILE_%s\t( &current_assets.all_btiles[ %d ] )\n",
+    push @h_lines, sprintf( "#define BTILE_%s\t( &banked_assets->all_btiles[ %d ] )\n",
         uc( $tile->{'name'} ),
         $btile_name_to_index{ $tile->{'name'} },
     );
@@ -1326,7 +1326,7 @@ sub generate_bullets {
 #define	BULLET_SPRITE_WIDTH	$width
 #define	BULLET_SPRITE_HEIGHT	$height
 #define BULLET_SPRITE_ID	$sprite_index
-#define	BULLET_SPRITE_FRAMES	( current_assets.all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
+#define	BULLET_SPRITE_FRAMES	( banked_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
 #define	BULLET_SPRITE_XTHRESH	$xthresh
 #define	BULLET_SPRITE_YTHRESH	$ythresh
 #define	BULLET_MOVEMENT_DX	$dx

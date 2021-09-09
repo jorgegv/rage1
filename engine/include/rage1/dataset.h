@@ -48,8 +48,10 @@ struct dataset_assets_s {
     struct map_screen_s			*all_screens;
 };
 
-// global struct that holds the current assets table
-extern struct dataset_assets_s current_assets;
+// Global structs that hold the current banked and home asset tables.  They
+// must go in low memory, so they are included in lowmem/asmdata.asm
+extern struct dataset_assets_s *banked_assets;
+extern struct dataset_assets_s *home_assets;
 
 // structure mapping dataset -> (bank number, size, offset) for a given
 // dataset

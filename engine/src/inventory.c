@@ -48,7 +48,7 @@ void inventory_show(void) {
     inv = &game_state.inventory;
     item_index = 16;
     while ( item_index-- ) {
-        tile = &current_assets.all_btiles[ all_items[ item_index ].btile_num ];
+        tile = &banked_assets->all_btiles[ all_items[ item_index ].btile_num ];
         if ( ( tile != NULL ) && ( INVENTORY_HAS_ITEM( inv, all_items[ item_index].item_id ) ) ) {
             btile_draw( INVENTORY_AREA_TOP, col, tile, TT_DECORATION, &inventory_area );
             col += tile->num_cols;

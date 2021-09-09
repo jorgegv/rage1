@@ -29,7 +29,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
         if ( ! IS_ENEMY_ACTIVE(*e) )	// skip if not active
             continue;
 
-        g = &current_assets.all_sprite_graphics[ e->num_graphic ];
+        g = &banked_assets->all_sprite_graphics[ e->num_graphic ];
 
         // reset enemy state to initial values
 
@@ -66,7 +66,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
         if ( ! IS_ENEMY_ACTIVE(*e) )	// skip if not active
             continue;
 
-        g = &current_assets.all_sprite_graphics[ e->num_graphic ];
+        g = &banked_assets->all_sprite_graphics[ e->num_graphic ];
 
         // animate sprite
         // animation can be in 2 states: animating frames or waiting for the next sequence run
