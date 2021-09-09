@@ -28,14 +28,14 @@ the memory holes for the game, if possible.
 The low memory map for our game is as follows:
 
 ```
-0000-3FFF: ROM			(16384 BYTES)
-4000-5AFF: SCREEN$		( 6912 BYTES)
-5B00-7FFF: LOWMEM BUFFER + HEAP	( 9472 BYTES)
-8000-8100: INT VECTOR TABLE	(  257 BYTES)
-8101-8180: STACK		(  128 BYTES)
-8181-8183: "jp <isr>" OPCODES	(    3 BYTES)
-8184-D1EC: C PROGRAM CODE	(20585 BYTES)
-D1ED-FFFF: SP1 LIBRARY DATA	(11795 BYTES)
+0000-3FFF: ROM                  (16384 BYTES)
+4000-5AFF: SCREEN$              ( 6912 BYTES)
+5B00-7FFF: LOWMEM BUFFER + HEAP ( 9472 BYTES)
+8000-8100: INT VECTOR TABLE     (  257 BYTES)
+8101-8180: STACK                (  128 BYTES)
+8181-8183: "jp <isr>" OPCODES   (    3 BYTES)
+8184-D1EC: C PROGRAM CODE       (20585 BYTES)
+D1ED-FFFF: SP1 LIBRARY DATA     (11795 BYTES)
 ```
 
 ## Implementation
@@ -200,9 +200,9 @@ that everything works.
 
 So we will do the following setup:
 
-- The code/data that will be paged will be included in separate sections. 
-  Arbitrary sections can be defined by using #pragmas in C code, and they
-  will be output as separate `.bin` or `.tap` files by the compiler/linker.
+- The code/data that will be paged will be included in separate binaries.
+  They will be compiled and linked as standalone blobs with no external
+  references.
 
 - Those sections (DATASETs) will have an ORG 0x5B00, which is the base
   address of our LOWMEM area (i.e.  where all that code/data will be copied
@@ -222,7 +222,7 @@ So we will do the following setup:
 - A small Dataset Mapping Table (DMT) will be needed within the main section
   (non-paged) code, that will map each dataset to the physical bank (0-7)
   the offset inside the bank from which data will be copied into LOWMEM, and
-  the size of the DATASET.  See dataset.h for he structure of the DMT
+  the size of the DATASET.  See dataset.h for the structure of the DMT
   entries.
   
 ## Design Keys for Game Data
@@ -247,24 +247,29 @@ So we will do the following setup:
 
 - A DATASET is a group of assets that can be loaded at once.
 
-- The MAP is an array of screens.  Each screen has an associated DATASET
-  where it is defined.
+- The MAP is made of screens.  Each screen is defined inside a DATASET. 
 
-- The SCREEN has new fields for BTILE, SPRITE, SOUND and RULE sets that are
-  the ones used for that screen and that must be stored in the same DATASET. 
-  The indexes for elements on each screen are always referred to the current
-  set of elements of the given type.
+- Each screen has a GLOBAL index which is the screen identifier, and a LOCAL
+  index into the DATASET screen table.
 
-- When ENTER_SCREEN or EXIT_SCREEN, the current DATASET  is chacked, and
-  switched to the new sets if needed before/after switching screen.
+- There is a SCREEN DATASET MAP, which maps the GLOBAL index to a structure
+  that contains the DATASET each screen is defined into, and the LOCAL index
+  for that screen into the DATASET screen table.
 
-- For switching DATASETs, the whole set is copied from high to low
-  memory as needed.  With this schema, only the sets for sprites, btiles,
-  sounds, screens and rules that are used by the current screen are in low
-  memory.
+- The assets that are used in that screen must be stored in the same
+  DATASET.  The indexes for elements on each screen are always referred to
+  the set of elements of the given type which is defined in the same
+  DATASET.
 
-- We can have a big number of sets in high memory, up to 80 KB (5 x 16KB
-  banks: 1,3,4,6,7)
+- When ENTER_SCREEN, the needed DATASET is requested.  The dataset selection
+  routine checks if the dataset has changed or not, and does nothing in the
+  later case.
+
+- For switching DATASETs, the whole set is copied from high to low memory as
+  needed.
+
+- We can have a big number of DATASETs in high memory, up to 80 KB (5 x 16KB
+  banks: 1,3,4,6,7). Even more with ZX0 compression.
 
 ## Banked Game Data Implementation
 
@@ -332,15 +337,14 @@ zcc +zx -compiler=sdcc -clib=sdcc_iy dataset1.c -o dataset1.bin --no-crt
   - Hero sprites
   - Bullet sprites
 
-- The dataset where each asset is stored is specified in the GDATA files
-  (REVIEW?).
+- Each asset must be store in the same DATASET as the screen where it is
+  used. So the DATASE must be defined for a SCREEN, and it is propagated to
+  all assets used in it.
 
-- Dataset switches occur on enter_screen events, so there must be a global
+- Dataset switches occur on ENTER_SCREEN events, so there must be a global
   map stored in regular (non-banked) memory, which maps the screen->dataset
-  relationship (global variable `screen_dataset_map`).  This is a simple
-  byte array, where the index is the screen number, and the value is the
-  dataset number.  It occupies at most 256 bytes, since that's the maximum
-  number of screens and datasets.
+  relationship (global variable `screen_dataset_map`) and the global->local
+  index for the screen.
 
 - A `game_config` setting selects if the game is to be compiled in for a 48K
   or 128K Spectrum (e.g.  `spectrum_target` directive, with values
