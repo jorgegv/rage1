@@ -22,14 +22,14 @@
 // struct dataset_assets_s *banked_assets;
 // struct dataset_assets_s *home_assets;
 
-void dataset_activate( uint8_t ds ) {
+void dataset_activate( uint8_t d ) {
     // switch the proper memory bank for the given dataset
-    memory_switch_bank( dataset_map[ ds ].bank_num );
+    memory_switch_bank( dataset_info[ d ].bank_num );
 
     // copy dataset data into LOWMEM buffer
     // data is ZX0 compressed, so decompress to destination address
     // beware: dzx0_* arguments are (source,dest), unlike memcpy and friends!
-    dzx0_standard( (void *) ( 0xC000 + dataset_map[ ds ].offset ), (void *) BANKED_DATASET_BASE_ADDRESS );
+    dzx0_standard( (void *) ( 0xC000 + dataset_info[ d ].offset ), (void *) BANKED_DATASET_BASE_ADDRESS );
 
     // switch back to bank 0
     memory_switch_bank( 0 );

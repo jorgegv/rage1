@@ -23,7 +23,7 @@ my $max_bank_size = 16384;
 # config vars
 my $bank_binaries_name_format = 'bank_%d.bin';
 my $bank_config_name = 'bank_bins.cfg';
-my $dataset_map_name = 'dataset_map.asm';
+my $dataset_info_name = 'dataset_info.asm';
 my $basic_loader_name = 'loader.bas';
 
 # auxiliary functions
@@ -125,11 +125,11 @@ sub generate_bank_config {
     print "OK\n";
 }
 
-sub generate_dataset_map_code_asm {
+sub generate_dataset_info_code_asm {
     my ( $layout, $datasets, $outdir ) = @_;
-    my $dsmap = $outdir . '/' . $dataset_map_name;
+    my $dsmap = $outdir . '/' . $dataset_info_name;
 
-    print "  Generating $dataset_map_name...";
+    print "  Generating $dataset_info_name...";
 
     open my $dsmap_h, ">", $dsmap
         or die "\n** Error: could not open $dsmap for writing\n";
@@ -140,14 +140,14 @@ sub generate_dataset_map_code_asm {
 ;; stored, and the start address on that bank
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; struct dataset_map_s dataset_map[ $num_datasets ] = { ... }
+;; struct dataset_info_s dataset_info[ $num_datasets ] = { ... }
 ;;
 
 section         code_crt_common
 
-public		_dataset_map
+public		_dataset_info
 
-_dataset_map:
+_dataset_info:
 EOF_DSMAP_3
 ;
 
@@ -232,6 +232,6 @@ generate_bank_binaries( $bank_layout, $input_dir, $output_dir );
 
 generate_bank_config( $bank_layout, $output_dir );
 
-generate_dataset_map_code_asm( $bank_layout, $datasets, $lowmem_output_dir );
+generate_dataset_info_code_asm( $bank_layout, $datasets, $lowmem_output_dir );
 
 generate_basic_loader( $bank_layout, $output_dir );
