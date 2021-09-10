@@ -26,11 +26,11 @@ my $dataset_base_address = 0x5b00;
 # if you add any global variable here, don't forget to add a reference to it
 # also in $all_state variable in dump_internal_state function at the end of
 # the script
-my @btiles;
+my @all_btiles;
 my %btile_name_to_index;
-my @screens;
+my @all_screens;
 my %screen_name_to_index = ( '__NO_SCREEN__', 0 );
-my @sprites;
+my @all_sprites;
 my %sprite_name_to_index;
 my $hero;
 my $all_items;
@@ -164,8 +164,8 @@ sub read_input_data {
             }
             if ( $line =~ /^END_BTILE$/ ) {
                 validate_and_compile_btile( $cur_btile );
-                my $index = scalar( @btiles );
-                push @btiles, $cur_btile;
+                my $index = scalar( @all_btiles );
+                push @all_btiles, $cur_btile;
                 $btile_name_to_index{ $cur_btile->{'name'} } = $index;
                 $state = 'NONE';
                 next;
@@ -252,8 +252,8 @@ sub read_input_data {
             }
             if ( $line =~ /^END_SPRITE$/ ) {
                 validate_and_compile_sprite( $cur_sprite );
-                $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @sprites );
-                push @sprites, $cur_sprite;
+                $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @all_sprites );
+                push @all_sprites, $cur_sprite;
                 $state = 'NONE';
                 next;
             }
@@ -355,8 +355,8 @@ sub read_input_data {
             }
             if ( $line =~ /^END_SCREEN$/ ) {
                 validate_and_compile_screen( $cur_screen );
-                $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @screens );
-                push @screens, $cur_screen;
+                $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
+                push @all_screens, $cur_screen;
                 $state = 'NONE';
                 next;
             }
@@ -1078,7 +1078,7 @@ sub compile_screen_data {
                     die "Screen '$screen->{name}': digraph '$data_dg' is undefined\n";
 
                 # "paint" the tile in the DEST array
-                my $btile = $btiles[ $btile_name_to_index{ $screen_digraphs->{ $data_dg }{'btile'} } ];
+                my $btile = $all_btiles[ $btile_name_to_index{ $screen_digraphs->{ $data_dg }{'btile'} } ];
                 foreach my $i ( 0 .. ( $btile->{'rows'} - 1 ) ) {
                     foreach my $j ( 0 .. ( $btile->{'cols'} - 1 ) ) {
                         $screen_dest->[ $r + $i ][ $c + $j ] = $data_dg;
@@ -1127,7 +1127,7 @@ sub compile_screen_data {
 
 sub generate_screen {
     my $screen_num = shift;
-    my $screen = $screens[ $screen_num ];
+    my $screen = $all_screens[ $screen_num ];
 
     # screen tiles
     if ( scalar( @{$screen->{'btiles'}} ) ) {
@@ -1163,7 +1163,7 @@ sub generate_screen {
                     $_->{'animation_delay'}, ( $_->{'sequence_delay'} || 0 ),
                     # animation_data: current values (initial)
                     # sequence number
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'initial_sequence'} },
+                    $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'initial_sequence'} },
                     0,0,0, # sequence_counter, frame_delay_counter, sequence_delay_counter: will be initialized later
 
                     # position_data
@@ -1179,8 +1179,8 @@ sub generate_screen {
                     $_->{'dx'}, $_->{'dy'},
                     $_->{'initx'}, $_->{'inity'},
                     $_->{'dx'}, $_->{'dy'},
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
-                    $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_b'} },
+                    $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
+                    $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_b'} },
 
                     # initial flags
                     $_->{'initial_flags'},
@@ -1272,10 +1272,10 @@ sub generate_hero {
     my $lives_btile_num	= 'BTILE_ID_' . uc( $hero->{'lives'}{'btile'} );
     my $sprite		= $hero->{'sprite'};
     my $num_sprite	= $sprite_name_to_index{ $hero->{'sprite'} };
-    my $sequence_up	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
-    my $sequence_down	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_down'} };
-    my $sequence_left	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_left'} };
-    my $sequence_right	= $sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_right'} };
+    my $sequence_up	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
+    my $sequence_down	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_down'} };
+    my $sequence_left	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_left'} };
+    my $sequence_right	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_right'} };
     my $delay		= $hero->{'animation_delay'};
     my $hstep		= $hero->{'hstep'};
     my $vstep		= $hero->{'vstep'};
@@ -1300,7 +1300,7 @@ EOF_HERO1
 }
 
 sub generate_bullets {
-    my $sprite = $sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
+    my $sprite = $all_sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
     my $sprite_name = $hero->{'bullet'}{'sprite'};
     my $sprite_index = $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
     my $width = $sprite->{'cols'} * 8;
@@ -1471,7 +1471,7 @@ sub validate_and_compile_rule {
 
         # hotzone filtering
         if ( $check =~ /^HERO_OVER_HOTZONE$/ ) {
-            $check_data = $screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
+            $check_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
             # regenerate the value with the filtered data
             $chk = sprintf( "%s\t%d", $check, $check_data );
         }
@@ -1485,7 +1485,7 @@ sub validate_and_compile_rule {
 
         # hotzone filtering
         if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
-            $action_data = $screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
+            $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
             # regenerate the value with the filtered data
             $do = sprintf( "%s\t%d", $action, $action_data );
         }
@@ -1515,7 +1515,7 @@ sub validate_and_compile_rule {
 
         # btile filtering
         if ( $action =~ /^(ENABLE|DISABLE)_BTILE$/ ) {
-            $action_data = $screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
+            $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
             # regenerate the value with the filtered data
             $do = sprintf( "%s\t%d", $action, $action_data );
         }
@@ -1673,8 +1673,8 @@ sub pixels_to_byte {
 
 sub check_screen_sprites_are_valid {
     my $errors = 0;
-    my %is_valid_sprite = map { $_->{'name'}, 1 } @sprites;
-    foreach my $screen ( @screens ) {
+    my %is_valid_sprite = map { $_->{'name'}, 1 } @all_sprites;
+    foreach my $screen ( @all_screens ) {
         foreach my $sprite ( @{ $screen->{'sprites'} } ) {
             if ( not $is_valid_sprite{ $sprite->{'name'} } ) {
                 warn sprintf( "Screen '%s': undefined sprite '%s'\n", $screen->{'name'}, $sprite->{'name'} );
@@ -1687,8 +1687,8 @@ sub check_screen_sprites_are_valid {
 
 sub check_screen_btiles_are_valid {
     my $errors = 0;
-    my %is_valid_btile = map { $_->{'name'}, 1 } @btiles;
-    foreach my $screen ( @screens ) {
+    my %is_valid_btile = map { $_->{'name'}, 1 } @all_btiles;
+    foreach my $screen ( @all_screens ) {
         foreach my $btile ( @{ $screen->{'btiles'} } ) {
             if ( not defined( $btile->{'btile'} ) ) {
                 warn sprintf( "Screen '%s': %s has no associated btile attribute\n", $screen->{'name'}, $btile->{'type'} );
@@ -1707,8 +1707,8 @@ sub check_screen_btiles_are_valid {
 # items are btiles
 sub check_screen_items_are_valid {
     my $errors = 0;
-    my %is_valid_btile = map { $_->{'name'}, 1 } @btiles;
-    foreach my $screen ( @screens ) {
+    my %is_valid_btile = map { $_->{'name'}, 1 } @all_btiles;
+    foreach my $screen ( @all_screens ) {
         foreach my $item ( @{ $screen->{'items'} } ) {
             if ( not $is_valid_btile{ $item->{'name'} } ) {
                 warn sprintf( "Screen '%s': undefined btile for item '%s'\n", $screen->{'name'}, $item->{'name'} );
@@ -1759,10 +1759,10 @@ EOF_HEADER
 }
 
 sub generate_c_banked_header {
-    my $num_btiles	= scalar( @btiles );
-    my $num_sprites	= scalar( @sprites );
+    my $num_btiles	= scalar( @all_btiles );
+    my $num_sprites	= scalar( @all_sprites );
     my $num_flow_rules	= scalar( @all_rules );
-    my $num_screens	= scalar( @screens );
+    my $num_screens	= scalar( @all_screens );
 
     push @{ $c_dataset_lines->{ 0 } }, <<EOF_HEADER
 ///////////////////////////////////////////////////////////////////////////
@@ -1838,13 +1838,13 @@ EOF_TILES_H
 EOF_TILES
 ;
     # generate the tiles
-    foreach my $tile ( @btiles ) { generate_btile( $tile ); }
+    foreach my $tile ( @all_btiles ) { generate_btile( $tile ); }
 
     # generate the global btile table
 
     push @{ $c_dataset_lines->{ 0 } }, "// Global BTile table\n";
-    push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @btiles ) );
-    foreach my $tile ( @btiles ) {
+    push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @all_btiles ) );
+    foreach my $tile ( @all_btiles ) {
         push @{ $c_dataset_lines->{ 0 } }, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
             $tile->{'rows'},
             $tile->{'cols'},
@@ -1864,10 +1864,10 @@ sub generate_sprites {
 
 EOF_SPRITES
 ;
-    foreach my $sprite ( @sprites ) { generate_sprite( $sprite ); }
+    foreach my $sprite ( @all_sprites ) { generate_sprite( $sprite ); }
 
     # output global sprite graphics table
-    my $num_sprites = scalar( @sprites );
+    my $num_sprites = scalar( @all_sprites );
     push @{ $c_dataset_lines->{ 0 } }, "// Global sprite graphics table\n";
     push @{ $c_dataset_lines->{ 0 } }, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
     push @{ $c_dataset_lines->{ 0 } }, join( ",\n\n\t", map {
@@ -1877,7 +1877,7 @@ EOF_SPRITES
             $_->{'frames'}, $_->{'name'},
             scalar( @{ $sprite->{'sequences'} } ),	# number of animation sequences
             ( scalar( @{ $sprite->{'sequences'} } ) ? sprintf( "&sprite_%s_sequences[0]", $_->{'name'}) : 'NULL' ) ),
-    } @sprites );
+    } @all_sprites );
     push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
 }
 
@@ -1889,12 +1889,12 @@ sub generate_screens {
 
 EOF_SCREENS
 ;
-    foreach my $screen_num ( 0 .. ( scalar( @screens ) - 1 ) ) { generate_screen( $screen_num ); }
+    foreach my $screen_num ( 0 .. ( scalar( @all_screens ) - 1 ) ) { generate_screen( $screen_num ); }
     
 }
 
 sub generate_map {
-    my $num_screens = scalar( @screens );
+    my $num_screens = scalar( @all_screens );
 
     # output global map data structure
     push @{ $c_dataset_lines->{ 0 } }, <<EOF_MAP
@@ -1942,7 +1942,7 @@ EOF_MAP
                 )
                 } @{ $syntax->{'valid_whens'} } ) .
             "\n\t}"
-        } @screens );
+        } @all_screens );
     push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
 
     push @h_game_data_lines, <<GAME_DATA_H_2
@@ -1995,10 +1995,10 @@ sub generate_game_config {
     my $max_spritechars = 0;
 
     # start with the screens
-    foreach my $screen ( @screens ) {
+    foreach my $screen ( @all_screens ) {
         my $screen_sprites = 0;
         my $screen_spritechars = 0;
-        foreach my $sprite ( map { $sprites[ $sprite_name_to_index{ $_->{'sprite'} } ] } @{ $screen->{'enemies'} } ) {
+        foreach my $sprite ( map { $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ] } @{ $screen->{'enemies'} } ) {
             $screen_sprites++;
             # remember: SP1 sprites have 1 extra row and col
             $screen_spritechars += ( $sprite->{'rows'} + 1 ) * ( $sprite->{'cols'} + 1 )
@@ -2013,12 +2013,12 @@ sub generate_game_config {
 
     # add the hero sprite - just 1
     $max_sprites++;
-    my $hs = $sprites[ $sprite_name_to_index{ $hero->{'sprite'} } ];
+    my $hs = $all_sprites[ $sprite_name_to_index{ $hero->{'sprite'} } ];
     $max_spritechars += ( $hs->{'rows'} + 1 ) * ( $hs->{'cols'} + 1 );
 
     # add the bullet sprites - the N bullets
     $max_sprites += $hero->{'bullet'}{'max_bullets'};
-    my $bs = $sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
+    my $bs = $all_sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
     $max_spritechars += $hero->{'bullet'}{'max_bullets'} * ( $bs->{'rows'} + 1 ) * ( $bs->{'cols'} + 1 );
 
     # 20 bytes for a safety margin, plus 6 bytes per allocation, plus 20
@@ -2109,10 +2109,11 @@ sub dump_internal_data {
         die "Could not open $dump_file for writing\n";
 
     my $all_state = {
-        btiles			=> \@btiles,
-        screens			=> \@screens,
+        btiles			=> \@all_btiles,
+        btile_name_to_index	=> \%btile_name_to_index,
+        screens			=> \@all_screens,
         screen_name_to_index	=> \%screen_name_to_index,
-        sprites			=> \@sprites,
+        sprites			=> \@all_sprites,
         sprite_name_to_index	=> \%sprite_name_to_index,
         hero			=> $hero,
         all_items		=> $all_items,
