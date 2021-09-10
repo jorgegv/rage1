@@ -265,6 +265,9 @@ END_SCREEN
 
 * `NAME`: the name of the screen, used for referencing it from other
   elements
+* `DATASET`: the number of the dataset where the screen should go.  It can
+be an integer number starting at 0, or the special name `home`. If no
+dataset is defined for a screen, the default value `home` is used.
 * `OBSTACLE`: places an element on the screen. The Hero can not go through
 this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the Btile that will be used to draw this obstacle
@@ -286,44 +289,44 @@ this element (=obstacle) but s/he must move around. Arguments:
   activated and deactivated during the game, this setting defined the
   initial state.
 * `HERO`: defines hero properties in this screen. Arguments:
-  * `STARTUP_XPOS`,`STARTP_YPOS`: startup hero coordinates in this screen,
+  * `STARTUP_XPOS`,`STARTUP_YPOS`: startup hero coordinates in this screen,
     of this is the initial screen.
 * `ITEM`: positions an inventory item on the screen. Arguments:
-  * `NAME`: the Btile that will be used to draw the item
+  * `NAME`: the name of the item
+  * `BTILE`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
-  * `ITEM_INDEX`: item index in the game inventory (0-15)
 * `ENEMY`: defines an enemy on the screen. Arguments:
   * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
     sprite name
   * `SPRITE`: the name of the sprite to be used for this enemy
   * `MOVEMENT`: how the enemy moves. For the moment, this can be only
   `LINEAR`, and the following arguments refer to this movement type.
-  * `XMIN`,`YMIN`,`XMAX`,`YMAX`: bounds for the enemy movement, in pixel
-  coords. The sprite will never move outside this rectangle.
-  * `BOUNCE`: 1 if the enemy bounces against obstacles, 0 if it goes through
-  them. Enemies _always_ bounce against their bounding rectangles
-  (XMIN,YMIN,XMAX,YMAX).
-  * `INITX`,`INITY`: initial position for the sprite in pixel coords
-  * `DX`,`DY`: coordinate increments when moving. Can be signed for defining
-  the movement direction.
-  * `SPEED_DELAY`: delay between different positions of the enemy (defines
-  the speed of the enemy). Specified in 1/50s (screen frames)
-  * `ANIMATION_DELAY`: delay between different sprites frames to be used for drawing
-  the enemy, specified in 1/50s (screen frames)
-  * `SEQUENCE_A`: (optional) name of the first animation sequence. If not
-  specified, 'Main' is assumed
-  * `SEQUENCE_B`: (optional) name of the second animation sequence. If not
-  specified, 'Main' is assumed
-  * `INITIAL_SEQUENCE`: (optional) name of the initial animation sequence.
-  If not specified, 'Main' is assumed
-  * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
-  (screen frames)
-  * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
-  will switch from animation sequence A to B and viceversa when bouncing
-  horizontally: sequence A for incrementing X, sequence B for decrementing X
-  * `CHANGE_SEQUENCE_VERT`: (optional) if this flag is 1, the enemy sprite
-  will switch from animation sequence A to B and viceversa when bouncing
-  vertically: sequence A for incrementing Y, sequence B for decrementing Y
+    * `XMIN`,`YMIN`,`XMAX`,`YMAX`: bounds for the enemy movement, in pixel
+    coords. The sprite will never move outside this rectangle.
+    * `BOUNCE`: 1 if the enemy bounces against obstacles, 0 if it goes through
+    them. Enemies _always_ bounce against their bounding rectangles
+    (XMIN,YMIN,XMAX,YMAX).
+    * `INITX`,`INITY`: initial position for the sprite in pixel coords
+    * `DX`,`DY`: coordinate increments when moving. Can be signed for defining
+    the movement direction.
+    * `SPEED_DELAY`: delay between different positions of the enemy (defines
+    the speed of the enemy). Specified in 1/50s (screen frames)
+    * `ANIMATION_DELAY`: delay between different sprites frames to be used for drawing
+    the enemy, specified in 1/50s (screen frames)
+    * `SEQUENCE_A`: (optional) name of the first animation sequence. If not
+    specified, 'Main' is assumed
+    * `SEQUENCE_B`: (optional) name of the second animation sequence. If not
+    specified, 'Main' is assumed
+    * `INITIAL_SEQUENCE`: (optional) name of the initial animation sequence.
+    If not specified, 'Main' is assumed
+    * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
+    (screen frames)
+    * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
+    will switch from animation sequence A to B and viceversa when bouncing
+    horizontally: sequence A for incrementing X, sequence B for decrementing X
+    * `CHANGE_SEQUENCE_VERT`: (optional) if this flag is 1, the enemy sprite
+    will switch from animation sequence A to B and viceversa when bouncing
+    vertically: sequence A for incrementing Y, sequence B for decrementing Y
 
 `CHANGE_SEQUENCE_HORIZ` and `CHANGE_SEQUENCE_VERT` animations should be
 used separately and never together in the same enemy.
