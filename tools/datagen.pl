@@ -1007,7 +1007,7 @@ sub validate_and_compile_screen {
 
     # if no dataset is specified, store the screen in home dataset
     if ( not defined( $screen->{'dataset'} ) ) {
-        $screen->{'dataset'} = 'home';
+        $screen->{'dataset'} = 'home';	# must be lowercase
     }
 
     # check each enemy
@@ -2134,15 +2134,41 @@ sub output_game_data {
 # each asset type (the all_<something> variables).
 
 sub create_dataset_dependencies {
+
+    # first, we add all assets to the dataset lists
     foreach my $screen ( @all_screens ) {
-        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'btiles'} = [
-        ];
-        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'sprites'} = [
-        ];
-        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'rules'} = [
-        ];
-        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'screens'} = [
-        ];
+        # add screen to the dataset
+        push @{ $dataset_dependency{ $screen->{'dataset'} }{'screens'} },
+            $screen_name_to_index{ $screen->{'name'} };
+        # add btiles
+        push @{ $dataset_dependency{ $screen->{'dataset'} }{'btiles'} },
+            map { $btile_name_to_index{ $_->{'btile'} } } @{ $screen->{'btiles'} };
+        # add sprites
+        push @{ $dataset_dependency{ $screen->{'dataset'} }{'sprites'} },
+            map { $sprite_name_to_index{ $_->{'sprite'} } } @{ $screen->{'enemies'} };
+        # add rules
+        push @{ $dataset_dependency{ $screen->{'dataset'} }{'rules'} },
+            map { @{ $screen->{'rules'}{ $_ } } } keys %{ $screen->{'rules'} };
+    }
+
+    # we must then remove duplicates from the lists
+    foreach my $dataset ( keys %dataset_dependency ) {
+
+        my %seen = ();
+        $dataset_dependency{ $dataset }{'screens'} =
+            [ sort grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'screens'} } ];
+
+        %seen = ();	# reset
+        $dataset_dependency{ $dataset }{'btiles'} =
+            [ sort grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'btiles'} } ];
+
+        %seen = ();	# reset
+        $dataset_dependency{ $dataset }{'sprites'} =
+            [ sort grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'sprites'} } ];
+
+        %seen = ();	# reset
+        $dataset_dependency{ $dataset }{'rules'} =
+            [ sort grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'rules'} } ];
     }
 }
 
