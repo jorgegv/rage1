@@ -38,11 +38,11 @@ my %sprite_name_to_index;
 my @all_items;
 my %item_name_to_index;
 
-my $hero;
-
-my $game_config;
 my @all_rules;
-my $screen_rules;
+
+my $hero;
+my $game_config;
+
 
 # file names
 my $c_file_game_data = 'game_data.c';
@@ -541,7 +541,7 @@ sub read_input_data {
                 }
 
                 # add the rule index to the proper screen rule table
-                push @{ $screen_rules->{ $screen }{ $when } }, $index;
+                push @{ $all_screens[ $screen_name_to_index{ $screen } ]{'rules'}{ $when } }, $index;
 
                 # clean up for next rule
                 $cur_rule = undef;
@@ -1233,15 +1233,15 @@ sub generate_screen {
     # flow rules
     push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
     foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
-        if ( defined( $screen_rules->{ $screen->{'name'} } ) and defined( $screen_rules->{ $screen->{'name'} }{ $table } ) ) {
-            my $num_rules = scalar( @{ $screen_rules->{ $screen->{'name'} }{ $table } } );
+        if ( defined( $screen->{'rules'} ) and defined( $screen->{'rules'}{ $table } ) ) {
+            my $num_rules = scalar( @{ $screen->{'rules'}{ $table } } );
             if ( $num_rules ) {
                 push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
                     $screen->{'name'}, $table, $num_rules );
                 push @{ $c_dataset_lines->{ 0 } }, join( ",\n\t",
                     map {
                         sprintf( "&all_flow_rules[ %d ]", $_ )
-                    } @{ $screen_rules->{ $screen->{'name'} }{ $table } }
+                    } @{ $screen->{'rules'}{ $table } }
                 );
                 push @{ $c_dataset_lines->{ 0 } }, "\n};\n";
             }
@@ -1917,6 +1917,7 @@ EOF_MAP
 
     push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
             my $screen_name = $_->{'name'};
+            my $screen = $_;
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
@@ -1939,8 +1940,8 @@ EOF_MAP
             join( ",\n", map {
                 sprintf( "\t\t.flow_data.rule_tables.%s = { %d, %s }",
                     $_,
-                    ( scalar( @{ $screen_rules->{ $screen_name }{ $_ } } ) || 0 ),
-                    ( scalar( @{ $screen_rules->{ $screen_name }{ $_ } } ) ?
+                    ( scalar( @{ $screen->{'rules'}{ $_ } } ) || 0 ),
+                    ( scalar( @{ $screen->{'rules'}{ $_ } } ) ?
                         sprintf( "&screen_%s_%s_rules[0]",
                             $screen_name,
                             $_
@@ -2125,10 +2126,9 @@ sub dump_internal_data {
         sprite_name_to_index	=> \%sprite_name_to_index,
         all_items		=> \@all_items,
         item_name_to_index	=> \%item_name_to_index,
+        all_rules		=> \@all_rules,
         hero			=> $hero,
         game_config		=> $game_config,
-        all_rules		=> \@all_rules,
-        screen_rules		=> $screen_rules,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
