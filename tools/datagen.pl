@@ -43,6 +43,8 @@ my @all_rules;
 my $hero;
 my $game_config;
 
+# dataset dependency: stores which assets go into each dataset
+my %dataset_dependency;
 
 # file names
 my $c_file_game_data = 'game_data.c';
@@ -270,6 +272,10 @@ sub read_input_data {
 
             if ( $line =~ /^NAME\s+(\w+)$/ ) {
                 $cur_screen->{'name'} = $1;
+                next;
+            }
+            if ( $line =~ /^DATASET\s+(\w+)$/ ) {
+                $cur_screen->{'dataset'} = $1;
                 next;
             }
             if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
@@ -999,6 +1005,11 @@ sub validate_and_compile_screen {
     defined( $screen->{'hero'} ) or
         die "Screen '$screen->{name}' has no Hero\n";
 
+    # if no dataset is specified, store the screen in home dataset
+    if ( not defined( $screen->{'dataset'} ) ) {
+        $screen->{'dataset'} = 'home';
+    }
+
     # check each enemy
     foreach my $s ( @{$screen->{'enemies'}} ) {
         # set initial flags
@@ -1138,27 +1149,28 @@ sub compile_screen_data {
 sub generate_screen {
     my $screen_num = shift;
     my $screen = $all_screens[ $screen_num ];
+    my $dataset = $screen->{'dataset'};
 
     # screen tiles
     if ( scalar( @{$screen->{'btiles'}} ) ) {
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'btiles'}} ) );
 
-        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
+        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
                 sprintf("\t{ TT_%s, %d, %d, %d, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'}, $btile_name_to_index{ $_->{'btile'} }, ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
             } @{$screen->{'btiles'}} );
-        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
+        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
 
     # screen enemies
     if ( scalar( @{$screen->{'enemies'}} ) ) {
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
-        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
+        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
                 sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
@@ -1196,28 +1208,28 @@ sub generate_screen {
                     $_->{'initial_flags'},
                  )
             } @{$screen->{'enemies'}} );
-        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
+        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
 
     # screen items
     if ( scalar( @{$screen->{'items'}} ) ) {
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'items'}} ) );
-        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {	# real item id is 0x1 << item_index
+        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {	# real item id is 0x1 << item_index
                 sprintf( "\t{ %d, %d, %d }", $_, $all_items[ $_ ]->{'row'}, $all_items[ $_ ]->{'col'} )
             } @{$screen->{'items'}} );
-        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
+        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
 
     # hot zones
-    if ( scalar( @{$screen->{'hotzones'}} ) ) {
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' hot zone data\n", $screen->{'name'} );
-        push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
+    if ( scalar( @{ $screen->{'hotzones'} } ) ) {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' hot zone data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'hotzones'}} ) );
-        push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {
+        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
                 my $x    = ( defined( $_->{'x'} ) ? $_->{'x'} : $_->{'col'} * 8 );
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
@@ -1227,23 +1239,23 @@ sub generate_screen {
                     ( $_->{'active'} ? 'F_HOTZONE_ACTIVE' : 0 ),
                 )
             } @{ $screen->{'hotzones'} } );
-        push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
+        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
 
     # flow rules
-    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
     foreach my $table ( @{ $syntax->{'valid_whens'} } ) {
         if ( defined( $screen->{'rules'} ) and defined( $screen->{'rules'}{ $table } ) ) {
             my $num_rules = scalar( @{ $screen->{'rules'}{ $table } } );
             if ( $num_rules ) {
-                push @{ $c_dataset_lines->{ 0 } }, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
+                push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
                     $screen->{'name'}, $table, $num_rules );
-                push @{ $c_dataset_lines->{ 0 } }, join( ",\n\t",
+                push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t",
                     map {
                         sprintf( "&all_flow_rules[ %d ]", $_ )
                     } @{ $screen->{'rules'}{ $table } }
                 );
-                push @{ $c_dataset_lines->{ 0 } }, "\n};\n";
+                push @{ $c_dataset_lines->{ $dataset } }, "\n};\n";
             }
         }
     }
@@ -1447,7 +1459,6 @@ sub find_existing_rule_index {
     }
     return undef;
 }
-
 
 sub validate_and_compile_rule {
     my $rule = shift;
@@ -2111,6 +2122,30 @@ sub output_game_data {
 
 }
 
+# calculates dataset_dependency structure:
+# dataset_dependency: a hash dataset_id => {
+#    btiles	=> [ ... ],	# index of btiles that must go in this dataset
+#    sprites	=> [ ... ],	# ...ditto for sprites...
+#    rules	=> [ ... ],	# ...rules...
+#    screens	=> [ ... ],	# ...screens...
+# }
+#
+# All values in the above listrefs are indexes into the global tables for
+# each asset type (the all_<something> variables).
+
+sub create_dataset_dependencies {
+    foreach my $screen ( @all_screens ) {
+        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'btiles'} = [
+        ];
+        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'sprites'} = [
+        ];
+        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'rules'} = [
+        ];
+        $dataset_dependency{ lc( $screen->{'dataset'} ) }{'screens'} = [
+        ];
+    }
+}
+
 # creates a dump of internal data so that other tools (e.g.  FLOWGEN) can
 # load it and use the parsed data. Use "-c" option to dump the internal data
 sub dump_internal_data {
@@ -2156,6 +2191,7 @@ read_input_data;
 run_consistency_checks;
 
 # generate output
+create_dataset_dependencies;
 generate_game_data;
 output_game_data;
 
