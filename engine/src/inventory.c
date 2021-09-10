@@ -46,7 +46,7 @@ void inventory_show(void) {
     // draw owned items, left to right
     col = INVENTORY_AREA_LEFT;
     inv = &game_state.inventory;
-    item_index = 16;
+    item_index = INVENTORY_MAX_ITEMS;
     while ( item_index-- ) {
         tile = &banked_assets->all_btiles[ all_items[ item_index ].btile_num ];
         if ( ( tile != NULL ) && ( INVENTORY_HAS_ITEM( inv, all_items[ item_index].item_id ) ) ) {

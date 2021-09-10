@@ -28,16 +28,23 @@ my $dataset_base_address = 0x5b00;
 # the script
 my @all_btiles;
 my %btile_name_to_index;
+
 my @all_screens;
 my %screen_name_to_index = ( '__NO_SCREEN__', 0 );
+
 my @all_sprites;
 my %sprite_name_to_index;
+
+my @all_items;
+my %item_name_to_index;
+
 my $hero;
-my $all_items;
+
 my $game_config;
 my @all_rules;
 my $screen_rules;
 
+# file names
 my $c_file_game_data = 'game_data.c';
 my $c_file_dataset_format = 'datasets/dataset_%d.c';
 my $output_dest_dir;
@@ -314,8 +321,11 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                push @{ $cur_screen->{'items'} }, $item;
-                $all_items->{ $item->{'item_index'} } = $item;
+                $item->{'screen'} = $cur_screen->{'name'};
+                my $item_index = scalar( @all_items );
+                push @all_items, $item;
+                push @{ $cur_screen->{'items'} }, $item_index;
+                $item_name_to_index{'name'} = $item_index;
                 next;
             }
             if ( $line =~ /^HOTZONE\s+(\w.*)$/ ) {
@@ -1196,7 +1206,7 @@ sub generate_screen {
             $screen->{'name'},
             scalar( @{$screen->{'items'}} ) );
         push @{ $c_dataset_lines->{ 0 } }, join( ",\n", map {	# real item id is 0x1 << item_index
-                sprintf( "\t{ %d, %d, %d }", $_->{'item_index'}, $_->{'row'}, $_->{'col'} )
+                sprintf( "\t{ %d, %d, %d }", $_, $all_items[ $_ ]->{'row'}, $all_items[ $_ ]->{'col'} )
             } @{$screen->{'items'}} );
         push @{ $c_dataset_lines->{ 0 } }, "\n};\n\n";
     }
@@ -1342,7 +1352,7 @@ EOF_BULLET4
 ########################
 
 sub generate_items {
-    my $max_items = scalar( keys %$all_items );
+    my $max_items = scalar( @all_items );
     my $all_items_mask = 0;
     my $mask = 1;
     foreach my $i ( 1 .. $max_items ) {
@@ -1364,18 +1374,16 @@ GAME_DATA_H_3
 // Global items table
 ///////////////////////
 
-struct item_info_s all_items[16] = {
+struct item_info_s all_items[ INVENTORY_MAX_ITEMS ] = {
 EOF_ITEMS1
 ;
     push @c_game_data_lines, join( ",\n",
         map {
-            exists( $all_items->{ $_ } ) ?
-                sprintf( "\t{ BTILE_ID_%s, 0x%04x, F_ITEM_ACTIVE }",
-                    uc( $all_items->{ $_ }{'btile'} ),
-                    ( 0x1 << $all_items->{ $_ }{'item_index'} ),
-                ) :
-                "\t{ 0, 0, 0 }"
-            } ( 0 .. 15 )
+            sprintf( "\t{ BTILE_ID_%s, 0x%04x, F_ITEM_ACTIVE }",
+                uc( $all_items[ $_ ]{'btile'} ),
+                ( 0x1 << $_ ),
+            )
+        } ( 0 .. ( $max_items - 1 ) )
     );
 
     push @c_game_data_lines, <<EOF_ITEMS2
@@ -1709,7 +1717,7 @@ sub check_screen_items_are_valid {
     my $errors = 0;
     my %is_valid_btile = map { $_->{'name'}, 1 } @all_btiles;
     foreach my $screen ( @all_screens ) {
-        foreach my $item ( @{ $screen->{'items'} } ) {
+        foreach my $item ( map { $all_items[ $_ ] } @{ $screen->{'items'} } ) {
             if ( not $is_valid_btile{ $item->{'name'} } ) {
                 warn sprintf( "Screen '%s': undefined btile for item '%s'\n", $screen->{'name'}, $item->{'name'} );
                 $errors++;
@@ -2115,8 +2123,9 @@ sub dump_internal_data {
         screen_name_to_index	=> \%screen_name_to_index,
         sprites			=> \@all_sprites,
         sprite_name_to_index	=> \%sprite_name_to_index,
+        all_items		=> \@all_items,
+        item_name_to_index	=> \%item_name_to_index,
         hero			=> $hero,
-        all_items		=> $all_items,
         game_config		=> $game_config,
         all_rules		=> \@all_rules,
         screen_rules		=> $screen_rules,
