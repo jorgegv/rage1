@@ -140,6 +140,10 @@ sub read_input_data {
                 $cur_btile->{'name'} = $1;
                 next;
             }
+            if ( $line =~ /^DATASET\s+(\w+)$/ ) {
+                $cur_btile->{'dataset'} = $1;
+                next;
+            }
             if ( $line =~ /^ROWS\s+(\d+)$/ ) {
                 $cur_btile->{'rows'} = $1;
                 next;
@@ -331,7 +335,7 @@ sub read_input_data {
                 my $item_index = scalar( @all_items );
                 push @all_items, $item;
                 push @{ $cur_screen->{'items'} }, $item_index;
-                $item_name_to_index{'name'} = $item_index;
+                $item_name_to_index{ $item->{'name'} } = $item_index;
                 next;
             }
             if ( $line =~ /^HOTZONE\s+(\w.*)$/ ) {
@@ -790,11 +794,11 @@ sub validate_and_compile_btile {
 }
 
 sub generate_btile {
-    my $tile = shift;
+    my ( $tile, $dataset ) = @_;
     my $cur_char = 0;
     my @char_names;
-    push @{ $c_dataset_lines->{ 0 } }, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
-    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
         $tile->{'name'},
         scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ),
         join( ", ",
@@ -802,7 +806,7 @@ sub generate_btile {
             map { @$_ }
             @{ $tile->{'pixel_bytes'} }
         ) );
-    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t *btile_%s_tiles[%d] = { %s };\n",
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_tiles[%d] = { %s };\n",
         $tile->{'name'},
         scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ) / 8,
         join( ', ',
@@ -812,11 +816,11 @@ sub generate_btile {
         ) );
     # manually specified attrs have preference over PNG ones
     my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
-    push @{ $c_dataset_lines->{ 0 } }, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
         $tile->{'name'},
         scalar( @{ $attrs } ),
         join( ', ', @{ $attrs } ) );
-    push @{ $c_dataset_lines->{ 0 } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 
     # output auxiliary definitions
     push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &banked_assets->all_btiles[ %d ] )\n",
@@ -1815,10 +1819,10 @@ EOF_HEADER
 sub generate_c_banked_header {
     my $dataset	= shift;
 
-    my $num_btiles	= scalar( @all_btiles );
-    my $num_sprites	= scalar( @all_sprites );
-    my $num_flow_rules	= scalar( @all_rules );
-    my $num_screens	= scalar( @all_screens );
+    my $num_btiles	= scalar( @{ $dataset_dependency{ $dataset }{'btiles'} } );
+    my $num_sprites	= scalar( @{ $dataset_dependency{ $dataset }{'sprites'} } );
+    my $num_flow_rules	= scalar( @{ $dataset_dependency{ $dataset }{'rules'} } );
+    my $num_screens	= scalar( @{ $dataset_dependency{ $dataset }{'screens'} } );
 
     push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER
 ///////////////////////////////////////////////////////////////////////////
@@ -1901,7 +1905,7 @@ EOF_TILES
     my @dataset_btiles = map { $all_btiles[ $_ ] } @{ $dataset_dependency{ $dataset }{'btiles'} };
 
     # generate the tiles
-    foreach my $tile ( @dataset_btiles ) { generate_btile( $tile ); }
+    foreach my $tile ( @dataset_btiles ) { generate_btile( $tile, $dataset ); }
 
     # generate the global btile table for this dataset
     push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTile table\n";
@@ -2140,7 +2144,8 @@ sub generate_game_data {
     # files
 
     # banked items
-    for my $dataset ( keys %dataset_dependency ) {
+    # only numbered dataset. Skip the home dataset
+    for my $dataset ( grep { /\d+/ } keys %dataset_dependency ) {
         generate_c_banked_header( $dataset );
         generate_tiles( $dataset );
         generate_sprites( $dataset );
@@ -2226,6 +2231,26 @@ sub create_dataset_dependencies {
             map { @{ $screen->{'rules'}{ $_ } } } keys %{ $screen->{'rules'} };
     }
 
+    # we then add the home dataset dependencies: special btiles with a
+    # 'home' dataset, hero and bullet sprites
+    foreach my $btile ( @all_btiles ) {
+        if ( defined( $btile->{'dataset'} ) ) {
+            push @{ $dataset_dependency{ $btile->{'dataset'} }{'btiles'} },
+                $btile_name_to_index{ $btile->{'name'} };
+        }
+    }
+    push @{ $dataset_dependency{'home'}{'sprites'} },
+        $sprite_name_to_index{ $hero->{'sprite'} };
+    push @{ $dataset_dependency{'home'}{'sprites'} },
+        $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
+
+    # item btiles are always added to the home dataset, since the item table
+    # is global
+    foreach my $item ( @all_items ) {
+        push @{ $dataset_dependency{'home'}{'btiles'} },
+            $item_name_to_index{ $item->{'name'} };
+    }
+
     # we must then remove duplicates from the lists
     foreach my $dataset ( keys %dataset_dependency ) {
 
@@ -2296,6 +2321,7 @@ run_consistency_checks;
 create_dataset_dependencies;
 generate_game_data;
 output_game_data;
+print Dumper( $c_dataset_lines->{'home'} );
 
 # dump internal data if required to do so
 dump_internal_data

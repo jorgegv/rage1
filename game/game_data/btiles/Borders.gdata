@@ -3,6 +3,7 @@ BEGIN_BTILE
 	NAME	BorderTL
 	ROWS	1
 	COLS	1
+	DATASET	home
 
 	PIXELS	................
 	PIXELS	..........######
@@ -20,6 +21,7 @@ BEGIN_BTILE
 	NAME	BorderTR
 	ROWS	1
 	COLS	1
+	DATASET	home
 
 	PIXELS	................
 	PIXELS	######..........
@@ -37,6 +39,7 @@ BEGIN_BTILE
 	NAME	BorderBL
 	ROWS	1
 	COLS	1
+	DATASET	home
 
 	PIXELS  ..####....####..
 	PIXELS  ..####....######
@@ -54,6 +57,7 @@ BEGIN_BTILE
 	NAME	BorderBR
 	ROWS	1
 	COLS	1
+	DATASET	home
 
 	PIXELS  ..####....####..
 	PIXELS  ######....####..
@@ -71,6 +75,7 @@ BEGIN_BTILE
 	NAME	BorderV
 	ROWS	1
 	COLS	1
+	DATASET	home
 
 	PIXELS	..####....####..
 	PIXELS	..####....####..
@@ -88,6 +93,7 @@ BEGIN_BTILE
 	NAME	BorderH
 	ROWS	1
 	COLS	1
+	DATASET	home
 
 	PIXELS	................
 	PIXELS	################
