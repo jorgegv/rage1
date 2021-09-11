@@ -48,7 +48,7 @@ my %dataset_dependency;
 
 # file names
 my $c_file_game_data = 'game_data.c';
-my $c_file_dataset_format = 'datasets/dataset_%d.c';
+my $c_file_dataset_format = 'datasets/dataset_%s.c';
 my $h_file_game_data = 'game_data.h';
 my $output_dest_dir;
 
@@ -795,6 +795,9 @@ sub validate_and_compile_btile {
 
 sub generate_btile {
     my ( $tile, $dataset ) = @_;
+
+    my $assets_table_ptr = ( $dataset eq 'home' ? 'home_assets' : 'banked_assets' );
+
     my $cur_char = 0;
     my @char_names;
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
@@ -823,13 +826,13 @@ sub generate_btile {
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 
     # output auxiliary definitions
-    push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &banked_assets->all_btiles[ %d ] )\n",
+    push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &${assets_table_ptr}->all_btiles[ %d ] )\n",
         uc( $tile->{'name'} ),
-        $btile_name_to_index{ $tile->{'name'} },
+        $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
     );
     push @h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
         uc( $tile->{'name'} ),
-        $btile_name_to_index{ $tile->{'name'} },
+        $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
     );
 }
 
@@ -1151,30 +1154,17 @@ sub compile_screen_data {
 
 
 sub generate_screen {
-    my ( $screen_num, $dataset ) = @_;
+    my ( $screen, $dataset ) = @_;
 
     # generate the lists of dataset screens, sprites
     my @dataset_screens = map { $all_screens[ $_ ] } @{ $dataset_dependency{ $dataset }{'screens'} };
 
-    # generate the global->local index btile mapping table
-    my @local_btile = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'btiles'} } ) - 1 );
-    my @global_btile = map { $dataset_dependency{ $dataset }{'btiles'}[ $_ ] } @local_btile;
-    my %btile_global_to_dataset_index = ( zip @global_btile, @local_btile );
-
-    # generate the global->local index sprite mapping table
-    my @local_sprite = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'sprites'} } ) - 1 );
-    my @global_sprite = map { $dataset_dependency{ $dataset }{'sprites'}[ $_ ] } @local_sprite;
-    my %sprite_global_to_dataset_index = ( zip @global_sprite, @local_sprite );
-
-    # generate the global->local index rule mapping table
-    my @local_rule = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'rules'} } ) - 1 );
-    my @global_rule = map { $dataset_dependency{ $dataset }{'rules'}[ $_ ] } @local_rule;
-    my %rule_global_to_dataset_index = ( zip @global_rule, @local_rule );
-
-    my $screen = $dataset_screens[ $screen_num ];
+    my $btile_global_to_dataset_index = $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'};
+    my $sprite_global_to_dataset_index = $dataset_dependency{ $dataset }{'sprite_global_to_dataset_index'};
+    my $rule_global_to_dataset_index = $dataset_dependency{ $dataset }{'rule_global_to_dataset_index'};
 
     # screen tiles
-    if ( scalar( @{$screen->{'btiles'}} ) ) {
+    if ( scalar( @{ $screen->{'btiles'} } ) ) {
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
             $screen->{'name'},
@@ -1182,14 +1172,14 @@ sub generate_screen {
 
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
                 sprintf("\t{ TT_%s, %d, %d, %d, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'},
-                    $btile_global_to_dataset_index{ $btile_name_to_index{ $_->{'btile'} } },
+                    $btile_global_to_dataset_index->{ $btile_name_to_index{ $_->{'btile'} } },
                     ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
             } @{$screen->{'btiles'}} );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
 
     # screen enemies
-    if ( scalar( @{$screen->{'enemies'}} ) ) {
+    if ( scalar( @{ $screen->{'enemies'} } ) ) {
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
             $screen->{'name'},
@@ -1200,7 +1190,7 @@ sub generate_screen {
                     'NULL',
 
                     # index into global sprite graphics table
-                    $sprite_global_to_dataset_index{ $sprite_name_to_index{ $_->{'sprite'} } },
+                    $sprite_global_to_dataset_index->{ $sprite_name_to_index{ $_->{'sprite'} } },
 
                     # color for the sprite
                     $_->{'color'},
@@ -1236,7 +1226,7 @@ sub generate_screen {
     }
 
     # screen items
-    if ( scalar( @{$screen->{'items'}} ) ) {
+    if ( scalar( @{ $screen->{'items'} } ) ) {
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
             $screen->{'name'},
@@ -1276,7 +1266,7 @@ sub generate_screen {
                     $screen->{'name'}, $table, $num_rules );
                 push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t",
                     map {
-                        sprintf( "&all_flow_rules[ %d ]", $rule_global_to_dataset_index{ $_ } )
+                        sprintf( "&all_flow_rules[ %d ]", $rule_global_to_dataset_index->{ $_ } )
                     } @{ $screen->{'rules'}{ $table } }
                 );
                 push @{ $c_dataset_lines->{ $dataset } }, "\n};\n";
@@ -1314,24 +1304,26 @@ sub validate_and_compile_hero {
 }
 
 sub generate_hero {
-    my $num_lives 	= $hero->{'lives'}{'num_lives'};
-    my $lives_btile_num	= 'BTILE_ID_' . uc( $hero->{'lives'}{'btile'} );
-    my $sprite		= $hero->{'sprite'};
-    my $num_sprite	= $sprite_name_to_index{ $hero->{'sprite'} };
-    my $sequence_up	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
-    my $sequence_down	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_down'} };
-    my $sequence_left	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_left'} };
-    my $sequence_right	= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_right'} };
-    my $delay		= $hero->{'animation_delay'};
-    my $hstep		= $hero->{'hstep'};
-    my $vstep		= $hero->{'vstep'};
+    my $num_lives 		= $hero->{'lives'}{'num_lives'};
+    my $lives_btile_num		= 'BTILE_ID_' . uc( $hero->{'lives'}{'btile'} );
+    my $sprite			= $hero->{'sprite'};
+    my $num_sprite		= $sprite_name_to_index{ $hero->{'sprite'} };
+    my $sequence_up		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
+    my $sequence_down		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_down'} };
+    my $sequence_left		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_left'} };
+    my $sequence_right		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_right'} };
+    my $delay			= $hero->{'animation_delay'};
+    my $hstep			= $hero->{'hstep'};
+    my $vstep			= $hero->{'vstep'};
+    my $local_num_sprite	= $dataset_dependency{'home'}{'sprite_global_to_dataset_index'}{ $num_sprite };
+
     push @h_game_data_lines, <<EOF_HERO1
 
 /////////////////////////////
 // Hero definition
 /////////////////////////////
 
-#define	HERO_SPRITE_ID			$num_sprite
+#define	HERO_SPRITE_ID			$local_num_sprite
 #define	HERO_SPRITE_SEQUENCE_UP		$sequence_up
 #define	HERO_SPRITE_SEQUENCE_DOWN	$sequence_down
 #define	HERO_SPRITE_SEQUENCE_LEFT	$sequence_left
@@ -1352,6 +1344,7 @@ sub generate_bullets {
     my $sprite = $all_sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
     my $sprite_name = $hero->{'bullet'}{'sprite'};
     my $sprite_index = $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
+    my $local_sprite_index = $dataset_dependency{'home'}{'sprite_global_to_dataset_index'}{ $sprite_index };
     my $width = $sprite->{'cols'} * 8;
     my $height = $sprite->{'rows'} * 8;
     my $max_bullets = $hero->{'bullet'}{'max_bullets'};
@@ -1375,8 +1368,8 @@ sub generate_bullets {
 #define	BULLET_MAX_BULLETS	$max_bullets
 #define	BULLET_SPRITE_WIDTH	$width
 #define	BULLET_SPRITE_HEIGHT	$height
-#define BULLET_SPRITE_ID	$sprite_index
-#define	BULLET_SPRITE_FRAMES	( banked_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
+#define BULLET_SPRITE_ID	$local_sprite_index
+#define	BULLET_SPRITE_FRAMES	( home_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
 #define	BULLET_SPRITE_XTHRESH	$xthresh
 #define	BULLET_SPRITE_YTHRESH	$ythresh
 #define	BULLET_MOVEMENT_DX	$dx
@@ -1465,7 +1458,7 @@ sub generate_game_areas {
         sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )
         } qw( game_area lives_area inventory_area debug_area )
-    ) . "\n";
+    ) . "\n\n";
 
     # output definitions for screen areas
     push @h_game_data_lines, "\n" . join( "\n", map {
@@ -1669,6 +1662,10 @@ sub generate_rule_actions {
 sub generate_flow_rules {
     my $dataset = shift;
 
+    # generate the list of dataset rules, return immediately if empty
+    my @dataset_rules = map { $all_rules[ $_ ] } @{ $dataset_dependency{ $dataset }{'rules'} };
+    return if not scalar( @dataset_rules );
+
     # file header comments
     push @{ $c_dataset_lines->{ $dataset } }, <<FLOW_DATA_C_1
 
@@ -1680,9 +1677,6 @@ sub generate_flow_rules {
 
 FLOW_DATA_C_1
 ;
-
-    # generate the list of dataset rules
-    my @dataset_rules = map { $all_rules[ $_ ] } @{ $dataset_dependency{ $dataset }{'rules'} };
 
     # output check and action tables for each rule
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// check tables for all dataset rules\n" );
@@ -1824,7 +1818,13 @@ sub generate_c_banked_header {
     my $num_flow_rules	= scalar( @{ $dataset_dependency{ $dataset }{'rules'} } );
     my $num_screens	= scalar( @{ $dataset_dependency{ $dataset }{'screens'} } );
 
-    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER
+    my $all_btiles_ptr		= ( $num_btiles ?	'&all_btiles[0]'		: 'NULL' );
+    my $all_sprites_ptr		= ( $num_sprites ?	'&all_sprite_graphics[0]'	: 'NULL' );
+    my $all_flow_rules_ptr	= ( $num_flow_rules ?	'&all_flow_rules[0]'		: 'NULL' );
+    my $all_screens_ptr		= ( $num_screens ?	'&all_screens[0]'		: 'NULL' );
+
+    if ( $dataset =~ /^\d+$/ ) {
+        push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER
 ///////////////////////////////////////////////////////////////////////////
 //
 // Game data for the High banks - automatically generated with datagen.pl
@@ -1859,6 +1859,11 @@ __asm
 __endasm;
 }
 
+EOF_HEADER
+    ;
+    }
+
+    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER2
 ///////////////////////////////////////////////////////////////////////////////
 // Asset index for this bank - This structure must be the first data item
 // generated in the bank: it contains pointers to the rest of the bank data
@@ -1867,21 +1872,25 @@ __endasm;
 
 struct dataset_assets_s all_assets_dataset_$dataset = {
     .num_btiles			= $num_btiles,
-    .all_btiles			= &all_btiles[0],
+    .all_btiles			= $all_btiles_ptr,
     .num_sprite_graphics	= $num_sprites,
-    .all_sprite_graphics	= &all_sprite_graphics[0],
+    .all_sprite_graphics	= $all_sprites_ptr,
     .num_flow_rules		= $num_flow_rules,
-    .all_flow_rules		= &all_flow_rules[0],
+    .all_flow_rules		= $all_flow_rules_ptr,
     .num_screens		= $num_screens,
-    .all_screens		= &all_screens[0],
+    .all_screens		= $all_screens_ptr,
 };
 
-EOF_HEADER
+EOF_HEADER2
 ;
 }
 
 sub generate_tiles {
     my $dataset = shift;
+
+    # generate the list of dataset btiles, return immediately if empty
+    my @dataset_btiles = map { $all_btiles[ $_ ] } @{ $dataset_dependency{ $dataset }{'btiles'} };
+    return if not scalar( @dataset_btiles );
 
     push @h_game_data_lines, <<EOF_TILES_H
 
@@ -1901,8 +1910,6 @@ EOF_TILES_H
 EOF_TILES
 ;
 
-    # generate the list of dataset btiles
-    my @dataset_btiles = map { $all_btiles[ $_ ] } @{ $dataset_dependency{ $dataset }{'btiles'} };
 
     # generate the tiles
     foreach my $tile ( @dataset_btiles ) { generate_btile( $tile, $dataset ); }
@@ -1924,6 +1931,11 @@ EOF_TILES
 
 sub generate_sprites {
     my $dataset = shift;
+
+    # generate the list of dataset sprites, return immediately if empty
+    my @dataset_sprites = map { $all_sprites[ $_ ] } @{ $dataset_dependency{ $dataset }{'sprites'} };
+    return if not scalar( @dataset_sprites );
+
     push @{ $c_dataset_lines->{ $dataset } }, <<EOF_SPRITES
 
 ////////////////////////////
@@ -1932,9 +1944,6 @@ sub generate_sprites {
 
 EOF_SPRITES
 ;
-
-    # generate the list of dataset sprites
-    my @dataset_sprites = map { $all_sprites[ $_ ] } @{ $dataset_dependency{ $dataset }{'sprites'} };
 
     # generate the sprites
     foreach my $sprite ( @dataset_sprites ) { generate_sprite( $sprite, $dataset ); }
@@ -1957,8 +1966,9 @@ EOF_SPRITES
 sub generate_screens {
     my $dataset = shift;
 
-    # generate the list of dataset screens
+    # generate the list of dataset screens,  return immediately if empty
     my @dataset_screens = map { $all_screens[ $_ ] } @{ $dataset_dependency{ $dataset }{'screens'} };
+    return if not scalar( @dataset_screens );
 
     push @{ $c_dataset_lines->{ $dataset } }, <<EOF_SCREENS
 
@@ -1970,14 +1980,17 @@ EOF_SCREENS
 ;
 
     # generate screen data
-    foreach my $screen_num ( 0 .. ( scalar( @dataset_screens ) - 1 ) ) { generate_screen( $screen_num, $dataset ); }
+    foreach my $screen ( @dataset_screens ) {
+        generate_screen( $screen, $dataset );
+    }
 }
 
 sub generate_map {
     my $dataset = shift;
 
-    # generate the list of dataset screens
+    # generate the list of dataset screens, return immediately if empty
     my @dataset_screens = map { $all_screens[ $_ ] } @{ $dataset_dependency{ $dataset }{'screens'} };
+    return if not scalar( @dataset_screens );
 
     my $num_screens = scalar( @dataset_screens );
 
@@ -1988,10 +2001,11 @@ sub generate_map {
 // Map definition
 ////////////////////////////
 
-// main game map
+// dataset map
+
 EOF_MAP
 ;
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct map_screen_s all_screens[ MAP_NUM_SCREENS ] = {\n" );
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct map_screen_s all_screens[ %d ] = {\n", $num_screens );
 
     push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
             my $screen_name = $_->{'name'};
@@ -2029,19 +2043,9 @@ EOF_MAP
                 )
                 } @{ $syntax->{'valid_whens'} } ) .
             "\n\t}"
-        } @all_screens );
+        } @dataset_screens );
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
 
-    push @h_game_data_lines, <<GAME_DATA_H_2
-
-////////////////////
-// Map definitions
-////////////////////
-
-#define MAP_NUM_SCREENS $num_screens
-
-GAME_DATA_H_2
-;
 }
 
 sub generate_h_header {
@@ -2054,7 +2058,7 @@ sub generate_h_header {
 
 #include "rage1/dataset.h"
 
-extern struct dataset_assets_s all_assets_dataset_0;
+extern struct dataset_assets_s all_assets_dataset_home;
 
 GAME_DATA_H_1
 ;
@@ -2133,6 +2137,11 @@ EOF_BLDCFG1
 
 }
 
+# generate miscelaneous btiles for the home dataset
+# lives, items and those with dataset = 'home'
+sub generate_home_btiles {
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2143,9 +2152,9 @@ sub generate_game_data {
     # generate data - each function is free to add lines to the .c or .h
     # files
 
-    # banked items
-    # only numbered dataset. Skip the home dataset
-    for my $dataset ( grep { /\d+/ } keys %dataset_dependency ) {
+    # dataset items. All dataset are generated, including 'home'
+    # 'home' dataset will be treated specially at output
+    for my $dataset ( keys %dataset_dependency ) {
         generate_c_banked_header( $dataset );
         generate_tiles( $dataset );
         generate_sprites( $dataset );
@@ -2158,6 +2167,7 @@ sub generate_game_data {
     generate_hero;
     generate_bullets;
     generate_items;
+    generate_home_btiles;
     generate_game_areas;
     generate_game_functions;
     generate_game_config;
@@ -2169,10 +2179,10 @@ sub generate_game_data {
 sub output_game_data {
     my $output_fh;
 
-    # output .c file for home bank data
+    # output .c file for home bank and dataset
     open( $output_fh, ">", $c_file_game_data ) or
         die "Could not open $c_file_game_data for writing\n";
-    print $output_fh join( "", @c_game_data_lines );
+    print $output_fh join( "", @c_game_data_lines, @{ $c_dataset_lines->{'home'} } );
     close $output_fh;
 
     # output .c file for banked datasets
@@ -2248,10 +2258,15 @@ sub create_dataset_dependencies {
     # is global
     foreach my $item ( @all_items ) {
         push @{ $dataset_dependency{'home'}{'btiles'} },
-            $item_name_to_index{ $item->{'name'} };
+            $btile_name_to_index{ $item->{'btile'} };
     }
 
+    # the same for the Lives btile
+    push @{ $dataset_dependency{'home'}{'btiles'} },
+        $btile_name_to_index{ $hero->{'lives'}{'btile'} };
+
     # we must then remove duplicates from the lists
+    # we take the oportunity to precalculate some tables
     foreach my $dataset ( keys %dataset_dependency ) {
 
         my %seen = ();
@@ -2269,6 +2284,32 @@ sub create_dataset_dependencies {
         %seen = ();	# reset
         $dataset_dependency{ $dataset }{'rules'} =
             [ sort { $a <=> $b } grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'rules'} } ];
+
+        # we now precalculate the global->local asset index tables for all asset types
+
+        # generate the global->local index btile mapping table
+        my @local_btile = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'btiles'} } ) - 1 );
+        my @global_btile = map { $dataset_dependency{ $dataset }{'btiles'}[ $_ ] } @local_btile;
+        my %btile_global_to_dataset_index = ( zip @global_btile, @local_btile );
+        $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'} = \%btile_global_to_dataset_index;
+
+        # generate the global->local index sprite mapping table
+        my @local_sprite = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'sprites'} } ) - 1 );
+        my @global_sprite = map { $dataset_dependency{ $dataset }{'sprites'}[ $_ ] } @local_sprite;
+        my %sprite_global_to_dataset_index = ( zip @global_sprite, @local_sprite );
+        $dataset_dependency{ $dataset }{'sprite_global_to_dataset_index'} = \%sprite_global_to_dataset_index;
+
+        # generate the global->local index rule mapping table
+        my @local_rule = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'rules'} } ) - 1 );
+        my @global_rule = map { $dataset_dependency{ $dataset }{'rules'}[ $_ ] } @local_rule;
+        my %rule_global_to_dataset_index = ( zip @global_rule, @local_rule );
+        $dataset_dependency{ $dataset }{'rule_global_to_dataset_index'} = \%rule_global_to_dataset_index;
+
+        # generate the global->local index screen mapping table
+        my @local_screen = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'screens'} } ) - 1 );
+        my @global_screen = map { $dataset_dependency{ $dataset }{'screens'}[ $_ ] } @local_screen;
+        my %screen_global_to_dataset_index = ( zip @global_screen, @local_screen );
+        $dataset_dependency{ $dataset }{'screen_global_to_dataset_index'} = \%screen_global_to_dataset_index;
     }
 }
 
@@ -2321,7 +2362,6 @@ run_consistency_checks;
 create_dataset_dependencies;
 generate_game_data;
 output_game_data;
-print Dumper( $c_dataset_lines->{'home'} );
 
 # dump internal data if required to do so
 dump_internal_data

@@ -48,7 +48,7 @@ void dataset_activate( uint8_t d ) {
 
 void init_datasets(void) {
     // setup home dataset
-//    home_assets = &dataset_home;
+    home_assets = &all_assets_dataset_home;
 
     // setup banked dataset; it is always at the same address
     banked_assets = (struct dataset_assets_s *) BANKED_DATASET_BASE_ADDRESS;
