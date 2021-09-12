@@ -2157,11 +2157,6 @@ EOF_BLDCFG1
 
 }
 
-# generate miscelaneous btiles for the home dataset
-# lives, items and those with dataset = 'home'
-sub generate_home_btiles {
-}
-
 # this function is called from main
 sub generate_game_data {
 
@@ -2187,7 +2182,6 @@ sub generate_game_data {
     generate_hero;
     generate_bullets;
     generate_items;
-    generate_home_btiles;
     generate_game_areas;
     generate_game_functions;
     generate_game_config;
