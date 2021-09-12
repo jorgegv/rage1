@@ -1823,6 +1823,7 @@ sub generate_c_home_header {
 #include <arch/zx/sp1.h>
 
 #include "rage1/inventory.h"
+#include "rage1/game_state.h"
 
 #include "game_data.h"
 
@@ -2232,39 +2233,48 @@ sub create_dataset_dependencies {
     # first, we add all assets to the dataset lists
     foreach my $screen ( @all_screens ) {
 
+        # get the screen dataset, override it and use 'home' if compiling for 48K target
+        my $dataset = ( $game_config->{'zx_target'} eq '48' ? 'home' : $screen->{'dataset'} );
+
         # add screen to the dataset
-        push @{ $dataset_dependency{ $screen->{'dataset'} }{'screens'} },
+        push @{ $dataset_dependency{ $dataset }{'screens'} },
             $screen_name_to_index{ $screen->{'name'} };
 
         # add btiles
-        push @{ $dataset_dependency{ $screen->{'dataset'} }{'btiles'} },
+        push @{ $dataset_dependency{ $dataset }{'btiles'} },
             map { $btile_name_to_index{ $_->{'btile'} } } @{ $screen->{'btiles'} };
 
         # the background btile is a special case, add it to the btile list
         if ( defined( $screen->{'background'} ) ) {
-            push @{ $dataset_dependency{ $screen->{'dataset'} }{'btiles'} },
+            push @{ $dataset_dependency{ $dataset }{'btiles'} },
                 $btile_name_to_index{ $screen->{'background'}{'btile'} };
         }
 
         # add sprites
-        push @{ $dataset_dependency{ $screen->{'dataset'} }{'sprites'} },
+        push @{ $dataset_dependency{ $dataset }{'sprites'} },
             map { $sprite_name_to_index{ $_->{'sprite'} } } @{ $screen->{'enemies'} };
 
         # add rules
-        push @{ $dataset_dependency{ $screen->{'dataset'} }{'rules'} },
+        push @{ $dataset_dependency{ $dataset }{'rules'} },
             map { @{ $screen->{'rules'}{ $_ } } } keys %{ $screen->{'rules'} };
     }
 
-    # we then add the home dataset dependencies: special btiles with a
-    # 'home' dataset, hero and bullet sprites
+    # we then add the home dataset dependencies:
+    # ...special btiles with a 'home' dataset
     foreach my $btile ( @all_btiles ) {
+        # get the btile dataset, override it and use 'home' if compiling for 48K target
+        my $dataset = ( $game_config->{'zx_target'} eq '48' ? 'home' : $btile->{'dataset'} );
         if ( defined( $btile->{'dataset'} ) ) {
-            push @{ $dataset_dependency{ $btile->{'dataset'} }{'btiles'} },
+            push @{ $dataset_dependency{ $dataset }{'btiles'} },
                 $btile_name_to_index{ $btile->{'name'} };
         }
     }
+
+    # ...hero sprite
     push @{ $dataset_dependency{'home'}{'sprites'} },
         $sprite_name_to_index{ $hero->{'sprite'} };
+
+    # ...bullet sprite
     push @{ $dataset_dependency{'home'}{'sprites'} },
         $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
 
