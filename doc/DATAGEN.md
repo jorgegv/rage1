@@ -29,6 +29,8 @@ Example `BTILE` definition:
 ```
 BEGIN_BTILE
         NAME    Rock01
+	DATASET	home
+
         ROWS    2
         COLS    2
 
@@ -66,7 +68,7 @@ END_BTILE
 * `DATASET`: the btile will be automatically copied into any dataset that
   contains screens using this btile.  Additionally, the btile will be copied
   to the dataset specified in this attribute. This is useful for btiles used
-  in the menu screen, since they must be in the home dataset.
+  in the menu screen, since they must be in the `home` dataset.
 * `ROWS`: number of character rows
 * `COLS`: number of character columns
 * `PIXELS`: pixel data.  Data must be COLS x 8 pixels (=bits) long.  Paper
@@ -242,6 +244,7 @@ Example `SCREEN` definition:
 ```
 BEGIN_SCREEN
 	NAME		Screen01
+	DATASET		0
 
 	OBSTACLE	NAME=Tree01	ROW=8 COL=4
 	OBSTACLE	NAME=Rock01	ROW=10 COL=12
