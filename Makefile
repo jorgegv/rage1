@@ -220,7 +220,12 @@ main: $(MAIN_BIN)
 ## Run options and target
 ##
 
-FUSE_RUN_OPTS=--machine 128
+# the default zx target matches the one in datagen.pl when no target is defined
+DEFAULT_ZX_TARGET	:= 48
+# what a hell of an escaped command line! :-/
+ZX_TARGET		= $(shell bash -c "V=\$$(grep -P '^\s+ZX_TARGET' build/game_data/game_config/*.gdata |head -1|awk '{print \$$2}'); echo \$${V:-$(DEFAULT_ZX_TARGET)}")
+FUSE_RUN_OPTS		= --machine $(ZX_TARGET)
+
 run: $(FINAL_TAP)
 	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
 

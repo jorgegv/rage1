@@ -422,6 +422,7 @@ Example `GAME_CONFIG` definition:
 ```
 BEGIN_GAME_CONFIG
         NAME            TestGame
+	ZX_TARGET	48
         SCREEN          INITIAL=1
         DEFAULT_BG_ATTR INK_CYAN | PAPER_BLACK
         SOUND           ENEMY_KILLED=2
@@ -442,6 +443,8 @@ END_GAME_CONFIG
 `GAME_CONFIG` attributes:
 
 * `NAME`: the name of the game (Imagine :-)
+* `ZX_TARGET`: set this to `48` or `128` to compile in those modes. `128`
+  mode includes automatic memory banking of assets.
 * `SCREEN`: screen related settings. Arguments:
   * `INITIAL`: sets the initial screen for the game
 * `DEFAULT_BG_ATTR`: default background attributes, defined as OR'ed

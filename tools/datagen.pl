@@ -451,6 +451,10 @@ sub read_input_data {
                 $game_config->{'name'} = $1;
                 next;
             }
+            if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
+                $game_config->{'zx_target'} = $1;
+                next;
+            }
             if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
                 $game_config->{'default_bg_attr'} = $1;
                 next;
@@ -1775,9 +1779,25 @@ sub integer_in_range {
     return ( ( $value >= $min ) and ( $value <= $max ) );
 }
 
+sub check_game_config_is_valid {
+    my $errors = 0;
+    if ( defined( $game_config->{'zx_target'} ) ) {
+        ( $game_config->{'zx_target'} eq '48' ) or
+        ( $game_config->{'zx_target'} eq '128' ) or do {
+            warn sprintf( "Game Config: invalid '%s' value for 'zx_target' setting", $game_config->{'zx_target'} );
+            $errors++;
+        }
+    } else {
+        $game_config->{'zx_target'} = '48';
+        warn "Game Config: 'zx_target' not defined - building for 48K mode\n";
+    }
+    return $errors;
+}
+
 # this function is called from main
 sub run_consistency_checks {
     my $errors = 0;
+    $errors += check_game_config_is_valid;
     $errors += check_screen_sprites_are_valid;
     $errors += check_screen_btiles_are_valid;
     $errors += check_screen_items_are_valid;
