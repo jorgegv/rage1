@@ -17,7 +17,7 @@
 
 struct hotzone_info_s {
     struct position_data_s position;
-    uint16_t flags;
+    uint8_t flags;
 };
 
 uint8_t hotzone_is_inside( struct hotzone_info_s *h, uint8_t x, uint8_t y );

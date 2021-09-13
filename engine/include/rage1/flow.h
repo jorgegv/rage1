@@ -48,7 +48,7 @@ struct flow_rule_check_s {
     uint8_t type;
     union {
         uint16_t					unused;		// for checks that do not need data
-        struct { uint16_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*, SCREEN_FLAG
+        struct { uint8_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*, SCREEN_FLAG
         struct { uint8_t	count; }		lives;		// INC_LIVES
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
@@ -89,7 +89,7 @@ struct flow_rule_action_s {
         uint16_t					unused;		// for actions that do not need data
         struct { uint8_t	count; }		lives;		// INC_LIVES
         struct { void		*sound_id; }		play_sound;	// PLAY_SOUND
-        struct { uint16_t	flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
+        struct { uint8_t	flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
         struct { void		(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
@@ -103,7 +103,7 @@ struct flow_rule_action_s {
         struct { uint16_t	item_id; }		item;		// ADD_TO/REMOVE_FROM_INVENTORY
         struct {
             uint8_t	num_screen;
-            uint16_t	flag;
+            uint8_t	flag;
             }						screen_flag;	// SET/RESET_SCREEN_FLAG
     } data;
 };

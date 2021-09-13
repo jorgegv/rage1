@@ -30,7 +30,7 @@ struct btile_pos_s {
     uint8_t type;
     uint8_t row, col;
     struct btile_s *btile;
-    uint16_t flags;
+    uint8_t flags;
 };
 
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box );
