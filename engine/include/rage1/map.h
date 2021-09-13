@@ -61,7 +61,7 @@ struct map_screen_s {
         struct sp1_Rect box;
     } background_data;
     struct {
-        uint16_t flags;
+        uint8_t flags;
     } state_data;
 };
 

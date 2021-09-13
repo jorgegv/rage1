@@ -38,7 +38,7 @@ struct enemy_info_s {
     struct sprite_animation_data_s animation;		// sprite animation data
     struct position_data_s position;			// enemy position data
     struct enemy_movement_data_s movement;		// enemy movement data
-    uint16_t flags;					// flags
+    uint8_t flags;					// flags
 };
 
 // enemy flags macros and definitions

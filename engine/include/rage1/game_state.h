@@ -46,9 +46,9 @@ struct game_state_s {
    //
    //   * user flags: they are checked and manipulated from FLOWGEN rules
    //
-   uint16_t flags;
-   uint16_t loop_flags;
-   uint16_t user_flags;
+   uint8_t flags;
+   uint8_t loop_flags;
+   uint8_t user_flags;
 
    // controller data
    struct controller_info_s controller;
