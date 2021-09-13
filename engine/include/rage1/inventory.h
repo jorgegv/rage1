@@ -23,7 +23,7 @@
 struct item_info_s {
     uint8_t btile_num;	// btile used for this item
     uint16_t item_id;		// inventory mask for this item: only 1 bit set
-    uint16_t flags;
+    uint8_t flags;
 };
 
 // struct for location of an item on a given screen

@@ -55,7 +55,7 @@ struct hero_info_s {
     struct hero_animation_data_s animation;	// animation data	
     struct position_data_s position;	// position data
     struct hero_movement_data_s movement;	// movement data
-    uint16_t flags;				// flags
+    uint8_t flags;				// flags
     uint8_t num_lives;				// lives
     uint8_t lives_btile_num;			// btile used to draw remaining lives
 };
