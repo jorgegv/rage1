@@ -86,6 +86,7 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     return NULL;	// no object
 }
 
+// FIX: this will be not needed probably
 void map_screen_reset_all_sprites( struct map_screen_s *s ) {
     uint8_t i;
     i = s->enemy_data.num_enemies;
@@ -93,6 +94,7 @@ void map_screen_reset_all_sprites( struct map_screen_s *s ) {
         SET_ENEMY_FLAG( s->enemy_data.enemies[ i ], F_ENEMY_ACTIVE );
 }
 
+// FIX: this will be not needed probably
 void map_sprites_reset_all(void) {
     uint8_t i;
     i = MAP_NUM_SCREENS;
@@ -100,6 +102,8 @@ void map_sprites_reset_all(void) {
         map_screen_reset_all_sprites ( &banked_assets->all_screens[ i ] );
 }
 
+// FIX:  no need to count, just #define a constant with the number.  Datagen
+// knows it at compile time!
 uint16_t map_count_enemies_all(void) {
     uint16_t count;
     uint8_t i;
