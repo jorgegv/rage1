@@ -60,22 +60,18 @@ struct map_screen_s {
         uint8_t probability;
         struct sp1_Rect box;
     } background_data;
-
-    // byte offset into the asset state table for this screen - Normally 0
-    // since code 0 is reserved for the screen state
-    uint8_t screen_state_offset;
+    struct {
+        uint8_t flags;
+    } state_data;
 };
 
-// struct for holding all info about a given screen, to be stored in the
-// home bank and always resident: map a screen in the global map to a screen
-// in a given dataset, pointer to the asset state table for that screen,
-// etc.  The index for this array is the global screen number
-struct screen_global_info_s {
-    uint8_t			dataset_num;		// dataset where this screen is stored
-    uint8_t			dataset_screen_num;	// local screen number into the dataset screen table
-    struct asset_state_info_s 	*asset_state;		// pointer
+// struct for mapping a screen in the global map to a screen in a given dataset
+// the index for this array is the global screen number
+struct screen_dataset_map_s {
+    uint8_t	dataset_num;
+    uint8_t	dataset_screen_num;
 };
-extern struct screen_dataset_map_s all_screen_info[];
+extern struct screen_dataset_map_s screen_dataset_map[];
 
 // with a generic function to draw a screen passed by pointer we can
 // later modify the logic behind maps without touching the map display
