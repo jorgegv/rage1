@@ -21,6 +21,14 @@
 #include "rage1/bullet.h"
 #include "rage1/inventory.h"
 
+// a structure for holding the runtime state for an asset and its value at reset
+struct asset_state_s {
+   uint8_t	asset_state;		// the runtime state for the asset
+   uint8_t	asset_initial_state;	// the initial state for the asset at game reset
+};
+// table of pointers to the asset tables for each screen
+extern struct asset_state_s *screen_asset_state_table[];
+
 // game state struct and related definitions
 //  struct
 struct game_state_s {
@@ -59,6 +67,11 @@ struct game_state_s {
    // enemies left
    uint16_t enemies_alive;
    uint16_t enemies_killed;
+
+   // pointer to array of asset state tables for each screen
+   // this will be always assigned to the global screen_asset_state_table
+   // variable
+   struct asset_state_s **screen_asset_state_table;
 };
 
 extern struct game_state_s game_state;
