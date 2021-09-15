@@ -312,6 +312,79 @@ zcc +zx -compiler=sdcc -clib=sdcc_iy dataset1.c -o dataset1.bin --no-crt
   switch to the neded memory bank when starting the game, switching screens,
   ending game, etc.
 
+## Issues with banked screen data and asset state during the game
+
+Some game assets (e.g.  btiles, enemies,...) have some kind of state which
+is reset at game startup, and changes during the game (flags field, movement
+coordinates, etc.); this state is currently stored in the asset definition
+structure for some asset types.
+
+This is fine when the assets don't "move" in memory; but when memory banking
+is introduced, assets are stored compressed in "read-only" memory and can
+reloaded to the working memory zone at any time.  That state would then get
+reset when switching out a dataset and bringing it back in later.  So asset
+configuration and state need to be in different data structures.
+
+State needs to be global (i.e.  home bank), so it needs to be as small as
+possible.  Possibly `flags` fields need to be reduced to 8-bit instead of
+the current 16-bit ones.
+
+Layouts based on "flag byte for all game enemies", "flag byte for all game
+btiles", etc.  do not scale.  Tables will be mostly static, with only a few
+entries changing.  We need to have state only for the assets that can
+change.
+
+Not ALL state needs to be global.  Some state may not matter being reset
+when loading a dataset, e.g.: movement state for the enemies.  Main state
+that needs to be maintained is ALIVE/DEAD, ENABLE/DISABLE, etc.
+
+Design:
+
+- For each screen, a state table for all its assets that need some stored
+  state.  An array `screen_ScreenXX_asset_state` of `struct asset_state_s`
+  stored in home bank.
+
+- Pointers to all screen state tables are included in the global
+  `game_state` structure for each screen.
+
+- DATAGEN: in the screen config data, replace every place where state is
+  stored (e.g.  `flags` fields) with a byte that is an index into the
+  containing screen's asset state table.
+
+- Since the number of elements with state on each screen will likely be very
+  small (enemies that can be killed, tiles that can be enabled, etc.), the
+  state table for each screen will be just a few bytes.  This means also
+  that the asset index into the the state table for that screen can be just
+  1 byte.
+
+- Since the asset state needs to be reset at game startup, we need the
+  initial value for that and that value needs to be also stored somewhere. 
+  If we store it in the asset configuration, we would need to walk all
+  datasets at game startup in order to get the default values for state
+  assets.  So an alternative solution is store the default value together
+  with the runtime asset state in the home bank.  This way we do not need to
+  walk dataset at startups, and game reset is immediate.
+
+- We would have then: a) a `struct asset_state_info_s` with fields
+  `asset_state` and `asset_initial_state` (a 2-byte struct); b) a table of
+  `struct asset_state_info_s` for each screen, which contains the current
+  state of the changing assets in that screen; c) a field
+  `asset_state_offset` in each asset configuration, which is the
+  byte-position for that asset into the state table described in b) (i.e. 
+  the first state would be index 0, the second one, index 2, third one index
+  4, etc.); d) a pointer in `game_state` to the array of asset states for
+  each screen.
+
+- Index 0 is reserved for the state of the screen itself
+
+- Since the `struct asset_state_info_s` is 2 bytes long, the index can
+  contain only even numbers, and there are a maximum of 128 state-changing
+  assets per screen (which is more than enough).  As a bonus, we can use the
+  value $FF for the `asset_state_offset` field in asset configuration, to
+  indicate that the asset does NOT have an associated state (we can define
+  it as an ASSET_NO_STATE constant).  The $FF value is an illegal value for
+  the index, since all indexes must be even.
+
 ## Single source compiling for 48/128 (banked/non-banked) mode
 
 - The current banked assets can be accessed via the `banked_assets` global
