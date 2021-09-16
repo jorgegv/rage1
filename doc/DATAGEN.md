@@ -279,6 +279,11 @@ dataset is defined for a screen, the default value `home` is used.
 this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the Btile that will be used to draw this obstacle
   * `ROW`, `COL`: position of the obstacle on the screen
+  * `ACTIVE`: 1 if this obstacle is active, 0 if not. Obstacles can be
+  activated and deactivated during the game, this setting defines the
+  initial state.
+  * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not. If it is ommited,
+  its state will not change during the game.
 * `DECORATION`: places a decoration on the screen. The hero can go over it.
   Arguments are the same as for OBSTACLEs.
 * `HOTZONE`: a zone on the screen where something happens when the hero goes
@@ -295,6 +300,8 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `ACTIVE`: 1 if this hotzone is active, 0 if not. Hot zones can be
   activated and deactivated during the game, this setting defined the
   initial state.
+  * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not. If it is ommited,
+  its state will not change during the game.
 * `HERO`: defines hero properties in this screen. Arguments:
   * `STARTUP_XPOS`,`STARTUP_YPOS`: startup hero coordinates in this screen,
     of this is the initial screen.

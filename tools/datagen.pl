@@ -104,7 +104,8 @@ sub read_input_data {
             }
             if ( $line =~ /^BEGIN_SCREEN$/ ) {
                 $state = 'SCREEN';
-                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ] };
+                # we start with empty lists, and with one reserved asset_state: the first one (0) for this screen
+                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_state_count => 1 };
                 next;
             }
             if ( $line =~ /^BEGIN_SPRITE$/ ) {
@@ -289,6 +290,15 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+
+                # check if it can change state during the game, and assign a
+                # state slot if it can
+                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                    $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+                } else {
+                    $item->{'asset_state_index'} = 0xff;	# special value for ASSET_NO_STATE
+                }
+
                 my $index = scalar( @{ $cur_screen->{'btiles'} } );
                 push @{ $cur_screen->{'btiles'} }, $item;
                 $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
@@ -301,6 +311,15 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+
+                # check if it can change state during the game, and assign a
+                # state slot if it can
+                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                    $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+                } else {
+                    $item->{'asset_state_index'} = 0xff;	# special value for ASSET_NO_STATE
+                }
+
                 my $index = scalar( @{ $cur_screen->{'btiles'} } );
                 push @{ $cur_screen->{'btiles'} }, $item;
                 $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
@@ -309,10 +328,15 @@ sub read_input_data {
             if ( $line =~ /^ENEMY\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = $1;
-                push @{ $cur_screen->{'enemies'} }, {
+                my $item = {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+
+                # enemies can always change state (=killed), so assign a state slot
+                $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+
+                push @{ $cur_screen->{'enemies'} }, $item;
                 next;
             }
             if ( $line =~ /^HERO\s+(\w.*)$/ ) {
@@ -345,6 +369,15 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+
+                # check if it can change state during the game, and assign a
+                # state slot if it can
+                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                    $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+                } else {
+                    $item->{'asset_state_index'} = 0xff;	# special value for ASSET_NO_STATE
+                }
+
                 my $index = scalar( @{ $cur_screen->{'hotzones'} } );
                 push @{ $cur_screen->{'hotzones'} }, $item;
                 $cur_screen->{'hotzone_name_to_index'}{ $item->{'name'} } = $index;
@@ -2094,7 +2127,8 @@ GAME_DATA_H_3
 
 sub generate_game_config {
     push @h_game_data_lines, "\n// game configuration data\n";
-    push @h_game_data_lines, sprintf( "#define MAP_INITIAL_SCREEN %d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} } );
+    push @h_game_data_lines, sprintf( "#define MAP_NUM_SCREENS\t%d\n", scalar( @all_screens ) );
+    push @h_game_data_lines, sprintf( "#define MAP_INITIAL_SCREEN\t%d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} } );
     push @h_game_data_lines, sprintf( "#define DEFAULT_BG_ATTR ( %s )\n", $game_config->{'default_bg_attr'} );
 
     push @h_game_data_lines, "\n// sound effect constants\n";
