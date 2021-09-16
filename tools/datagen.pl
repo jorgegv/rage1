@@ -104,8 +104,10 @@ sub read_input_data {
             }
             if ( $line =~ /^BEGIN_SCREEN$/ ) {
                 $state = 'SCREEN';
-                # we start with empty lists, and with one reserved asset_state: the first one (0) for this screen
-                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_state_count => 1 };
+                # we start with empty lists, and with one reserved
+                # asset_state: the first one (0) for this screen, with all
+                # flags reset
+                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_states => [ 0 ] };
                 next;
             }
             if ( $line =~ /^BEGIN_SPRITE$/ ) {
@@ -294,9 +296,10 @@ sub read_input_data {
                 # check if it can change state during the game, and assign a
                 # state slot if it can
                 if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
-                    $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                    push @{ $cur_screen->{'asset_states'} }, $item->{'active'};
                 } else {
-                    $item->{'asset_state_index'} = 0xff;	# special value for ASSET_NO_STATE
+                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
                 }
 
                 my $index = scalar( @{ $cur_screen->{'btiles'} } );
@@ -315,9 +318,10 @@ sub read_input_data {
                 # check if it can change state during the game, and assign a
                 # state slot if it can
                 if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
-                    $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                    push @{ $cur_screen->{'asset_states'} }, $item->{'active'};
                 } else {
-                    $item->{'asset_state_index'} = 0xff;	# special value for ASSET_NO_STATE
+                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
                 }
 
                 my $index = scalar( @{ $cur_screen->{'btiles'} } );
@@ -334,7 +338,8 @@ sub read_input_data {
                 };
 
                 # enemies can always change state (=killed), so assign a state slot
-                $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                push @{ $cur_screen->{'asset_states'} }, 'F_ENEMY_ACTIVE';
 
                 push @{ $cur_screen->{'enemies'} }, $item;
                 next;
@@ -373,9 +378,10 @@ sub read_input_data {
                 # check if it can change state during the game, and assign a
                 # state slot if it can
                 if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
-                    $item->{'asset_state_index'} = $cur_screen->{'asset_state_count'}++;
+                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                    push @{ $cur_screen->{'asset_states'} }, $item->{'active'};
                 } else {
-                    $item->{'asset_state_index'} = 0xff;	# special value for ASSET_NO_STATE
+                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
                 }
 
                 my $index = scalar( @{ $cur_screen->{'hotzones'} } );
@@ -1161,6 +1167,7 @@ sub compile_screen_data {
                     row => $game_area_top + $r,
                     col => $game_area_left + $c,
                     active => 1,
+                    asset_state_index => 'ASSET_NO_STATE',	# all tiles are immutable by default
                 };
 
             # else if there is a tile in DEST and it is different from the one in DATA...
@@ -1208,9 +1215,10 @@ sub generate_screen {
             scalar( @{$screen->{'btiles'}} ) );
 
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf("\t{ TT_%s, %d, %d, %d, %s }", uc($_->{'type'}), $_->{'row'}, $_->{'col'},
+                sprintf("\t{ .type = TT_%s, .row = %d, .col = %d, .btile_id = %d, .state_offset = %s }",
+                    uc($_->{'type'}), $_->{'row'}, $_->{'col'},
                     $btile_global_to_dataset_index->{ $btile_name_to_index{ $_->{'btile'} } },
-                    ( $_->{'active'} ? 'F_BTILE_ACTIVE' : 0 ) )
+                    ( "$_->{'asset_state_index'}" eq 'ASSET_NO_STATE' ? 'ASSET_NO_STATE' : 2 * $_->{'asset_state_index'} ) )
             } @{$screen->{'btiles'}} );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }

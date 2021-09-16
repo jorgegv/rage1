@@ -29,8 +29,8 @@ struct btile_s {
 struct btile_pos_s {
     uint8_t type;
     uint8_t row, col;
-    uint8_t btile_id;	// index into global btile table
-    uint8_t flags;
+    uint8_t btile_id;		// index into the dataset btile table
+    uint8_t state_offset;	// offset into screen asset state table
 };
 
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box );
@@ -49,12 +49,13 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
 // also, macro for getting the btile type at a given screen position
 extern uint8_t screen_pos_tile_type[];
 #define TILE_TYPE_AT(srow,scol)		( screen_pos_tile_type[ (srow) * 32 + (scol) ] )
+
 void btile_clear_type_all_screen(void);
 
 // btile flags macros and definitions
-#define GET_BTILE_FLAG(s,f)	( (s).flags & (f) )
-#define SET_BTILE_FLAG(s,f)	( (s).flags |= (f) )
-#define RESET_BTILE_FLAG(s,f)	( (s).flags &= ~(f) )
+#define GET_BTILE_FLAG(s,f)	( (s) & (f) )
+#define SET_BTILE_FLAG(s,f)	( (s) |= (f) )
+#define RESET_BTILE_FLAG(s,f)	( (s) &= ~(f) )
 
 #define F_BTILE_ACTIVE	0x0001
 

@@ -55,9 +55,10 @@ void map_draw_screen(struct map_screen_s *s) {
     i = s->btile_data.num_btiles;
     while ( i-- ) {
         t = &s->btile_data.btiles_pos[i];
-        if ( ! IS_BTILE_ACTIVE( *t ) )
-            continue;
-        btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ], t->type, &game_area );
+        // we draw if there is no state ( no state = always active ), or if the btile is active
+        if ( ( t->state_offset == ASSET_NO_STATE ) ||
+            IS_BTILE_ACTIVE( screen_asset_state_table[ s->global_screen_num ][ t->state_offset / sizeof( struct asset_state_s ) ] ) )
+            btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ], t->type, &game_area );
     }
 
     // draw items
@@ -100,6 +101,7 @@ void map_sprites_reset_all(void) {
         map_screen_reset_all_sprites ( &banked_assets->all_screens[ i ] );
 }
 
+// FIX: remove this function and @define a constant, DATAGEN knows this at compile time!
 uint16_t map_count_enemies_all(void) {
     uint16_t count;
     uint8_t i;

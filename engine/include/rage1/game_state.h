@@ -22,12 +22,17 @@
 #include "rage1/inventory.h"
 
 // a structure for holding the runtime state for an asset and its value at reset
+// if this structure is ever changed, its size _must_ be a power of 2!
 struct asset_state_s {
    uint8_t	asset_state;		// the runtime state for the asset
    uint8_t	asset_initial_state;	// the initial state for the asset at game reset
 };
+
 // table of pointers to the asset tables for each screen
 extern struct asset_state_s *screen_asset_state_table[];
+
+// definition for an offset value that means "NO STATE" for an asset
+#define	ASSET_NO_STATE	(0xff)
 
 // game state struct and related definitions
 //  struct
