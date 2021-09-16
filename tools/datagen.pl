@@ -2073,6 +2073,7 @@ EOF_MAP
             my $screen_name = $_->{'name'};
             my $screen = $_;
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
+            sprintf( "\t\t.global_screen_num = %d,\n", $screen_name_to_index{ $_->{'name'} } ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.enemy_data = { %d, %s },\t// enemy_data\n",
