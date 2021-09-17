@@ -29,7 +29,7 @@ struct asset_state_s {
 };
 
 // table of pointers to the asset tables for each screen
-extern struct asset_state_s *screen_asset_state_table[];
+extern struct asset_state_s *all_screen_asset_state_tables[];
 
 // definition for an offset value that means "NO STATE" for an asset
 #define	ASSET_NO_STATE	(0xff)

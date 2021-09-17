@@ -368,22 +368,20 @@ Design:
 - We would have then: a) a `struct asset_state_info_s` with fields
   `asset_state` and `asset_initial_state` (a 2-byte struct); b) a table of
   `struct asset_state_info_s` for each screen, which contains the current
-  state of the changing assets in that screen; c) a field
-  `asset_state_offset` in each asset configuration, which is the
-  byte-position for that asset into the state table described in b) (i.e. 
-  the first state would be index 0, the second one, index 2, third one index
-  4, etc.); d) a pointer in `game_state` to the array of asset states for
-  each screen.
+  state of the changing assets in that screen; c) a field `state_index` in
+  each asset configuration, which is the index for that asset into the state
+  table described in b); and d) a pointer in `game_state` to the array of
+  pointers to asset state tables for each screen.
 
 - Index 0 is reserved for the state of the screen itself
 
-- Since the `struct asset_state_info_s` is 2 bytes long, the index can
-  contain only even numbers, and there are a maximum of 128 state-changing
-  assets per screen (which is more than enough).  As a bonus, we can use the
-  value $FF for the `asset_state_offset` field in asset configuration, to
-  indicate that the asset does NOT have an associated state (we can define
-  it as an ASSET_NO_STATE constant).  The $FF value is an illegal value for
-  the index, since all indexes must be even.
+- Since the `struct asset_state_info_s` is 2 bytes long, the index can be
+  127 as a maximum, and there is maximum of 128 state-changing assets per
+  screen (which is more than enough).  We will use the value $FF
+  for the `state_index` field in asset configuration, to indicate that the
+  asset does NOT have an associated state (we can define it as an
+  ASSET_NO_STATE constant).  The $FF value is an illegal value for the
+  index, since all indexes must be <= 127.
 
 ## Single source compiling for 48/128 (banked/non-banked) mode
 

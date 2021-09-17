@@ -30,7 +30,7 @@ struct btile_pos_s {
     uint8_t type;
     uint8_t row, col;
     uint8_t btile_id;		// index into the dataset btile table
-    uint8_t state_offset;	// offset into screen asset state table
+    uint8_t state_index;	// index into screen asset state table
 };
 
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box );

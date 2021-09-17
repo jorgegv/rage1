@@ -1215,10 +1215,10 @@ sub generate_screen {
             scalar( @{$screen->{'btiles'}} ) );
 
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf("\t{ .type = TT_%s, .row = %d, .col = %d, .btile_id = %d, .state_offset = %s }",
+                sprintf("\t{ .type = TT_%s, .row = %d, .col = %d, .btile_id = %d, .state_index = %s }",
                     uc($_->{'type'}), $_->{'row'}, $_->{'col'},
                     $btile_global_to_dataset_index->{ $btile_name_to_index{ $_->{'btile'} } },
-                    ( "$_->{'asset_state_index'}" eq 'ASSET_NO_STATE' ? 'ASSET_NO_STATE' : 2 * $_->{'asset_state_index'} ) )
+                    ( "$_->{'asset_state_index'}" eq 'ASSET_NO_STATE' ? 'ASSET_NO_STATE' : $_->{'asset_state_index'} ) )
             } @{$screen->{'btiles'}} );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
@@ -1318,6 +1318,7 @@ sub generate_screen {
             }
         }
     }
+
 }
 
 ###################################
@@ -2201,6 +2202,41 @@ EOF_BLDCFG1
 
 }
 
+# this function generates screen data that needs to be stored in the home
+# dataset at all times: screen->dataset mapping, screen state asset tables,
+# etc.
+
+sub generate_global_screen_data {
+
+    my $dataset = 'home';
+
+    # FIXME: generate global screen_dataset_map variable with screen->dataset mapping
+
+    # screen asset state tables
+    foreach my $screen ( @all_screens ) {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' asset state table\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_s screen_%s_asset_state[ %d ] = {\n\t",
+            $screen->{'name'}, scalar( @{ $screen->{'asset_states'} } )
+        );
+        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t",
+            map {
+                sprintf( "{ .asset_state = %s, .asset_initial_state = %s }", $_, $_ )
+            } @{ $screen->{'asset_states'} }
+        );
+        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+    }
+    # global table of asset state tables for all screens
+    push @{ $c_dataset_lines->{ $dataset } }, "// Global table of asset state tables for all screens\n";
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_s *all_screen_asset_state_tables[ %d ] = {\n\t",
+        scalar( @all_screens ) );
+    push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t",
+        map {
+            sprintf( "&screen_%s_asset_state[0]", $_->{'name'} )
+        } @all_screens
+    );
+    push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2226,6 +2262,7 @@ sub generate_game_data {
     generate_hero;
     generate_bullets;
     generate_items;
+    generate_global_screen_data;
     generate_game_areas;
     generate_game_functions;
     generate_game_config;

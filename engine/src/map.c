@@ -56,8 +56,8 @@ void map_draw_screen(struct map_screen_s *s) {
     while ( i-- ) {
         t = &s->btile_data.btiles_pos[i];
         // we draw if there is no state ( no state = always active ), or if the btile is active
-        if ( ( t->state_offset == ASSET_NO_STATE ) ||
-            IS_BTILE_ACTIVE( screen_asset_state_table[ s->global_screen_num ][ t->state_offset / sizeof( struct asset_state_s ) ] ) )
+        if ( ( t->state_index == ASSET_NO_STATE ) ||
+            IS_BTILE_ACTIVE( all_screen_asset_state_tables[ s->global_screen_num ][ t->state_index ].asset_state ) )
             btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ], t->type, &game_area );
     }
 
@@ -87,6 +87,7 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     return NULL;	// no object
 }
 
+//FIXME: this function will probably be removed
 void map_screen_reset_all_sprites( struct map_screen_s *s ) {
     uint8_t i;
     i = s->enemy_data.num_enemies;
@@ -94,6 +95,7 @@ void map_screen_reset_all_sprites( struct map_screen_s *s ) {
         SET_ENEMY_FLAG( s->enemy_data.enemies[ i ], F_ENEMY_ACTIVE );
 }
 
+//FIXME: this function will probably be removed
 void map_sprites_reset_all(void) {
     uint8_t i;
     i = MAP_NUM_SCREENS;
@@ -101,7 +103,7 @@ void map_sprites_reset_all(void) {
         map_screen_reset_all_sprites ( &banked_assets->all_screens[ i ] );
 }
 
-// FIX: remove this function and @define a constant, DATAGEN knows this at compile time!
+// FIXME: remove this function and @define a constant, DATAGEN knows this at compile time!
 uint16_t map_count_enemies_all(void) {
     uint16_t count;
     uint8_t i;
