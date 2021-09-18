@@ -8,9 +8,9 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-// COMPILE TIME CRT CONFIGURATION
+// COMPILE TIME CRT CONFIGURATION FOR 128K MODE BUILD
 
-// don't change these values before reading doc/MEMORY_MAP.md !!
+// don't change these values!!
 #pragma output CRT_ORG_CODE           = 0x8184	// org of compile
 #pragma output REGISTER_SP            = 0x8181	// just below ISR
 #pragma output CRT_STACK_SIZE         = 128	// just enough

@@ -18,52 +18,58 @@ GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
 # Main sources and objs
-LOWMEM_CSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.c) $(wildcard $(GENERATED_DIR_LOWMEM)/*.c)
-LOWMEM_ASMSRC	= $(wildcard $(ENGINE_DIR)/lowmem/*.asm) $(wildcard $(GENERATED_DIR_LOWMEM)/*.asm)
-CSRC 		= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
-ASMSRC		= $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
-SRC		= $(LOWMEM_ASMSRC) $(LOWMEM_CSRC) $(CSRC) $(ASMSRC)
-OBJS		= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
+LOWMEM_CSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.c) $(wildcard $(GENERATED_DIR_LOWMEM)/*.c)
+LOWMEM_ASMSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.asm) $(wildcard $(GENERATED_DIR_LOWMEM)/*.asm)
+CSRC 			= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
+ASMSRC			= $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
+SRC			= $(LOWMEM_ASMSRC) $(LOWMEM_CSRC) $(CSRC) $(ASMSRC)
+OBJS			= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 
 # Dataset sources and binaries
-CSRC_DATASETS	= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
-SRC_DATASETS	= $(CSRC_DATASETS)
-BIN_DATASETS	= $(CSRC_DATASETS:.c=.bin)
-ZX0_DATASETS	= $(BIN_DATASETS:.bin=.zx0)
-DATASET_MAXSIZE	= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
+CSRC_DATASETS		= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
+SRC_DATASETS		= $(CSRC_DATASETS)
+BIN_DATASETS		= $(CSRC_DATASETS:.c=.bin)
+ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
+DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
 
 # Bank binaries and taps
-BANK_BINS_FILE	= $(GENERATED_DIR)/bank_bins.cfg
-BANK_BINS	= $(shell cat $(BANK_BINS_FILE) 2>/dev/null )
-BANK_TAPS	= $(BANK_BINS:.bin=.tap)
+BANK_BINS_FILE		= $(GENERATED_DIR)/bank_bins.cfg
+BANK_BINS		= $(shell cat $(BANK_BINS_FILE) 2>/dev/null )
+BANK_TAPS		= $(BANK_BINS:.bin=.tap)
 
 # Bank switcher routine for BASIC and tap
-BSWITCH_SRC	= $(ENGINE_DIR)/bank/bswitch.asm
-BSWITCH_BIN	= $(GENERATED_DIR)/bswitch.bin
-BSWITCH_TAP	= $(BSWITCH_BIN:.bin=.tap)
+BSWITCH_SRC		= $(ENGINE_DIR)/bank/bswitch.asm
+BSWITCH_BIN		= $(GENERATED_DIR)/bswitch.bin
+BSWITCH_TAP		= $(BSWITCH_BIN:.bin=.tap)
 
 # BASIC Loader and tap
-BAS_LOADER	= $(GENERATED_DIR)/loader.bas
-BAS_LOADER_TAP	= $(BAS_LOADER:.bas=.tap)
+BAS_LOADER		= $(GENERATED_DIR)/loader.bas
+BAS_LOADER_TAP		= $(BAS_LOADER:.bas=.tap)
 
 # Main binary and tap
-MAIN_BIN	= main.bin
-MAIN_TAP	= $(MAIN_BIN:.bin=.tap)
+MAIN_BIN		= main.bin
+MAIN_TAP		= $(MAIN_BIN:.bin=.tap)
 
 # All taps
-TAPS		= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP) $(MAIN_TAP)
+TAPS			= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP) $(MAIN_TAP)
 
 # Final game TAP
-FINAL_TAP	= game.tap
+FINAL_TAP		= game.tap
+
+# the default zx target matches the one in datagen.pl when no target is defined
+# what a hell of an escaped command line! :-/
+DEFAULT_ZX_TARGET	:= 48
+ZX_TARGET		= $(shell bash -c "V=\$$(grep -P '^\s+ZX_TARGET' build/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print \$$2}'); echo \$${V:-$(DEFAULT_ZX_TARGET)}")
 
 # compiler and tools
-ZCC		= zcc
-ZX0		= z88dk-zx0
+ZCC			= zcc
+ZX0			= z88dk-zx0
 
 # compiler flags
-INC		= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
-CFLAGS		= +zx -vn -SO3 --c-code-in-asm --list -m -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include zpragma.inc $(INC)
-CFLAGS_TO_ASM	= -a
+ZPRAGMA_INC		= zpragma-$(ZX_TARGET).inc
+INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
+CFLAGS			= +zx -vn -SO3 --c-code-in-asm --list -m -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC)
+CFLAGS_TO_ASM		= -a
 
 # generic rules
 %.o: %.c
@@ -103,9 +109,7 @@ build:
 	@$(MAKE) -s clean
 	@$(MAKE) -s config
 	@$(MAKE) -s data
-	@$(MAKE) -s -j8 datasets
-	@$(MAKE) -s -j8 banks
-	@$(MAKE) -s bank_switcher
+	@if [ "$(ZX_TARGET)" == "128" ]; then $(MAKE) -s -j8 datasets; $(MAKE) -s -j8 banks; $(MAKE) -s bank_switcher; fi
 	@$(MAKE) -s -j8 main
 	@$(MAKE) -s -j8 taps
 	@$(MAKE) -s final
@@ -130,7 +134,7 @@ config:
 	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/ $(GENERATED_DIR_LOWMEM)/
 	@cp -r game/game_data/* $(GAME_DATA_DIR)/
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
-	@echo "Build config: REGULAR GAME"
+	@echo "Build config: REGULAR GAME - Target: $(ZX_TARGET)K"
 
 $(MAIN_BIN): $(OBJS)
 	@echo "Bulding $(MAIN_BIN)...."
@@ -217,13 +221,9 @@ $(BSWITCH_TAP): $(BSWITCH_BIN)
 main: $(MAIN_BIN)
 
 ##
-## Run options and target
+## Run options
 ##
 
-# the default zx target matches the one in datagen.pl when no target is defined
-DEFAULT_ZX_TARGET	:= 48
-# what a hell of an escaped command line! :-/
-ZX_TARGET		= $(shell bash -c "V=\$$(grep -P '^\s+ZX_TARGET' build/game_data/game_config/*.gdata |head -1|awk '{print \$$2}'); echo \$${V:-$(DEFAULT_ZX_TARGET)}")
 FUSE_RUN_OPTS		= --machine $(ZX_TARGET)
 
 run: $(FINAL_TAP)
@@ -268,7 +268,7 @@ textbox: tests/textbox.c $(TEXTBOX_OBJS)
 
 # these are pure library files that will be overwritten when updating the library
 # do not modify these in your game!
-LIB_ENGINE_FILES	= engine tools Makefile zpragma.inc .gitignore env.sh
+LIB_ENGINE_FILES	= engine tools Makefile zpragma*.inc .gitignore env.sh
 
 # these are game data directories that will be copied from the template when creating
 # a new game, but will _not_ be overwritten when updating the library. These contain

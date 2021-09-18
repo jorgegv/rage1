@@ -9,4 +9,4 @@ config-minimal:
 	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/
 	@cp -r minimal_game/game_data/* $(GAME_DATA_DIR)
 	@cp -r minimal_game/game_src/* $(GAME_SRC_DIR)
-	@echo "Build config: MINIMAL GAME"
+	@echo "Build config: MINIMAL GAME - Target: $(ZX_TARGET)K"

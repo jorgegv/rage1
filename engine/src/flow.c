@@ -229,13 +229,13 @@ void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk
 
 void do_rule_action_enable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &banked_assets->all_screens[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
-    SET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
+    SET_BTILE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ][ t->state_index ].asset_state, F_BTILE_ACTIVE );
     btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ] , t->type, &game_area);
 }
 
 void do_rule_action_disable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &banked_assets->all_screens[ game_state.current_screen ].btile_data.btiles_pos[ action->data.btile.num_btile ];
-    RESET_BTILE_FLAG( *t, F_BTILE_ACTIVE );
+    RESET_BTILE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ][ t->state_index ].asset_state, F_BTILE_ACTIVE );
     btile_remove( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ] );
 }
 
