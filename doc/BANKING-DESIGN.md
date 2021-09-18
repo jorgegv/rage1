@@ -409,8 +409,8 @@ Design:
   - Bullet sprites
 
 - Each asset must be store in the same DATASET as the screen where it is
-  used. So the DATASE must be defined for a SCREEN, and it is propagated to
-  all assets used in it.
+  used.  So the DATASET must be defined for a SCREEN, and it is propagated
+  to all assets used in it.
 
 - Dataset switches occur on ENTER_SCREEN events, so there must be a global
   map stored in regular (non-banked) memory, which maps the screen->dataset
@@ -418,19 +418,41 @@ Design:
   index for the screen.
 
 - A `game_config` setting selects if the game is to be compiled in for a 48K
-  or 128K Spectrum (e.g.  `spectrum_target` directive, with values
-  `48/128`), and the game is compiled differently:
+  or 128K Spectrum (`zx_target` directive, with values `48/128`), and the
+  game is compiled differently.
 
-  - If configured for 48K mode, the `home_assets` and `banked_assets` both
-    point to the `home_dataset`, which is expected to fit in the regular 48K
-    RAM,.  Also, a simplified BASIC loader is generated which does not load
-    anything in the memory banks, and bank switching routines are
-    conditionally compiled off the main program.
+### Game build and configuration when targetting 48K mode
 
-  - If configured for 128K mode, `home_assets` points to the `home_dataset`
-    and `banked_assets` points to the currently selected dataset at 0x5B00. 
-    Also, the banking BASIC loader is used for loading bank data, and all
-    memory banking routines are compiled in and used.
+- Simple linear memory map: CODE+DATA+BSS at 0x5F00-0xCFFF (28928 bytes), IV
+  table at 0xD000-0xD100 (257 bytes), stack at 0xD101-0xD1D0 (208 bytes),
+  ISR at 0xD1D1 (3 bytes), SP1 reserved data up to 0xFFFF
+
+- Automatic heap definition by standard CRT and library
+
+- The `home_assets` and `banked_assets` both point to the `home_dataset`,
+  which is expected to fit in the regular 48K RAM
+
+- Bank switching routines are not included
+
+- A simple BASIC loader is generated which does not load anything in the
+  memory banks
+
+### Game build and configuration  when targetting 128K mode
+
+- A specific memory map is used (see **Memory Layout** section at the
+  beginning of this document)
+
+- The heap is explicitly defined and managed at a specific section of the
+  mentioned memory map
+
+- The `home_assets` points to the `home_dataset` and `banked_assets` points
+  to the currently selected dataset, at fixed address 0x5B00
+
+- Data is stored in different datasets and memory banks, and needed memory
+  banking routines are compiled in and used
+
+- A specialized BASIC loader is used for loading memory bank data
+
 
 ## References
 
