@@ -24,6 +24,7 @@
 
 uint8_t dataset_currently_active = 255;
 
+#if ( BUILD_FEATURE_ZX_TARGET == 128 )
 void dataset_activate( uint8_t d ) {
 
     // if the dataset is already active, do nothing
@@ -45,14 +46,18 @@ void dataset_activate( uint8_t d ) {
     // AFTER switching back to bank 0!
     dataset_currently_active = d;
 }
+#endif
 
 void init_datasets(void) {
     // setup home dataset
     home_assets = &all_assets_dataset_home;
 
+#if ( BUILD_FEATURE_ZX_TARGET == 128 )
     // setup banked dataset; it is always at the same address
     banked_assets = (struct dataset_assets_s *) BANKED_DATASET_BASE_ADDRESS;
-
     // activate dataset
     dataset_activate( 0 );
+#else
+    banked_assets = home_assets;
+#endif
 }
