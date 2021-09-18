@@ -21,13 +21,21 @@
 //
 /////////////////////////////////////
 
-#if ( BUILD_FEATURE_ZX_TARGET == 48 )
-void init_memory(void) {
-#else
-unsigned char *_malloc_heap;
+// memory init depends on the target
 
+#if ( BUILD_FEATURE_ZX_TARGET == 48 )
+
+// heap is automatically managed in 48K build
+void init_memory(void) {
+}
+
+#else
+
+// heap is specifically defined in 128K build
+unsigned char *_malloc_heap;
 void init_memory(void) {
     _malloc_heap = MALLOC_HEAP_START;
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
-#endif
 }
+
+#endif
