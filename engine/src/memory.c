@@ -21,11 +21,13 @@
 //
 /////////////////////////////////////
 
+#if ( BUILD_FEATURE_ZX_TARGET == 48 )
+void init_memory(void) {
+#else
 unsigned char *_malloc_heap;
-
-// constants defined in rage1/memory.h
 
 void init_memory(void) {
     _malloc_heap = MALLOC_HEAP_START;
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
+#endif
 }
