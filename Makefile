@@ -109,7 +109,7 @@ build:
 	@$(MAKE) -s clean
 	@$(MAKE) -s config
 	@$(MAKE) -s data
-	@if [ "$(ZX_TARGET)" == "128" ]; then $(MAKE) -s -j8 datasets; $(MAKE) -s -j8 banks; $(MAKE) -s bank_switcher; fi
+	@if [ "$(ZX_TARGET)" == "128" ]; then $(MAKE) -s -j8 datasets; $(MAKE) -s -j8 banks; $(MAKE) -s bank_switcher; else cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER); fi
 	@$(MAKE) -s -j8 main
 	@$(MAKE) -s -j8 taps
 	@$(MAKE) -s final
@@ -142,7 +142,7 @@ $(MAIN_BIN): $(OBJS)
 
 $(FINAL_TAP): $(TAPS)
 	@echo "Building final TAP $(FINAL_TAP)..."
-	@cat $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP) > $(FINAL_TAP)
+	@if [ "$(ZX_TARGET)" == "128" ]; then cat $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP) > $(FINAL_TAP) ; else cat $(BAS_LOADER_TAP) $(MAIN_TAP) > $(FINAL_TAP); fi
 	@echo "Build completed SUCCESSFULLY"
 
 ##
@@ -202,10 +202,10 @@ bank_%.tap: bank_%.bin
 	@echo "Creating TAP $@..."
 	@z88dk-appmake +zx --noloader --org 0xC000 -b $<
 
-# we set org at 0x8184 for main
+# we set org at 0x8184 for 128 mode, 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
 	@echo "Creating TAP $@..."
-	@z88dk-appmake +zx --noloader --org 0x8184 -b $<
+	@if [ "$(ZX_TARGET)" == "128" ]; then z88dk-appmake +zx --noloader --org 0x8184 -b $< ; else z88dk-appmake +zx --noloader --org 0x5F00 -b $< ; fi
 
 # we set org at 0x8000 for bank switcher
 $(BSWITCH_TAP): $(BSWITCH_BIN)
