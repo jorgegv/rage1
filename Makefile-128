@@ -8,6 +8,8 @@
 ## 
 ################################################################################
 
+MYMAKE			= $(MAKE) -f Makefile-128
+
 # directory configurations
 ENGINE_DIR		= engine
 BUILD_DIR		= build
@@ -56,15 +58,12 @@ TAPS			= $(BANK_TAPS) $(BSWITCH_TAP) $(BAS_LOADER_TAP) $(MAIN_TAP)
 # Final game TAP
 FINAL_TAP		= game.tap
 
-# the default zx target matches the one in datagen.pl when no target is defined
-ZX_TARGET		= $(shell ./tools/zx_target.sh)
-
 # compiler and tools
 ZCC			= zcc
 ZX0			= z88dk-zx0
 
 # compiler flags
-ZPRAGMA_INC		= zpragma-$(ZX_TARGET).inc
+ZPRAGMA_INC		= zpragma-128.inc
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
 CFLAGS			= +zx -vn -SO3 --c-code-in-asm --list -m -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC)
 CFLAGS_TO_ASM		= -a
@@ -104,13 +103,15 @@ help:
 final: $(FINAL_TAP)
 
 build:
-	@$(MAKE) -s clean
-	@$(MAKE) -s config
-	@$(MAKE) -s data
-	@if [ "$(ZX_TARGET)" == "128" ]; then $(MAKE) -s -j8 datasets; $(MAKE) -s -j8 banks; $(MAKE) -s bank_switcher; else cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER); fi
-	@$(MAKE) -s -j8 main
-	@$(MAKE) -s -j8 taps
-	@$(MAKE) -s final
+	@$(MYMAKE) -s clean
+	@$(MYMAKE) -s config
+	@$(MYMAKE) -s data
+	@$(MYMAKE) -s -j8 datasets
+	@$(MYMAKE) -s -j8 banks
+	@$(MYMAKE) -s bank_switcher
+	@$(MYMAKE) -s -j8 main
+	@$(MYMAKE) -s -j8 taps
+	@$(MYMAKE) -s final
 
 # include minimal game configuration.  If the Makefile has been copied to a
 # Game directory 'make build' works as usual.  If it is the Makefile on the
@@ -128,7 +129,7 @@ clean-config:
 	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* 2>/dev/null
 
 config:
-	@$(MAKE) -s clean-config
+	@$(MYMAKE) -s clean-config
 	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/ $(GENERATED_DIR_LOWMEM)/
 	@cp -r game/game_data/* $(GAME_DATA_DIR)/
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
@@ -140,7 +141,7 @@ $(MAIN_BIN): $(OBJS)
 
 $(FINAL_TAP): $(TAPS)
 	@echo "Building final TAP $(FINAL_TAP)..."
-	@if [ "$(ZX_TARGET)" == "128" ]; then cat $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP) > $(FINAL_TAP) ; else cat $(BAS_LOADER_TAP) $(MAIN_TAP) > $(FINAL_TAP); fi
+	@cat $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP) > $(FINAL_TAP)
 	@echo "Build completed SUCCESSFULLY"
 
 ##
@@ -148,10 +149,10 @@ $(FINAL_TAP): $(TAPS)
 ##
 
 $(GENERATED_DIR)/game_data_home.c: $(GENERATED_DIR)/game_data.dep
-	@$(MAKE) -s data
+	@$(MYMAKE) -s data
 
 $(GENERATED_DIR_DATASETS)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
-	@$(MAKE) -s data
+	@$(MYMAKE) -s data
 
 $(GENERATED_DIR)/game_data.dep: data_depend
 
@@ -203,7 +204,7 @@ bank_%.tap: bank_%.bin
 # we set org at 0x8184 for 128 mode, 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
 	@echo "Creating TAP $@..."
-	@if [ "$(ZX_TARGET)" == "128" ]; then z88dk-appmake +zx --noloader --org 0x8184 -b $< ; else z88dk-appmake +zx --noloader --org 0x5F00 -b $< ; fi
+	@z88dk-appmake +zx --noloader --org 0x8184 -b $<
 
 # we set org at 0x8000 for bank switcher
 $(BSWITCH_TAP): $(BSWITCH_BIN)
@@ -222,7 +223,7 @@ main: $(MAIN_BIN)
 ## Run options
 ##
 
-FUSE_RUN_OPTS		= --machine $(ZX_TARGET)
+FUSE_RUN_OPTS		= --machine 128
 
 run: $(FINAL_TAP)
 	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
