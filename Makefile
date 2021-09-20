@@ -45,10 +45,12 @@ config:
 	@cp -r game/game_data/* $(GAME_DATA_DIR)/
 	@cp -r game/game_src/* $(GAME_SRC_DIR)/
 	@echo "Build config: REGULAR GAME"
-	@echo "Build target: $(shell grep 'ZX_TARGET' game/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')K"
+	@grep -qE 'ZX_TARGET.+(48|128)$$' game/game_data/game_config/*.gdata || \
+		( echo "** Error: ZX_TARGET must be defined as 48|128" && exit 1 )
+	@echo "Build target: $(ZX_TARGET)K"
 
 build:
 	@$(MAKE) -s clean
 	@$(MAKE) -s config
 	@$(MAKE) -s data
-	@$(MAKE) -s -f Makefile-$(shell ./tools/zx_target.sh) build
+	@$(MAKE) -s -f Makefile-$(ZX_TARGET) build

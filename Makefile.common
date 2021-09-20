@@ -54,7 +54,7 @@ MAIN_TAP		= $(MAIN_BIN:.bin=.tap)
 FINAL_TAP		= game.tap
 
 # the default zx target matches the one in datagen.pl when no target is defined
-ZX_TARGET		= $(shell ./tools/zx_target.sh)
+ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' game/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')
 
 # compiler and tools
 ZCC			= zcc
