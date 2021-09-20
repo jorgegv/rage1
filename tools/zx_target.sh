@@ -11,6 +11,6 @@
 
 DEFAULT_ZX_TARGET=48
 
-V=$(grep -P '^\s+ZX_TARGET' build/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $2}')
+V=$(grep 'ZX_TARGET' game/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $2}')
 
 echo ${V:-$DEFAULT_ZX_TARGET}

@@ -17,9 +17,6 @@ TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
 -include Makefile.common
 
 build:
-	@$(MYMAKE) -s clean
-	@$(MYMAKE) -s config
-	@$(MYMAKE) -s data
 	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
 	@$(MYMAKE) -s -j8 main
 	@$(MYMAKE) -s -j8 taps
