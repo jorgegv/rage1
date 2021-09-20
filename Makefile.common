@@ -143,6 +143,14 @@ $(FINAL_TAP): $(TAPS)
 main: $(MAIN_BIN)
 
 ##
+## Misc targets
+##
+
+show:
+	@echo " Game Configuration: $(shell grep -E '^\s*NAME\s+' build/game_data/game_config/Game.gdata | head -1 | awk '{print $$2}' )"
+	@echo "Build Configuration: $(ZX_TARGET)K"
+
+##
 ## Run options
 ##
 
