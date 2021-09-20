@@ -146,13 +146,13 @@ main: $(MAIN_BIN)
 ## Run options
 ##
 
-run: $(FINAL_TAP)
+run:
 	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
 
-debug: $(FINAL_TAP)
+debug:
 	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | ./tools/r1sym.pl -m main.map )"
 
-runz: $(FINAL_TAP)
+runz:
 	@../zesarux/src/zesarux $(FINAL_TAP)
 
 ##
