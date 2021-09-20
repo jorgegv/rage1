@@ -60,6 +60,7 @@ my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
 my @h_game_data_lines;
 my $build_dir;
+my $forced_build_target;
 
 ######################################################
 ## Configuration syntax definitions and lists
@@ -1833,6 +1834,9 @@ sub check_game_config_is_valid {
         $game_config->{'zx_target'} = '48';
         warn "Game Config: 'zx_target' not defined - building for 48K mode\n";
     }
+    if ( $forced_build_target ) {
+        $game_config->{'zx_target'} = $forced_build_target;
+    }
     return $errors;
 }
 
@@ -2466,8 +2470,8 @@ sub dump_internal_data {
 ## Main loop
 #########################
 
-our ( $opt_b, $opt_d, $opt_c );
-getopts("b:d:c");
+our ( $opt_b, $opt_d, $opt_c, $opt_t );
+getopts("b:d:ct:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data = "$opt_d/$c_file_game_data";
     $h_file_game_data = "$opt_d/$h_file_game_data";
@@ -2475,6 +2479,7 @@ if ( defined( $opt_d ) ) {
     $output_dest_dir = $opt_d;
 }
 $build_dir = $opt_b || 'build';
+$forced_build_target = $opt_t || 0;
 
 # read, validate and compile input
 read_input_data;

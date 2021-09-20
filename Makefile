@@ -54,3 +54,15 @@ build:
 	@$(MAKE) -s config
 	@$(MAKE) -s data
 	@$(MAKE) -s -f Makefile-$(ZX_TARGET) build
+
+build48:
+	@$(MAKE) -s clean
+	@$(MAKE) -s ZX_TARGET=48 config
+	@$(MAKE) -s ZX_TARGET=48 data
+	@$(MAKE) -s -f Makefile-48 build
+
+build128:
+	@$(MAKE) -s clean
+	@$(MAKE) -s ZX_TARGET=128 config
+	@$(MAKE) -s ZX_TARGET=128 data
+	@$(MAKE) -s -f Makefile-128 build
