@@ -153,7 +153,7 @@ EOF_DSMAP_3
 
     print $dsmap_h join( "\n",
         map {
-            sprintf( "\t\t;; dataset %d\n\t\tdb\t%d\n\t\tdw\t%d\n\t\tdw\t%d\n",
+            sprintf( "\t\t;; dataset %d\n\t\tdb\t%d\t;; bank number\n\t\tdw\t%d\t;; size\n\t\tdw\t%d\t;; offset into bank\n",
                 $_,
                 $datasets->{ $_ }{'bank'},
                 $datasets->{ $_ }{'size'},
