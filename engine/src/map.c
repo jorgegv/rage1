@@ -67,7 +67,7 @@ void map_draw_screen(struct map_screen_s *s) {
         it = &s->item_data.items[i];
         if ( ! IS_ITEM_ACTIVE( all_items[ it->item_num ] ) )
             continue;
-        btile_draw( it->row, it->col, &banked_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
+        btile_draw( it->row, it->col, &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
     }
 }
 
@@ -78,8 +78,8 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     i = s->item_data.num_items;
     while ( i-- ) {
         it = &s->item_data.items[i];
-        rmax = it->row + banked_assets->all_btiles[ all_items[ it->item_num ].btile_num ].num_rows - 1;
-        cmax = it->col + banked_assets->all_btiles[ all_items[ it->item_num ].btile_num ].num_cols - 1;
+        rmax = it->row + home_assets->all_btiles[ all_items[ it->item_num ].btile_num ].num_rows - 1;
+        cmax = it->col + home_assets->all_btiles[ all_items[ it->item_num ].btile_num ].num_cols - 1;
         if ( ( row >= it->row ) && ( row <= rmax ) &&
              ( col >= it->col ) && ( col <= cmax ) )
             return it;

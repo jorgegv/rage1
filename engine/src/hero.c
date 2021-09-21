@@ -355,8 +355,8 @@ void hero_update_lives_display(void) {
     col = LIVES_AREA_LEFT;
     n = game_state.hero.num_lives;
     while ( n-- ) {
-        btile_draw( LIVES_AREA_TOP, col, &banked_assets->all_btiles[ game_state.hero.lives_btile_num], TT_DECORATION, &lives_area );
-        col += banked_assets->all_btiles[ game_state.hero.lives_btile_num ].num_cols;
+        btile_draw( LIVES_AREA_TOP, col, &home_assets->all_btiles[ game_state.hero.lives_btile_num], TT_DECORATION, &lives_area );
+        col += home_assets->all_btiles[ game_state.hero.lives_btile_num ].num_cols;
     }
 }
 
