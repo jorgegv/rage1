@@ -2235,6 +2235,16 @@ sub generate_global_screen_data {
     my $dataset = 'home';
 
     # FIXME: generate global screen_dataset_map variable with screen->dataset mapping
+    push @{ $c_dataset_lines->{ $dataset } }, "\n// Global screen->dataset mapping table\n";
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct screen_dataset_map_s screen_dataset_map[ %d ] = {\n", scalar( @all_screens) );
+    foreach my $screen ( @all_screens ) {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ .dataset_num = %d, .dataset_screen_num = %d },\t// Screen '%s'\n",
+            $screen->{'dataset'},
+            $dataset_dependency{ $screen->{'dataset'} }{'screen_global_to_dataset_index'}{ $screen->{'name'} },
+            $screen->{'name'}
+        );
+    }
+    push @{ $c_dataset_lines->{ $dataset } }, "};\n\n";
 
     # screen asset state tables
     foreach my $screen ( @all_screens ) {
