@@ -2237,10 +2237,12 @@ sub generate_global_screen_data {
     # FIXME: generate global screen_dataset_map variable with screen->dataset mapping
     push @{ $c_dataset_lines->{ $dataset } }, "\n// Global screen->dataset mapping table\n";
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct screen_dataset_map_s screen_dataset_map[ %d ] = {\n", scalar( @all_screens) );
-    foreach my $screen ( @all_screens ) {
+    foreach my $global_screen_index ( 0 .. ( scalar( @all_screens) - 1 ) ) {
+        my $screen = $all_screens[ $global_screen_index ];
+        my $screen_dataset = ( $game_config->{'zx_target'} eq '48' ? 'home' : $screen->{'dataset'} );
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ .dataset_num = %d, .dataset_screen_num = %d },\t// Screen '%s'\n",
             $screen->{'dataset'},
-            $dataset_dependency{ $screen->{'dataset'} }{'screen_global_to_dataset_index'}{ $screen->{'name'} },
+            $dataset_dependency{ $screen_dataset }{'screen_global_to_dataset_index'}{ $global_screen_index },
             $screen->{'name'}
         );
     }
