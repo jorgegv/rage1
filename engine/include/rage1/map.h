@@ -71,7 +71,7 @@ struct map_screen_s {
 // the index for this array is the global screen number
 struct screen_dataset_map_s {
     uint8_t	dataset_num;
-    uint8_t	dataset_screen_num;
+    uint8_t	dataset_local_screen_num;
 };
 extern struct screen_dataset_map_s screen_dataset_map[];
 

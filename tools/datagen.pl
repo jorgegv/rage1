@@ -2089,14 +2089,6 @@ EOF_MAP
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
-            ( defined( $_->{'background'} ) ?
-                sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
-                    sprintf( "BTILE_ID_%s", uc( $_->{'background'}{'btile'} ) ),
-                    ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
-                    $_->{'background'}{'row'}, $_->{'background'}{'col'},
-                    $_->{'background'}{'width'}, $_->{'background'}{'height'}
-                ) :
-                "\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
             join( ",\n", map {
                 sprintf( "\t\t.flow_data.rule_tables.%s = { %d, %s }",
                     $_,
@@ -2110,6 +2102,14 @@ EOF_MAP
                     )
                 )
                 } @{ $syntax->{'valid_whens'} } ) .
+            ( defined( $_->{'background'} ) ?
+                sprintf( "\n\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
+                    sprintf( "BTILE_ID_%s", uc( $_->{'background'}{'btile'} ) ),
+                    ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
+                    $_->{'background'}{'row'}, $_->{'background'}{'col'},
+                    $_->{'background'}{'width'}, $_->{'background'}{'height'}
+                ) :
+                "\n\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
             "\n\t}"
         } @dataset_screens );
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
@@ -2240,7 +2240,7 @@ sub generate_global_screen_data {
     foreach my $global_screen_index ( 0 .. ( scalar( @all_screens) - 1 ) ) {
         my $screen = $all_screens[ $global_screen_index ];
         my $screen_dataset = ( $game_config->{'zx_target'} eq '48' ? 'home' : $screen->{'dataset'} );
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ .dataset_num = %d, .dataset_screen_num = %d },\t// Screen '%s'\n",
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ .dataset_num = %d, .dataset_local_screen_num = %d },\t// Screen '%s'\n",
             $screen->{'dataset'},
             $dataset_dependency{ $screen_dataset }{'screen_global_to_dataset_index'}{ $global_screen_index },
             $screen->{'name'}
