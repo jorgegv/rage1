@@ -2214,7 +2214,7 @@ EOF_BLDCFG1
 EOF_FEATURES1
 ;
 
-    push @h_game_data_lines, sprintf( "#define\tBUILD_FEATURE_ZX_TARGET\t%s\n", $game_config->{'zx_target'} );
+    push @h_game_data_lines, sprintf( "#define\tBUILD_FEATURE_ZX_TARGET_%s\n", $game_config->{'zx_target'} );
 
     push @h_game_data_lines, <<EOF_FEATURES2
 
