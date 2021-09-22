@@ -27,7 +27,7 @@ void inventory_reset_all(void) {
     uint8_t i;
 
     // reset item state in all screens
-    i = 16;
+    i = INVENTORY_MAX_ITEMS;
     while ( i-- )
         SET_ITEM_FLAG( all_items[i], F_ITEM_ACTIVE );
 
