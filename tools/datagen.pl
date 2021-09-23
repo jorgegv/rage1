@@ -2089,8 +2089,8 @@ EOF_MAP
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
-            join( ",\n", map {
-                sprintf( "\t\t.flow_data.rule_tables.%s = { %d, %s }",
+            join( "\n", map {
+                sprintf( "\t\t.flow_data.rule_tables.%s = { %d, %s },",
                     $_,
                     ( scalar( @{ $screen->{'rules'}{ $_ } } ) || 0 ),
                     ( scalar( @{ $screen->{'rules'}{ $_ } } ) ?
@@ -2101,16 +2101,16 @@ EOF_MAP
                         'NULL'
                     )
                 )
-                } @{ $syntax->{'valid_whens'} } ) .
+                } @{ $syntax->{'valid_whens'} } ) . "\n" .
             ( defined( $_->{'background'} ) ?
-                sprintf( "\n\t\t.background_data = { %s, %d, { %d, %d, %d, %d } },\t// background_data\n",
+                sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } }\t// background_data\n",
                     sprintf( "BTILE_ID_%s", uc( $_->{'background'}{'btile'} ) ),
                     ( defined( $_->{'background'}{'probability'} ) ? $_->{'background'}{'probability'} : 255 ),
                     $_->{'background'}{'row'}, $_->{'background'}{'col'},
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
                 ) :
-                "\n\t\t.background_data = { NULL, 0, { 0,0,0,0 } },\t// background_data\n" ) .
-            "\n\t}"
+                "\t\t.background_data = { NULL, 0, { 0,0,0,0 } }\t// background_data\n" ) .
+            "\t}"
         } @dataset_screens );
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
 
