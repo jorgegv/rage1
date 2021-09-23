@@ -23,6 +23,8 @@
 #include "rage1/interrupts.h"
 #include "rage1/debug.h"
 
+#include "game_data.h"
+
 // data struct and ISR hook for timekeeping
 // struct time_s current_time = { 0, 0, 0, 0 };
 // moved to lowmem/asmdata.asm to ensure it is placed in memory below 0xC000
@@ -43,15 +45,24 @@ IM2_DEFINE_ISR(do_timer_tick)
 }
 
 // Initialize interrupts in IM2 mode
-
-
 // IV_ADDR must be 256-byte aligned
-#define IV_ADDR		( ( unsigned char * ) 0x8000 )
-
 // ISR_ADDR and IV_BYTE must match: if IV_BYTE is 0x81, ISR_ADDR must be
 // 0x8181
-#define ISR_ADDR	( ( unsigned char * ) 0x8181 )
-#define IV_BYTE		( 0x81 )
+
+// In 128 mode, IV is at 0x8000-0x8100, ISR at 0x8181
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+   #define IV_ADDR	( ( unsigned char * ) 0x8000 )
+
+   #define ISR_ADDR	( ( unsigned char * ) 0x8181 )
+   #define IV_BYTE	( 0x81 )
+#endif
+
+// In 48 mode, IV is at 0xD000-0xD100, ISR at 0xD1D1
+#ifdef BUILD_FEATURE_ZX_TARGET_48
+   #define IV_ADDR	( ( unsigned char * ) 0xD000 )
+   #define ISR_ADDR	( ( unsigned char * ) 0xD1D1 )
+   #define IV_BYTE	( 0xD1 )
+#endif
 
 // code to patch at ISR_ADDR: jp xxxx
 #define Z80_OPCODE_JP	( 0xc3 )
