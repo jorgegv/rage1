@@ -108,7 +108,7 @@ sub read_input_data {
                 # we start with empty lists, and with one reserved
                 # asset_state: the first one (0) for this screen, with all
                 # flags reset
-                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_states => [ 0 ] };
+                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_states => [ { value => 0, comment => 'Screen state' } ] };
                 next;
             }
             if ( $line =~ /^BEGIN_SPRITE$/ ) {
@@ -298,7 +298,7 @@ sub read_input_data {
                 # state slot if it can
                 if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
                     $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, $item->{'active'};
+                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Decoration '$item->{name}'" } ;
                 } else {
                     $item->{'asset_state_index'} = 'ASSET_NO_STATE';
                 }
@@ -320,7 +320,7 @@ sub read_input_data {
                 # state slot if it can
                 if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
                     $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, $item->{'active'};
+                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Obstacle '$item->{name}'" };
                 } else {
                     $item->{'asset_state_index'} = 'ASSET_NO_STATE';
                 }
@@ -340,7 +340,7 @@ sub read_input_data {
 
                 # enemies can always change state (=killed), so assign a state slot
                 $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                push @{ $cur_screen->{'asset_states'} }, 'F_ENEMY_ACTIVE';
+                push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
 
                 push @{ $cur_screen->{'enemies'} }, $item;
                 next;
@@ -380,7 +380,7 @@ sub read_input_data {
                 # state slot if it can
                 if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
                     $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, $item->{'active'};
+                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Hotzone '$item->{name}'" };
                 } else {
                     $item->{'asset_state_index'} = 'ASSET_NO_STATE';
                 }
@@ -2234,7 +2234,7 @@ sub generate_global_screen_data {
 
     my $dataset = 'home';
 
-    # FIXME: generate global screen_dataset_map variable with screen->dataset mapping
+    # generate global screen_dataset_map variable with screen->dataset mapping
     push @{ $c_dataset_lines->{ $dataset } }, "\n// Global screen->dataset mapping table\n";
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct screen_dataset_map_s screen_dataset_map[ %d ] = {\n", scalar( @all_screens) );
     foreach my $global_screen_index ( 0 .. ( scalar( @all_screens) - 1 ) ) {
@@ -2254,9 +2254,11 @@ sub generate_global_screen_data {
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_s screen_%s_asset_state[ %d ] = {\n\t",
             $screen->{'name'}, scalar( @{ $screen->{'asset_states'} } )
         );
-        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t",
+        push @{ $c_dataset_lines->{ $dataset } }, join( "\n\t",
             map {
-                sprintf( "{ .asset_state = %s, .asset_initial_state = %s }", $_, $_ )
+                sprintf( "{ .asset_state = %s, .asset_initial_state = %s },\t// %s",
+                    $_->{'value'}, $_->{'value'}, $_->{'comment'},
+                )
             } @{ $screen->{'asset_states'} }
         );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
