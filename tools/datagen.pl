@@ -1294,9 +1294,9 @@ sub generate_screen {
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
                 my $ymax = $y + ( defined( $_->{'pix_height'} ) ? $_->{'pix_height'} : $_->{'height'} * 8 ) - 1;
-                sprintf( "\t{ .position = { %d, %d, %d, %d }, %s }",
+                sprintf( "\t{ .position = { %d, %d, %d, %d }, .state_index = %s }",
                     $x, $y, $xmax, $ymax,
-                    ( $_->{'active'} ? 'F_HOTZONE_ACTIVE' : 0 ),
+                    $_->{'asset_state_index'},
                 )
             } @{ $screen->{'hotzones'} } );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";

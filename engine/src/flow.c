@@ -164,9 +164,15 @@ uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) __z88dk_f
 uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88dk_fastcall {
     struct hotzone_info_s *hz;
     hz = &banked_assets->all_screens[ game_state.current_screen ].hotzone_data.hotzones[ check->data.hotzone.num_hotzone ];
-    return ( GET_HOTZONE_FLAG( *hz, F_HOTZONE_ACTIVE ) &&
-        collision_check( &game_state.hero.position, &hz->position )
-    );
+
+    // if the hotzone has a state, consider if it is active or not
+    if ( hz->state_index != ASSET_NO_STATE )
+        return ( GET_HOTZONE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ][ hz->state_index ].asset_state, F_HOTZONE_ACTIVE ) &&
+            collision_check( &game_state.hero.position, &hz->position )
+            );
+    else
+        // if the hotzone does not have a state, it is always active
+        return collision_check( &game_state.hero.position, &hz->position );
 }
 
 uint8_t do_rule_check_screen_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
@@ -218,13 +224,21 @@ void do_rule_action_warp_to_screen( struct flow_rule_action_s *action ) __z88dk_
 }
 
 void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    SET_HOTZONE_FLAG( banked_assets->all_screens[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
-        F_HOTZONE_ACTIVE );
+    struct hotzone_info_s *hz;
+    hz = &banked_assets->all_screens[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ];
+    // only do it if there is a state, ignore if there is not
+    if ( hz->state_index != ASSET_NO_STATE )
+        SET_HOTZONE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ][ hz->state_index ].asset_state,
+            F_HOTZONE_ACTIVE );
 }
 
 void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    RESET_HOTZONE_FLAG( banked_assets->all_screens[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ],
-        F_HOTZONE_ACTIVE );
+    struct hotzone_info_s *hz;
+    hz = &banked_assets->all_screens[ game_state.current_screen ].hotzone_data.hotzones[ action->data.hotzone.num_hotzone ];
+    // only do it if there is a state, ignore if there is not
+    if ( hz->state_index != ASSET_NO_STATE )
+        RESET_HOTZONE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ][ hz->state_index ].asset_state,
+            F_HOTZONE_ACTIVE );
 }
 
 void do_rule_action_enable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
