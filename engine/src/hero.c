@@ -325,7 +325,7 @@ void hero_pickup_items(void) {
                 // mark the item as inactive
                 RESET_ITEM_FLAG( all_items[ item ], F_ITEM_ACTIVE );
                 // remove item from screen
-                btile_remove( item_loc->row, item_loc->col, &banked_assets->all_btiles[ all_items[ item ].btile_num ] );
+                btile_remove( item_loc->row, item_loc->col, &home_assets->all_btiles[ all_items[ item ].btile_num ] );
                 // update inventory on screen (show)
                 inventory_show();
                 // play pickup sound
