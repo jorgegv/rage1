@@ -2275,6 +2275,17 @@ sub generate_global_screen_data {
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
 }
 
+# generate data that does not logically fit elsewhere
+sub generate_misc_data {
+    # number of enemies at game reset
+    my $count = 0;
+    foreach my $screen ( @all_screens ) {
+        $count += scalar( @{ $screen->{'enemies'} } );
+    }
+    push @h_game_data_lines, "\n// Total number of enemies in the game\n";
+    push @h_game_data_lines, sprintf( "#define\tGAME_NUM_TOTAL_ENEMIES\t%d\n\n", $count );
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2304,6 +2315,7 @@ sub generate_game_data {
     generate_game_areas;
     generate_game_functions;
     generate_game_config;
+    generate_misc_data;
 
     # generate ending lines if needed
     generate_h_ending;

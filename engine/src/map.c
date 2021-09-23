@@ -103,19 +103,6 @@ void map_sprites_reset_all(void) {
         map_screen_reset_all_sprites ( &banked_assets->all_screens[ i ] );
 }
 
-// FIXME: remove this function and @define a constant, DATAGEN knows this at compile time!
-uint16_t map_count_enemies_all(void) {
-    uint16_t count;
-    uint8_t i;
-
-    count = 0;
-    i = MAP_NUM_SCREENS;
-    while ( i-- )
-        count += banked_assets->all_screens[ i ].enemy_data.num_enemies;
-
-    return count;
-}
-
 void map_enter_screen( struct map_screen_s *s ) {
     map_allocate_sprites( s );
 }
