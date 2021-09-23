@@ -62,10 +62,11 @@ struct map_screen_s {
         uint8_t probability;
         struct sp1_Rect box;
     } background_data;
-    struct {
-        uint8_t flags;
-    } state_data;
+    // there used to be a 'flags' field here, but state (=flags) for each
+    // screen is always at position 0 in the asset state table for that
+    // screen, so we use that number everywhere and save one byte here
 };
+#define	SCREEN_STATE_INDEX	0
 
 // struct for mapping a screen in the global map to a screen in a given dataset
 // the index for this array is the global screen number
@@ -89,8 +90,8 @@ void map_free_sprites( struct map_screen_s *s );
 
 // utility macros and definitions
 // screen flags macros and definitions
-#define GET_SCREEN_FLAG(s,f)	( (s).state_data.flags & (f) )
-#define SET_SCREEN_FLAG(s,f)	( (s).state_data.flags |= (f) )
-#define RESET_SCREEN_FLAG(s,f)	( (s).state_data.flags &= ~(f) )
+#define GET_SCREEN_FLAG(s,f)	( (s) & (f) )
+#define SET_SCREEN_FLAG(s,f)	( (s) |= (f) )
+#define RESET_SCREEN_FLAG(s,f)	( (s) &= ~(f) )
 
 #endif // _MAP_H

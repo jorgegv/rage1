@@ -170,11 +170,11 @@ uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88
 }
 
 uint8_t do_rule_check_screen_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( GET_SCREEN_FLAG( banked_assets->all_screens[ game_state.current_screen ], check->data.flag_state.flag ) ? 1 : 0 );
+    return ( GET_SCREEN_FLAG( all_screen_asset_state_tables[ game_state.current_screen ][ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_screen_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( GET_SCREEN_FLAG( banked_assets->all_screens[ game_state.current_screen ], check->data.flag_state.flag ) ? 0 : 1 );
+    return ( GET_SCREEN_FLAG( all_screen_asset_state_tables[ game_state.current_screen ][ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 0 : 1 );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -250,11 +250,11 @@ void do_rule_action_remove_from_inventory( struct flow_rule_action_s *action ) _
 }
 
 void do_rule_action_set_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    SET_SCREEN_FLAG( banked_assets->all_screens[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
+    SET_SCREEN_FLAG( all_screen_asset_state_tables[ action->data.screen_flag.num_screen ][ SCREEN_STATE_INDEX ].asset_state, action->data.screen_flag.flag );
 }
 
 void do_rule_action_reset_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    RESET_SCREEN_FLAG( banked_assets->all_screens[ action->data.screen_flag.num_screen ], action->data.screen_flag.flag );
+    RESET_SCREEN_FLAG( all_screen_asset_state_tables[ action->data.screen_flag.num_screen ][ SCREEN_STATE_INDEX ].asset_state, action->data.screen_flag.flag );
 }
 
 // dispatch tables for check and action functions
