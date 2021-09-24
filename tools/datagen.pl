@@ -2268,11 +2268,13 @@ sub generate_global_screen_data {
     }
     # global table of asset state tables for all screens
     push @{ $c_dataset_lines->{ $dataset } }, "// Global table of asset state tables for all screens\n";
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_s *all_screen_asset_state_tables[ %d ] = {\n\t",
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_table_s all_screen_asset_state_tables[ %d ] = {\n\t",
         scalar( @all_screens ) );
     push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t",
         map {
-            sprintf( "&screen_%s_asset_state[0]", $_->{'name'} )
+            sprintf( "{ .num_states = %d, .states = &screen_%s_asset_state[0] }",
+                scalar( @{$_->{ 'asset_states' } } ), $_->{'name'}
+            )
         } @all_screens
     );
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
@@ -2280,6 +2282,7 @@ sub generate_global_screen_data {
 
 # generate data that does not logically fit elsewhere
 sub generate_misc_data {
+
     # number of enemies at game reset
     my $count = 0;
     foreach my $screen ( @all_screens ) {

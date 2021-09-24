@@ -26,7 +26,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
     n = num_enemies;
     while( n-- ) {
         e = &enemies[n];		// eficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ][ e->state_index ].asset_state ) )	// skip if not active
+        if ( ! IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ].states[ e->state_index ].asset_state ) )	// skip if not active
             continue;
 
         g = &banked_assets->all_sprite_graphics[ e->num_graphic ];
@@ -63,7 +63,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
     n = num_enemies;
     while( n-- ) {
         e = &enemies[n];		// efficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ][ e->state_index ].asset_state ) )	// skip if not active
+        if ( ! IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ].states[ e->state_index ].asset_state ) )	// skip if not active
             continue;
 
         g = &banked_assets->all_sprite_graphics[ e->num_graphic ];

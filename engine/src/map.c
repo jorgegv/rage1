@@ -57,7 +57,7 @@ void map_draw_screen(struct map_screen_s *s) {
         t = &s->btile_data.btiles_pos[i];
         // we draw if there is no state ( no state = always active ), or if the btile is active
         if ( ( t->state_index == ASSET_NO_STATE ) ||
-            IS_BTILE_ACTIVE( all_screen_asset_state_tables[ s->global_screen_num ][ t->state_index ].asset_state ) )
+            IS_BTILE_ACTIVE( all_screen_asset_state_tables[ s->global_screen_num ].states[ t->state_index ].asset_state ) )
             btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ], t->type, &game_area );
     }
 
@@ -85,22 +85,6 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
             return it;
     }
     return NULL;	// no object
-}
-
-//FIXME: this function will probably be removed
-void map_screen_reset_all_sprites( struct map_screen_s *s ) {
-    uint8_t i;
-    i = s->enemy_data.num_enemies;
-    while ( i-- )
-        SET_ENEMY_FLAG( all_screen_asset_state_tables[ s->global_screen_num ][ s->enemy_data.enemies[ i ].state_index ].asset_state, F_ENEMY_ACTIVE );
-}
-
-//FIXME: this function will probably be removed
-void map_sprites_reset_all(void) {
-    uint8_t i;
-    i = MAP_NUM_SCREENS;
-    while ( i-- )
-        map_screen_reset_all_sprites ( &banked_assets->all_screens[ i ] );
 }
 
 void map_enter_screen( struct map_screen_s *s ) {

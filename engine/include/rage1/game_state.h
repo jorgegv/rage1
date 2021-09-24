@@ -28,8 +28,16 @@ struct asset_state_s {
    uint8_t	asset_initial_state;	// the initial state for the asset at game reset
 };
 
-// table of pointers to the asset tables for each screen
-extern struct asset_state_s *all_screen_asset_state_tables[];
+struct asset_state_table_s {
+   uint8_t		num_states;
+   struct asset_state_s	*states;
+};
+
+// table of asset state tables for each screen
+extern struct asset_state_table_s all_screen_asset_state_tables[];
+
+// resets state for all game assets in all screens
+void game_state_assets_reset_all(void);
 
 // definition for an offset value that means "NO STATE" for an asset
 #define	ASSET_NO_STATE	(0xff)

@@ -37,7 +37,9 @@ void game_state_reset_initial(void) {
    hero_reset_all();
    bullet_reset_all();
    inventory_reset_all();
-   map_sprites_reset_all();
+   game_state_assets_reset_all();
+
+   // Enemies tally
    game_state.enemies_alive = GAME_NUM_TOTAL_ENEMIES;
    game_state.enemies_killed = 0;
 
@@ -73,4 +75,16 @@ void game_state_goto_screen(uint8_t screen) {
 
     // set flag
     SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
+}
+
+void game_state_assets_reset_all(void) {
+    uint8_t i,j;
+    i = MAP_NUM_SCREENS;
+    while ( i-- ) {
+        j = all_screen_asset_state_tables[ i ].num_states;
+        while ( j-- ) {
+            all_screen_asset_state_tables[ i ].states[ j ].asset_state =
+                all_screen_asset_state_tables[ i ].states[ j ].asset_initial_state;
+        }
+    }
 }
