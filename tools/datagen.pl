@@ -1063,9 +1063,9 @@ sub validate_and_compile_screen {
 
     # check each enemy
     foreach my $s ( @{$screen->{'enemies'}} ) {
-        # set initial flags
-        $s->{'initial_flags'} = join( " | ", 0,
-            map { "F_ENEMY_" . uc($_) }
+        # set movement flags
+        $s->{'movement_flags'} = join( " | ", 0,
+            map { "F_ENEMY_MOVE_" . uc($_) }
             grep { $s->{$_} }
             qw( bounce change_sequence_horiz change_sequence_vert )
             );
@@ -1231,7 +1231,7 @@ sub generate_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }",
+                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d }, %s }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
@@ -1264,8 +1264,11 @@ sub generate_screen {
                     $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
                     $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_b'} },
 
-                    # initial flags
-                    $_->{'initial_flags'},
+                    # movement flags
+                    $_->{'movement_flags'},
+
+                    # state index
+                    $_->{'asset_state_index'},
                  )
             } @{$screen->{'enemies'}} );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";

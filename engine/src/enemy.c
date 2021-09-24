@@ -26,7 +26,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
     n = num_enemies;
     while( n-- ) {
         e = &enemies[n];		// eficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE(*e) )	// skip if not active
+        if ( ! IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ][ e->state_index ].asset_state ) )	// skip if not active
             continue;
 
         g = &banked_assets->all_sprite_graphics[ e->num_graphic ];
@@ -63,7 +63,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
     n = num_enemies;
     while( n-- ) {
         e = &enemies[n];		// efficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE(*e) )	// skip if not active
+        if ( ! IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ][ e->state_index ].asset_state ) )	// skip if not active
             continue;
 
         g = &banked_assets->all_sprite_graphics[ e->num_graphic ];
@@ -125,7 +125,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                             if (
                                     ( pos->x >= move->data.linear.xmax ) ||
                                     ( pos->x <= move->data.linear.xmin ) ||
-                                    ( ENEMY_MUST_BOUNCE(*e) && (
+                                    ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
                                         ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
                                         ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE ) ||
                                         ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
@@ -135,7 +135,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                                 move->data.linear.dx = -move->data.linear.dx;
                                 // adjust animation sequence if the enemy is configured for it
                                 // sequence_a if dx > 0, sequence_b if dx < 0
-                                if ( ENEMY_CHANGES_SEQUENCE_HORIZ(*e) ) {
+                                if ( ENEMY_MOVE_CHANGES_SEQUENCE_HORIZ( *move ) ) {
                                     anim->current.sequence = ( move->data.linear.dx > 0 ?
                                         move->data.linear.sequence_a :
                                         move->data.linear.sequence_b );
@@ -152,7 +152,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                             if (
                                     ( pos->y >= move->data.linear.ymax ) ||
                                     ( pos->y <= move->data.linear.ymin ) ||
-                                    ( ENEMY_MUST_BOUNCE(*e) && (
+                                    ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
                                         ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
                                         ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1 ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
                                         ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x + g->width - 1) ) == TT_OBSTACLE ) ||
@@ -162,7 +162,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                                 move->data.linear.dy = -move->data.linear.dy;
                                 // adjust animation sequence if the enemy is configured for it
                                 // sequence_a if dy > 0, sequence_b if dy < 0
-                                if ( ENEMY_CHANGES_SEQUENCE_VERT(*e) ) {
+                                if ( ENEMY_MOVE_CHANGES_SEQUENCE_VERT( *move ) ) {
                                     anim->current.sequence = ( move->data.linear.dy > 0 ?
                                         move->data.linear.sequence_a :
                                         move->data.linear.sequence_b );
