@@ -88,6 +88,18 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
 }
 
 void map_enter_screen( struct map_screen_s *s ) {
+
+    // If we are in 128 mode, we need to switch to the dataset where the
+    // screen resides.  If in 48 mode, this is not needed since everything
+    // is in home dataset
+
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+    // We can just call dataset_activate with the screen dataset number.
+    // The function returns immediately if the current dataset is already
+    // loaded and does not need to be changed
+    dataset_activate( screen_dataset_map[ s->global_screen_num ].dataset_num );
+#endif
+
     map_allocate_sprites( s );
 }
 
