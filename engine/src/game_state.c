@@ -13,6 +13,7 @@
 #include "rage1/hero.h"
 #include "rage1/inventory.h"
 #include "rage1/controller.h"
+#include "rage1/dataset.h"
 
 #include "game_data.h"
 
@@ -54,20 +55,26 @@ void game_state_reset_initial(void) {
 // can't be used on game start!
 // this function presumes a next sreen is in game_state.next_screen
 void game_state_switch_to_next_screen(void) {
+    struct map_screen_s *cs;
+    cs = dataset_get_current_screen_ptr();
 
     // move all enemies and bullets off-screen
-    enemy_move_offscreen_all( banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.num_enemies,
-        banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.enemies );
+    enemy_move_offscreen_all(
+        cs->enemy_data.num_enemies,
+        cs->enemy_data.enemies
+    );
     bullet_move_offscreen_all();
 
     // run EXIT_SCREEN hooks for the old screen
-    map_exit_screen( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ] );
+    map_exit_screen( cs );
 
     // switch screen!
     game_state.current_screen = game_state.next_screen;
 
     // run ENTER_SCREEN tasks for the new screen
     map_enter_screen( game_state.current_screen );
+    // Not need for now, but...
+    // cs = dataset_get_current_screen_ptr();
 
     // draw the hero in the new position
     hero_draw();

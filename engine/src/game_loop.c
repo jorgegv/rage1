@@ -28,6 +28,7 @@
 #include "rage1/flow.h"
 #include "rage1/enemy.h"
 #include "rage1/hero.h"
+#include "rage1/dataset.h"
 
 #include "game_data.h"
 
@@ -40,47 +41,51 @@ void check_game_pause(void) {
 }
 
 void check_game_flags( void ) {
+    struct map_screen_s *cs;
+    cs = dataset_get_current_screen_ptr();
 
-      // update screen data if the player has entered new screen
-      // also done whe game has just started
-      if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
+    // update screen data if the player has entered new screen
+    // also done whe game has just started
+    if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
 
-         // draw screen and reset sprites
-         map_draw_screen( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ] );
-         enemy_reset_position_all( 
-            banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.num_enemies, 
-            banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.enemies
-         );
-         bullet_reset_all();
-         RESET_GAME_FLAG( F_GAME_START );
-      }
+       // draw screen and reset sprites
+       map_draw_screen( cs );
+       enemy_reset_position_all( 
+          cs->enemy_data.num_enemies, 
+          cs->enemy_data.enemies
+       );
+       bullet_reset_all();
+       RESET_GAME_FLAG( F_GAME_START );
+    }
 
-      // check if player has died
-      if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
-         beep_fx( SOUND_HERO_DIED );
-         if ( ! --game_state.hero.num_lives )
-            SET_GAME_FLAG( F_GAME_OVER );
-         else {
-            enemy_reset_position_all(
-               banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.num_enemies, 
-               banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.enemies
-            );
-            hero_reset_position();
-            bullet_reset_all();
-            hero_update_lives_display();
-            SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
-         }
-      }
-
+    // check if player has died
+    if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
+       beep_fx( SOUND_HERO_DIED );
+       if ( ! --game_state.hero.num_lives )
+          SET_GAME_FLAG( F_GAME_OVER );
+       else {
+          enemy_reset_position_all(
+             cs->enemy_data.num_enemies, 
+             cs->enemy_data.enemies
+          );
+          hero_reset_position();
+          bullet_reset_all();
+          hero_update_lives_display();
+          SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+       }
+    }
 }
 
 void move_enemies(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
+    struct map_screen_s *cs;
+    cs = dataset_get_current_screen_ptr();
+
    // move enemies
    enemy_animate_and_move_all(
-      banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.num_enemies, 
-      banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.enemies
+      cs->enemy_data.num_enemies, 
+      cs->enemy_data.enemies
    );
 }
 
@@ -120,6 +125,8 @@ void show_heartbeat(void) {
 }
 
 void run_main_game_loop(void) {
+
+   struct map_screen_s *cs;
 
    // seed PRNG. It is important that this is done here, after the menu has been run
    // and the controller has been selected. This involves the human user, and so
@@ -201,12 +208,15 @@ void run_main_game_loop(void) {
    // cleanup
 
    // free sprites in the current screen
-   map_exit_screen( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ] );
+   cs = dataset_get_current_screen_ptr();
+   map_exit_screen( cs );
 
    // move all moving things off-screen:
    hero_move_offscreen();
-   enemy_move_offscreen_all( banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.num_enemies,
-      banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.enemies );
+   enemy_move_offscreen_all(
+      cs->enemy_data.num_enemies,
+      cs->enemy_data.enemies
+   );
    bullet_move_offscreen_all();
 
 }

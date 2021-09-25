@@ -15,7 +15,7 @@
 
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
-#include "rage1/dataset.h"
+#include "rage1/game_state.h"
 
 // Global structs that hold the current banked and home asset tables.  They
 // must go in low memory, so they are instead included in lowmem/asmdata.asm
@@ -62,4 +62,8 @@ void init_datasets(void) {
 #ifdef BUILD_FEATURE_ZX_TARGET_48
     banked_assets = home_assets;
 #endif
+}
+
+struct map_screen_s *dataset_get_current_screen_ptr( void ) {
+    return &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ];
 }
