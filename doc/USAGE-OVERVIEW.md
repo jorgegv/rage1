@@ -22,6 +22,12 @@ testing all engine features.  I recommend to go through the files under
 `game_data` directory and understand the main components.  If in doubt,
 check the game source and data, it's pretty well explained (I think :-).
 
+Finally, the engine has the possibility of compiling for 48K or 128K
+Spectrum models, with just a configuration setting `zx_target` (see
+[DATAGEN.md](DATAGEN.md) and [BANKING-DESIGN.md](BANKING-DESIGN.md) for the
+details about how to configure it and the different memory layouts and
+possibilities in 48/128 modes.
+
 ## New game creation
 
 You can create a new fully working game from the template game with a single
