@@ -31,7 +31,7 @@ void game_state_reset_initial(void) {
    game_state.current_screen = MAP_INITIAL_SCREEN;
 
    // run ENTER_SCREEN hooks for the initial screen
-   map_enter_screen( &banked_assets->all_screens[ game_state.current_screen ] );
+   map_enter_screen( game_state.current_screen );
 
    // reset everything
    hero_reset_all();
@@ -68,7 +68,7 @@ void game_state_goto_screen(uint8_t screen) {
     game_state.current_screen = screen;
 
     // run ENTER_SCREEN hooks for the new screen
-    map_enter_screen( &banked_assets->all_screens[ game_state.current_screen ] );
+    map_enter_screen( game_state.current_screen );
 
     // draw the hero in the new position
     hero_draw();

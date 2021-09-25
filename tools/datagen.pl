@@ -840,10 +840,6 @@ sub validate_and_compile_btile {
 sub generate_btile {
     my ( $tile, $dataset ) = @_;
 
-    my $assets_table_ptr = ( $dataset eq 'home' ? 'home_assets' : 'banked_assets' );
-
-    my $cur_char = 0;
-    my @char_names;
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
         $tile->{'name'},
@@ -870,14 +866,25 @@ sub generate_btile {
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
 
     # output auxiliary definitions
-    push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &${assets_table_ptr}->all_btiles[ %d ] )\n",
-        uc( $tile->{'name'} ),
-        $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
-    );
-    push @h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
-        uc( $tile->{'name'} ),
-        $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
-    );
+    if ( $dataset eq 'home' ) {
+        push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+            uc( $tile->{'name'} ),
+            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+        );
+        push @h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
+            uc( $tile->{'name'} ),
+            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+        );
+    } else {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+            uc( $tile->{'name'} ),
+            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+        );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_ID_%s\t%d\n",
+            uc( $tile->{'name'} ),
+            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+        );
+    }
 }
 
 #####################################
@@ -976,8 +983,6 @@ sub generate_sprite {
     my $sprite_frames = $sprite->{'frames'};
     my $sprite_name = $sprite->{'name'};
 
-    my $cur_char = 0;
-    my @char_names;
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (required by SP1)\n\n", $sprite->{'name'} );
 
     # prepare mask and bytes lists
@@ -1955,7 +1960,7 @@ EOF_HEADER2
 ;
 }
 
-sub generate_tiles {
+sub generate_btiles {
     my $dataset = shift;
 
     # generate the list of dataset btiles, return immediately if empty
@@ -2306,7 +2311,7 @@ sub generate_game_data {
     # 'home' dataset will be treated specially at output
     for my $dataset ( keys %dataset_dependency ) {
         generate_c_banked_header( $dataset );
-        generate_tiles( $dataset );
+        generate_btiles( $dataset );
         generate_sprites( $dataset );
         generate_flow_rules( $dataset );
         generate_screens( $dataset );
