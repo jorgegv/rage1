@@ -64,7 +64,6 @@ void check_flow_rules(void) {
     // WHEN_GAME_LOOP rules
     ////////////////////////////////////////////////////////
 
-    // current_screen and previous_screen may change here, be aware of it!
     if ( banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].flow_data.rule_tables.game_loop.num_rules )
         run_flow_rule_table( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].flow_data.rule_tables.game_loop );
 
