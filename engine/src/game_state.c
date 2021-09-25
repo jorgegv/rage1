@@ -30,7 +30,7 @@ void game_state_reset_initial(void) {
    // set initial screen
    game_state.current_screen = MAP_INITIAL_SCREEN;
 
-   // run ENTER_SCREEN hooks for the initial screen
+   // run ENTER_SCREEN tasks for the initial screen
    map_enter_screen( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ] );
 
    // reset everything
@@ -52,23 +52,22 @@ void game_state_reset_initial(void) {
 
 // change to a new screen
 // can't be used on game start!
-// this function presumes a previous screen
-void game_state_goto_screen(uint8_t screen) {
+// this function presumes a next sreen is in game_state.next_screen
+void game_state_switch_to_next_screen(void) {
 
     // move all enemies and bullets off-screen
-    enemy_move_offscreen_all( banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ].enemy_data.num_enemies,
-        banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ].enemy_data.enemies );
+    enemy_move_offscreen_all( banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.num_enemies,
+        banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].enemy_data.enemies );
     bullet_move_offscreen_all();
 
     // run EXIT_SCREEN hooks for the old screen
-    map_exit_screen( &banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ] );
+    map_exit_screen( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ] );
 
-    // update basic screen data
-    game_state.previous_screen = game_state.current_screen;
-    game_state.current_screen = screen;
+    // switch screen!
+    game_state.current_screen = game_state.next_screen;
 
     // run ENTER_SCREEN hooks for the new screen
-    map_enter_screen( &banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ] );
+    map_enter_screen( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ] );
 
     // draw the hero in the new position
     hero_draw();

@@ -48,7 +48,7 @@ struct game_state_s {
 
    // current, previous screen indexes in map table
    uint8_t current_screen;
-   uint8_t previous_screen;
+   uint8_t next_screen;
 
    // hero info and state
    struct hero_info_s hero;
@@ -93,7 +93,7 @@ extern struct game_state_s game_state;
 void game_state_reset_initial(void);
 
 // manage game state when moving to a new screen
-void game_state_goto_screen(uint8_t screen );
+void game_state_switch_to_next_screen( void );
 
 ///////////////////////////////////////////////
 // game flags macros and definitions
