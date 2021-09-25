@@ -34,7 +34,7 @@ void collision_check_hero_with_sprites(void) {
     struct map_screen_s *sc;
 
     hero_pos = &game_state.hero.position;
-    sc = &banked_assets->all_screens[ game_state.current_screen ];
+    sc = &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ];
 
     i = sc->enemy_data.num_enemies;
     while ( i-- ) {
@@ -56,7 +56,7 @@ void collision_check_bullets_with_sprites( void ) {
     uint8_t si,bi;
     struct map_screen_s *sc;
 
-    sc = &banked_assets->all_screens[ game_state.current_screen ];
+    sc = &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ];
 
     bi = game_state.bullet.num_bullets;
     while ( bi-- ) {

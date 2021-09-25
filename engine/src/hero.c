@@ -71,8 +71,8 @@ void hero_reset_position(void) {
         ];
 
     // set initial position and move it there
-    hero_set_position_x( h, banked_assets->all_screens[ game_state.current_screen ].hero_data.startup_x );
-    hero_set_position_y( h, banked_assets->all_screens[ game_state.current_screen ].hero_data.startup_y );
+    hero_set_position_x( h, banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].hero_data.startup_x );
+    hero_set_position_y( h, banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ].hero_data.startup_y );
     sp1_MoveSprPix( h->sprite, &game_area, animation_frame, h->position.x, h->position.y );
 }
 
@@ -317,7 +317,7 @@ void hero_pickup_items(void) {
         while ( j-- ) {
             c = s->col + j;
             if ( TILE_TYPE_AT( r, c ) == TT_ITEM ) {
-                item_loc = map_get_item_location_at_position( &banked_assets->all_screens[ game_state.current_screen ], r, c );
+                item_loc = map_get_item_location_at_position( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ], r, c );
                 item = item_loc->item_num;
 
                 // add item to inventory

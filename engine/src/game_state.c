@@ -31,7 +31,7 @@ void game_state_reset_initial(void) {
    game_state.current_screen = MAP_INITIAL_SCREEN;
 
    // run ENTER_SCREEN hooks for the initial screen
-   map_enter_screen( &banked_assets->all_screens[ game_state.current_screen ] );
+   map_enter_screen( &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ] );
 
    // reset everything
    hero_reset_all();
@@ -56,19 +56,19 @@ void game_state_reset_initial(void) {
 void game_state_goto_screen(uint8_t screen) {
 
     // move all enemies and bullets off-screen
-    enemy_move_offscreen_all( banked_assets->all_screens[ game_state.current_screen ].enemy_data.num_enemies,
-        banked_assets->all_screens[ game_state.current_screen ].enemy_data.enemies );
+    enemy_move_offscreen_all( banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ].enemy_data.num_enemies,
+        banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ].enemy_data.enemies );
     bullet_move_offscreen_all();
 
     // run EXIT_SCREEN hooks for the old screen
-    map_exit_screen( &banked_assets->all_screens[ game_state.current_screen ] );
+    map_exit_screen( &banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ] );
 
     // update basic screen data
     game_state.previous_screen = game_state.current_screen;
     game_state.current_screen = screen;
 
     // run ENTER_SCREEN hooks for the new screen
-    map_enter_screen( &banked_assets->all_screens[ game_state.current_screen ] );
+    map_enter_screen( &banked_assets->all_screens[ screen_dataset_map[ screen ].dataset_local_screen_num ] );
 
     // draw the hero in the new position
     hero_draw();
