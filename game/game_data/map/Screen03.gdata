@@ -1,5 +1,6 @@
 BEGIN_SCREEN
 	NAME		Screen03
+	DATASET		2
 
 	// Decoration for a hotzone must defined separately
 	// warp to Screen02

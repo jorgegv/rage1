@@ -28,6 +28,8 @@
 
 // struct describing a screen
 struct map_screen_s {
+    // global screen number
+    uint8_t	global_screen_num;
     // data
     struct {
         uint8_t num_btiles;
@@ -56,31 +58,38 @@ struct map_screen_s {
         } rule_tables;
     } flow_data;
     struct {
-        struct btile_s *btile;
+        uint8_t btile_num;
         uint8_t probability;
         struct sp1_Rect box;
     } background_data;
-    struct {
-        uint8_t flags;
-    } state_data;
+    // there used to be a 'flags' field here, but state (=flags) for each
+    // screen is always at position 0 in the asset state table for that
+    // screen, so we use that number everywhere and save one byte here
 };
+#define	SCREEN_STATE_INDEX	0
+
+// struct for mapping a screen in the global map to a screen in a given dataset
+// the index for this array is the global screen number
+struct screen_dataset_map_s {
+    uint8_t	dataset_num;
+    uint8_t	dataset_local_screen_num;
+};
+extern struct screen_dataset_map_s screen_dataset_map[];
 
 // with a generic function to draw a screen passed by pointer we can
 // later modify the logic behind maps without touching the map display
 // code
 void map_draw_screen(struct map_screen_s *s);
 struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
-void map_sprites_reset_all(void);
-uint16_t map_count_enemies_all(void);
-void map_enter_screen( struct map_screen_s *s );
+void map_enter_screen( uint8_t screen );
 void map_exit_screen( struct map_screen_s *s );
 void map_allocate_sprites( struct map_screen_s *m );
 void map_free_sprites( struct map_screen_s *s );
 
 // utility macros and definitions
 // screen flags macros and definitions
-#define GET_SCREEN_FLAG(s,f)	( (s).state_data.flags & (f) )
-#define SET_SCREEN_FLAG(s,f)	( (s).state_data.flags |= (f) )
-#define RESET_SCREEN_FLAG(s,f)	( (s).state_data.flags &= ~(f) )
+#define GET_SCREEN_FLAG(s,f)	( (s) & (f) )
+#define SET_SCREEN_FLAG(s,f)	( (s) |= (f) )
+#define RESET_SCREEN_FLAG(s,f)	( (s) &= ~(f) )
 
 #endif // _MAP_H

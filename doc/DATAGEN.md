@@ -29,6 +29,8 @@ Example `BTILE` definition:
 ```
 BEGIN_BTILE
         NAME    Rock01
+	DATASET	home
+
         ROWS    2
         COLS    2
 
@@ -63,6 +65,10 @@ END_BTILE
 `BTILE` attributes:
 
 * `NAME`: the name of the btile
+* `DATASET`: the btile will be automatically copied into any dataset that
+  contains screens using this btile.  Additionally, the btile will be copied
+  to the dataset specified in this attribute. This is useful for btiles used
+  in the menu screen, since they must be in the `home` dataset.
 * `ROWS`: number of character rows
 * `COLS`: number of character columns
 * `PIXELS`: pixel data.  Data must be COLS x 8 pixels (=bits) long.  Paper
@@ -238,6 +244,7 @@ Example `SCREEN` definition:
 ```
 BEGIN_SCREEN
 	NAME		Screen01
+	DATASET		0
 
 	OBSTACLE	NAME=Tree01	ROW=8 COL=4
 	OBSTACLE	NAME=Rock01	ROW=10 COL=12
@@ -265,10 +272,18 @@ END_SCREEN
 
 * `NAME`: the name of the screen, used for referencing it from other
   elements
+* `DATASET`: the number of the dataset where the screen should go.  It can
+be an integer number starting at 0, or the special name `home`. If no
+dataset is defined for a screen, the default value `home` is used.
 * `OBSTACLE`: places an element on the screen. The Hero can not go through
 this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the Btile that will be used to draw this obstacle
   * `ROW`, `COL`: position of the obstacle on the screen
+  * `ACTIVE`: 1 if this obstacle is active, 0 if not. Obstacles can be
+  activated and deactivated during the game, this setting defines the
+  initial state.
+  * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not. If it is ommited,
+  its state will not change during the game.
 * `DECORATION`: places a decoration on the screen. The hero can go over it.
   Arguments are the same as for OBSTACLEs.
 * `HOTZONE`: a zone on the screen where something happens when the hero goes
@@ -285,45 +300,47 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `ACTIVE`: 1 if this hotzone is active, 0 if not. Hot zones can be
   activated and deactivated during the game, this setting defined the
   initial state.
+  * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not. If it is ommited,
+  its state will not change during the game.
 * `HERO`: defines hero properties in this screen. Arguments:
-  * `STARTUP_XPOS`,`STARTP_YPOS`: startup hero coordinates in this screen,
+  * `STARTUP_XPOS`,`STARTUP_YPOS`: startup hero coordinates in this screen,
     of this is the initial screen.
 * `ITEM`: positions an inventory item on the screen. Arguments:
-  * `NAME`: the Btile that will be used to draw the item
+  * `NAME`: the name of the item
+  * `BTILE`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
-  * `ITEM_INDEX`: item index in the game inventory (0-15)
 * `ENEMY`: defines an enemy on the screen. Arguments:
   * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
     sprite name
   * `SPRITE`: the name of the sprite to be used for this enemy
   * `MOVEMENT`: how the enemy moves. For the moment, this can be only
   `LINEAR`, and the following arguments refer to this movement type.
-  * `XMIN`,`YMIN`,`XMAX`,`YMAX`: bounds for the enemy movement, in pixel
-  coords. The sprite will never move outside this rectangle.
-  * `BOUNCE`: 1 if the enemy bounces against obstacles, 0 if it goes through
-  them. Enemies _always_ bounce against their bounding rectangles
-  (XMIN,YMIN,XMAX,YMAX).
-  * `INITX`,`INITY`: initial position for the sprite in pixel coords
-  * `DX`,`DY`: coordinate increments when moving. Can be signed for defining
-  the movement direction.
-  * `SPEED_DELAY`: delay between different positions of the enemy (defines
-  the speed of the enemy). Specified in 1/50s (screen frames)
-  * `ANIMATION_DELAY`: delay between different sprites frames to be used for drawing
-  the enemy, specified in 1/50s (screen frames)
-  * `SEQUENCE_A`: (optional) name of the first animation sequence. If not
-  specified, 'Main' is assumed
-  * `SEQUENCE_B`: (optional) name of the second animation sequence. If not
-  specified, 'Main' is assumed
-  * `INITIAL_SEQUENCE`: (optional) name of the initial animation sequence.
-  If not specified, 'Main' is assumed
-  * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
-  (screen frames)
-  * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
-  will switch from animation sequence A to B and viceversa when bouncing
-  horizontally: sequence A for incrementing X, sequence B for decrementing X
-  * `CHANGE_SEQUENCE_VERT`: (optional) if this flag is 1, the enemy sprite
-  will switch from animation sequence A to B and viceversa when bouncing
-  vertically: sequence A for incrementing Y, sequence B for decrementing Y
+    * `XMIN`,`YMIN`,`XMAX`,`YMAX`: bounds for the enemy movement, in pixel
+    coords. The sprite will never move outside this rectangle.
+    * `BOUNCE`: 1 if the enemy bounces against obstacles, 0 if it goes through
+    them. Enemies _always_ bounce against their bounding rectangles
+    (XMIN,YMIN,XMAX,YMAX).
+    * `INITX`,`INITY`: initial position for the sprite in pixel coords
+    * `DX`,`DY`: coordinate increments when moving. Can be signed for defining
+    the movement direction.
+    * `SPEED_DELAY`: delay between different positions of the enemy (defines
+    the speed of the enemy). Specified in 1/50s (screen frames)
+    * `ANIMATION_DELAY`: delay between different sprites frames to be used for drawing
+    the enemy, specified in 1/50s (screen frames)
+    * `SEQUENCE_A`: (optional) name of the first animation sequence. If not
+    specified, 'Main' is assumed
+    * `SEQUENCE_B`: (optional) name of the second animation sequence. If not
+    specified, 'Main' is assumed
+    * `INITIAL_SEQUENCE`: (optional) name of the initial animation sequence.
+    If not specified, 'Main' is assumed
+    * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
+    (screen frames)
+    * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
+    will switch from animation sequence A to B and viceversa when bouncing
+    horizontally: sequence A for incrementing X, sequence B for decrementing X
+    * `CHANGE_SEQUENCE_VERT`: (optional) if this flag is 1, the enemy sprite
+    will switch from animation sequence A to B and viceversa when bouncing
+    vertically: sequence A for incrementing Y, sequence B for decrementing Y
 
 `CHANGE_SEQUENCE_HORIZ` and `CHANGE_SEQUENCE_VERT` animations should be
 used separately and never together in the same enemy.
@@ -415,6 +432,7 @@ Example `GAME_CONFIG` definition:
 ```
 BEGIN_GAME_CONFIG
         NAME            TestGame
+	ZX_TARGET	48
         SCREEN          INITIAL=1
         DEFAULT_BG_ATTR INK_CYAN | PAPER_BLACK
         SOUND           ENEMY_KILLED=2
@@ -435,6 +453,8 @@ END_GAME_CONFIG
 `GAME_CONFIG` attributes:
 
 * `NAME`: the name of the game (Imagine :-)
+* `ZX_TARGET`: set this to `48` or `128` to compile in those modes. `128`
+  mode includes automatic memory banking of assets.
 * `SCREEN`: screen related settings. Arguments:
   * `INITIAL`: sets the initial screen for the game
 * `DEFAULT_BG_ATTR`: default background attributes, defined as OR'ed

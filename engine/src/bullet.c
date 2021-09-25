@@ -50,8 +50,8 @@ void bullet_add( void ) {
         bs = &game_state.bullet.bullets[ i ];
         if ( ! GET_BULLET_FLAG( *bs, F_BULLET_ACTIVE ) ) {
             SET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
-            h_dy = ( all_sprite_graphics[ hero->num_graphic ].height - bi->height ) >> 1;	// divide by 2
-            v_dx = ( all_sprite_graphics[ hero->num_graphic ].width - bi->width ) >> 1;	// divide by 2
+            h_dy = ( banked_assets->all_sprite_graphics[ hero->num_graphic ].height - bi->height ) >> 1;	// divide by 2
+            v_dx = ( banked_assets->all_sprite_graphics[ hero->num_graphic ].width - bi->width ) >> 1;	// divide by 2
             switch ( hero->movement.last_direction ) {
                 case MOVE_UP:
                     bs->position.x = hero->position.x + v_dx;
@@ -189,7 +189,7 @@ void bullet_init_sprites(void) {
     bi = &game_state.bullet;
     bi->width = BULLET_SPRITE_WIDTH;
     bi->height = BULLET_SPRITE_HEIGHT;
-    bi->frames = &BULLET_SPRITE_FRAMES;
+    bi->frames = BULLET_SPRITE_FRAMES;
     bi->movement.dx = BULLET_MOVEMENT_DX;
     bi->movement.dy = BULLET_MOVEMENT_DY;
     bi->movement.delay = BULLET_MOVEMENT_DELAY;

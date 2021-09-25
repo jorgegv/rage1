@@ -21,13 +21,34 @@
 #include "rage1/bullet.h"
 #include "rage1/inventory.h"
 
+// a structure for holding the runtime state for an asset and its value at reset
+// if this structure is ever changed, its size _must_ be a power of 2!
+struct asset_state_s {
+   uint8_t	asset_state;		// the runtime state for the asset
+   uint8_t	asset_initial_state;	// the initial state for the asset at game reset
+};
+
+struct asset_state_table_s {
+   uint8_t		num_states;
+   struct asset_state_s	*states;
+};
+
+// table of asset state tables for each screen
+extern struct asset_state_table_s all_screen_asset_state_tables[];
+
+// resets state for all game assets in all screens
+void game_state_assets_reset_all(void);
+
+// definition for an offset value that means "NO STATE" for an asset
+#define	ASSET_NO_STATE	(0xff)
+
 // game state struct and related definitions
 //  struct
 struct game_state_s {
 
    // current, previous screen indexes in map table
    uint8_t current_screen;
-   uint8_t previous_screen;
+   uint8_t next_screen;
 
    // hero info and state
    struct hero_info_s hero;
@@ -59,6 +80,11 @@ struct game_state_s {
    // enemies left
    uint16_t enemies_alive;
    uint16_t enemies_killed;
+
+   // pointer to array of asset state tables for each screen
+   // this will be always assigned to the global screen_asset_state_table
+   // variable
+   struct asset_state_s **screen_asset_state_table;
 };
 
 extern struct game_state_s game_state;
@@ -67,7 +93,7 @@ extern struct game_state_s game_state;
 void game_state_reset_initial(void);
 
 // manage game state when moving to a new screen
-void game_state_goto_screen(uint8_t screen );
+void game_state_switch_to_next_screen( void );
 
 ///////////////////////////////////////////////
 // game flags macros and definitions

@@ -1,0 +1,36 @@
+################################################################################
+##
+## RAGE1 - Retro Adventure Game Engine, release 1
+## (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
+## 
+## This code is ublished under a GNU GPL license version 3 or later.  See
+## LICENSE file in the distribution for details.
+## 
+################################################################################
+
+MYMAKE			= $(MAKE) -f Makefile-48
+ZPRAGMA_INC		= zpragma-48.inc
+
+# All taps
+TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
+
+-include Makefile.common
+
+build:
+	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
+	@$(MYMAKE) -s -j8 main
+	@$(MYMAKE) -s -j8 taps
+	@$(MYMAKE) -s final
+
+## Taps
+
+taps: $(TAPS)
+
+# we set org at 0x5F00 for 48 mode
+$(MAIN_TAP): $(MAIN_BIN)
+	@echo "Creating TAP $@..."
+	@z88dk-appmake +zx --noloader --org 0x5F00 -b $<
+
+## Run options
+
+FUSE_RUN_OPTS		= --machine 48

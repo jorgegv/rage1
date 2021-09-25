@@ -57,7 +57,7 @@ struct hero_info_s {
     struct hero_movement_data_s movement;	// movement data
     uint8_t flags;				// flags
     uint8_t num_lives;				// lives
-    struct btile_s *lives_tile;			// btile used to draw remaining lives
+    uint8_t lives_btile_num;			// btile used to draw remaining lives
 };
 
 // a pre-filled hero_info_s struct for game reset

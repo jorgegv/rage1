@@ -29,6 +29,7 @@ struct  enemy_movement_data_s {
             uint8_t sequence_a, sequence_b;	// sprite animation sequences (see FLAGS)
         } linear;
     } data;
+    uint8_t flags;				// movement flags
 };
 
 struct enemy_info_s {
@@ -38,23 +39,27 @@ struct enemy_info_s {
     struct sprite_animation_data_s animation;		// sprite animation data
     struct position_data_s position;			// enemy position data
     struct enemy_movement_data_s movement;		// enemy movement data
-    uint8_t flags;					// flags
+    uint8_t state_index;				// index into screen asset state table
 };
 
-// enemy flags macros and definitions
-#define GET_ENEMY_FLAG(s,f)	( (s).flags & (f) )
-#define SET_ENEMY_FLAG(s,f)	( (s).flags |= (f) )
-#define RESET_ENEMY_FLAG(s,f)	( (s).flags &= ~(f) )
+// enemy state macros and definitions
+#define GET_ENEMY_FLAG(s,f)	( (s) & (f) )
+#define SET_ENEMY_FLAG(s,f)	( (s) |= (f) )
+#define RESET_ENEMY_FLAG(s,f)	( (s) &= ~(f) )
 
-#define F_ENEMY_ACTIVE			0x0001
-#define F_ENEMY_BOUNCE			0x0002
-#define F_ENEMY_CHANGE_SEQUENCE_VERT	0x0004
-#define F_ENEMY_CHANGE_SEQUENCE_HORIZ	0x0008
+#define F_ENEMY_ACTIVE			0x01
 
 #define IS_ENEMY_ACTIVE(s)			(GET_ENEMY_FLAG((s),F_ENEMY_ACTIVE))
-#define ENEMY_MUST_BOUNCE(s)			(GET_ENEMY_FLAG((s),F_ENEMY_BOUNCE))
-#define ENEMY_CHANGES_SEQUENCE_VERT(s)		(GET_ENEMY_FLAG((s),F_ENEMY_CHANGE_SEQUENCE_VERT))
-#define ENEMY_CHANGES_SEQUENCE_HORIZ(s)		(GET_ENEMY_FLAG((s),F_ENEMY_CHANGE_SEQUENCE_HORIZ))
+
+// enemy movement state flags
+#define GET_ENEMY_MOVE_FLAG(s,f)	( (s).flags & (f) )
+#define F_ENEMY_MOVE_BOUNCE			0x01
+#define F_ENEMY_MOVE_CHANGE_SEQUENCE_VERT	0x02
+#define F_ENEMY_MOVE_CHANGE_SEQUENCE_HORIZ	0x04
+
+#define ENEMY_MOVE_MUST_BOUNCE(s)			(GET_ENEMY_MOVE_FLAG((s),F_ENEMY_MOVE_BOUNCE))
+#define ENEMY_MOVE_CHANGES_SEQUENCE_VERT(s)		(GET_ENEMY_MOVE_FLAG((s),F_ENEMY_MOVE_CHANGE_SEQUENCE_VERT))
+#define ENEMY_MOVE_CHANGES_SEQUENCE_HORIZ(s)		(GET_ENEMY_MOVE_FLAG((s),F_ENEMY_MOVE_CHANGE_SEQUENCE_HORIZ))
 
 // sets all enemies in a enemy set to initial positions and frames
 void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies );

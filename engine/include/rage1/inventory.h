@@ -21,7 +21,7 @@
 
 // struct for an item in the global item table
 struct item_info_s {
-    struct btile_s *btile;	// btile used for this item
+    uint8_t btile_num;	// btile used for this item
     uint16_t item_id;		// inventory mask for this item: only 1 bit set
     uint8_t flags;
 };

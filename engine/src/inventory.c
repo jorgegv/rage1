@@ -27,7 +27,7 @@ void inventory_reset_all(void) {
     uint8_t i;
 
     // reset item state in all screens
-    i = 16;
+    i = INVENTORY_MAX_ITEMS;
     while ( i-- )
         SET_ITEM_FLAG( all_items[i], F_ITEM_ACTIVE );
 
@@ -46,9 +46,9 @@ void inventory_show(void) {
     // draw owned items, left to right
     col = INVENTORY_AREA_LEFT;
     inv = &game_state.inventory;
-    item_index = 16;
+    item_index = INVENTORY_MAX_ITEMS;
     while ( item_index-- ) {
-        tile = all_items[ item_index ].btile;
+        tile = &home_assets->all_btiles[ all_items[ item_index ].btile_num ];
         if ( ( tile != NULL ) && ( INVENTORY_HAS_ITEM( inv, all_items[ item_index].item_id ) ) ) {
             btile_draw( INVENTORY_AREA_TOP, col, tile, TT_DECORATION, &inventory_area );
             col += tile->num_cols;

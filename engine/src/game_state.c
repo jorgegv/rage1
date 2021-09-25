@@ -13,6 +13,7 @@
 #include "rage1/hero.h"
 #include "rage1/inventory.h"
 #include "rage1/controller.h"
+#include "rage1/dataset.h"
 
 #include "game_data.h"
 
@@ -30,15 +31,17 @@ void game_state_reset_initial(void) {
    // set initial screen
    game_state.current_screen = MAP_INITIAL_SCREEN;
 
-   // run ENTER_SCREEN hooks for the initial screen
-   map_enter_screen( &map[ game_state.current_screen ] );
+   // run ENTER_SCREEN tasks for the initial screen
+   map_enter_screen( game_state.current_screen );
 
    // reset everything
    hero_reset_all();
    bullet_reset_all();
    inventory_reset_all();
-   map_sprites_reset_all();
-   game_state.enemies_alive = map_count_enemies_all();
+   game_state_assets_reset_all();
+
+   // Enemies tally
+   game_state.enemies_alive = GAME_NUM_TOTAL_ENEMIES;
    game_state.enemies_killed = 0;
 
    // reset all flags and set initial ones
@@ -50,27 +53,44 @@ void game_state_reset_initial(void) {
 
 // change to a new screen
 // can't be used on game start!
-// this function presumes a previous screen
-void game_state_goto_screen(uint8_t screen) {
+// this function presumes a next sreen is in game_state.next_screen
+void game_state_switch_to_next_screen(void) {
+    struct map_screen_s *cs;
+    cs = dataset_get_current_screen_ptr();
 
     // move all enemies and bullets off-screen
-    enemy_move_offscreen_all( map[ game_state.current_screen ].enemy_data.num_enemies,
-        map[ game_state.current_screen ].enemy_data.enemies );
+    enemy_move_offscreen_all(
+        cs->enemy_data.num_enemies,
+        cs->enemy_data.enemies
+    );
     bullet_move_offscreen_all();
 
     // run EXIT_SCREEN hooks for the old screen
-    map_exit_screen( &map[ game_state.current_screen ] );
+    map_exit_screen( cs );
 
-    // update basic screen data
-    game_state.previous_screen = game_state.current_screen;
-    game_state.current_screen = screen;
+    // switch screen!
+    game_state.current_screen = game_state.next_screen;
 
-    // run ENTER_SCREEN hooks for the new screen
-    map_enter_screen( &map[ game_state.current_screen ] );
+    // run ENTER_SCREEN tasks for the new screen
+    map_enter_screen( game_state.current_screen );
+    // Not need for now, but...
+    // cs = dataset_get_current_screen_ptr();
 
     // draw the hero in the new position
     hero_draw();
 
     // set flag
     SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
+}
+
+void game_state_assets_reset_all(void) {
+    uint8_t i,j;
+    i = MAP_NUM_SCREENS;
+    while ( i-- ) {
+        j = all_screen_asset_state_tables[ i ].num_states;
+        while ( j-- ) {
+            all_screen_asset_state_tables[ i ].states[ j ].asset_state =
+                all_screen_asset_state_tables[ i ].states[ j ].asset_initial_state;
+        }
+    }
 }

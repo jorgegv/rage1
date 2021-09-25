@@ -28,14 +28,14 @@ the memory holes for the game, if possible.
 The low memory map for our game is as follows:
 
 ```
-0000-3FFF: ROM			(16384 BYTES)
-4000-5AFF: SCREEN$		( 6912 BYTES)
-5B00-7FFF: LOWMEM BUFFER	( 9472 BYTES)
-8000-8100: INT VECTOR TABLE	(  257 BYTES)
-8101-8180: STACK		(  128 BYTES)
-8181-8183: "jp <isr>" OPCODES	(    3 BYTES)
-8184-D1EC: C PROGRAM CODE	(20585 BYTES)
-D1ED-FFFF: SP1 LIBRARY DATA	(11795 BYTES)
+0000-3FFF: ROM                  (16384 BYTES)
+4000-5AFF: SCREEN$              ( 6912 BYTES)
+5B00-7FFF: LOWMEM BUFFER + HEAP ( 9472 BYTES)
+8000-8100: INT VECTOR TABLE     (  257 BYTES)
+8101-8180: STACK                (  128 BYTES)
+8181-8183: "jp <isr>" OPCODES   (    3 BYTES)
+8184-D1EC: C PROGRAM CODE       (20585 BYTES)
+D1ED-FFFF: SP1 LIBRARY DATA     (11795 BYTES)
 ```
 
 ## Implementation
@@ -47,10 +47,10 @@ the execution phase.
 
 The Loading phase starts by loading a BASIC loader that does the following:
 
-- Set RAMTOP to 0x6fff (that's enough space to run the complete loader)
+- Set RAMTOP to 0x7fff (that's enough space to run the complete loader)
 
 - Load a minimal bank switching ASM routine at an address below 0x8184 (e.g. 
-  0x7000)
+  0x8000)
 
 - For each of the banks 1, 3, 4 ,6 ,7:
 
@@ -84,10 +84,14 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
   then sets IM2 mode and enables interrupts.
 
 - At this point, all the memory map is setup and the code is in place.  The
-  buffer at 0x5b00-0x7fff will be used as the LOW MEM buffer for copying
+  buffer at 0x5b00-0x7fff will be used as the LOWMEM buffer for copying
   assets from high memory banks: when they are needed, page frame (0xc000)
   is switched to the source bank, content is copied, then bank 0 is switched
   back.
+
+- The upper part of the LOWMEM buffer is used as the heap. Since only SP1 is
+  using the heap for sprite allocation, its size is automatically calculated
+  by DATAGEN.
 
 - The memory area from 0x5b00 normally contains system variables and BASIC
   program code, but since we are not returning to BASIC ever, we can freely
@@ -110,7 +114,8 @@ The BASIC loader can be compiled to TAP format with BAS2TAP.
 
   - Bit 3 = 0 selects normal screen
 
-  - Bit 4 = 0 selects 128K ROM (which is irrelevant for us)
+  - Bit 4 = 1 selects 48K ROM (which is irrelevant for us - but we need to
+    select ROM1, the 48K ROM: SP1 uses the char definition data from there!)
 
   - Bit 5 = 0 means memory banking is kept enabled (which is what we want)
 
@@ -195,122 +200,259 @@ that everything works.
 
 So we will do the following setup:
 
-- The code/data that will be paged will be included in separate code
-  sections.  Arbitrary sections can be defined by using #pragmas in C code,
-  and they will be output as separate `.bin` or `.tap` files by the
-  compiler/linker.
+- The code/data that will be paged will be included in separate binaries.
+  They will be compiled and linked as standalone blobs with no external
+  references.
 
-- Those sections will have an ORG 0x5B00 (also selectable by #pragmas),
-  which is the base address of our LOWMEM area (i.e.  where all that
-  code/data will be copied when needed at runtime).  This means that
-  code/data will _already_ be prepared to run at that address.  _This_ is
-  the job that the Z88DK linker will do for us.
+- Those sections (DATASETs) will have an ORG 0x5B00, which is the base
+  address of our LOWMEM area (i.e.  where all that code/data will be copied
+  when needed at runtime).  This means that code/data will _already_ be
+  prepared to run at that address.  _This_ is the job that the Z88DK linker
+  will do for us.
 
-- Since the sections will need to fit in the LOWMEM area (which is ~9 kB), a
-  good maximum size would be 8 KB.  This allows for 2 sections to fit in a high
-  BANK, and we do not waste too much of the LOWMEM area.
+- The DATASETs will need to fit in the LOWMEM area (which is at most ~9 kB
+  minus the heap size).  Heap size is calculated automatically from the game
+  definition (it depends mostly on the number of simultaneous sprites on
+  screen).
 
-- Each 8 kB section will be loaded at the proper BANK address (0xC000 or 0xE000)
-  by the BASIC loader.
-
-- When the section is needed at runtime, it will be copied to base address
+- When the DATASET is needed at runtime, it will be copied to base address
   0x5B00, which matches the ORG used for compiling the section, and so
   everything will work fine without further fixes.
 
-- A small Memory Mapping Table (MMT) will be needed within the main section
-  (non-paged) code, that will map each section to the physical bank (0-7)
-  and the top or bottom half of the bank that will be copied into LOWMEM. 
-  The structure for each entry could be:
-
-  - Bits 0-2: physical bank (0-7)
-
-  - Bit 3: bank half (0: low 0xC000; 1: high 0xE000)
-
-### Possible enhancement
-
-There is one implicit assumption in all the above analysis and design: that
-the data/code in the paged sections is immutable and does not need to change
-during the game.
-
-But what if we wanted to be able to make modifications in tha section while
-running, and _keep_ those modifications?  It would be interesting that after
-paging the memory area out and back in later, the changes are still there. 
-I.e.  make the section a READ/WRITE section, and not a READ ONLY one.
-
-There are two small changes to the design in previous sections that would
-allow us to do this:
-
-- Add an additional R/W bit to each MMT entry, which would be as follows:
-
-  - Bits 0-2: physical bank (0-7)
-
-  - Bit 3: bank half (0: low 0xC000; 1: high 0xE000)
-
-  - Bit 4: RO/RW (0: readonly; 1: read/write)
-
-- Depending on bit 4 of the MMT entry, the section would be treated
-  differently when paging: it would only be copied to LOWMEM when paging it
-  in (for RO sections); or it would be copied to LOWMEM when paging it in
-  and _back_ to the bank when paging it out (for RW sections)
-
-- For this to work, now we _do need_ to know which of the physical banks is
-  currently selected (since we may need to copy data back to it).  So we
-  need to keep it somewhere.
-
-- There are performance considerations, since each time a section is paged
-  in/out, a whole block of data might need to be copied back and forth (once
-  for a RO section, and twice for a RW section).  So this is definitely not
-  a mechanism to be used frequently, or inside loops, but sporadically.
-
-- It would be interesting to explore reducing the section size (to e.g. 
-  4kB).  It would make it easier to use it more often during the game (since
-  copying data would be faster, less data involved), but it would make it
-  more inconvenient since code in a section cannot call code in other
-  sections (only code in the main section).
-
-- It would also be interesting to explore copying functions different from
-  LDIR based ones.  Copying 8 kB with an LDIR instruction takes around 50ms.
-
-This is indeed a paging memory manager design :-)
-
+- A small Dataset Mapping Table (DMT) will be needed within the main section
+  (non-paged) code, that will map each dataset to the physical bank (0-7)
+  the offset inside the bank from which data will be copied into LOWMEM, and
+  the size of the DATASET.  See dataset.h for the structure of the DMT
+  entries.
+  
 ## Design Keys for Game Data
 
-- All of the game code must reside in low memory (below 0xc00), as a rule of
+- All of the game code must reside in low memory (below 0xC000), as a rule of
   thumb. Code that is used in exceptional situations (menu, start, game end,
   game over conditions) can be in other banks provided that it does not call
-  anything outside its own bank or the main bank.
+  anything outside its own bank or the main bank. Code that runs and
+  finishes without referring any other code or data besides its own memory
+  bank or the home banks is also suitable for this (e.g. a 128K music
+  player, which is run 50 times per second.)
 
-- There are some assets that are used all the time and must reside in low
-  memory: character set, game state, etc.
+- There are some assets that are used all the time and must reside in the
+  home bank: character set, game state, etc.
 
 - There are other assets that are used only at given times, and that can be
-  loaded and unloaded on-demand: sprites, tiles, screen rules, sounds, etc.
+  loaded and unloaded on-demand: sprites, tiles, screens, flow rules,
+  sounds, etc.
 
 - For the loadable assets that are reusable, a simple optimization is to
-  have them organized in SETS.  I.e.  sprite sets, btile sets, sound
-  sets, screen sets.
+  have them organized in DATASETS.
 
-- A SET is a group of assets that can be loaded at once.
+- A DATASET is a group of assets that can be loaded at once.
 
-- The MAP is an array of screens.  SCREENs can be arranged in sets, so the
-  MAP contains not only the screen number, but tuples (screen set, index)
+- The MAP is made of screens.  Each screen is defined inside a DATASET. 
 
-- The SCREEN has new fields for BTILE, SPRITE, SOUND and RULE sets that are
-  the ones used for that screen.  The indexes for elements on each screen
-  are always referred to the current set of elements of the given type.
+- Each screen has a GLOBAL index which is the screen identifier, and a LOCAL
+  index into the DATASET screen table.
 
-- When ENTER_SCREEN or EXIT_SCREEN, the current sets for all element types
-  are checked, and switched to the new sets if needed before/after
-  switching screen.
+- There is a SCREEN DATASET MAP, which maps the GLOBAL index to a structure
+  that contains the DATASET each screen is defined into, and the LOCAL index
+  for that screen into the DATASET screen table.
 
-- For switching element sets, the whole set is copied from high to low
-  memory as needed.  With this schema, only the sets for sprites, btiles,
-  sounds, screens and rules that are used by the current screen are in low
-  memory.
+- The assets that are used in that screen must be stored in the same
+  DATASET.  The indexes for elements on each screen are always referred to
+  the set of elements of the given type which is defined in the same
+  DATASET.
 
-- Element sets need not be big.  In fact, they should be as small as
-  possible, in order to fit in low RAM.  We can have a big number of sets
-  in high memory, up to 80 KB (5 x 16KB banks: 1,3,4,6,7)
+- When ENTER_SCREEN, the needed DATASET is requested.  The dataset selection
+  routine checks if the dataset has changed or not, and does nothing in the
+  later case.
+
+- For switching DATASETs, the whole set is copied from high to low memory as
+  needed.
+
+- We can have a big number of DATASETs in high memory, up to 80 KB (5 x 16KB
+  banks: 1,3,4,6,7). Even more with ZX0 compression.
+
+## Banked Game Data Implementation
+
+- A game DATASET (sprites, map, rules, btiles, etc.) must be self contained:
+  pointers can only reference data that is either inside the same DATASET or
+  the home memory bank.  This allows to compile a game DATASET to a single
+  binary with no external dependencies.
+
+- An ASSET RECORD structure is generated as the first element in the DATASET
+  source file generated.  It contains pointers to the asset tables inside
+  the DATASET.
+
+- The DATASET binary file is compiled at a fixed ORG address of 0x5B00 (this
+  is the address where it will be loaded at runtime).  It is generated with
+  the "__orgit" trick by Dom
+  (https://z88dk.org/forum/viewtopic.php?p=19796#p19796) so that it is
+  compiled to the desired base address 0x5B00.  Since the ASSET RECORD
+  structure is the first data item in the DATASET, and the address is known,
+  we can access all the internal game data assets from the main code by
+  using this structure and its internal pointers.  It is also linked as
+  standalone binary files with no CRT.
+
+  Example commands:
+
+~~~
+zcc +zx -compiler=sdcc -clib=sdcc_iy dataset1.c -o dataset1.bin --no-crt
+~~~
+
+- DATASETs are compressed with ZX0 after being compiled.  Compressed
+  datasets are then laid out in BANKs, and their coordinates (dataset
+  number, bank number, offset inside bank, size) are saved, so that several
+  datasets can be included in the same bank.
+
+- The DATASET MAP TABLE (DMT) must be generated and included in main
+  (non-banked) memory.  This table contains tuples of (dataset, memory bank,
+  address offset, size), which are used to decompress the dataset into the
+  final 0x5B00 runtime address.
+
+- The data in the DMT is used at runtime to select the proper DATASET and
+  switch to the neded memory bank when starting the game, switching screens,
+  ending game, etc.
+
+## Issues with banked screen data and asset state during the game
+
+Some game assets (e.g.  btiles, enemies,...) have some kind of state which
+is reset at game startup, and changes during the game (flags field, movement
+coordinates, etc.); this state is currently stored in the asset definition
+structure for some asset types.
+
+This is fine when the assets don't "move" in memory; but when memory banking
+is introduced, assets are stored compressed in "read-only" memory and can
+reloaded to the working memory zone at any time.  That state would then get
+reset when switching out a dataset and bringing it back in later.  So asset
+configuration and state need to be in different data structures.
+
+State needs to be global (i.e.  home bank), so it needs to be as small as
+possible.  Possibly `flags` fields need to be reduced to 8-bit instead of
+the current 16-bit ones.
+
+Layouts based on "flag byte for all game enemies", "flag byte for all game
+btiles", etc.  do not scale.  Tables will be mostly static, with only a few
+entries changing.  We need to have state only for the assets that can
+change.
+
+Not ALL state needs to be global.  Some state may not matter being reset
+when loading a dataset, e.g.: movement state for the enemies.  Main state
+that needs to be maintained is ALIVE/DEAD, ENABLE/DISABLE, etc.
+
+Design:
+
+- For each screen, a state table for all its assets that need some stored
+  state.  An array `screen_ScreenXX_asset_state` of `struct asset_state_s`
+  stored in home bank.
+
+- Pointers to all screen state tables are included in the global
+  `game_state` structure for each screen.
+
+- DATAGEN: in the screen config data, replace every place where state is
+  stored (e.g.  `flags` fields) with a byte that is an index into the
+  containing screen's asset state table.
+
+- Since the number of elements with state on each screen will likely be very
+  small (enemies that can be killed, tiles that can be enabled, etc.), the
+  state table for each screen will be just a few bytes.  This means also
+  that the asset index into the the state table for that screen can be just
+  1 byte.
+
+- Since the asset state needs to be reset at game startup, we need the
+  initial value for that and that value needs to be also stored somewhere. 
+  If we store it in the asset configuration, we would need to walk all
+  datasets at game startup in order to get the default values for state
+  assets.  So an alternative solution is store the default value together
+  with the runtime asset state in the home bank.  This way we do not need to
+  walk dataset at startups, and game reset is immediate.
+
+- We would have then: a) a `struct asset_state_info_s` with fields
+  `asset_state` and `asset_initial_state` (a 2-byte struct); b) a table of
+  `struct asset_state_info_s` for each screen, which contains the current
+  state of the changing assets in that screen; c) a field `state_index` in
+  each asset configuration, which is the index for that asset into the state
+  table described in b); and d) a pointer in `game_state` to the array of
+  pointers to asset state tables for each screen.
+
+- Index 0 is reserved for the state of the screen itself
+
+- Since the `struct asset_state_info_s` is 2 bytes long, the index can be
+  127 as a maximum, and there is maximum of 128 state-changing assets per
+  screen (which is more than enough).  We will use the value $FF
+  for the `state_index` field in asset configuration, to indicate that the
+  asset does NOT have an associated state (we can define it as an
+  ASSET_NO_STATE constant).  The $FF value is an illegal value for the
+  index, since all indexes must be <= 127.
+
+## Single source compiling for 48/128 (banked/non-banked) mode
+
+- The current banked assets can be accessed via the `banked_assets` global
+  variable.  This a pointer that is initialized at program startup to a
+  fixed value of 0x5B00, since datasets are always loaded there and the
+  asset record for the dataset is always at that address.
+
+- Additionally to the regular banked datasets, we have a `home_dataset`
+  which is always placed at regular program memory (i.e.  it is not stored
+  on a memory bank and it is _not_ loaded at 0x5B00).
+
+- The global variable `home_assets` is also a pointer initialized at program
+  startup and it always points to the `home_dataset` asset record.
+
+- The `home_dataset` has the same structure of a banked dataset (but in
+  regular memory) and can have the same types of assets as a regular
+  dataset.
+
+- The `home_dataset` is used for assets that must be always present.  That
+  is at least:
+
+  - BTiles that are used for drawing the game menu
+  - Hero sprites
+  - Bullet sprites
+
+- Each asset must be store in the same DATASET as the screen where it is
+  used.  So the DATASET must be defined for a SCREEN, and it is propagated
+  to all assets used in it.
+
+- Dataset switches occur on ENTER_SCREEN events, so there must be a global
+  map stored in regular (non-banked) memory, which maps the screen->dataset
+  relationship (global variable `screen_dataset_map`) and the global->local
+  index for the screen.
+
+- A `game_config` setting selects if the game is to be compiled in for a 48K
+  or 128K Spectrum (`zx_target` directive, with values `48/128`), and the
+  game is compiled differently.
+
+### Game build and configuration when targetting 48K mode
+
+- Simple linear memory map: CODE+DATA+BSS at 0x5F00-0xCFFF (28928 bytes), IV
+  table at 0xD000-0xD100 (257 bytes), stack at 0xD101-0xD1D0 (208 bytes),
+  ISR at 0xD1D1 (3 bytes), SP1 reserved data up to 0xFFFF
+
+- Automatic heap definition by standard CRT and library
+
+- The `home_assets` and `banked_assets` both point to the `home_dataset`,
+  which is expected to fit in the regular 48K RAM
+
+- Bank switching routines are not included
+
+- A simple BASIC loader is generated which does not load anything in the
+  memory banks
+
+### Game build and configuration  when targetting 128K mode
+
+- A specific memory map is used (see **Memory Layout** section at the
+  beginning of this document)
+
+- The heap is explicitly defined and managed at a specific section of the
+  mentioned memory map
+
+- The `home_assets` points to the `home_dataset` and `banked_assets` points
+  to the currently selected dataset, at fixed address 0x5B00
+
+- Data is stored in different datasets and memory banks, and needed memory
+  banking routines are compiled in and used
+
+- A specialized BASIC loader is used for loading memory bank data
+
 
 ## References
 
@@ -319,3 +461,5 @@ This is indeed a paging memory manager design :-)
 - https://worldofspectrum.org/faq/reference/128kreference.htm
 
 - https://github.com/speccyorg/bas2tap
+
+- https://www.z88dk.org/wiki/doku.php?id=libnew:examples:sp1_ex1

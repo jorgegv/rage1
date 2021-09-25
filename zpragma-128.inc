@@ -8,18 +8,18 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-// COMPILE TIME CRT CONFIGURATION
+// COMPILE TIME CRT CONFIGURATION FOR 128K MODE BUILD
 
-// don't change these values before reading doc/MEMORY_MAP.md !!
-#pragma output CRT_ORG_CODE           = 0x5f00	// org of compile
-#pragma output REGISTER_SP            = 0xd1d1	// just below ISR
-#pragma output CRT_STACK_SIZE         = 208	// just enough
+// don't change these values!!
+#pragma output CRT_ORG_CODE           = 0x8184	// org of compile
+#pragma output REGISTER_SP            = 0x8181	// just below ISR
+#pragma output CRT_STACK_SIZE         = 128	// just enough
 
 #pragma output CRT_ENABLE_CLOSE       = 0	// don't bother closing files on exit
 #pragma output CRT_ENABLE_EIDI        = 1	// disable interrupts at start
 #pragma output CRT_ENABLE_RESTART     = 1	// do not return to basic
 
-#pragma output CLIB_MALLOC_HEAP_SIZE  = -1	// heap: from end of code to stkbot
+#pragma output CLIB_MALLOC_HEAP_SIZE  = 0	// heap: initialized manually
 #pragma output CLIB_STDIO_HEAP_SIZE   = 0	// no stdio heap (no files)
 
 #pragma output CLIB_FOPEN_MAX         = -1	// no FILE* list

@@ -32,11 +32,11 @@ void map_draw_screen(struct map_screen_s *s) {
     btile_clear_type_all_screen();
 
     // draw background if present
-    if ( s->background_data.btile ) {
+    if ( s->background_data.probability ) {
         maxr = s->background_data.box.row + s->background_data.box.height - 1;
         maxc = s->background_data.box.col + s->background_data.box.width - 1;
-        btwidth = s->background_data.btile->num_cols;
-        btheight = s->background_data.btile->num_rows;
+        btwidth = banked_assets->all_btiles[ s->background_data.btile_num ].num_cols;
+        btheight = banked_assets->all_btiles[ s->background_data.btile_num ].num_rows;
 
         r = s->background_data.box.row;
         while ( r <= maxr ) {
@@ -44,7 +44,7 @@ void map_draw_screen(struct map_screen_s *s) {
             while ( c <= maxc ) {
                 // draw the btile with probability (s->background_data.probability / 255)
                 if ( (uint8_t) rand() <= s->background_data.probability )
-                    btile_draw( r, c, s->background_data.btile, TT_DECORATION, &s->background_data.box );
+                    btile_draw( r, c, &banked_assets->all_btiles[ s->background_data.btile_num ], TT_DECORATION, &s->background_data.box );
                 c += btwidth;
             }
             r += btheight;
@@ -55,9 +55,10 @@ void map_draw_screen(struct map_screen_s *s) {
     i = s->btile_data.num_btiles;
     while ( i-- ) {
         t = &s->btile_data.btiles_pos[i];
-        if ( ! IS_BTILE_ACTIVE( *t ) )
-            continue;
-        btile_draw( t->row, t->col, t->btile, t->type, &game_area );
+        // we draw if there is no state ( no state = always active ), or if the btile is active
+        if ( ( t->state_index == ASSET_NO_STATE ) ||
+            IS_BTILE_ACTIVE( all_screen_asset_state_tables[ s->global_screen_num ].states[ t->state_index ].asset_state ) )
+            btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ], t->type, &game_area );
     }
 
     // draw items
@@ -66,7 +67,7 @@ void map_draw_screen(struct map_screen_s *s) {
         it = &s->item_data.items[i];
         if ( ! IS_ITEM_ACTIVE( all_items[ it->item_num ] ) )
             continue;
-        btile_draw( it->row, it->col, all_items[ it->item_num ].btile, TT_ITEM, &game_area );
+        btile_draw( it->row, it->col, &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
     }
 }
 
@@ -77,8 +78,8 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     i = s->item_data.num_items;
     while ( i-- ) {
         it = &s->item_data.items[i];
-        rmax = it->row + all_items[ it->item_num ].btile->num_rows - 1;
-        cmax = it->col + all_items[ it->item_num ].btile->num_cols - 1;
+        rmax = it->row + home_assets->all_btiles[ all_items[ it->item_num ].btile_num ].num_rows - 1;
+        cmax = it->col + home_assets->all_btiles[ all_items[ it->item_num ].btile_num ].num_cols - 1;
         if ( ( row >= it->row ) && ( row <= rmax ) &&
              ( col >= it->col ) && ( col <= cmax ) )
             return it;
@@ -86,34 +87,20 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     return NULL;	// no object
 }
 
-void map_screen_reset_all_sprites( struct map_screen_s *s ) {
-    uint8_t i;
-    i = s->enemy_data.num_enemies;
-    while ( i-- )
-        SET_ENEMY_FLAG( s->enemy_data.enemies[ i ], F_ENEMY_ACTIVE );
-}
+void map_enter_screen( uint8_t screen_num ) {
+    // If we are in 128 mode, we need to switch to the dataset where the
+    // screen resides.  If in 48 mode, this is not needed since everything
+    // is in home dataset
 
-void map_sprites_reset_all(void) {
-    uint8_t i;
-    i = MAP_NUM_SCREENS;
-    while ( i-- )
-        map_screen_reset_all_sprites ( &map[ i ] );
-}
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+    // We can just call dataset_activate with the screen dataset number.
+    // The function returns immediately if the current dataset is already
+    // loaded and does not need to be changed
+    dataset_activate( screen_dataset_map[ screen_num ].dataset_num );
+#endif
 
-uint16_t map_count_enemies_all(void) {
-    uint16_t count;
-    uint8_t i;
-
-    count = 0;
-    i = MAP_NUM_SCREENS;
-    while ( i-- )
-        count += map[ i ].enemy_data.num_enemies;
-
-    return count;
-}
-
-void map_enter_screen( struct map_screen_s *s ) {
-    map_allocate_sprites( s );
+    // we must use the local screen number when indexing on banked_assets->all_screens!
+    map_allocate_sprites( &banked_assets->all_screens[ screen_dataset_map[ screen_num ].dataset_local_screen_num ] );
 }
 
 void map_exit_screen( struct map_screen_s *s ) {
@@ -127,8 +114,8 @@ void map_allocate_sprites( struct map_screen_s *m ) {
     i = m->enemy_data.num_enemies;
     while ( i-- ) {
         s = sprite_allocate(
-            all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].height >> 3,
-            all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].width >> 3
+            banked_assets->all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].height >> 3,
+            banked_assets->all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].width >> 3
         );
         sprite_set_color( s, m->enemy_data.enemies[ i ].color );
         m->enemy_data.enemies[ i ].sprite = s;
