@@ -87,8 +87,7 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     return NULL;	// no object
 }
 
-void map_enter_screen( struct map_screen_s *s ) {
-
+void map_enter_screen( uint8_t screen_num ) {
     // If we are in 128 mode, we need to switch to the dataset where the
     // screen resides.  If in 48 mode, this is not needed since everything
     // is in home dataset
@@ -97,10 +96,11 @@ void map_enter_screen( struct map_screen_s *s ) {
     // We can just call dataset_activate with the screen dataset number.
     // The function returns immediately if the current dataset is already
     // loaded and does not need to be changed
-    dataset_activate( screen_dataset_map[ s->global_screen_num ].dataset_num );
+    dataset_activate( screen_dataset_map[ screen_num ].dataset_num );
 #endif
 
-    map_allocate_sprites( s );
+    // we must use the local screen number when indexing on banked_assets->all_screens!
+    map_allocate_sprites( &banked_assets->all_screens[ screen_dataset_map[ screen_num ].dataset_local_screen_num ] );
 }
 
 void map_exit_screen( struct map_screen_s *s ) {

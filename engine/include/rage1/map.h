@@ -81,7 +81,7 @@ extern struct screen_dataset_map_s screen_dataset_map[];
 // code
 void map_draw_screen(struct map_screen_s *s);
 struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
-void map_enter_screen( struct map_screen_s *s );
+void map_enter_screen( uint8_t screen );
 void map_exit_screen( struct map_screen_s *s );
 void map_allocate_sprites( struct map_screen_s *m );
 void map_free_sprites( struct map_screen_s *s );
