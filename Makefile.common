@@ -56,6 +56,21 @@ FINAL_TAP		= game.tap
 # the default zx target matches the one in datagen.pl when no target is defined
 ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' game/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')
 
+#######################################################################
+# template files and directories needed for game creation and update
+#######################################################################
+#
+# these are pure library files that will be overwritten when updating the library
+# do not modify these in your game!
+LIB_ENGINE_FILES	= engine tools Makefile* zpragma*.inc .gitignore env.sh
+# these are game data directories that will be copied from the template when creating
+# a new game, but will _not_ be overwritten when updating the library. These contain
+# your game!
+LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
+# needed directories that will be created empty if they do not exist
+LIB_ENGINE_EMPTY_DIRS	= build/generated tests
+#######################################################################
+
 # compiler and tools
 ZCC			= zcc
 ZX0			= z88dk-zx0
@@ -191,20 +206,6 @@ textbox: tests/textbox.c $(TEXTBOX_OBJS)
 ##
 ## Update and sync targets for games using the library. See USAGE-OVERVIEW.md document
 ##
-
-# template files and directories needed for game creation and update
-
-# these are pure library files that will be overwritten when updating the library
-# do not modify these in your game!
-LIB_ENGINE_FILES	= engine tools Makefile zpragma*.inc .gitignore env.sh
-
-# these are game data directories that will be copied from the template when creating
-# a new game, but will _not_ be overwritten when updating the library. These contain
-# your game!
-LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
-
-# needed directories that will be created empty if they do not exist
-LIB_ENGINE_EMPTY_DIRS	= build/generated tests
 
 # create a minimal game using the library
 new-game:
