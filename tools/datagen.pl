@@ -1443,6 +1443,7 @@ EOF_BULLET4
 ########################
 
 sub generate_items {
+
     my $max_items = scalar( @all_items );
     my $all_items_mask = 0;
     my $mask = 1;
@@ -1453,13 +1454,27 @@ sub generate_items {
 
     push @h_game_data_lines, <<GAME_DATA_H_3
 
-// global items table
+// Global Items table
 #define INVENTORY_MAX_ITEMS $max_items
 #define INVENTORY_ALL_ITEMS_MASK $all_items_mask
 extern struct item_info_s all_items[];
 
+// Item constants
 GAME_DATA_H_3
 ;
+
+    # output constants for inventory items
+    foreach my $i ( 0 .. ($max_items - 1) ) {
+        my $item = $all_items[ $i ];
+        my $item_mask = 1 << $i;
+        push @h_game_data_lines, sprintf( "#define\tINVENTORY_ITEM_%s\t%d\n",
+            uc( $item->{'name'} ), $item_mask
+        );
+        push @h_game_data_lines, sprintf( "#define\tINVENTORY_ITEM_%s_NUM\t%d\n",
+            uc( $item->{'name'} ), $i
+        );
+    }
+    push @h_game_data_lines, "\n";
 
     push @c_game_data_lines, <<EOF_ITEMS1
 
