@@ -95,8 +95,13 @@ You would do it like this:
   order to give the player some hint that something should be brought there.
 
 - Also, you define an OBSTACLE in Screen B, which overlaps with the holder
-  hotzone, and that has the same BTILE as the item you are managing.  But
-  you configure it in ACTIVE=0 initial state.
+  hotzone, with an associated BTILE which is identical to the one from the
+  item you are managing, and you configure it in ACTIVE=0 initial state.
+
+  BEWARE! The BTILE for the dropped object CANNOT be the same as the
+  ITEM's!! The item btile is stored in the home dataset (because it is an
+  item), but the screen btiles are always referred to the dataset where the
+  screen is defined.
 
 - Then you define a Game Loop RULE in Screen B that does the following:
   - IF:
@@ -105,7 +110,7 @@ You would do it like this:
   - THEN:
     - Activate the BTILE in Screen B (this makes the item appear where it
       should be dropped - It is not the item, it is an obstacle with the
-      same tile, but the player does not know that :-) )
+      a similar/equal tile, but the player does not know that :-) )
     - AND Deactivate the (optional) holder decoration
     - AND Remove the item from the inventory
     - AND Set whatever flag you need to note that the iem has been dropped
