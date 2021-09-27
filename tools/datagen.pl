@@ -1934,6 +1934,9 @@ sub generate_c_banked_header {
 #include "rage1/flow.h"
 #include "rage1/dataset.h"
 
+// This _must_ be included - Datasets may reference assets from the home dataset!
+#include "game_data.h"
+
 ///////////////////////////////////////////////////////////////////////////////
 // Forced ORG address trick by Dom - The following does not generate any
 // code but forces the linking to be at the indicated base address.  This is
