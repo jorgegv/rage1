@@ -21,6 +21,8 @@
 #include "rage1/inventory.h"
 #include "rage1/dataset.h"
 
+#include "game_data.h"
+
 // disable "unreferenced function argument" warning, there are some
 // functions here that don't use their parameter
 # pragma disable_warning 85

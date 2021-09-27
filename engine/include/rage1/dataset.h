@@ -18,9 +18,6 @@
 #include "rage1/flow.h"
 #include "rage1/map.h"
 
-#include "game_data.h"
-
-
 // Banking settings
 #define BANKED_DATASET_BASE_ADDRESS     0x5B00
 

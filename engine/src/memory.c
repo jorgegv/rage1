@@ -14,6 +14,7 @@
 
 #include "rage1/memory.h"
 #include "rage1/debug.h"
+
 #include "game_data.h"
 
 /////////////////////////////////////
@@ -21,6 +22,10 @@
 // Memory initialization
 //
 /////////////////////////////////////
+
+// Memory allocator settings
+#define MALLOC_HEAP_SIZE        BUILD_MAX_HEAP_SPRITE_USAGE
+#define MALLOC_HEAP_START       ((unsigned char *)(0x8000 - MALLOC_HEAP_SIZE))
 
 // memory init depends on the target
 

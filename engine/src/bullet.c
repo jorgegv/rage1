@@ -16,8 +16,9 @@
 #include "rage1/screen.h"
 #include "rage1/util.h"
 #include "rage1/beeper.h"
-
 #include "rage1/debug.h"
+
+#include "game_data.h"
 
 //////////////////////////////
 // Bullets definition

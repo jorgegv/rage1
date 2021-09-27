@@ -20,8 +20,6 @@
 #include "rage1/sprite.h"
 #include "rage1/controller.h"
 
-#include "game_data.h"
-
 // animation data for the hero sprite
 // there are 4 animation sequences, for up, down, left and right movements
 // They may point to the same frame sets, of course

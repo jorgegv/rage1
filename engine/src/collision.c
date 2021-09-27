@@ -18,6 +18,8 @@
 #include "rage1/enemy.h"
 #include "rage1/dataset.h"
 
+#include "game_data.h"
+
 #define COLLISION_TOLERANCE	2
 
 uint8_t collision_check( struct position_data_s *a,struct position_data_s *b ) {

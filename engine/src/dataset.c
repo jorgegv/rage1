@@ -17,6 +17,8 @@
 #include "rage1/memory.h"
 #include "rage1/game_state.h"
 
+#include "game_data.h"
+
 // Global structs that hold the current banked and home asset tables.  They
 // must go in low memory, so they are instead included in lowmem/asmdata.asm
 // struct dataset_assets_s *banked_assets;
