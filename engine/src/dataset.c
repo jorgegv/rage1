@@ -66,6 +66,16 @@ void init_datasets(void) {
 #endif
 }
 
+// acceleration functions :-)
 struct map_screen_s *dataset_get_current_screen_ptr( void ) {
     return &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ];
 }
+
+struct sprite_graphic_data_s *dataset_get_home_sprite_graphic_ptr( uint8_t id) {
+    return &home_assets->all_sprite_graphics[ id ];
+}
+
+struct sprite_graphic_data_s *dataset_get_banked_sprite_graphic_ptr( uint8_t id) {
+    return &banked_assets->all_sprite_graphics[ id ];
+}
+

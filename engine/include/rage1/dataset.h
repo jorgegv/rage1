@@ -67,7 +67,17 @@ void init_datasets( void );
 // activate a given dataset
 void dataset_activate( uint8_t d );
 
+///////////////////////////////////////////////////////
+//
 // Functions for optimizing access to banked assets
+//
+///////////////////////////////////////////////////////
+
+// get ptr to the current screen
 struct map_screen_s *dataset_get_current_screen_ptr( void );
+
+// get ptr to a given sprite graphic in the home and banked datasets
+struct sprite_graphic_data_s *dataset_get_home_sprite_graphic_ptr( uint8_t id);
+struct sprite_graphic_data_s *dataset_get_banked_sprite_graphic_ptr( uint8_t id);
 
 #endif // _DATASET_H
