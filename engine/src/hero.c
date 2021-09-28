@@ -69,8 +69,8 @@ void hero_reset_position(void) {
     cs = dataset_get_current_screen_ptr();
 
     // set pointer to first animation frame
-    animation_frame = home_assets->all_sprite_graphics[ h->num_graphic ].frame_data.frames[
-        home_assets->all_sprite_graphics[ h->num_graphic ].sequence_data.sequences[ anim->current_sequence ].frame_numbers[ 0 ]
+    animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[
+        home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].sequence_data.sequences[ anim->current_sequence ].frame_numbers[ 0 ]
         ];
 
     // set initial position and move it there
@@ -82,12 +82,12 @@ void hero_reset_position(void) {
 // X and Y setting functions - take care of setting XMAX and YMAX also
 void hero_set_position_x( struct hero_info_s *h, uint8_t x ) {
     h->position.x = x;
-    h->position.xmax = h->position.x + home_assets->all_sprite_graphics[ h->num_graphic ].width - 1;
+    h->position.xmax = h->position.x + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].width - 1;
 }
 
 void hero_set_position_y( struct hero_info_s *h, uint8_t y ) {
     h->position.y = y;
-    h->position.ymax = h->position.y + home_assets->all_sprite_graphics[ h->num_graphic ].height - 1;
+    h->position.ymax = h->position.y + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].height - 1;
 }
 
 // this is initialized on startup, it is used when resetting the hero state
@@ -126,22 +126,22 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
     switch (direction ) {
         case MOVE_UP:
             r = PIXEL_TO_CELL_COORD( y - dy );
-            c = PIXEL_TO_CELL_COORD( x + home_assets->all_sprite_graphics[ h->num_graphic ].width - 1 );
+            c = PIXEL_TO_CELL_COORD( x + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].width - 1 );
             for ( i = PIXEL_TO_CELL_COORD( x ) ; i <= c ; i++ )
                 if ( TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
                     return 0;
             return 1;
             break;
         case MOVE_DOWN:
-            r = PIXEL_TO_CELL_COORD( y + home_assets->all_sprite_graphics[ h->num_graphic ].height - 1 + dy );
-            c = PIXEL_TO_CELL_COORD( x + home_assets->all_sprite_graphics[ h->num_graphic ].width - 1 );
+            r = PIXEL_TO_CELL_COORD( y + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].height - 1 + dy );
+            c = PIXEL_TO_CELL_COORD( x + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].width - 1 );
             for ( i = PIXEL_TO_CELL_COORD( x ) ; i <= c ; i++ )
                 if ( TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
                     return 0;
             return 1;
             break;
         case MOVE_LEFT:
-            r = PIXEL_TO_CELL_COORD( y + home_assets->all_sprite_graphics[ h->num_graphic ].height - 1 );
+            r = PIXEL_TO_CELL_COORD( y + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].height - 1 );
             c = PIXEL_TO_CELL_COORD( x - dx );
             for ( i = PIXEL_TO_CELL_COORD( y ) ; i <= r ; i++ )
                 if ( TILE_TYPE_AT( i, c ) == TT_OBSTACLE )
@@ -149,8 +149,8 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
             return 1;
             break;
         case MOVE_RIGHT:
-            r = PIXEL_TO_CELL_COORD( y + home_assets->all_sprite_graphics[ h->num_graphic ].height - 1 );
-            c = PIXEL_TO_CELL_COORD( x + home_assets->all_sprite_graphics[ h->num_graphic ].width - 1 + dx );
+            r = PIXEL_TO_CELL_COORD( y + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].height - 1 );
+            c = PIXEL_TO_CELL_COORD( x + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].width - 1 + dx );
             for ( i = PIXEL_TO_CELL_COORD( y ) ; i <= r ; i++ )
                 if ( TILE_TYPE_AT( i, c ) == TT_OBSTACLE )
                     return 0;
@@ -229,7 +229,7 @@ void hero_animate_and_move( void ) {
             }
             newy = pos->y + move->dy;
             // coordinate of the bottommost pixel
-            allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - home_assets->all_sprite_graphics[ h->num_graphic ].height;
+            allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].height;
             if ( newy >= allowed )
                 pos->y = allowed;
             else
@@ -257,7 +257,7 @@ void hero_animate_and_move( void ) {
             }
             newx = pos->x + move->dx;
             // coordinate of the rightmost pixel
-            allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - home_assets->all_sprite_graphics[ h->num_graphic ].width;
+            allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].width;
             if ( newx >= allowed )
                 pos->x = allowed;
             else
@@ -269,14 +269,14 @@ void hero_animate_and_move( void ) {
     }
 
     // set pointer to animation frame
-    animation_frame = home_assets->all_sprite_graphics[ h->num_graphic ].frame_data.frames[
-        home_assets->all_sprite_graphics[ h->num_graphic ].sequence_data.sequences[ anim->current_sequence ].frame_numbers[ anim->current_frame ]
+    animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[
+        home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].sequence_data.sequences[ anim->current_sequence ].frame_numbers[ anim->current_frame ]
         ];
 
     // animate hero
     if ( ++anim->delay_counter == anim->delay ) {
         anim->delay_counter = 0;
-        if ( ++anim->current_frame == home_assets->all_sprite_graphics[ h->num_graphic ].sequence_data.sequences[ anim->current_sequence ].num_elements ) {
+        if ( ++anim->current_frame == home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].sequence_data.sequences[ anim->current_sequence ].num_elements ) {
             anim->current_frame = 0;
         }
     }
@@ -284,8 +284,8 @@ void hero_animate_and_move( void ) {
     // if position has changed, adjust xmax, ymax and move sprite to new
     // position
     if ( ( oldx != pos->x ) || ( oldy != pos->y ) ) {
-        pos->xmax = pos->x + home_assets->all_sprite_graphics[ h->num_graphic ].width - 1;
-        pos->ymax = pos->y + home_assets->all_sprite_graphics[ h->num_graphic ].height - 1;
+        pos->xmax = pos->x + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].width - 1;
+        pos->ymax = pos->y + home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].height - 1;
         anim->last_frame_ptr = animation_frame;
         hero_draw();
     }
