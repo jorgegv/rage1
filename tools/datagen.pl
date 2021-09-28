@@ -1363,6 +1363,8 @@ sub generate_hero {
     my $lives_btile_num		= 'BTILE_ID_' . uc( $hero->{'lives'}{'btile'} );
     my $sprite			= $hero->{'sprite'};
     my $num_sprite		= $sprite_name_to_index{ $hero->{'sprite'} };
+    my $width			= $all_sprites[ $num_sprite ]{'cols'} * 8;
+    my $height			= $all_sprites[ $num_sprite ]{'rows'} * 8;
     my $sequence_up		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_up'} };
     my $sequence_down		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_down'} };
     my $sequence_left		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_left'} };
@@ -1384,6 +1386,8 @@ sub generate_hero {
 #define	HERO_SPRITE_SEQUENCE_LEFT	$sequence_left
 #define	HERO_SPRITE_SEQUENCE_RIGHT	$sequence_right
 #define	HERO_SPRITE_ANIMATION_DELAY	$delay
+#define HERO_SPRITE_WIDTH		$width
+#define HERO_SPRITE_HEIGHT		$height
 #define	HERO_MOVE_HSTEP			$hstep
 #define	HERO_MOVE_VSTEP			$vstep
 #define	HERO_NUM_LIVES			$num_lives
