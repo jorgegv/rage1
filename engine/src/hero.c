@@ -112,6 +112,23 @@ void hero_reset_all(void) {
     hero_reset_position();
 }
 
+// auxiliary functions for hero_can_move_in_direction()
+uint8_t hero_can_move_vertical( uint8_t x, uint8_t r, uint8_t c ) {
+    uint8_t i;
+    for ( i = PIXEL_TO_CELL_COORD( x ) ; i <= c ; i++ )
+        if ( TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
+            return 0;
+    return 1;
+}
+
+uint8_t hero_can_move_horizontal( uint8_t y, uint8_t r, uint8_t c ) {
+    uint8_t i;
+    for ( i = PIXEL_TO_CELL_COORD( y ) ; i <= r ; i++ )
+        if ( TILE_TYPE_AT( i, c ) == TT_OBSTACLE )
+            return 0;
+    return 1;
+}
+
 uint8_t hero_can_move_in_direction( uint8_t direction ) {
     struct hero_info_s *h;
     uint8_t x,y,dx,dy,i,r,c;
@@ -127,34 +144,22 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
         case MOVE_UP:
             r = PIXEL_TO_CELL_COORD( y - dy );
             c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
-            for ( i = PIXEL_TO_CELL_COORD( x ) ; i <= c ; i++ )
-                if ( TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
-                    return 0;
-            return 1;
+            return hero_can_move_vertical( x, r, c );
             break;
         case MOVE_DOWN:
             r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 + dy );
             c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
-            for ( i = PIXEL_TO_CELL_COORD( x ) ; i <= c ; i++ )
-                if ( TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
-                    return 0;
-            return 1;
+            return hero_can_move_vertical( x, r, c );
             break;
         case MOVE_LEFT:
             r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
             c = PIXEL_TO_CELL_COORD( x - dx );
-            for ( i = PIXEL_TO_CELL_COORD( y ) ; i <= r ; i++ )
-                if ( TILE_TYPE_AT( i, c ) == TT_OBSTACLE )
-                    return 0;
-            return 1;
+            return hero_can_move_horizontal( y, r, c );
             break;
         case MOVE_RIGHT:
             r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
             c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 + dx );
-            for ( i = PIXEL_TO_CELL_COORD( y ) ; i <= r ; i++ )
-                if ( TILE_TYPE_AT( i, c ) == TT_OBSTACLE )
-                    return 0;
-            return 1;
+            return hero_can_move_horizontal( y, r, c );
             break;
     }
     // should not reach this
