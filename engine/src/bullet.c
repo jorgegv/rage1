@@ -51,8 +51,8 @@ void bullet_add( void ) {
         bs = &game_state.bullet.bullets[ i ];
         if ( ! GET_BULLET_FLAG( *bs, F_BULLET_ACTIVE ) ) {
             SET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
-            h_dy = ( home_assets->all_sprite_graphics[ hero->num_graphic ].height - bi->height ) >> 1;	// divide by 2
-            v_dx = ( home_assets->all_sprite_graphics[ hero->num_graphic ].width - bi->width ) >> 1;	// divide by 2
+            h_dy = ( HERO_SPRITE_HEIGHT - bi->height ) >> 1;	// divide by 2
+            v_dx = ( HERO_SPRITE_WIDTH - bi->width ) >> 1;	// divide by 2
             switch ( hero->movement.last_direction ) {
                 case MOVE_UP:
                     bs->position.x = hero->position.x + v_dx;
