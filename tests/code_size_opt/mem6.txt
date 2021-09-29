@@ -1,0 +1,65 @@
+./tools/memmap.pl main.map
+----------------------------------------------------------------------
+SECTION NAME          BASE           TOP            SIZE
+----------------------------------------------------------------------
+CODE                  $5F00 (24320)  $5F04 (24324)  5
+code_crt_main         $5F26 (24358)  $5F26 (24358)  1
+code_crt_common       $5F2B (24363)  $5F31 (24369)  7
+code_alloc_malloc     $5F33 (24371)  $5FEB (24555)  185
+code_arch             $5FF4 (24564)  $5FF4 (24564)  1
+code_error            $6007 (24583)  $6030 (24624)  42
+code_im2              $6038 (24632)  $604F (24655)  24
+code_input            $605F (24671)  $61D1 (25041)  371
+code_compiler         $7146 (28998)  $9FE7 (40935)  11938
+rodata_input          $9FFC (40956)  $9FFC (40956)  1
+rodata_sound_bit      $A09C (41116)  $A0F5 (41205)  90
+rodata_compiler       $A117 (41239)  $A1D2 (41426)  188
+data_alloc_malloc     $A1DD (41437)  $A1DD (41437)  1
+data_sound_bit        $A1DF (41439)  $A1DF (41439)  1
+data_arch             $A1DF (41439)  $A1DF (41439)  1
+data_stdlib           $A1E0 (41440)  $A1E0 (41440)  1
+data_compiler         $A1E5 (41445)  $AE74 (44660)  3216
+bss_error             $AE7D (44669)  $AE7D (44669)  1
+bss_stdlib            $AE7F (44671)  $AE80 (44672)  2
+bss_compiler          $AE81 (44673)  $B1CD (45517)  845
+FREE                  $B1CD (45517)  $D1EC (53740)  8224
+RESERVED_SP1          $D1ED (53741)  $FFFF (65535)  11795
+----------------------------------------------------------------------
+TOTAL CODE     :  12574 bytes
+TOTAL DATA     :   3499 bytes
+TOTAL BSS      :    848 bytes
+TOTAL RESERVED :  11795 bytes
+TOTAL FREE     :   8224 bytes
+----------------------------------------------------------------------
+RAGE1 memory usage:
+Object file            CODE   DATA    BSS
+-------------------------------------------
+beeper.o                148      0      0
+btile.o                 420      0    768
+bullet.o               1564     40      0
+collision.o             586      0      0
+controller.o             83      0      0
+dataset.o                10      1      0
+debug.o                 275     16      7
+enemy.o                1775      0      0
+flow.o                 1470     70      0
+game_loop.o             423      0      4
+game_state.o            209      0     60
+hero.o                 1548     34      2
+hotzone.o                60      0      0
+interrupts.o             87      0      0
+inventory.o             247      0      0
+main.o                   52      0      0
+map.o                  1056      0      0
+memory.o                  1      0      0
+screen.o                  0      4      0
+sp1engine.o              27      0      0
+sprite.o                268      0      2
+asmdata.o                 8      0      0
+bswitch.o                23      0      0
+game_data.o               0   3021      0
+game_functions.o       1261     38      5
+user_functions.o          3      0      0
+*.o                       0      0      0
+-------------------------------------------
+TOTAL                 11604   3224    848
