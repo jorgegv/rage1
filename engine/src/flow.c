@@ -170,7 +170,7 @@ uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88
 
     // if the hotzone has a state, consider if it is active or not
     if ( hz->state_index != ASSET_NO_STATE )
-        return ( GET_HOTZONE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ hz->state_index ].asset_state, F_HOTZONE_ACTIVE ) &&
+        return ( GET_HOTZONE_FLAG( game_state.current_screen_asset_state_table_ptr[ hz->state_index ].asset_state, F_HOTZONE_ACTIVE ) &&
             collision_check( &game_state.hero.position, &hz->position )
             );
     else
@@ -179,11 +179,11 @@ uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88
 }
 
 uint8_t do_rule_check_screen_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( GET_SCREEN_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 1 : 0 );
+    return ( GET_SCREEN_FLAG( game_state.current_screen_asset_state_table_ptr[ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 1 : 0 );
 }
 
 uint8_t do_rule_check_screen_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( GET_SCREEN_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 0 : 1 );
+    return ( GET_SCREEN_FLAG( game_state.current_screen_asset_state_table_ptr[ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 0 : 1 );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -233,7 +233,7 @@ void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) __z88dk_
     hz = &game_state.current_screen_ptr->hotzone_data.hotzones[ action->data.hotzone.num_hotzone ];
     // only do it if there is a state, ignore if there is not
     if ( hz->state_index != ASSET_NO_STATE )
-        SET_HOTZONE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ hz->state_index ].asset_state,
+        SET_HOTZONE_FLAG( game_state.current_screen_asset_state_table_ptr[ hz->state_index ].asset_state,
             F_HOTZONE_ACTIVE );
 }
 
@@ -243,19 +243,19 @@ void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk
     hz = &game_state.current_screen_ptr->hotzone_data.hotzones[ action->data.hotzone.num_hotzone ];
     // only do it if there is a state, ignore if there is not
     if ( hz->state_index != ASSET_NO_STATE )
-        RESET_HOTZONE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ hz->state_index ].asset_state,
+        RESET_HOTZONE_FLAG( game_state.current_screen_asset_state_table_ptr[ hz->state_index ].asset_state,
             F_HOTZONE_ACTIVE );
 }
 
 void do_rule_action_enable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &game_state.current_screen_ptr->btile_data.btiles_pos[ action->data.btile.num_btile ];
-    SET_BTILE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ t->state_index ].asset_state, F_BTILE_ACTIVE );
+    SET_BTILE_FLAG( game_state.current_screen_asset_state_table_ptr[ t->state_index ].asset_state, F_BTILE_ACTIVE );
     btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ] , t->type, &game_area);
 }
 
 void do_rule_action_disable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &game_state.current_screen_ptr->btile_data.btiles_pos[ action->data.btile.num_btile ];
-    RESET_BTILE_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ t->state_index ].asset_state, F_BTILE_ACTIVE );
+    RESET_BTILE_FLAG( game_state.current_screen_asset_state_table_ptr[ t->state_index ].asset_state, F_BTILE_ACTIVE );
     btile_remove( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ] );
 }
 

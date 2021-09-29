@@ -23,9 +23,13 @@
 //
 /////////////////////////////////////
 
-// aux function
+// aux functions
 struct map_screen_s *get_current_screen_ptr( void ) {
     return &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ];
+}
+
+struct asset_state_s *get_current_screen_asset_state_table_ptr( void ) {
+    return &all_screen_asset_state_tables[ game_state.current_screen ].states[ 0 ];
 }
 
 
@@ -43,6 +47,7 @@ void game_state_reset_initial(void) {
    // game_state.current_screen_ptr must be updated here, not before. 
    // map_enter_screen might have switched datasets!
    game_state.current_screen_ptr = get_current_screen_ptr();
+   game_state.current_screen_asset_state_table_ptr = get_current_screen_asset_state_table_ptr();
 
    // reset everything
    hero_reset_all();
@@ -85,6 +90,7 @@ void game_state_switch_to_next_screen(void) {
     // game_state.current_screen_ptr must be updated here, not before. 
     // map_enter_screen might have switched datasets!
     game_state.current_screen_ptr = get_current_screen_ptr();
+    game_state.current_screen_asset_state_table_ptr = get_current_screen_asset_state_table_ptr();
 
     // set flag
     SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );

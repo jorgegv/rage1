@@ -41,7 +41,7 @@ void collision_check_hero_with_sprites(void) {
     while ( i-- ) {
         s = &game_state.current_screen_ptr->enemy_data.enemies[ i ];
 
-        if ( IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ].states[ s->state_index ].asset_state ) ) {
+        if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state ) ) {
             enemy_pos = &s->position;
             if ( collision_check( hero_pos, enemy_pos ) ) {
                 SET_LOOP_FLAG( F_LOOP_HERO_HIT );
@@ -63,13 +63,13 @@ void collision_check_bullets_with_sprites( void ) {
             si = game_state.current_screen_ptr->enemy_data.num_enemies;
             while ( si-- ) {
                 s = &game_state.current_screen_ptr->enemy_data.enemies[ si ];
-                if ( IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ].states[ s->state_index ].asset_state ) ) {
+                if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state ) ) {
                     if ( collision_check( &b->position, &s->position ) ) {
                         // set bullet inactive and move away
                         RESET_BULLET_FLAG( *b, F_BULLET_ACTIVE );
                         sprite_move_offscreen( b->sprite );
                         // set sprite inactive and move away
-                        RESET_ENEMY_FLAG( all_screen_asset_state_tables[ game_state.current_screen ].states[ s->state_index ].asset_state, F_ENEMY_ACTIVE );
+                        RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state, F_ENEMY_ACTIVE );
                         sprite_move_offscreen( s->sprite );
                         // TO DO: increment score, etc.
                         if ( ! --game_state.enemies_alive )

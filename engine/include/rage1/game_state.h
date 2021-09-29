@@ -50,6 +50,7 @@ struct game_state_s {
    uint8_t current_screen;
    uint8_t next_screen;
    struct map_screen_s *current_screen_ptr;
+   struct asset_state_s *current_screen_asset_state_table_ptr;
 
    // hero info and state
    struct hero_info_s hero;
