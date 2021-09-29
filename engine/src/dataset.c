@@ -66,3 +66,11 @@ void init_datasets(void) {
 #endif
 }
 
+// acceleration functions
+struct btile_s *dataset_get_banked_btile_ptr( uint8_t t ) __z88dk_fastcall {
+    return &banked_assets->all_btiles[ t ];
+}
+
+struct sprite_graphic_data_s *dataset_get_banked_sprite_ptr( uint8_t s ) __z88dk_fastcall {
+    return &banked_assets->all_sprite_graphics[ s ];
+}

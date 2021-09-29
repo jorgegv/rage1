@@ -24,6 +24,7 @@ void map_draw_screen(struct map_screen_s *s) {
     uint8_t i,r,c, maxr, maxc, btwidth, btheight;
     struct btile_pos_s *t;
     struct item_location_s *it;
+    struct btile_s *bt;
 
     // clear screen
     sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
@@ -35,8 +36,10 @@ void map_draw_screen(struct map_screen_s *s) {
     if ( s->background_data.probability ) {
         maxr = s->background_data.box.row + s->background_data.box.height - 1;
         maxc = s->background_data.box.col + s->background_data.box.width - 1;
-        btwidth = banked_assets->all_btiles[ s->background_data.btile_num ].num_cols;
-        btheight = banked_assets->all_btiles[ s->background_data.btile_num ].num_rows;
+
+        bt = dataset_get_banked_btile_ptr( s->background_data.btile_num );
+        btwidth = bt->num_cols;
+        btheight = bt->num_rows;
 
         r = s->background_data.box.row;
         while ( r <= maxr ) {
@@ -44,7 +47,7 @@ void map_draw_screen(struct map_screen_s *s) {
             while ( c <= maxc ) {
                 // draw the btile with probability (s->background_data.probability / 255)
                 if ( (uint8_t) rand() <= s->background_data.probability )
-                    btile_draw( r, c, &banked_assets->all_btiles[ s->background_data.btile_num ], TT_DECORATION, &s->background_data.box );
+                    btile_draw( r, c, bt, TT_DECORATION, &s->background_data.box );
                 c += btwidth;
             }
             r += btheight;
@@ -58,7 +61,7 @@ void map_draw_screen(struct map_screen_s *s) {
         // we draw if there is no state ( no state = always active ), or if the btile is active
         if ( ( t->state_index == ASSET_NO_STATE ) ||
             IS_BTILE_ACTIVE( all_screen_asset_state_tables[ s->global_screen_num ].states[ t->state_index ].asset_state ) )
-            btile_draw( t->row, t->col, &banked_assets->all_btiles[ t->btile_id ], t->type, &game_area );
+            btile_draw( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ), t->type, &game_area );
     }
 
     // draw items
@@ -110,12 +113,14 @@ void map_exit_screen( struct map_screen_s *s ) {
 void map_allocate_sprites( struct map_screen_s *m ) {
     uint8_t i;
     struct sp1_ss *s;
+    struct sprite_graphic_data_s *g;
 
     i = m->enemy_data.num_enemies;
     while ( i-- ) {
+        g = dataset_get_banked_sprite_ptr( m->enemy_data.enemies[ i ].num_graphic );
         s = sprite_allocate(
-            banked_assets->all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].height >> 3,
-            banked_assets->all_sprite_graphics[ m->enemy_data.enemies[ i ].num_graphic ].width >> 3
+            g->height >> 3,
+            g->width >> 3
         );
         sprite_set_color( s, m->enemy_data.enemies[ i ].color );
         m->enemy_data.enemies[ i ].sprite = s;

@@ -15,6 +15,7 @@
 #include "rage1/map.h"
 #include "rage1/debug.h"
 #include "rage1/util.h"
+#include "rage1/dataset.h"
 
 #include "game_data.h"
 
@@ -29,7 +30,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
         if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )	// skip if not active
             continue;
 
-        g = &banked_assets->all_sprite_graphics[ e->num_graphic ];
+        g = dataset_get_banked_sprite_ptr( e->num_graphic );
 
         // reset enemy state to initial values
 
@@ -66,7 +67,7 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
         if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )	// skip if not active
             continue;
 
-        g = &banked_assets->all_sprite_graphics[ e->num_graphic ];
+        g = dataset_get_banked_sprite_ptr( e->num_graphic );
 
         // animate sprite
         // animation can be in 2 states: animating frames or waiting for the next sequence run
