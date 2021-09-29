@@ -41,18 +41,16 @@ void check_game_pause(void) {
 }
 
 void check_game_flags( void ) {
-    struct map_screen_s *cs;
-    cs = dataset_get_current_screen_ptr();
 
     // update screen data if the player has entered new screen
     // also done whe game has just started
     if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
 
        // draw screen and reset sprites
-       map_draw_screen( cs );
+       map_draw_screen( game_state.current_screen_ptr );
        enemy_reset_position_all( 
-          cs->enemy_data.num_enemies, 
-          cs->enemy_data.enemies
+          game_state.current_screen_ptr->enemy_data.num_enemies, 
+          game_state.current_screen_ptr->enemy_data.enemies
        );
        bullet_reset_all();
        RESET_GAME_FLAG( F_GAME_START );
@@ -65,8 +63,8 @@ void check_game_flags( void ) {
           SET_GAME_FLAG( F_GAME_OVER );
        else {
           enemy_reset_position_all(
-             cs->enemy_data.num_enemies, 
-             cs->enemy_data.enemies
+             game_state.current_screen_ptr->enemy_data.num_enemies, 
+             game_state.current_screen_ptr->enemy_data.enemies
           );
           hero_reset_position();
           bullet_reset_all();
@@ -79,13 +77,10 @@ void check_game_flags( void ) {
 void move_enemies(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
-    struct map_screen_s *cs;
-    cs = dataset_get_current_screen_ptr();
-
    // move enemies
    enemy_animate_and_move_all(
-      cs->enemy_data.num_enemies, 
-      cs->enemy_data.enemies
+      game_state.current_screen_ptr->enemy_data.num_enemies, 
+      game_state.current_screen_ptr->enemy_data.enemies
    );
 }
 
@@ -125,8 +120,6 @@ void show_heartbeat(void) {
 }
 
 void run_main_game_loop(void) {
-
-   struct map_screen_s *cs;
 
    // seed PRNG. It is important that this is done here, after the menu has been run
    // and the controller has been selected. This involves the human user, and so
@@ -208,14 +201,13 @@ void run_main_game_loop(void) {
    // cleanup
 
    // free sprites in the current screen
-   cs = dataset_get_current_screen_ptr();
-   map_exit_screen( cs );
+   map_exit_screen( game_state.current_screen_ptr );
 
    // move all moving things off-screen:
    hero_move_offscreen();
    enemy_move_offscreen_all(
-      cs->enemy_data.num_enemies,
-      cs->enemy_data.enemies
+      game_state.current_screen_ptr->enemy_data.num_enemies,
+      game_state.current_screen_ptr->enemy_data.enemies
    );
    bullet_move_offscreen_all();
 

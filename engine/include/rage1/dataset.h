@@ -67,7 +67,4 @@ void init_datasets( void );
 // activate a given dataset
 void dataset_activate( uint8_t d );
 
-// Functions for optimizing access to banked assets
-struct map_screen_s *dataset_get_current_screen_ptr( void );
-
 #endif // _DATASET_H

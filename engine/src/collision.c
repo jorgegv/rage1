@@ -34,14 +34,12 @@ void collision_check_hero_with_sprites(void) {
     struct position_data_s *hero_pos,*enemy_pos;
     struct enemy_info_s *s;
     uint8_t i;
-    struct map_screen_s *sc;
 
     hero_pos = &game_state.hero.position;
-    sc = dataset_get_current_screen_ptr();
 
-    i = sc->enemy_data.num_enemies;
+    i = game_state.current_screen_ptr->enemy_data.num_enemies;
     while ( i-- ) {
-        s = &sc->enemy_data.enemies[ i ];
+        s = &game_state.current_screen_ptr->enemy_data.enemies[ i ];
 
         if ( IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ].states[ s->state_index ].asset_state ) ) {
             enemy_pos = &s->position;
@@ -57,17 +55,14 @@ void collision_check_bullets_with_sprites( void ) {
     struct bullet_state_data_s *b;
     struct enemy_info_s *s;
     uint8_t si,bi;
-    struct map_screen_s *sc;
-
-    sc = dataset_get_current_screen_ptr();
 
     bi = game_state.bullet.num_bullets;
     while ( bi-- ) {
         b = &game_state.bullet.bullets[ bi ];
         if ( IS_BULLET_ACTIVE( *b ) ) {
-            si = sc->enemy_data.num_enemies;
+            si = game_state.current_screen_ptr->enemy_data.num_enemies;
             while ( si-- ) {
-                s = &sc->enemy_data.enemies[ si ];
+                s = &game_state.current_screen_ptr->enemy_data.enemies[ si ];
                 if ( IS_ENEMY_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen ].states[ s->state_index ].asset_state ) ) {
                     if ( collision_check( &b->position, &s->position ) ) {
                         // set bullet inactive and move away

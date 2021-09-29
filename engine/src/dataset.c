@@ -66,6 +66,3 @@ void init_datasets(void) {
 #endif
 }
 
-struct map_screen_s *dataset_get_current_screen_ptr( void ) {
-    return &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ];
-}

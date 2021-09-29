@@ -62,11 +62,9 @@ void hero_reset_position(void) {
     struct hero_info_s *h;
     struct hero_animation_data_s *anim;
     uint8_t *animation_frame;
-    struct map_screen_s *cs;
 
     h = &game_state.hero;
     anim = &h->animation;
-    cs = dataset_get_current_screen_ptr();
 
     // set pointer to first animation frame
     animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[
@@ -74,8 +72,8 @@ void hero_reset_position(void) {
         ];
 
     // set initial position and move it there
-    hero_set_position_x( h, cs->hero_data.startup_x );
-    hero_set_position_y( h, cs->hero_data.startup_y );
+    hero_set_position_x( h, game_state.current_screen_ptr->hero_data.startup_x );
+    hero_set_position_y( h, game_state.current_screen_ptr->hero_data.startup_y );
     sp1_MoveSprPix( h->sprite, &game_area, animation_frame, h->position.x, h->position.y );
 }
 
@@ -131,7 +129,7 @@ uint8_t hero_can_move_horizontal( uint8_t y, uint8_t r, uint8_t c ) {
 
 uint8_t hero_can_move_in_direction( uint8_t direction ) {
     struct hero_info_s *h;
-    uint8_t x,y,dx,dy,i,r,c;
+    uint8_t x,y,dx,dy,r,c;
 
     h = &game_state.hero;
     x = h->position.x;
@@ -312,10 +310,8 @@ void hero_pickup_items(void) {
     struct sp1_ss *s;
     uint8_t i,j,cols,r,c,item;
     struct item_location_s *item_loc;
-    struct map_screen_s *cs;
 
     s = game_state.hero.sprite;
-    cs = dataset_get_current_screen_ptr();
 
     // run all chars and search for items
     cols = s->width;	// SP1 units: chars (_not_ pixels!)
@@ -327,7 +323,7 @@ void hero_pickup_items(void) {
         while ( j-- ) {
             c = s->col + j;
             if ( TILE_TYPE_AT( r, c ) == TT_ITEM ) {
-                item_loc = map_get_item_location_at_position( cs, r, c );
+                item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
 
                 // add item to inventory

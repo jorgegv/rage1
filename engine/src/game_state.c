@@ -23,6 +23,12 @@
 //
 /////////////////////////////////////
 
+// aux function
+struct map_screen_s *get_current_screen_ptr( void ) {
+    return &banked_assets->all_screens[ screen_dataset_map[ game_state.current_screen ].dataset_local_screen_num ];
+}
+
+
 // running game state
 struct game_state_s game_state;
 
@@ -33,6 +39,10 @@ void game_state_reset_initial(void) {
 
    // run ENTER_SCREEN tasks for the initial screen
    map_enter_screen( game_state.current_screen );
+
+   // game_state.current_screen_ptr must be updated here, not before. 
+   // map_enter_screen might have switched datasets!
+   game_state.current_screen_ptr = get_current_screen_ptr();
 
    // reset everything
    hero_reset_all();
@@ -55,26 +65,26 @@ void game_state_reset_initial(void) {
 // can't be used on game start!
 // this function presumes a next sreen is in game_state.next_screen
 void game_state_switch_to_next_screen(void) {
-    struct map_screen_s *cs;
-    cs = dataset_get_current_screen_ptr();
 
     // move all enemies and bullets off-screen
     enemy_move_offscreen_all(
-        cs->enemy_data.num_enemies,
-        cs->enemy_data.enemies
+        game_state.current_screen_ptr->enemy_data.num_enemies,
+        game_state.current_screen_ptr->enemy_data.enemies
     );
     bullet_move_offscreen_all();
 
     // run EXIT_SCREEN hooks for the old screen
-    map_exit_screen( cs );
+    map_exit_screen( game_state.current_screen_ptr );
 
     // switch screen!
     game_state.current_screen = game_state.next_screen;
 
     // run ENTER_SCREEN tasks for the new screen
     map_enter_screen( game_state.current_screen );
-    // Not need for now, but...
-    // cs = dataset_get_current_screen_ptr();
+
+    // game_state.current_screen_ptr must be updated here, not before. 
+    // map_enter_screen might have switched datasets!
+    game_state.current_screen_ptr = get_current_screen_ptr();
 
     // draw the hero in the new position
     hero_draw();

@@ -46,9 +46,10 @@ void game_state_assets_reset_all(void);
 //  struct
 struct game_state_s {
 
-   // current, previous screen indexes in map table
+   // current, previous screen indexes in map table and some cached values
    uint8_t current_screen;
    uint8_t next_screen;
+   struct map_screen_s *current_screen_ptr;
 
    // hero info and state
    struct hero_info_s hero;
@@ -81,10 +82,6 @@ struct game_state_s {
    uint16_t enemies_alive;
    uint16_t enemies_killed;
 
-   // pointer to array of asset state tables for each screen
-   // this will be always assigned to the global screen_asset_state_table
-   // variable
-   struct asset_state_s **screen_asset_state_table;
 };
 
 extern struct game_state_s game_state;
