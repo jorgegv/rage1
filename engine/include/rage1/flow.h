@@ -13,6 +13,8 @@
 
 #include <arch/spectrum.h>
 
+#include "features.h"
+
 ////////////////////////////////////////////////
 //
 // FLOWGEN RULE CHECKS

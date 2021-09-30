@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 void memory_switch_bank( uint8_t bank_num );
 
 void init_memory(void);

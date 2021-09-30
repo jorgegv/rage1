@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 // Big tiles functions and definitions
 // A big tile is an array of regular 8x8 char tiles, arranged in
 // rectangular form. Array is in row form. Tiles can be either
