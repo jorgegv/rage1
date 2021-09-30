@@ -92,6 +92,9 @@ void game_state_switch_to_next_screen(void) {
     game_state.current_screen_ptr = get_current_screen_ptr();
     game_state.current_screen_asset_state_table_ptr = get_current_screen_asset_state_table_ptr();
 
+    // draw the hero in the new position
+    hero_draw();
+
     // set flag
     SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
 }
