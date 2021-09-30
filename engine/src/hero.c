@@ -114,7 +114,7 @@ void hero_reset_all(void) {
 uint8_t hero_can_move_vertical( uint8_t x, uint8_t r, uint8_t c ) {
     uint8_t i;
     for ( i = PIXEL_TO_CELL_COORD( x ) ; i <= c ; i++ )
-        if ( TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
+        if ( GET_TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
             return 0;
     return 1;
 }
@@ -122,7 +122,7 @@ uint8_t hero_can_move_vertical( uint8_t x, uint8_t r, uint8_t c ) {
 uint8_t hero_can_move_horizontal( uint8_t y, uint8_t r, uint8_t c ) {
     uint8_t i;
     for ( i = PIXEL_TO_CELL_COORD( y ) ; i <= r ; i++ )
-        if ( TILE_TYPE_AT( i, c ) == TT_OBSTACLE )
+        if ( GET_TILE_TYPE_AT( i, c ) == TT_OBSTACLE )
             return 0;
     return 1;
 }
@@ -322,7 +322,7 @@ void hero_pickup_items(void) {
         j = cols;
         while ( j-- ) {
             c = s->col + j;
-            if ( TILE_TYPE_AT( r, c ) == TT_ITEM ) {
+            if ( GET_TILE_TYPE_AT( r, c ) == TT_ITEM ) {
                 item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
 

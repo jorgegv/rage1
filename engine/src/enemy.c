@@ -127,10 +127,10 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                                     ( pos->x >= move->data.linear.xmax ) ||
                                     ( pos->x <= move->data.linear.xmin ) ||
                                     ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE ) ||
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE )
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y ), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE ) ||
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x + g->width ) ) == TT_OBSTACLE ) ||
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height - 1), PIXEL_TO_CELL_COORD( pos->x - 1 ) ) == TT_OBSTACLE )
                                     ) )
                                 ) { // then
                                 move->data.linear.dx = -move->data.linear.dx;
@@ -154,10 +154,10 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
                                     ( pos->y >= move->data.linear.ymax ) ||
                                     ( pos->y <= move->data.linear.ymin ) ||
                                     ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1 ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x + g->width - 1) ) == TT_OBSTACLE ) ||
-                                        ( TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1), PIXEL_TO_CELL_COORD( pos->x + g->width - 1 ) ) == TT_OBSTACLE )
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1 ), PIXEL_TO_CELL_COORD( pos->x ) ) == TT_OBSTACLE ) ||
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y + g->height ), PIXEL_TO_CELL_COORD( pos->x + g->width - 1) ) == TT_OBSTACLE ) ||
+                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y - 1), PIXEL_TO_CELL_COORD( pos->x + g->width - 1 ) ) == TT_OBSTACLE )
                                     ) )
                                 ) { // then
                                 move->data.linear.dy = -move->data.linear.dy;

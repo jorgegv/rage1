@@ -47,8 +47,22 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
 
 // array which contains the btile type on each position of the screen
 // also, macro for getting the btile type at a given screen position
-extern uint8_t screen_pos_tile_type[];
-#define TILE_TYPE_AT(srow,scol)		( screen_pos_tile_type[ (srow) * 32 + (scol) ] )
+extern uint8_t screen_pos_tile_type_data[];
+
+#define BUILD_FEATURE_PACKED_TILE_TYPE_MAP
+
+#ifdef BUILD_FEATURE_PACKED_TILE_TYPE_MAP
+    // Data format: xxxxAAAAAAAAAATT - A: position (0-767); T: tile type (0-3)
+    #define GET_TILE_TYPE_AT(srow,scol)		( btile_get_tile_type( (srow), (scol) ) )
+    #define SET_TILE_TYPE_AT(srow,scol,sval)	( btile_set_tile_type( (srow), (scol), (sval) ) )
+#else
+    #define GET_TILE_TYPE_AT(srow,scol)		( screen_pos_tile_type_data[ (srow) * 32 + (scol) ] )
+    #define SET_TILE_TYPE_AT(srow,scol,sval)	( screen_pos_tile_type_data[ (srow) * 32 + (scol) ] = (sval) )
+#endif
+
+// Accelerated functions for getting/setting tile types
+uint8_t btile_get_tile_type( uint8_t row, uint8_t col );
+void btile_set_tile_type( uint8_t row, uint8_t col, uint8_t type );
 
 void btile_clear_type_all_screen(void);
 

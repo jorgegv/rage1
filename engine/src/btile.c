@@ -19,9 +19,17 @@
 #define SCREEN_MAX_COL	31
 #define SCREEN_SIZE	( ( SCREEN_MAX_ROW + 1 ) * ( SCREEN_MAX_COL + 1 ) )
 
+// when using a packed tile type map, we pack 4 tiles per byte
+// if not, we use 1 byte per tile
+#ifdef BUILD_FEATURE_PACKED_TILE_TYPE_MAP
+    #define TILE_TYPE_DATA_SIZE		( SCREEN_SIZE / 4 )
+#else
+    #define TILE_TYPE_DATA_SIZE		( SCREEN_SIZE )
+#endif
+
 // an array to store the type of the tile which is on each screen position
 // TT_DECORATION, TT_OBSTACLE, ...
-uint8_t screen_pos_tile_type[ SCREEN_SIZE ];
+uint8_t screen_pos_tile_type_data[ TILE_TYPE_DATA_SIZE ];
 
 // draw a given btile
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
@@ -42,7 +50,7 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, stru
             c = col + dc;
             if ( ( r >= brmin ) && ( r <= brmax ) && ( c >= bcmin ) && ( c <= bcmax ) )  {
                 sp1_PrintAtInv( r, c, b->attrs[n], (uint16_t)b->tiles[n] );
-                TILE_TYPE_AT( r, c ) = type;
+                SET_TILE_TYPE_AT( r, c, type );
             }
         }
 }
@@ -55,12 +63,32 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b ) {
     for ( dr = 0; dr < rmax; ++dr )
         for ( dc = 0; dc < cmax; ++dc ) {
             sp1_PrintAtInv( row + dr, col + dc, DEFAULT_BG_ATTR, ' ' );
-            TILE_TYPE_AT( row + dr, col + dc ) = TT_DECORATION;
+            SET_TILE_TYPE_AT( row + dr, col + dc, TT_DECORATION );
         }
 }
 
 // clears tile type array
 void btile_clear_type_all_screen(void) {
-    uint16_t i = SCREEN_SIZE;
-    while ( i-- ) { screen_pos_tile_type[ i ] = TT_DECORATION; }
+    uint16_t i = TILE_TYPE_DATA_SIZE;
+    while ( i-- ) screen_pos_tile_type_data[ i ] = 0;
+    // When using a packed tile type map, TT_DECORATION(=0) in all 4 positions
+    // When not, TT_DECORATION as well
 }
+
+#ifdef BUILD_FEATURE_PACKED_TILE_TYPE_MAP
+
+// Accelerated functions for getting/setting tile types
+
+uint8_t btile_get_tile_type( uint8_t row, uint8_t col ) {
+    uint8_t pos = ( row * 32 + col ) / 4;
+    uint8_t rot = 2 * ( col & 0x03 );
+    return ( ( screen_pos_tile_type_data[ pos ] >> rot ) & 0x03 );
+}
+
+void btile_set_tile_type( uint8_t row, uint8_t col, uint8_t type ) {
+    uint8_t pos = ( row * 32 + col ) / 4;
+    uint8_t rot = 2 * ( col & 0x03 );
+    screen_pos_tile_type_data[ pos ] = ( screen_pos_tile_type_data[ pos ] & ( ~( 0x03 << rot ) ) ) | ( type << rot );
+}
+
+#endif
