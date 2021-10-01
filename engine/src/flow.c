@@ -95,74 +95,109 @@ void check_flow_rules(void) {
 //   uint8_t do_rule_check_xxxx( struct flow_rule_check_s *check )
 ////////////////////////////////////////////////////////////////////
 
-uint8_t do_rule_check_game_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_FLAG_IS_SET
+uint8_t do_rule_check_game_flag_is_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_GAME_FLAG( check->data.flag_state.flag ) ? 1 : 0 );
 }
+#endif
 
-uint8_t do_rule_check_game_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_FLAG_IS_RESET
+uint8_t do_rule_check_game_flag_is_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_GAME_FLAG( check->data.flag_state.flag ) ? 0 : 1 );
 }
+#endif
 
-uint8_t do_rule_check_loop_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LOOP_FLAG_IS_SET
+uint8_t do_rule_check_loop_flag_is_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_LOOP_FLAG( check->data.flag_state.flag ) ? 1 : 0 );
 }
+#endif
 
-uint8_t do_rule_check_loop_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LOOP_FLAG_IS_RESET
+uint8_t do_rule_check_loop_flag_is_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_LOOP_FLAG( check->data.flag_state.flag ) ? 0 : 1 );
 }
+#endif
 
-uint8_t do_rule_check_user_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_USER_FLAG_IS_SET
+uint8_t do_rule_check_user_flag_is_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_USER_FLAG( check->data.flag_state.flag ) ? 1 : 0 );
 }
+#endif
 
-uint8_t do_rule_check_user_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_USER_FLAG_IS_RESET
+uint8_t do_rule_check_user_flag_is_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_USER_FLAG( check->data.flag_state.flag ) ? 0 : 1 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_EQUAL
 uint8_t do_rule_check_lives_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.hero.num_lives == check->data.lives.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_MORE_THAN
 uint8_t do_rule_check_lives_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.hero.num_lives > check->data.lives.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_LESS_THAN
 uint8_t do_rule_check_lives_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.hero.num_lives < check->data.lives.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_ALIVE_EQUAL
 uint8_t do_rule_check_enemies_alive_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_alive == check->data.enemies.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_ALIVE_MORE_THAN
 uint8_t do_rule_check_enemies_alive_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_alive > check->data.enemies.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_ALIVE_LESS_THAN
 uint8_t do_rule_check_enemies_alive_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_alive < check->data.enemies.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_KILLED_EQUAL
 uint8_t do_rule_check_enemies_killed_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_killed == check->data.enemies.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_KILLED_MORE_THAN
 uint8_t do_rule_check_enemies_killed_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_killed > check->data.enemies.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_KILLED_LESS_THAN
 uint8_t do_rule_check_enemies_killed_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( game_state.enemies_killed < check->data.enemies.count ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_CALL_CUSTOM_FUNCTION
 uint8_t do_rule_check_call_custom_function( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return check->data.custom.function();
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ITEM_IS_OWNED
 uint8_t do_rule_check_item_is_owned( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( INVENTORY_HAS_ITEM( &game_state.inventory, check->data.item.item_id ) ? 1 : 0 );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_HERO_OVER_HOTZONE
 uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88dk_fastcall {
     struct hotzone_info_s *hz;
 
@@ -177,14 +212,19 @@ uint8_t do_rule_check_hero_over_hotzone( struct flow_rule_check_s *check ) __z88
         // if the hotzone does not have a state, it is always active
         return collision_check( &game_state.hero.position, &hz->position );
 }
+#endif
 
-uint8_t do_rule_check_screen_flag_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_SCREEN_FLAG_IS_SET
+uint8_t do_rule_check_screen_flag_is_set( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_SCREEN_FLAG( game_state.current_screen_asset_state_table_ptr[ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 1 : 0 );
 }
+#endif
 
-uint8_t do_rule_check_screen_flag_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_SCREEN_FLAG_IS_RESET
+uint8_t do_rule_check_screen_flag_is_reset( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( GET_SCREEN_FLAG( game_state.current_screen_asset_state_table_ptr[ SCREEN_STATE_INDEX ].asset_state, check->data.flag_state.flag ) ? 0 : 1 );
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
@@ -282,26 +322,106 @@ void do_rule_action_reset_screen_flag( struct flow_rule_action_s *action ) __z88
 // Table of check functions. The 'check' value from the rule is used to
 // index into this table and execute the appropriate function
 rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
-    do_rule_check_game_flag_set,
-    do_rule_check_game_flag_reset,
-    do_rule_check_loop_flag_set,
-    do_rule_check_loop_flag_reset,
-    do_rule_check_user_flag_set,
-    do_rule_check_user_flag_reset,
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_FLAG_IS_SET
+    do_rule_check_game_flag_is_set,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_FLAG_IS_RESET
+    do_rule_check_game_flag_is_reset,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LOOP_FLAG_IS_SET
+    do_rule_check_loop_flag_is_set,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LOOP_FLAG_IS_RESET
+    do_rule_check_loop_flag_is_reset,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_USER_FLAG_IS_SET
+    do_rule_check_user_flag_is_set,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_USER_FLAG_IS_RESET
+    do_rule_check_user_flag_is_reset,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_EQUAL
     do_rule_check_lives_equal,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_MORE_THAN
     do_rule_check_lives_more_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_LESS_THAN
     do_rule_check_lives_less_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_ALIVE_EQUAL
     do_rule_check_enemies_alive_equal,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_ALIVE_MORE_THAN
     do_rule_check_enemies_alive_more_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_ALIVE_LESS_THAN
     do_rule_check_enemies_alive_less_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_KILLED_EQUAL
     do_rule_check_enemies_killed_equal,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_KILLED_MORE_THAN
     do_rule_check_enemies_killed_more_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ENEMIES_KILLED_LESS_THAN
     do_rule_check_enemies_killed_less_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_CALL_CUSTOM_FUNCTION
     do_rule_check_call_custom_function,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ITEM_IS_OWNED
     do_rule_check_item_is_owned,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_HERO_OVER_HOTZONE
     do_rule_check_hero_over_hotzone,
-    do_rule_check_screen_flag_set,
-    do_rule_check_screen_flag_reset,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_SCREEN_FLAG_IS_SET
+    do_rule_check_screen_flag_is_set,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_SCREEN_FLAG_IS_RESET
+    do_rule_check_screen_flag_is_reset,
+#else
+    NULL,
+#endif
 };
 
 // Table of action functions.  The 'action' value from the rule is used to

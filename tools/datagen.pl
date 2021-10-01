@@ -1663,6 +1663,19 @@ sub validate_and_compile_rule {
 
     }
 
+    # generate conditional build features for this rule: checks and actions
+    foreach my $chk ( @{ $rule->{'check'} } ) {
+        my ( $check, $check_data ) = split( /\s+/, $chk );
+        my $id = sprintf( 'FLOW_RULE_CHECK_%s', uc( $check ) );
+        $conditional_build_features{ $id }++;
+    }
+    foreach my $do ( @{ $rule->{'do'} } ) {
+        $do =~ m/^(\w+)\s*(.*)$/;
+        my ( $action, $action_data ) = ( $1, $2 );
+        my $id = sprintf( 'FLOW_RULE_ACTION_%s', uc( $action ) );
+        $conditional_build_features{ $id }++;
+    }
+
     1;
 }
 
