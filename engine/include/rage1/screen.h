@@ -14,6 +14,8 @@
 #include <games/sp1.h>
 #include <stdint.h>
 
+#include "features.h"
+
 // off-screen cell coords (used for "parking" sprites)
 #define OFF_SCREEN_ROW		24
 #define OFF_SCREEN_COLUMN	0

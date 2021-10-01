@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 #include "rage1/btile.h"
 #include "rage1/sprite.h"
 #include "rage1/flow.h"

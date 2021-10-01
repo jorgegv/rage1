@@ -13,6 +13,8 @@
 
 #include <sound.h>
 
+#include "features.h"
+
 // this is a private copy of bit_beepfx function
 // effect definitions are the same and compatible, so we can use them
 

@@ -11,6 +11,8 @@
 #ifndef _COLLISION_H
 #define _COLLISION_H
 
+#include "features.h"
+
 #include "rage1/types.h"
 #include "rage1/sprite.h"
 

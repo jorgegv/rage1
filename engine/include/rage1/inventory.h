@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 #include "rage1/btile.h"
 
 //

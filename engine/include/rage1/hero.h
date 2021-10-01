@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "features.h"
+
 #include "rage1/types.h"
 #include "rage1/sprite.h"
 #include "rage1/controller.h"

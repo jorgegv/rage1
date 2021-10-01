@@ -15,6 +15,8 @@
 #include <games/sp1.h>
 #include <stdint.h>
 
+#include "features.h"
+
 #include "rage1/btile.h"
 #include "rage1/inventory.h"
 #include "rage1/hotzone.h"

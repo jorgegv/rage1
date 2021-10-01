@@ -11,6 +11,8 @@
 #ifndef _ENEMY_H
 #define _ENEMY_H
 
+#include "features.h"
+
 #include "rage1/sprite.h"
 #include "rage1/types.h"
 

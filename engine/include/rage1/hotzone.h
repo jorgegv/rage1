@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 #include "rage1/types.h"
 
 struct hotzone_info_s {

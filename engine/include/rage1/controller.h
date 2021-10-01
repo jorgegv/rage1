@@ -14,6 +14,8 @@
 #include <input.h>
 #include <stdint.h>
 
+#include "features.h"
+
 struct controller_info_s {
     // controller type, see below
     uint8_t type;

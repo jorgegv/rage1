@@ -11,6 +11,8 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
+#include "features.h"
+
 #define PIXEL_TO_CELL_COORD(a)		((a) >> 3)
 #define CELL_TO_PIXEL_COORD(a)		((a) << 3)
 

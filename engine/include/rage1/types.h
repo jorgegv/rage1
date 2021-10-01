@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 struct position_data_s {
     uint8_t x,y;	// position top, left
     uint8_t xmax,ymax;	// position bottom,right

@@ -50,6 +50,7 @@ my %dataset_dependency;
 my $c_file_game_data = 'game_data.c';
 my $c_file_dataset_format = 'datasets/dataset_%s.c';
 my $h_file_game_data = 'game_data.h';
+my $h_file_build_features = 'features.h';
 my $output_dest_dir;
 
 # dump file for internal state
@@ -59,8 +60,15 @@ my $dump_file = 'internal_state.dmp';
 my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
 my @h_game_data_lines;
+my @h_build_features_lines;
 my $build_dir;
 my $forced_build_target;
+my %conditional_build_features;
+
+# build features that always selected no matter what
+my @default_build_features = qw(
+    BTILE_PACKED_TYPE_MAP
+);
 
 ######################################################
 ## Configuration syntax definitions and lists
@@ -2232,26 +2240,8 @@ sub generate_game_config {
 EOF_BLDCFG1
 ;
 
-    # output build features for conditional compiles
-    push @h_game_data_lines, <<EOF_FEATURES1
+    add_build_feature( sprintf( "ZX_TARGET_%s\n", $game_config->{'zx_target'} ) );
 
-////////////////////////////////////////////////////////////////
-// BUILD FEATURE MACROS FOR CONDITIONAL COMPILES
-////////////////////////////////////////////////////////////////
-
-EOF_FEATURES1
-;
-
-    push @h_game_data_lines, sprintf( "#define\tBUILD_FEATURE_ZX_TARGET_%s\n", $game_config->{'zx_target'} );
-
-    push @h_game_data_lines, <<EOF_FEATURES2
-
-////////////////////////////////////////////////////////////////
-// END OF BUILD FEATURE MACROS
-////////////////////////////////////////////////////////////////
-
-EOF_FEATURES2
-;
 }
 
 # this function generates screen data that needs to be stored in the home
@@ -2317,6 +2307,49 @@ sub generate_misc_data {
     push @h_game_data_lines, sprintf( "#define\tGAME_NUM_TOTAL_ENEMIES\t%d\n\n", $count );
 }
 
+sub add_build_feature {
+    my $f = shift;
+    $conditional_build_features{ $f }++;
+}
+
+sub add_default_build_features {
+    foreach my $f ( @default_build_features ) {
+        add_build_feature( $f );
+    }
+}
+
+sub generate_conditional_build_features {
+
+    # output build features for conditional compiles
+    push @h_build_features_lines, <<EOF_FEATURES1
+
+////////////////////////////////////////////////////////////////
+// BUILD FEATURE MACROS FOR CONDITIONAL COMPILES
+////////////////////////////////////////////////////////////////
+
+#ifndef _FEATURES_H
+#define _FEATURES_H
+
+EOF_FEATURES1
+;
+
+    foreach my $f ( sort keys %conditional_build_features ) {
+        push @h_build_features_lines, sprintf( "#define BUILD_FEATURE_%s\n", uc($f) );
+    }
+
+    push @h_build_features_lines, <<EOF_FEATURES2
+
+////////////////////////////////////////////////////////////////
+// END OF BUILD FEATURE MACROS
+////////////////////////////////////////////////////////////////
+
+#endif // _FEATURES_H
+
+EOF_FEATURES2
+;
+
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2348,6 +2381,10 @@ sub generate_game_data {
     generate_game_config;
     generate_misc_data;
 
+    # generate conditional build features
+    add_default_build_features;
+    generate_conditional_build_features;
+
     # generate ending lines if needed
     generate_h_ending;
 }
@@ -2370,10 +2407,16 @@ sub output_game_data {
         close $output_fh;
     }
 
-    # output .h file
+    # output game_data.h file
     open( $output_fh, ">", $h_file_game_data ) or
         die "Could not open $h_file_game_data for writing\n";
     print $output_fh join( "", @h_game_data_lines );
+    close $output_fh;
+
+    # output features.h file
+    open( $output_fh, ">", $h_file_build_features ) or
+        die "Could not open $h_file_build_features for writing\n";
+    print $output_fh join( "", @h_build_features_lines );
     close $output_fh;
 
 }
@@ -2532,6 +2575,7 @@ getopts("b:d:ct:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data = "$opt_d/$c_file_game_data";
     $h_file_game_data = "$opt_d/$h_file_game_data";
+    $h_file_build_features = "$opt_d/$h_file_build_features";
     $dump_file = "$opt_d/$dump_file";
     $output_dest_dir = $opt_d;
 }

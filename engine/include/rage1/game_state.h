@@ -15,6 +15,8 @@
 #include <input.h>
 #include <stdint.h>
 
+#include "features.h"
+
 #include "rage1/map.h"
 #include "rage1/sprite.h"
 #include "rage1/hero.h"

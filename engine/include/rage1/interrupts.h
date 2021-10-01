@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 struct time_s {
    uint8_t hour, min, sec, frame;
 };

@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "features.h"
+
 void init_sp1(void);
 
 #endif // _SP1ENGINE_H
