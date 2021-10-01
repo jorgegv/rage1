@@ -232,31 +232,44 @@ uint8_t do_rule_check_screen_flag_is_reset( struct flow_rule_check_s *check ) __
 //   void do_rule_action_xxxx( struct flow_rule_action_s *action )
 ////////////////////////////////////////////////////////////////////
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_SET_USER_FLAG
 void do_rule_action_set_user_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
     SET_USER_FLAG( action->data.user_flag.flag );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_RESET_USER_FLAG
 void do_rule_action_reset_user_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
     RESET_USER_FLAG( action->data.user_flag.flag );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_PLAY_SOUND
 void do_rule_action_play_sound( struct flow_rule_action_s *action ) __z88dk_fastcall {
     beep_fx( action->data.play_sound.sound_id );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_INC_LIVES
 void do_rule_action_inc_lives( struct flow_rule_action_s *action ) __z88dk_fastcall {
     game_state.hero.num_lives += action->data.lives.count;
     hero_update_lives_display();
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_CALL_CUSTOM_FUNCTION
 void do_rule_action_call_custom_function( struct flow_rule_action_s *action ) __z88dk_fastcall {
     action->data.custom.function();
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_END_OF_GAME
 void do_rule_action_end_of_game( struct flow_rule_action_s *action ) __z88dk_fastcall {
     SET_GAME_FLAG( F_GAME_END );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_WARP_TO_SCREEN
 void do_rule_action_warp_to_screen( struct flow_rule_action_s *action ) __z88dk_fastcall {
     // only change coords if directed to do it
     if ( ! ( action->data.warp_to_screen.flags & ACTION_WARP_TO_SCREEN_KEEP_HERO_X ) )
@@ -266,7 +279,9 @@ void do_rule_action_warp_to_screen( struct flow_rule_action_s *action ) __z88dk_
     game_state.next_screen = action->data.warp_to_screen.num_screen;
     SET_LOOP_FLAG( F_LOOP_WARP_TO_SCREEN );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ENABLE_HOTZONE
 void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct hotzone_info_s *hz;
 
@@ -276,7 +291,9 @@ void do_rule_action_enable_hotzone( struct flow_rule_action_s *action ) __z88dk_
         SET_HOTZONE_FLAG( game_state.current_screen_asset_state_table_ptr[ hz->state_index ].asset_state,
             F_HOTZONE_ACTIVE );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_DISABLE_HOTZONE
 void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct hotzone_info_s *hz;
 
@@ -286,36 +303,49 @@ void do_rule_action_disable_hotzone( struct flow_rule_action_s *action ) __z88dk
         RESET_HOTZONE_FLAG( game_state.current_screen_asset_state_table_ptr[ hz->state_index ].asset_state,
             F_HOTZONE_ACTIVE );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ENABLE_BTILE
 void do_rule_action_enable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &game_state.current_screen_ptr->btile_data.btiles_pos[ action->data.btile.num_btile ];
     SET_BTILE_FLAG( game_state.current_screen_asset_state_table_ptr[ t->state_index ].asset_state, F_BTILE_ACTIVE );
     btile_draw( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ) , t->type, &game_area);
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_DISABLE_BTILE
 void do_rule_action_disable_btile( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct btile_pos_s *t = &game_state.current_screen_ptr->btile_data.btiles_pos[ action->data.btile.num_btile ];
     RESET_BTILE_FLAG( game_state.current_screen_asset_state_table_ptr[ t->state_index ].asset_state, F_BTILE_ACTIVE );
     btile_remove( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ) );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ADD_TO_INVENTORY
 void do_rule_action_add_to_inventory( struct flow_rule_action_s *action ) __z88dk_fastcall {
     ADD_TO_INVENTORY( &game_state.inventory, action->data.item.item_id );
     inventory_show();
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_REMOVE_FROM_INVENTORY
 void do_rule_action_remove_from_inventory( struct flow_rule_action_s *action ) __z88dk_fastcall {
     REMOVE_FROM_INVENTORY( &game_state.inventory, action->data.item.item_id );
     inventory_show();
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_SET_SCREEN_FLAG
 void do_rule_action_set_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
     SET_SCREEN_FLAG( all_screen_asset_state_tables[ action->data.screen_flag.num_screen ].states[ SCREEN_STATE_INDEX ].asset_state, action->data.screen_flag.flag );
 }
+#endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_RESET_SCREEN_FLAG
 void do_rule_action_reset_screen_flag( struct flow_rule_action_s *action ) __z88dk_fastcall {
     RESET_SCREEN_FLAG( all_screen_asset_state_tables[ action->data.screen_flag.num_screen ].states[ SCREEN_STATE_INDEX ].asset_state, action->data.screen_flag.flag );
 }
+#endif
 
 // dispatch tables for check and action functions
 
@@ -427,19 +457,79 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
 // Table of action functions.  The 'action' value from the rule is used to
 // index into this table and execute the appropriate function
 rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_SET_USER_FLAG
     do_rule_action_set_user_flag,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_RESET_USER_FLAG
     do_rule_action_reset_user_flag,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_PLAY_SOUND
     do_rule_action_play_sound,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_INC_LIVES
     do_rule_action_inc_lives,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_CALL_CUSTOM_FUNCTION
     do_rule_action_call_custom_function,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_END_OF_GAME
     do_rule_action_end_of_game,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_WARP_TO_SCREEN
     do_rule_action_warp_to_screen,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ENABLE_HOTZONE
     do_rule_action_enable_hotzone,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_DISABLE_HOTZONE
     do_rule_action_disable_hotzone,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ENABLE_BTILE
     do_rule_action_enable_btile,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_DISABLE_BTILE
     do_rule_action_disable_btile,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ADD_TO_INVENTORY
     do_rule_action_add_to_inventory,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_REMOVE_FROM_INVENTORY
     do_rule_action_remove_from_inventory,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_SET_SCREEN_FLAG
     do_rule_action_set_screen_flag,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_RESET_SCREEN_FLAG
     do_rule_action_reset_screen_flag,
+#else
+    NULL,
+#endif
 };
