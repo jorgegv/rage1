@@ -67,7 +67,7 @@ my %conditional_build_features;
 
 # build features that always selected no matter what
 my @default_build_features = qw(
-    PACKED_TILE_TYPE_MAP
+    BTILE_PACKED_TYPE_MAP
 );
 
 ######################################################

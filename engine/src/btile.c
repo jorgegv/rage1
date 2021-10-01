@@ -21,7 +21,7 @@
 
 // when using a packed tile type map, we pack 4 tiles per byte
 // if not, we use 1 byte per tile
-#ifdef BUILD_FEATURE_PACKED_TILE_TYPE_MAP
+#ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
     #define TILE_TYPE_DATA_SIZE		( SCREEN_SIZE / 4 )
 #else
     #define TILE_TYPE_DATA_SIZE		( SCREEN_SIZE )
@@ -75,7 +75,7 @@ void btile_clear_type_all_screen(void) {
     // When not, TT_DECORATION as well
 }
 
-#ifdef BUILD_FEATURE_PACKED_TILE_TYPE_MAP
+#ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
 
 // Accelerated functions for getting/setting tile types
 

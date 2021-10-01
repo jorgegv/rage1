@@ -51,10 +51,7 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
 // also, macro for getting the btile type at a given screen position
 extern uint8_t screen_pos_tile_type_data[];
 
-#define BUILD_FEATURE_PACKED_TILE_TYPE_MAP
-
-#ifdef BUILD_FEATURE_PACKED_TILE_TYPE_MAP
-    // Data format: xxxxAAAAAAAAAATT - A: position (0-767); T: tile type (0-3)
+#ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
     #define GET_TILE_TYPE_AT(srow,scol)		( btile_get_tile_type( (srow), (scol) ) )
     #define SET_TILE_TYPE_AT(srow,scol,sval)	( btile_set_tile_type( (srow), (scol), (sval) ) )
 #else
