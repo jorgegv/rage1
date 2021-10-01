@@ -1,5 +1,47 @@
 # RAGE1 ChangeLog
 
+## 0.4.0 (2021-09-01)
+
+### New features
+
+- Support for 48K/128K mode with just a single `ZX_TARGET` configuration
+  parameter! Compiling for 128K is as easy as setting `ZX_TARGET` to 128.
+
+  Compilation for 128K target makes full use of the spare 5 RAM banks with
+  your game data and handles automatic bank switching.  Game screens and
+  assets are compressed (ZX0 - Thanks Einar Saukas!  :-) ) and located in
+  different datasets and paged in and out as needed during the game.
+
+### Fixes and optimizations
+
+- Huge rewrite that was needed for supporting 128K build
+
+- You can't optimize what you can't measure: new tools added to aid in
+  spotting optimization opportunities and measuring the results of the code
+  refactor
+
+- Heavy code size optimizations: new packed tile type map which occupies 75%
+  less memory than the original implementation, and several other
+  refactorings that helped reduce global memory usage for the test game in
+  around 15%.
+
+- New internal framework for conditional feature compilation: only features
+  that are used in your game should be compiled in the final binary.  For
+  now, only flow rules, checks and actions are using this framework, but
+  more features will use it in the future for still more savings
+
+### Documentation
+
+- Documented design of 48K/128K mode architecture in
+  [BANKING-DESIGN.md](doc/BANKING-DESIGN.md), and updated
+  [USAGE-OVERVIEW.md](doc/USAGE-OVERVIEW.md) with new instructions
+
+- [DATAGEN](doc/DATAGEN.md) syntax updates for the new 128K mode and
+  functionalities
+
+- Updated [OPTIMIZATIONS.md](doc/OPTIMIZATIONS.md) with the new techniques
+  and tips used during the heavy optimization work done in this release
+
 ## 0.3.0 (2021-06-27)
 
 ### New features
