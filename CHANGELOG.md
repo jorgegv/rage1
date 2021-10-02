@@ -14,11 +14,11 @@
 
 ### Fixes and optimizations
 
-- Huge rewrite that was needed for supporting 128K build
+- A huge rewrite was needed for supporting 128K build
 
 - You can't optimize what you can't measure: new tools added to aid in
-  spotting optimization opportunities and measuring the results of the code
-  refactor
+  spotting optimization opportunities and measuring the results of code
+  refactoring
 
 - Heavy code size optimizations: new packed tile type map which occupies 75%
   less memory than the original implementation, and several other
@@ -28,7 +28,9 @@
 - New internal framework for conditional feature compilation: only features
   that are used in your game should be compiled in the final binary.  For
   now, only flow rules, checks and actions are using this framework, but
-  more features will use it in the future for still more savings
+  more features will use it in the future for still more savings.
+
+- New tool and script for easier FUSE debugging
 
 ### Documentation
 
@@ -41,6 +43,9 @@
 
 - Updated [OPTIMIZATIONS.md](doc/OPTIMIZATIONS.md) with the new techniques
   and tips used during the heavy optimization work done in this release
+
+- New document [FUSE-DEBUG.md](doc/FUSE-DEBUG.md) with details for better
+  debugging with FUSE emulator
 
 ## 0.3.0 (2021-06-27)
 
