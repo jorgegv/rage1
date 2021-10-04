@@ -35,6 +35,10 @@ struct hero_animation_data_s {
     uint8_t current_frame;	// current sprite frame
     uint8_t delay_counter;	// current frame delay counter
     uint8_t *last_frame_ptr;	// last used frame
+    uint8_t steady_frame_up;	// steady frames for all directions
+    uint8_t steady_frame_down;
+    uint8_t steady_frame_left;
+    uint8_t steady_frame_right;
 };
 
 // movement data for the hero sprite
@@ -70,9 +74,11 @@ extern struct sp1_ss *hero_sprite;
 #define SET_HERO_FLAG(s,f)	( (s).flags |= (f) )
 #define RESET_HERO_FLAG(s,f)	( (s).flags &= ~(f) )
 
-#define F_HERO_ALIVE	0x0001
+#define F_HERO_ALIVE	0x01
+#define F_HERO_STEADY	0x02
 
 #define IS_HERO_ALIVE(s)	(GET_HERO_FLAG((s),F_HERO_ALIVE))
+#define IS_HERO_STEADY(s)	(GET_HERO_FLAG((s),F_HERO_STEADY))
 
 void init_hero(void);
 void hero_reset_all(void);

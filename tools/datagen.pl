@@ -477,6 +477,15 @@ sub read_input_data {
                 $hero->{'sequence_right'} = $1;
                 next;
             }
+            if ( $line =~ /^STEADY_FRAMES\s+(.*)$/ ) {
+                my $args = $1;
+                my $vars = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                $hero->{'steady_frames'} = $vars;
+                next;
+            }
             if ( $line =~ /^BULLET\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = $1;
@@ -1377,6 +1386,10 @@ sub generate_hero {
     my $sequence_down		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_down'} };
     my $sequence_left		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_left'} };
     my $sequence_right		= $all_sprites[ $num_sprite ]{'sequence_name_to_index'}{ $hero->{'sequence_right'} };
+    my $steady_frame_up		= $hero->{'steady_frames'}{'up'} || 0;
+    my $steady_frame_down	= $hero->{'steady_frames'}{'down'} || 0;
+    my $steady_frame_left	= $hero->{'steady_frames'}{'left'} || 0;
+    my $steady_frame_right	= $hero->{'steady_frames'}{'right'} || 0;
     my $delay			= $hero->{'animation_delay'};
     my $hstep			= $hero->{'hstep'};
     my $vstep			= $hero->{'vstep'};
@@ -1393,6 +1406,10 @@ sub generate_hero {
 #define	HERO_SPRITE_SEQUENCE_DOWN	$sequence_down
 #define	HERO_SPRITE_SEQUENCE_LEFT	$sequence_left
 #define	HERO_SPRITE_SEQUENCE_RIGHT	$sequence_right
+#define	HERO_SPRITE_STEADY_FRAME_UP	$steady_frame_up
+#define	HERO_SPRITE_STEADY_FRAME_DOWN	$steady_frame_down
+#define	HERO_SPRITE_STEADY_FRAME_LEFT	$steady_frame_left
+#define	HERO_SPRITE_STEADY_FRAME_RIGHT	$steady_frame_right
 #define	HERO_SPRITE_ANIMATION_DELAY	$delay
 #define HERO_SPRITE_WIDTH		$width
 #define HERO_SPRITE_HEIGHT		$height

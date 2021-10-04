@@ -42,7 +42,11 @@ struct hero_info_s hero_startup_data = {
         HERO_SPRITE_SEQUENCE_LEFT,
         HERO_SPRITE_SEQUENCE_RIGHT,
         HERO_SPRITE_ANIMATION_DELAY,
-        0, 0, 0, NULL
+        HERO_SPRITE_SEQUENCE_DOWN, 0, 0, NULL,
+        HERO_SPRITE_STEADY_FRAME_UP,
+        HERO_SPRITE_STEADY_FRAME_DOWN,
+        HERO_SPRITE_STEADY_FRAME_LEFT,
+        HERO_SPRITE_STEADY_FRAME_RIGHT,
     },	// animation
     { 0,0,0,0 },	// position - will be reset when entering a screen, including the first one
     { MOVE_NONE, HERO_MOVE_HSTEP, HERO_MOVE_VSTEP },	// movement
@@ -64,12 +68,16 @@ void hero_reset_position(void) {
     uint8_t *animation_frame;
 
     h = &game_state.hero;
-    anim = &h->animation;
 
-    // set pointer to first animation frame
-    animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[
-        home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].sequence_data.sequences[ anim->current_sequence ].frame_numbers[ 0 ]
-        ];
+    // reset animation sequence
+    anim = &h->animation;
+    h->animation.current_sequence = h->animation.sequence_down;
+    h->animation.current_frame = 0;
+
+    // set pointer to steady frame down
+    SET_HERO_FLAG( *h, F_HERO_STEADY );
+    animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ HERO_SPRITE_STEADY_FRAME_DOWN ];
+    h->movement.last_direction = MOVE_DOWN;
 
     // set initial position and move it there
     hero_set_position_x( h, game_state.current_screen_ptr->hero_data.startup_x );
@@ -105,8 +113,7 @@ void hero_reset_all(void) {
     // set flags
     SET_HERO_FLAG( *h, F_HERO_ALIVE );
 
-    // set defalt animaton sequence and reset position
-    h->animation.current_sequence = h->animation.sequence_right;
+    // set default animation sequence and reset position
     hero_reset_position();
 }
 
@@ -183,21 +190,49 @@ void hero_animate_and_move( void ) {
     uint8_t newx,newy,x,y,oldx,oldy;
     uint8_t *animation_frame;
     uint8_t allowed;
-
+    uint8_t steady_frame;
 
     h = &game_state.hero;	// efficiency matters ;-)
-    if ( ! IS_HERO_ALIVE(*h) )	// skip if not alive
-        return;
-
-    move = &h->movement;	// for efficiency
-    controller = game_state.controller.state;
-
-    // do nothing if no move
-    if ( ( controller & MOVE_ALL ) == MOVE_NONE )
+    if ( ! IS_HERO_ALIVE( game_state.hero ) )	// skip if not alive
         return;
 
     // cache some pointers for eficiency
     anim = &h->animation;
+    move = &h->movement;
+
+    // get controller state
+    controller = game_state.controller.state;
+
+    if ( ( controller & MOVE_ALL ) == MOVE_NONE ) {
+        if ( ! IS_HERO_STEADY( game_state.hero ) ) {
+            switch ( move->last_direction ) {
+                case MOVE_UP:
+                    steady_frame = HERO_SPRITE_STEADY_FRAME_UP;
+                    break;
+                case MOVE_DOWN:
+                    steady_frame = HERO_SPRITE_STEADY_FRAME_DOWN;
+                    break;
+                case MOVE_LEFT:
+                    steady_frame = HERO_SPRITE_STEADY_FRAME_LEFT;
+                    break;
+                case MOVE_RIGHT:
+                    steady_frame = HERO_SPRITE_STEADY_FRAME_RIGHT;
+                    break;
+                default:
+                    steady_frame = 0;
+            }
+            anim->current_frame = 0;
+            anim->last_frame_ptr = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ steady_frame ];
+            hero_draw();
+            SET_HERO_FLAG( game_state.hero, F_HERO_STEADY );
+        }
+        return;
+    }
+
+    // if we reach here, some movement was requested, so reset the steady flag
+    RESET_HERO_FLAG( game_state.hero, F_HERO_STEADY );
+
+    // cache some pointers for eficiency
     pos = &h->position;
 
     // initialize preconditions
