@@ -388,10 +388,12 @@ Example `HERO` definition:
 ```
 BEGIN_HERO
         NAME            Jorge
-        SPRITE_UP       JorgeUp
-        SPRITE_DOWN     JorgeDown
-        SPRITE_LEFT     JorgeLeft
-        SPRITE_RIGHT    JorgeRight
+	SPRITE		Jorge
+        SEQUENCE_UP     JorgeUp
+        SEQUENCE_DOWN   JorgeDown
+        SEQUENCE_LEFT   JorgeLeft
+        SEQUENCE_RIGHT  JorgeRight
+        STEADY_FRAMES   LEFT=5 RIGHT=7 UP=8 DOWN=9
         ANIMATION_DELAY 6
         HSTEP           1
         VSTEP           1
@@ -403,10 +405,13 @@ END_HERO
 `HERO` attributes:
 
 * `NAME`: a name for the hero
-* `SPRITE_UP, SPRITE_DOWN, SPRITE_LEFT, SPRITE_RIGHT`: the sprites to use
-  when moving in each of the four directions. These sprites can also have
-  their own animation frames. The names used must match previous SPRITE
-  graphic definitions
+* `SPRITE`: the sprite to use when moving in each of the four directions. 
+  The sprite can also have its own animation sequences.  The names used must
+  match previous SPRITE graphic definitions
+* `SEQUENCE_UP, SEQUENCE_DOWN, SEQUENCE_LEFT, SEQUENCE_RIGHT`: the names of
+  the animation sequences that will be used for the four directions.
+* `STEADY_FRAMES`: the sprite frame numbers to be used when the hero is in a
+  steady position after having moved in a given direction.
 * `ANIMATION_DELAY`: delay between hero animation frames, in 1/50s (screen
   frames)
 * `HSTEP`, `VSTEP`: movement increments for the hero
