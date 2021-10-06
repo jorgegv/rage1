@@ -44,27 +44,60 @@ The design constraints for a CODESET are:
 - A CODESET owns a memory bank. Banks dedicated to CODESETs cannot be used
   for DATASETs.
 
-- Similar to DATASETs, each CODESET has at address 0xC000 a table of data
-  for all the functions contained in it. Data for each function is function
-  address (maybe more?)
+- Similar to DATASETs, each CODESET has at address 0xC000 a data of type
+  `struct codeset_assets_s` which contains info about the assets in the
+  CODESET: init function, pointers to low memory data structs, and a table
+  of the functions that are callable from outside the CODESET.
 
-- All CODESET functions have the same prototype
+- All CODESET functions have the same prototype: void f(void);
 
-- CODESET functions receive a parameter which is a pointer to a struct with
-  low memory information, that is, pointers to low memory data: game_state,
-  home_assets, asset_state table, etc.  All low memory access from the
-  CODESET functions has to be done via these pointers.
+- CODESETs have an init function which is called at program startup with
+  parameters that are pointers to low memory data structures: `game_state`,
+  `home_assets`,`banked_assets`.  The init function uses them to initialize
+  the local `struct codeset_assets_s`.
 
-- A global table is generated in low memory with data for all the CODESET
-  functions in all CODESETS.  A global index is assigned to each function,
-  and the data for that function includes: the CODESET where it lives, and
-  the local index into the CODESET function table, in a similar way as the
-  dataset assets mappings are currently done
+- CODESET functions receive no parameters and return void.  All accesses to
+  low memory data from the CODESET functions has to be done via the pointers
+  set up when the init function was called.
+
+- A global table `all_codeset_functions`is generated in low memory with data
+  for all the CODESET functions in all CODESETS.  A global index is assigned
+  to each function.  The function data includes the CODESET where it lives,
+  and the local index into the CODESET function table.  The
+  `all_codeset_functions` table is indexed with the global function index to
+  get the CODESET and the local function index in that CODESET.
 
 ## Mechanism for calling a CODESET function from low memory
 
-...
+- A function `codeset_call_function` exists to call a given function by its
+  global index.
+
+- The `codeset_call_function` function does the following tasks to invoke
+  the codeset function requested:
+
+  - Index the `all_codeset_functions` table with the global function index
+    received as its parameter, to get the codeset number and the local
+    function index into its codeset
+
+  - Index the `codeset_info` table with the codeset number from the previous
+    step to get the memory bank number which we need to activate
+
+  - Switch to the new memory bank (via call to `memory_switch_bank`
+    function)
+
+  - Access the `codeset_assets_s` structure at the beginning of the codeset
+    (fixed address 0xC000), use the local function index obtained in the
+    first step to access the codeset functions table and invoke the
+    function.
+
+  - Switch back to bank 0 and return
+
+- As it was said before, the codeset functions accept no parameters and
+  return no value.  All interaction with the program has to be done via the
+  global `game_state` variable and the asset pointers that are setup with
+  the codeset init function.
 
 ## Mechanism for calling low memory code from a CODESET function
 
-...
+(TBD)
+
