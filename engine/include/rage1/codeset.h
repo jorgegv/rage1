@@ -79,7 +79,37 @@ struct codeset_function_info_s {
 // the codeset and local function number
 extern struct codeset_function_info_s *all_codeset_functions[];
 
+// codeset initialization at program start
+void init_codesets( void );
+
 // function to call a given codeset function, wherever it may be
 void codeset_call_function( uint8_t global_function_num );
+
+////////////////////////////////////////////////////////////////
+//
+// Engine functions that are implemented as CODESET functions
+//
+////////////////////////////////////////////////////////////////
+//
+// We need to define the global function IDs here for CODESET 0 functions
+// and those IDs will be reserved.  Global indexes for user CODESET
+// functions will be assigned starting with
+// CODESET_GLOBAL_INDEX_RESERVED_MAX + 1
+//
+// Whenever you migrate an engine function to be a CODESET function (or
+// create a new one), assign a new ID and update
+// CODESET_GLOBAL_INDEX_RESERVED_MAX, so that user CODESET function IDs are
+// assigned after that
+//
+// Example:
+// ....
+// #define	CODESET_GLOBAL_MY_FUNCTION_1		0
+// #define	CODESET_GLOBAL_MY_FUNCTION_2		1
+// #define	CODESET_GLOBAL_MY_FUNCTION_3		2
+//
+// #define	CODESET_GLOBAL_INDEX_RESERVED_MAX	2
+
+// define the engine CODESET reserved function IDs here...
+#define CODESET_GLOBAL_INDEX_RESERVED_MAX	0
 
 #endif // _CODESET_H
