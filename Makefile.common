@@ -34,9 +34,8 @@ ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
 
 # Codeset sources and binaries
-CSRC_CODESETS		= $(wildcard $(GENERATED_DIR_CODESETS)/*.c)
-SRC_CODESETS		= $(CSRC_CODESETS)
-BIN_CODESETS		= $(CSRC_CODESETS:.c=.bin)
+CODESET_DIRS		= $(wildcard $(GENERATED_DIR_CODESETS)/codeset_*.src/)
+BIN_CODESETS		= $(CODESET_DIRS:.src=.bin)
 CODESET_MAXSIZE		= 16384
 
 # Bank binaries and taps
@@ -153,7 +152,7 @@ dataset_%.zx0: dataset_%.bin
 
 codesets: $(BIN_CODESETS)
 
-codeset_%.bin: codeset_%.c
+codeset_%.bin: codeset_%.src/*.c codeset_%.src/*.asm
 	@echo "Compiling CODESET $< ..."
 	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
 	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
