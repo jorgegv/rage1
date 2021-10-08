@@ -2,10 +2,10 @@
 //
 // RAGE1 - Retro Adventure Game Engine, release 1
 // (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
-// 
+//
 // This code is published under a GNU GPL license version 3 or later.  See
 // LICENSE file in the distribution for details.
-// 
+//
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef _CODESET_H
@@ -55,6 +55,10 @@ struct codeset_assets_s {
     codeset_function_t		*functions;
 
 };
+// global pointer to the codeset assets struct - the pointer itself does not
+// change, but the struct contents change depending on the bank that is
+// mapped
+extern struct codeset_assets_s *codeset_assets;
 
 ///////////////////////////////////////////////////////////
 //
@@ -77,7 +81,7 @@ struct codeset_function_info_s {
 };
 // this array is indexed by the global function number, we use that to get
 // the codeset and local function number
-extern struct codeset_function_info_s *all_codeset_functions[];
+extern struct codeset_function_info_s all_codeset_functions[];
 
 // codeset initialization at program start
 void init_codesets( void );

@@ -2380,6 +2380,28 @@ EOF_FEATURES2
 
 }
 
+## CODESET information
+sub generate_codesets {
+    push @h_game_data_lines, <<EOF_CODESET_1
+
+//////////////////////////////////////////
+// CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_1
+;
+    push @h_game_data_lines, "#define	NUM_CODESETS	0\n";
+    push @h_game_data_lines, <<EOF_CODESET_2
+
+//////////////////////////////////////////
+// END OF CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_2
+;
+}
+
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2410,6 +2432,9 @@ sub generate_game_data {
     generate_game_functions;
     generate_game_config;
     generate_misc_data;
+
+    # codeset items
+    generate_codesets;
 
     # generate conditional build features
     add_default_build_features;
