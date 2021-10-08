@@ -17,7 +17,8 @@ use Data::Dumper;
 use Getopt::Std;
 
 # list of valid banks and size for 128K Speccy
-my @valid_banks = ( 1, 3, 4, 6, 7 );
+my @dataset_valid_banks = ( 1, 3, 7 );	# contended banks reserved for data
+my @codeset_valid_banks = ( 4, 6, );	# non-contended banks reserved for code
 my $max_bank_size = 16384;
 
 # config vars
@@ -81,21 +82,21 @@ sub layout_binaries {
         }
 
         # check if we need to spill to the next bank
-        my $current_size = $layout->{ $valid_banks[ $current_bank_index ] }{'size'} || 0;
+        my $current_size = $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} || 0;
         if ( $current_size + $bin->{'size'} > $max_bank_size ) {
             $current_bank_index++;
-            if ( $current_bank_index >= scalar( @valid_banks ) ) {
+            if ( $current_bank_index >= scalar( @dataset_valid_banks ) ) {
                 die "** Error: no more banks to fill, datasets are too big\n";
             }
         }
 
         # add the bank and offset info to the dataset. Offset is the curent pos in the bank
-        $bin->{'bank'} = $valid_banks[ $current_bank_index ];
-        $bin->{'offset'} = $layout->{ $valid_banks[ $current_bank_index ] }{'size'} || 0;
+        $bin->{'bank'} = $dataset_valid_banks[ $current_bank_index ];
+        $bin->{'offset'} = $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} || 0;
 
         # then update the bank layout
-        push @{ $layout->{ $valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
-        $layout->{ $valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
+        push @{ $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
+        $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
     }
 
     return $layout;
@@ -187,7 +188,10 @@ EOF_DSMAP_3
 sub generate_codeset_info_code_asm {
     my ( $layout, $codesets, $outdir ) = @_;
     my $csmap = $outdir . '/' . $codeset_info_name;
-    my $num_codesets = scalar( @$codesets );
+
+    # FIXME
+    my $num_codesets = 0;
+#    my $num_codesets = scalar( @$codesets );
 
     print "  Generating $codeset_info_name...";
 
