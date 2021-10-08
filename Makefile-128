@@ -18,6 +18,7 @@ TAPS			= $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
 
 build:
 	@$(MYMAKE) -s -j8 datasets
+	@$(MYMAKE) -s -j8 codesets
 	@$(MYMAKE) -s -j8 banks
 	@$(MYMAKE) -s bank_switcher
 	@$(MYMAKE) -s -j8 main

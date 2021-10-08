@@ -13,6 +13,7 @@ ENGINE_DIR		= engine
 BUILD_DIR		= build
 GENERATED_DIR		= $(BUILD_DIR)/generated
 GENERATED_DIR_DATASETS	= $(GENERATED_DIR)/datasets
+GENERATED_DIR_CODESETS	= $(GENERATED_DIR)/codesets
 GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
 GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
@@ -31,6 +32,12 @@ SRC_DATASETS		= $(CSRC_DATASETS)
 BIN_DATASETS		= $(CSRC_DATASETS:.c=.bin)
 ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
+
+# Codeset sources and binaries
+CSRC_CODESETS		= $(wildcard $(GENERATED_DIR_CODESETS)/*.c)
+SRC_CODESETS		= $(CSRC_CODESETS)
+BIN_CODESETS		= $(CSRC_CODESETS:.c=.bin)
+CODESET_MAXSIZE		= 16384
 
 # Bank binaries and taps
 BANK_BINS_FILE		= $(GENERATED_DIR)/bank_bins.cfg
@@ -139,6 +146,18 @@ dataset_%.bin: dataset_%.c
 dataset_%.zx0: dataset_%.bin
 	@echo "Compressing DATASET $< ..."
 	@$(ZX0) $< $@ >/dev/null 2>&1
+
+##
+## Codeset compilation to standalone binaries org'ed at 0xC000
+##
+
+codesets: $(BIN_CODESETS)
+
+codeset_%.bin: codeset_%.c
+	@echo "Compiling CODESET $< ..."
+	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
+	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+	@if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
 
 ## Taps
 
