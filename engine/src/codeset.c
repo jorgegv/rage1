@@ -18,7 +18,9 @@
 
 #include "game_data.h"
 
-struct codeset_assets_s *codeset_assets;
+// this should be here, but we need to ensure that it is _always_ in low
+// memory below 0xC000, so we put it in lowmem/asmdata.asm
+// struct codeset_assets_s *codeset_assets;
 
 // global codeset initialization called from main
 void init_codesets( void ) {
@@ -34,7 +36,9 @@ void init_codesets( void ) {
         // codeset_assets always points to 0xC000, but when switching banks
         // we access the different codeset_assets struct for each bank
         memory_switch_bank( codeset_info[ i ].bank_num );
-        codeset_assets->init( &game_state, home_assets, banked_assets );
+        codeset_assets->game_state	= &game_state;
+        codeset_assets->home_assets	= home_assets;
+        codeset_assets->banked_assets	= banked_assets;
     }
     // switch back to bank 0
     memory_switch_bank( 0 );

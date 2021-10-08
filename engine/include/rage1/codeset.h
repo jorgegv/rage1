@@ -26,13 +26,6 @@
 
 // type definitions for codeset functions:
 
-// init function - this is called once at program startup
-typedef void (*codeset_init_function_t)(
-    struct game_state_s		*game_state,
-    struct dataset_assets_s	*home_assets,
-    struct dataset_assets_s	*banked_assets
-);
-
 // general codeset function - this can be called any time
 typedef void (*codeset_function_t)( void );
 
@@ -41,11 +34,7 @@ typedef void (*codeset_function_t)( void );
 // (same trick here as for datasets)
 struct codeset_assets_s {
 
-    // codeset initialization function
-    codeset_init_function_t	init;
-
-    // these values are setup at program startup with a call to the init
-    // function
+    // these values are setup at program startup for all codesets
     struct game_state_s		*game_state;
     struct dataset_assets_s	*banked_assets;
     struct dataset_assets_s	*home_assets;

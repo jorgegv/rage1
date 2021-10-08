@@ -49,15 +49,14 @@ so they can't be called from any CODESET!
 
 - Similar to DATASETs, each CODESET has at address 0xC000 a data of type
   `struct codeset_assets_s` which contains info about the assets in the
-  CODESET: init function, pointers to low memory data structs, and a table
-  of the functions that are callable from outside the CODESET.
+  CODESET: pointers to low memory data structs, and a table of the functions
+  that are callable from outside the CODESET.
 
 - All CODESET functions have the same prototype: void f(void);
 
-- CODESETs have an init function which is called at program startup with
-  parameters that are pointers to low memory data structures: `game_state`,
-  `home_assets`,`banked_assets`.  The init function uses them to initialize
-  the local `struct codeset_assets_s`.
+- The local `struct codeset_assets_s` in CODESETs is initialized at program
+  startup with pointers to low memory data structures: `game_state`,
+  `home_assets`,`banked_assets`.
 
 - CODESET functions receive no parameters and return void.  All accesses to
   low memory data from the CODESET functions has to be done via the pointers
