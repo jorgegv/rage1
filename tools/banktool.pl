@@ -24,11 +24,30 @@ my $max_bank_size = 16384;
 my $bank_binaries_name_format = 'bank_%d.bin';
 my $bank_config_name = 'bank_bins.cfg';
 my $dataset_info_name = 'dataset_info.asm';
+my $codeset_info_name = 'codeset_info.asm';
 my $basic_loader_name = 'loader.bas';
 
 # auxiliary functions
 
 sub gather_datasets {
+    my ( $dir, $ext ) = @_;
+    my %binaries;
+
+    opendir BINDIR, $dir or
+        die "** Error: could not open directory $dir for reading\n";
+    foreach my $bin ( grep { /^dataset_.*\Q$ext\E/ } readdir BINDIR ) {
+        $bin =~ m/dataset_(.*)\Q$ext\E/;
+        $binaries{ $1 } = {
+                'name'	=> $bin,
+                'size'	=> ( stat( "$dir/$bin" ) )[7],
+        };
+    }
+    close BINDIR;
+    return \%binaries;
+}
+
+# FIXME: make this reall gather codesets
+sub gather_codesets {
     my ( $dir, $ext ) = @_;
     my %binaries;
 
@@ -165,6 +184,46 @@ EOF_DSMAP_3
     print "OK\n";
 }
 
+sub generate_codeset_info_code_asm {
+    my ( $layout, $codesets, $outdir ) = @_;
+    my $csmap = $outdir . '/' . $codeset_info_name;
+    my $num_codesets = scalar( @$codesets );
+
+    print "  Generating $codeset_info_name...";
+
+    open my $csmap_h, ">", $csmap
+        or die "\n** Error: could not open $csmap for writing\n";
+    print $csmap_h <<EOF_CSMAP_3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Codeset Map: for a given codeset ID, maps the memory bank where it is
+;; stored
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; struct codeset_info_s codeset_info[ $num_codesets ] = { ... }
+;;
+
+section         code_crt_common
+
+public		_codeset_info
+
+_codeset_info:
+EOF_CSMAP_3
+;
+
+#    print $dsmap_h join( "\n",
+#        map {
+#            sprintf( "\t\t;; dataset %d\n\t\tdb\t%d\t;; bank number\n\t\tdw\t%d\t;; size\n\t\tdw\t%d\t;; offset into bank\n",
+#                $_,
+#                $datasets->{ $_ }{'bank'},
+#                $datasets->{ $_ }{'size'},
+#                $datasets->{ $_ }{'offset'} );
+#        } sort keys %$datasets
+#    );
+
+    close $csmap_h;
+    print "OK\n";
+}
+
 sub generate_basic_loader {
     my ( $layout, $outdir ) = @_;
     my $bas_loader = $outdir . '/' . $basic_loader_name;
@@ -225,13 +284,19 @@ if ( not scalar( keys %$datasets ) ) {
     die "** Error: no dataset binaries found in $input_dir\n";
 }
 
+my $codesets = gather_codesets( $input_dir, $bin_ext );
+if ( not scalar( keys %$codesets ) ) {
+    die "** Error: no codeset binaries found in $input_dir\n";
+}
+
 my $bank_layout = layout_binaries( $datasets );
-#print Dumper( $bank_layout );
 
 generate_bank_binaries( $bank_layout, $input_dir, $output_dir );
 
 generate_bank_config( $bank_layout, $output_dir );
 
 generate_dataset_info_code_asm( $bank_layout, $datasets, $lowmem_output_dir );
+
+generate_codeset_info_code_asm( $bank_layout, $codesets, $lowmem_output_dir );
 
 generate_basic_loader( $bank_layout, $output_dir );
