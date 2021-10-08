@@ -30,6 +30,7 @@ my $basic_loader_name = 'loader.bas';
 
 # auxiliary functions
 
+# datasets are files under build/generated/datasets/ with names dataset_N.bin
 sub gather_datasets {
     my ( $dir, $ext ) = @_;
     my %binaries;
@@ -41,33 +42,34 @@ sub gather_datasets {
         $binaries{ $1 } = {
                 'name'	=> $bin,
                 'size'	=> ( stat( "$dir/$bin" ) )[7],
+                'dir'	=> $dir,
         };
     }
     close BINDIR;
     return \%binaries;
 }
 
-# FIXME: make this reall gather codesets
+# codesets are files under build/generated/codesets/ with names codeset_N.bin
 sub gather_codesets {
     my ( $dir, $ext ) = @_;
     my %binaries;
 
     opendir BINDIR, $dir or
         die "** Error: could not open directory $dir for reading\n";
-    foreach my $bin ( grep { /^dataset_.*\Q$ext\E/ } readdir BINDIR ) {
-        $bin =~ m/dataset_(.*)\Q$ext\E/;
+    foreach my $bin ( grep { /^codeset_.*\Q$ext\E/ } readdir BINDIR ) {
+        $bin =~ m/codeset_(.*)\Q$ext\E/;
         $binaries{ $1 } = {
                 'name'	=> $bin,
                 'size'	=> ( stat( "$dir/$bin" ) )[7],
+                'dir'	=> $dir,
         };
     }
     close BINDIR;
     return \%binaries;
 }
 
-sub layout_binaries {
-    my $bins = shift;
-    my $layout;
+sub layout_dataset_binaries {
+    my ( $layout, $bins ) = @_;
 
     # start with the first bank, place the binaries on the current bank
     # until it is full, then continue with the next until no more banks o no
@@ -102,8 +104,38 @@ sub layout_binaries {
     return $layout;
 }
 
+sub layout_codeset_binaries {
+    my ( $layout, $bins ) = @_;
+
+    # a codeset is directly assigned to a bank
+    my $current_bank_index = 0;
+    foreach my $bk ( sort keys %$bins ) {
+        my $bin = $bins->{ $bk };
+
+        # just error if any codeset is too big
+        if ( $bin->{'size'} > $max_bank_size ) {
+            die "** Error: codesetset $bin->{name} is too big ($bin->{size}), it does not fit in a bank ($max_bank_size)\n";
+        }
+
+        # check if there are banks left
+        if ( $current_bank_index >= scalar( @codeset_valid_banks ) ) {
+            die "** Error: no more banks to fill, too many codesets\n";
+        }
+
+        # add the bank and offset info to the codeset. Offset is the curent pos in the bank
+        $bin->{'bank'} = $codeset_valid_banks[ $current_bank_index ];
+        $current_bank_index++;
+
+        # then update the bank layout
+        push @{ $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
+        $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
+    }
+
+    return $layout;
+}
+
 sub generate_bank_binaries {
-    my ( $layout, $indir, $outdir ) = @_;
+    my ( $layout, $outdir ) = @_;
 
     foreach my $bank ( sort keys %$layout ) {
         my $bank_binary = $outdir . '/' . sprintf( $bank_binaries_name_format, $bank );
@@ -114,7 +146,7 @@ sub generate_bank_binaries {
 
         print "  Writing " . sprintf( $bank_binaries_name_format, $bank ) . "...";
         foreach my $bin ( @{ $layout->{ $bank }{'binaries'} } ) {
-            my $in = "$indir/$bin->{'name'}";
+            my $in = "$bin->{'dir'}/$bin->{'name'}";
             open my $bin_in, "<", $in or
                 die "\n** Error: could not open $in for reading\n";
             binmode $bin_in;
@@ -189,9 +221,7 @@ sub generate_codeset_info_code_asm {
     my ( $layout, $codesets, $outdir ) = @_;
     my $csmap = $outdir . '/' . $codeset_info_name;
 
-    # FIXME
-    my $num_codesets = 0;
-#    my $num_codesets = scalar( @$codesets );
+    my $num_codesets = scalar( @$codesets );
 
     print "  Generating $codeset_info_name...";
 
@@ -214,15 +244,14 @@ _codeset_info:
 EOF_CSMAP_3
 ;
 
-#    print $dsmap_h join( "\n",
-#        map {
-#            sprintf( "\t\t;; dataset %d\n\t\tdb\t%d\t;; bank number\n\t\tdw\t%d\t;; size\n\t\tdw\t%d\t;; offset into bank\n",
-#                $_,
-#                $datasets->{ $_ }{'bank'},
-#                $datasets->{ $_ }{'size'},
-#                $datasets->{ $_ }{'offset'} );
-#        } sort keys %$datasets
-#    );
+    print $csmap_h join( "\n",
+        map {
+            sprintf( "\t\t;; codeset %d\n\t\tdb\t%d\t;; bank number\n",
+                $_,
+                $codesets->{ $_ }{'bank'},
+            )
+        } sort keys %$codesets
+    );
 
     close $csmap_h;
     print "OK\n";
@@ -272,30 +301,32 @@ sub generate_basic_loader {
 ##
 
 # parse command options
-our( $opt_i, $opt_o, $opt_b, $opt_s, $opt_l );
-getopts("i:o:b:s:l:");
-( defined( $opt_i ) and defined( $opt_o ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-b <.bin_ext>] [-l <lowmem_output_dir>]\n";
+our( $opt_i, $opt_o, $opt_b, $opt_s, $opt_l, $opt_c );
+getopts("i:o:b:s:l:c:");
+( defined( $opt_i ) and defined( $opt_o ) and defined( $opt_c ) ) or
+    die "usage: $0 -i <dataset_bin_dir> -c <codeset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-b <.bin_ext>] [-l <lowmem_output_dir>]\n";
 
 # if $lowmem_output_dir is not specified, use same as $output_dir
-my ( $input_dir, $output_dir, $lowmem_output_dir ) = ( $opt_i, $opt_o, $opt_l || $opt_o );
+my ( $input_dir_ds, $input_dir_cs, $output_dir, $lowmem_output_dir ) = ( $opt_i, $opt_c, $opt_o, $opt_l || $opt_o );
 my $bin_ext = $opt_b || '.bin';
 
 my $bank_switcher_binary = $opt_s;
 
-my $datasets = gather_datasets( $input_dir, $bin_ext );
+my $datasets = gather_datasets( $input_dir_ds, $bin_ext );
 if ( not scalar( keys %$datasets ) ) {
-    die "** Error: no dataset binaries found in $input_dir\n";
+    die "** Error: no dataset binaries found in $input_dir_ds\n";
 }
 
-my $codesets = gather_codesets( $input_dir, $bin_ext );
+my $codesets = gather_codesets( $input_dir_cs, $bin_ext );
 if ( not scalar( keys %$codesets ) ) {
-    die "** Error: no codeset binaries found in $input_dir\n";
+    die "** Error: no codeset binaries found in $input_dir_cs\n";
 }
 
-my $bank_layout = layout_binaries( $datasets );
+my $bank_layout;
+layout_dataset_binaries( $bank_layout, $datasets );
+layout_codeset_binaries( $bank_layout, $codesets );
 
-generate_bank_binaries( $bank_layout, $input_dir, $output_dir );
+generate_bank_binaries( $bank_layout, $output_dir );
 
 generate_bank_config( $bank_layout, $output_dir );
 
