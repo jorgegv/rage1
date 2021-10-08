@@ -18,6 +18,8 @@ use Data::Dumper;
 use List::MoreUtils qw( zip );
 use Getopt::Std;
 use Data::Compare;
+use File::Path qw( make_path );
+use File::Copy;
 
 # final destination address for compilation of datasets
 my $dataset_base_address = 0x5b00;
@@ -51,11 +53,18 @@ my $game_config;
 my %dataset_dependency;
 
 # file names
-my $c_file_game_data = 'game_data.c';
-my $c_file_dataset_format = 'datasets/dataset_%s.c';
-my $h_file_game_data = 'game_data.h';
-my $h_file_build_features = 'features.h';
+my $c_file_game_data		= 'game_data.c';
+my $c_file_dataset_format	= 'datasets/dataset_%s.c';
+my $h_file_game_data		= 'game_data.h';
+my $h_file_build_features	= 'features.h';
+
 my $output_dest_dir;
+my $game_src_dir;
+my $build_dir;
+
+# codesets have their source files in their own directory for each codeset
+my $codeset_src_dir_format	= 'codesets/codeset_%s.src';
+my $c_file_codeset_format	= 'codeset_%s.c';
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
@@ -63,9 +72,9 @@ my $dump_file = 'internal_state.dmp';
 # output lines for each of the files
 my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
+my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
 my @h_build_features_lines;
-my $build_dir;
 my $forced_build_target;
 my %conditional_build_features;
 
@@ -2398,7 +2407,7 @@ EOF_FEATURES2
 }
 
 ## CODESET information
-sub generate_codesets {
+sub generate_global_codeset_data {
     push @h_game_data_lines, <<EOF_CODESET_1
 
 //////////////////////////////////////////
@@ -2451,6 +2460,27 @@ EOF_CODESET_4
 ;
 }
 
+sub generate_codesets {
+
+    # for each codeset
+    foreach my $codeset ( keys %codeset_functions_by_codeset ) {
+        # create the destination directory
+        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
+        make_path( $dst_dir ) or
+            die "** Could not create destination directory $dst_dir\n";
+
+        # copy the source files for functions associated to this codeset to the dest dir
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            my $src_file = $game_src_dir . '/' . $function->{'file'};
+            my $dst_file = $dst_dir . '/' . $function->{'file'}; 
+            copy( $src_file, $dst_file ) or
+                die "** Could not copy $src_file to $dst_file\n";
+        }
+
+        # add the needed source lines to the .c and .h files for that codeset if needed
+        # e.g. tiles used by these functions
+    }
+}
 
 # this function is called from main
 sub generate_game_data {
@@ -2485,6 +2515,7 @@ sub generate_game_data {
 
     # codeset items
     generate_codesets;
+    generate_global_codeset_data;
 
     # generate conditional build features
     add_default_build_features;
@@ -2678,8 +2709,8 @@ sub dump_internal_data {
 ## Main loop
 #########################
 
-our ( $opt_b, $opt_d, $opt_c, $opt_t );
-getopts("b:d:ct:");
+our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
+getopts("b:d:ct:s:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data = "$opt_d/$c_file_game_data";
     $h_file_game_data = "$opt_d/$h_file_game_data";
@@ -2688,6 +2719,7 @@ if ( defined( $opt_d ) ) {
     $output_dest_dir = $opt_d;
 }
 $build_dir = $opt_b || 'build';
+$game_src_dir = $opt_s || 'build/game_src';
 $forced_build_target = $opt_t || 0;
 
 # read, validate and compile input
