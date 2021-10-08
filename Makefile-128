@@ -28,7 +28,7 @@ build:
 
 banks:
 	@echo "Building Bank binaries, BASIC loader and Dataset map..."
-	@./tools/r1banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM) -b .zx0
+	@./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM) -b .zx0
 
 bank_switcher: $(BSWITCH_BIN)
 

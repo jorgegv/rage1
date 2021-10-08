@@ -18,7 +18,7 @@ The following tools can be found in the `tools` directory:
   stock `Makefile` from RAGE1, you can just run `make mem` after a sucessful
   build to run the tool in `-m` mode.
 
-* `r1banktool.pl`: this the main tool for generating the memory bank
+* `banktool.pl`: this the main tool for generating the memory bank
   configuration from the compiled datasets: it lays out the datasets into
   different banks taking care of the bank size; it generates the bank
   configuration and the BASIC loader that loads each bank where it belongs;
