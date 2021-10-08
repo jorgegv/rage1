@@ -40,6 +40,10 @@ my %item_name_to_index;
 
 my @all_rules;
 
+my @all_codeset_functions;
+my %codeset_function_name_to_index;
+my %codeset_functions_by_codeset;
+
 my $hero;
 my $game_config;
 
@@ -534,15 +538,27 @@ sub read_input_data {
                 };
                 next;
             }
-            if ( $line =~ /^GAME_FUNCTIONS\s+(\w.*)$/ ) {
+            if ( $line =~ /^GAME_FUNCTION\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = $1;
-                foreach my $a ( split( /\s+/, $args ) ) {
-                    $a =~ s/^\s*//g;	# remove leading and trailing blanks
-                    $a =~ s/\s*$//g;
-                    my ($k,$v) = split( /=/, $a );
-                    $game_config->{'game_functions'}{ lc($k) } = $v;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                my $codeset = $item->{'codeset'} || 0;
+                $item->{'codeset'} = $codeset;
+                if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
+                    $codeset_functions_by_codeset{ $codeset } = [];
                 }
+
+                my $global_index = scalar( @all_codeset_functions );
+                $item->{'global_index'} = $global_index;
+                my $local_index = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+                $item->{'local_index'} = $local_index;
+
+                $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
+                push @all_codeset_functions, $item;
+                push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
                 next;
             }
             if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
@@ -1537,13 +1553,13 @@ sub generate_game_functions {
 
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ } )
+            sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ }{'name'} )
         } keys %{ $game_config->{'game_functions'} } );
     push @h_game_data_lines, "\n\n";
 
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ } )
+            sprintf( "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ }{'name'} )
         } keys %{ $game_config->{'game_functions'} }
     );
 
@@ -1935,6 +1951,7 @@ sub generate_c_home_header {
 
 #include "rage1/inventory.h"
 #include "rage1/game_state.h"
+#include "rage1/codeset.h"
 
 #include "game_data.h"
 
@@ -2390,7 +2407,31 @@ sub generate_codesets {
 
 EOF_CODESET_1
 ;
-    push @h_game_data_lines, "#define	NUM_CODESETS	0\n";
+    push @h_game_data_lines, sprintf( "#define	NUM_CODESETS	%d\n", scalar( keys %codeset_functions_by_codeset ) );
+    push @c_game_data_lines, <<EOF_CODESET_3
+
+//////////////////////////////////////////
+// CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_3
+;
+
+    push @c_game_data_lines, sprintf( "struct codeset_function_info_s all_codeset_functions[ %d ] = { \n",
+        scalar( @all_codeset_functions )
+    );
+    foreach my $function ( @all_codeset_functions ) {
+        push @c_game_data_lines,  sprintf( "{ .codeset_num = %d, .local_function_num = %d },\n",
+            $function->{'codeset'},
+            $function->{'local_index'},
+        );
+        push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%s	(%d)\n",
+            uc( $function->{'name'} ),
+            $function->{'global_index'},
+        );
+    }
+    push @c_game_data_lines, "\n};\n";
+
     push @h_game_data_lines, <<EOF_CODESET_2
 
 //////////////////////////////////////////
@@ -2398,6 +2439,15 @@ EOF_CODESET_1
 //////////////////////////////////////////
 
 EOF_CODESET_2
+;
+
+    push @c_game_data_lines, <<EOF_CODESET_4
+
+//////////////////////////////////////////
+// END OF CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_4
 ;
 }
 
@@ -2603,18 +2653,21 @@ sub dump_internal_data {
         die "Could not open $dump_file for writing\n";
 
     my $all_state = {
-        btiles			=> \@all_btiles,
-        btile_name_to_index	=> \%btile_name_to_index,
-        screens			=> \@all_screens,
-        screen_name_to_index	=> \%screen_name_to_index,
-        sprites			=> \@all_sprites,
-        sprite_name_to_index	=> \%sprite_name_to_index,
-        all_items		=> \@all_items,
-        item_name_to_index	=> \%item_name_to_index,
-        all_rules		=> \@all_rules,
-        hero			=> $hero,
-        game_config		=> $game_config,
-        dataset_dependency	=> \%dataset_dependency,
+        btiles				=> \@all_btiles,
+        btile_name_to_index		=> \%btile_name_to_index,
+        screens				=> \@all_screens,
+        screen_name_to_index		=> \%screen_name_to_index,
+        sprites				=> \@all_sprites,
+        sprite_name_to_index		=> \%sprite_name_to_index,
+        all_items			=> \@all_items,
+        item_name_to_index		=> \%item_name_to_index,
+        all_rules			=> \@all_rules,
+        hero				=> $hero,
+        game_config			=> $game_config,
+        dataset_dependency		=> \%dataset_dependency,
+        all_codeset_functions		=> \@all_codeset_functions,
+        codeset_function_name_to_index	=> \%codeset_function_name_to_index,
+        codeset_functions_by_codeset	=> \%codeset_functions_by_codeset,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
