@@ -3,11 +3,18 @@
 #include "rage1/map.h"
 
 void my_user_init(void) {
+    canary[0] = 'C';
+    canary[1] = 'a';
+    canary[2] = 'N';
+    canary[3] = 'a';
+    canary[4] = 'R';
+    canary[5] = 'y';
 }
 
 void my_user_game_init(void) {
 }
 
+uint8_t canary[6];
 void my_user_game_loop(void) {
 //   debug_out( "\nDBG:" ); debug_out( itohex( debug_flags ) );
 //   debug_out( "\nDBG:" ); debug_out( i8toa( game_state.hero.num_graphic ) );
