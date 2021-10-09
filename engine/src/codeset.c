@@ -56,7 +56,7 @@ void codeset_call_function( uint8_t global_function_num ) {
     memory_switch_bank( codeset_info[ f->codeset_num ].bank_num );
 
     // call the function
-    codeset_assets->functions[ f->local_function_num ]();
+    ( * ( codeset_function_t ) codeset_assets->functions[ f->local_function_num ] )();
 
     // switch back to bank 0
     memory_switch_bank( 0 );

@@ -2,6 +2,7 @@
 #include "rage1/game_state.h"
 #include "rage1/map.h"
 
+uint8_t canary[6] = { 1,2,3,4,5,6 };
 void my_user_init(void) {
     canary[0] = 'C';
     canary[1] = 'a';
@@ -14,7 +15,6 @@ void my_user_init(void) {
 void my_user_game_init(void) {
 }
 
-uint8_t canary[6];
 void my_user_game_loop(void) {
 //   debug_out( "\nDBG:" ); debug_out( itohex( debug_flags ) );
 //   debug_out( "\nDBG:" ); debug_out( i8toa( game_state.hero.num_graphic ) );

@@ -27,7 +27,7 @@
 // type definitions for codeset functions:
 
 // general codeset function - this can be called any time
-typedef void (*codeset_function_t)( void );
+typedef void (*codeset_function_t)(void);
 
 // struct for codeset local info: there is only one instance of this
 // structure on each codeset and it goes at a fixed address of 0xC000
@@ -41,7 +41,7 @@ struct codeset_assets_s {
 
     // these are the codeset functions themselves
     uint8_t			num_functions;
-    codeset_function_t		*functions;
+    void			**functions;
 
 };
 // global pointer to the codeset assets struct - the pointer itself does not

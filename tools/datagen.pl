@@ -21,8 +21,9 @@ use Data::Compare;
 use File::Path qw( make_path );
 use File::Copy;
 
-# final destination address for compilation of datasets
-my $dataset_base_address = 0x5b00;
+# final destination address for compilation of datasets and codesets
+my $dataset_base_address = 0x5B00;
+my $codeset_base_address = 0xC000;
 
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
@@ -64,7 +65,7 @@ my $build_dir;
 
 # codesets have their source files in their own directory for each codeset
 my $codeset_src_dir_format	= 'codesets/codeset_%s.src';
-my $c_file_codeset_format	= 'codeset_%s.c';
+my $c_file_codeset_format	= 'codesets/codeset_%s.src/AAAmain.c';
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
@@ -2474,12 +2475,61 @@ sub generate_codesets {
 
     # for each codeset except 'home' codeset
     foreach my $codeset ( grep { "$_" ne 'home' } keys %codeset_functions_by_codeset ) {
+
+        my $num_codeset_functions = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+
+        # add the needed source lines to the 00_main.c file for this
+        # codeset: the main codeset_assets_s struct at the beginning, the
+        # function table and e.g.  tiles used by these functions
+        push @{ $c_codeset_lines->{ $codeset } }, <<EOF_CODESET_LINES_MAIN
+#include <stdlib.h>
+
+#include "features.h"
+
+#include "rage1/codeset.h"
+
+#include "game_data.h"
+
+///////////////////////////////////////////////////////////////////////////////
+// Forced ORG address trick by Dom - The following does not generate any
+// code but forces the linking to be at the indicated base address.  This is
+// needed because SDCC does not allow relocating the DATA section.  See:
+// https://z88dk.org/forum/viewtopic.php?p=19796#p19796
+///////////////////////////////////////////////////////////////////////////////
+
+static void __orgit(void) __naked {
+__asm
+    org $codeset_base_address
+__endasm;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Asset index for this bank - This structure must be the first data item
+// generated in the bank: it contains pointers to the rest of the bank data
+// items!
+///////////////////////////////////////////////////////////////////////////////
+
+extern void *codeset_functions[];
+struct codeset_assets_s all_assets_codeset_$codeset = {
+    .game_state		= NULL,
+    .banked_assets	= NULL,
+    .home_assets	= NULL,
+    .num_functions	= $num_codeset_functions,
+    .functions		= &codeset_functions[0],
+};
+
+EOF_CODESET_LINES_MAIN
+;
+
         # create the destination directory
         my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
-        make_path( $dst_dir ) or
-            die "** Could not create destination directory $dst_dir\n";
+        if ( ! -d $dst_dir ) {
+            make_path( $dst_dir ) or
+                die "** Could not create destination directory $dst_dir\n";
+        }
 
         # copy the source files for functions associated to this codeset to the dest dir
+        # and add the needed lines to the main.c file
         foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
             my $src_file = $game_src_dir . '/' . $function->{'file'};
             my $dst_file = $dst_dir . '/' . $function->{'file'}; 
@@ -2487,8 +2537,18 @@ sub generate_codesets {
                 die "** Could not copy $src_file to $dst_file\n";
         }
 
-        # add the needed source lines to the .c and .h files for that codeset if needed
-        # e.g. tiles used by these functions
+        # add extern codeset function declarations
+        push @{ $c_codeset_lines->{ $codeset } }, "// codeset functions table\n";
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            push @{ $c_codeset_lines->{ $codeset } }, sprintf( "extern void %s( void );\n", $function->{'name'} );
+        }
+
+        # add the codeset function table
+        push @{ $c_codeset_lines->{ $codeset } }, "void *codeset_functions[ $num_codeset_functions ] = {\n";
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            push @{ $c_codeset_lines->{ $codeset } }, sprintf( "\t&%s,\n", $function->{'name'} );
+        }
+        push @{ $c_codeset_lines->{ $codeset } }, "};\n\n";
     }
 }
 
@@ -2550,6 +2610,15 @@ sub output_game_data {
         open( $output_fh, ">", $c_file_dataset ) or
             die "Could not open $c_file_dataset for writing\n";
         print $output_fh join( "", @{ $c_dataset_lines->{ $i } } );
+        close $output_fh;
+    }
+
+    # output .c file for banked codesets
+    foreach my $i ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
+        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $i );
+        open( $output_fh, ">", $c_file_codeset ) or
+            die "Could not open $c_file_codeset for writing\n";
+        print $output_fh join( "", @{ $c_codeset_lines->{ $i } } );
         close $output_fh;
     }
 
