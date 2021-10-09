@@ -41,7 +41,7 @@ struct codeset_assets_s {
 
     // these are the codeset functions themselves
     uint8_t			num_functions;
-    void			**functions;
+    codeset_function_t		*functions;
 
 };
 // global pointer to the codeset assets struct - the pointer itself does not

@@ -2509,7 +2509,7 @@ __endasm;
 // items!
 ///////////////////////////////////////////////////////////////////////////////
 
-extern void *codeset_functions[];
+extern codeset_function_t codeset_functions[];
 struct codeset_assets_s all_assets_codeset_$codeset = {
     .game_state		= NULL,
     .banked_assets	= NULL,
@@ -2544,7 +2544,7 @@ EOF_CODESET_LINES_MAIN
         }
 
         # add the codeset function table
-        push @{ $c_codeset_lines->{ $codeset } }, "void *codeset_functions[ $num_codeset_functions ] = {\n";
+        push @{ $c_codeset_lines->{ $codeset } }, "codeset_function_t codeset_functions[ $num_codeset_functions ] = {\n";
         foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
             push @{ $c_codeset_lines->{ $codeset } }, sprintf( "\t&%s,\n", $function->{'name'} );
         }
