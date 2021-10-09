@@ -447,7 +447,7 @@ BEGIN_GAME_CONFIG
         SOUND           CONTROLLER_SELECTED=5
         SOUND           GAME_WON=6
         SOUND           GAME_OVER=10
-        GAME_FUNCTIONS  MENU=my_menu_screen INTRO=my_intro_screen GAME_END=my_game_end_screen GAME_OVER=my_game_over_screen
+        GAME_FUNCTION   TYPE=MENU NAME=my_menu_screen FILE=my_menu_screen.c CODESET=1
         GAME_AREA       TOP=1 LEFT=1 BOTTOM=21 RIGHT=30
         LIVES_AREA      TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
         INVENTORY_AREA  TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
@@ -473,23 +473,31 @@ END_GAME_CONFIG
   * `CONTROLLER_SELECTED`: controller is selected in main menu
   * `GAME_WON`: game is ended successfully
   * `GAME_OVER`: game is over because lives=0
-* `GAME_FUNCTIONS`: defines the names of special game functions. These
+* `GAME_FUNCTION`: defines a special game function. These
   functions must be included in sources under `game_src` directory. All
   these functions take and return no arguments, and must work over the
   global `game_state` variable. Arguments:
-  * `MENU`: the main menu, must end with the correct controller selected
-  * `INTRO`: intro screen, shown just after the menu and before beginning
-  gameplay
-  * `GAME_END`: this function will run when the game is ended successfully,
-  i.e. the hero has completed the game objectives
-  * `GAME_OVER`: this runs when the hero has lost all of his/her lives
-  without completing the game objectives
-  * `USER_INIT`: this function runs once when the game has just finished
-  loading. It is a one-time initialization.
-  * `USER_GAME_INIT`: this function runs once when a new gameplay is
-  started.
-  * `USER_GAME_LOOP`: this function runs once in every game loop. Use with
-  care, this function can hurt performance badly!
+  * `TYPE`: the type of function. Possible values:
+    * `MENU`: the main menu, must end with the correct controller selected
+    * `INTRO`: intro screen, shown just after the menu and before beginning
+    gameplay
+    * `GAME_END`: this function will run when the game is ended successfully,
+    i.e. the hero has completed the game objectives
+    * `GAME_OVER`: this runs when the hero has lost all of his/her lives
+    without completing the game objectives
+    * `USER_INIT`: this function runs once when the game has just finished
+    loading. It is a one-time initialization.
+    * `USER_GAME_INIT`: this function runs once when a new gameplay is
+    started.
+    * `USER_GAME_LOOP`: this function runs once in every game loop. Use with
+    care, this function can hurt performance badly!
+  * `NAME`: the function name. Must follow C function naming conventions
+  * `FILE`: (optional) the file name where the function is. If not
+    specified, the name of the file will be assumed the same as the function
+    name, plus a `.c` extension
+  * `CODESET`: (optional) the codeset where the function must reside. If not
+    specified, or we are compiling for 48K model, all GAME_FUNCTIONs will go
+    into lowmem area
 * `GAME_AREA`, `LIVES_ARES`, `INVENTORY_AREA`, `DEBUG_AREA`: definitions for
 the different screen areas used by the game. All of then accept the
 following aguments:

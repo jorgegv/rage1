@@ -39,6 +39,9 @@ The design constraints for a CODESET are:
 
 - The CODESET is loaded at a fixed address of 0xC000
 
+- If no CODESET functions are included in the game, the CODESET
+  infrastructure should not be compiled in.
+
 Beware: SP1 code and data (for example) are stored in low memory + bank 0,
 so they can't be called from any CODESET!
 
@@ -47,10 +50,10 @@ so they can't be called from any CODESET!
 - A CODESET owns a memory bank. Banks dedicated to CODESETs cannot be used
   for DATASETs.
 
-- Similar to DATASETs, each CODESET has at address 0xC000 a data of type
-  `struct codeset_assets_s` which contains info about the assets in the
-  CODESET: pointers to low memory data structs, and a table of the functions
-  that are callable from outside the CODESET.
+- Similar to DATASETs, each CODESET has at address 0xC000 a data structure
+  of type `struct codeset_assets_s` which contains info about the assets in
+  the CODESET: pointers to low memory data structs, and a table of the
+  functions that are callable from outside the CODESET.
 
 - All CODESET functions have the same prototype: void f(void);
 
@@ -60,7 +63,7 @@ so they can't be called from any CODESET!
 
 - CODESET functions receive no parameters and return void.  All accesses to
   low memory data from the CODESET functions has to be done via the pointers
-  set up when the init function was called.
+  set up in its assets structure.
 
 - A global table `all_codeset_functions`is generated in low memory with data
   for all the CODESET functions in all CODESETS.  A global index is assigned
