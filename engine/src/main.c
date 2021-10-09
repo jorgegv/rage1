@@ -27,7 +27,9 @@ void init_program(void) {
    init_sp1();
    init_interrupts();
    init_datasets();
+#ifdef	BUILD_FEATURE_CODESETS
    init_codesets();
+#endif	// BUILD_FEATURE_CODESETS
    init_controllers();
    init_hero();
    init_bullets();

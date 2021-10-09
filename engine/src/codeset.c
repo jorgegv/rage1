@@ -18,6 +18,8 @@
 
 #include "game_data.h"
 
+#ifdef BUILD_FEATURE_CODESETS
+
 // this should be here, but we need to ensure that it is _always_ in low
 // memory below 0xC000, so we put it in lowmem/asmdata.asm
 // struct codeset_assets_s *codeset_assets;
@@ -59,3 +61,5 @@ void codeset_call_function( uint8_t global_function_num ) {
     // switch back to bank 0
     memory_switch_bank( 0 );
 }
+
+#endif // BUILD_FEATURE_CODESETS
