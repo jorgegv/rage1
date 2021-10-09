@@ -554,20 +554,25 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $codeset = $item->{'codeset'} || 0;
-                $item->{'codeset'} = $codeset;
-                if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
-                    $codeset_functions_by_codeset{ $codeset } = [];
+                if ( not defined( $item->{'codeset'} ) ) {
+                    $item->{'codeset'} = 'home';
+                }
+                my $codeset = $item->{'codeset'};
+                # only add it to the codeset functions lists if it is not in the home codeset
+                if ( $codeset ne 'home' ) {
+                    if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
+                        $codeset_functions_by_codeset{ $codeset } = [];
+                    }
+                    my $global_index = scalar( @all_codeset_functions );
+                    $item->{'global_index'} = $global_index;
+                    my $local_index = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+                    $item->{'local_index'} = $local_index;
+                    push @all_codeset_functions, $item;
+                    push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
                 }
 
-                my $global_index = scalar( @all_codeset_functions );
-                $item->{'global_index'} = $global_index;
-                my $local_index = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
-                $item->{'local_index'} = $local_index;
-
+                # add the function to the game config
                 $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
-                push @all_codeset_functions, $item;
-                push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
                 next;
             }
             if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
@@ -2426,21 +2431,26 @@ EOF_CODESET_1
 EOF_CODESET_3
 ;
 
-    push @c_game_data_lines, sprintf( "struct codeset_function_info_s all_codeset_functions[ %d ] = { \n",
-        scalar( @all_codeset_functions )
-    );
-    foreach my $function ( @all_codeset_functions ) {
-        push @c_game_data_lines,  sprintf( "{ .codeset_num = %d, .local_function_num = %d },\n",
-            $function->{'codeset'},
-            $function->{'local_index'},
+    if ( scalar( @all_codeset_functions ) ) {
+        add_build_feature( 'CODESETS' );
+        push @c_game_data_lines, sprintf( "struct codeset_function_info_s all_codeset_functions[ %d ] = { \n",
+            scalar( @all_codeset_functions )
         );
-        push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%s	(%d)\n",
-            uc( $function->{'name'} ),
-            $function->{'global_index'},
-        );
+        foreach my $function ( @all_codeset_functions ) {
+            push @c_game_data_lines,  sprintf( "{ .codeset_num = %d, .local_function_num = %d },\n",
+                $function->{'codeset'},
+                $function->{'local_index'},
+            );
+            push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%s	(%d)\n",
+                uc( $function->{'name'} ),
+                $function->{'global_index'},
+            );
+        }
+        push @c_game_data_lines, "\n};\n";
+    } else {
+        push @c_game_data_lines, "// No codesets defined\n";
+        push @h_game_data_lines, "// No codesets defined\n";
     }
-    push @c_game_data_lines, "\n};\n";
-
     push @h_game_data_lines, <<EOF_CODESET_2
 
 //////////////////////////////////////////
@@ -2462,8 +2472,8 @@ EOF_CODESET_4
 
 sub generate_codesets {
 
-    # for each codeset
-    foreach my $codeset ( keys %codeset_functions_by_codeset ) {
+    # for each codeset except 'home' codeset
+    foreach my $codeset ( grep { "$_" ne 'home' } keys %codeset_functions_by_codeset ) {
         # create the destination directory
         my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
         make_path( $dst_dir ) or

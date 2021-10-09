@@ -71,6 +71,7 @@ sub gather_codesets {
 sub layout_dataset_binaries {
     my ( $layout, $bins ) = @_;
 
+
     # start with the first bank, place the binaries on the current bank
     # until it is full, then continue with the next until no more banks o no
     # more binaries left
@@ -100,8 +101,6 @@ sub layout_dataset_binaries {
         push @{ $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
         $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
     }
-
-    return $layout;
 }
 
 sub layout_codeset_binaries {
@@ -130,8 +129,6 @@ sub layout_codeset_binaries {
         push @{ $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
         $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
     }
-
-    return $layout;
 }
 
 sub generate_bank_binaries {
@@ -221,7 +218,11 @@ sub generate_codeset_info_code_asm {
     my ( $layout, $codesets, $outdir ) = @_;
     my $csmap = $outdir . '/' . $codeset_info_name;
 
-    my $num_codesets = scalar( @$codesets );
+    my $num_codesets = scalar( keys %$codesets );
+    if ( $num_codesets == 0 ) {
+        print "  No codesets defined\n";
+        return;
+    }
 
     print "  Generating $codeset_info_name...";
 
@@ -318,11 +319,9 @@ if ( not scalar( keys %$datasets ) ) {
 }
 
 my $codesets = gather_codesets( $input_dir_cs, $bin_ext );
-if ( not scalar( keys %$codesets ) ) {
-    die "** Error: no codeset binaries found in $input_dir_cs\n";
-}
+# there may be _no_ codesets after all, so no error in that case
 
-my $bank_layout;
+my $bank_layout = { };
 layout_dataset_binaries( $bank_layout, $datasets );
 layout_codeset_binaries( $bank_layout, $codesets );
 
