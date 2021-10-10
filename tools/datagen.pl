@@ -567,7 +567,6 @@ sub read_input_data {
                 if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
                     $codeset_functions_by_codeset{ $codeset } = [];
                 }
-                $item->{'global_index'} = scalar( @all_codeset_functions );
                 $item->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
 
                 # add the function to the codeset lists
@@ -2424,7 +2423,7 @@ sub generate_global_codeset_data {
 
 EOF_CODESET_1
 ;
-    push @h_game_data_lines, sprintf( "#define	NUM_CODESETS	%d\n\n", scalar( keys %codeset_functions_by_codeset ) );
+    push @h_game_data_lines, sprintf( "#define	NUM_CODESETS	%d\n\n", scalar( grep { "$_" ne 'home' } keys %codeset_functions_by_codeset ) );
     push @c_game_data_lines, <<EOF_CODESET_3
 
 //////////////////////////////////////////
@@ -2436,25 +2435,27 @@ EOF_CODESET_3
 
     my @non_home_codeset_functions = grep { $_->{'codeset'} ne 'home' } @all_codeset_functions;
 
-    if ( scalar( @non_home_codeset_functions ) ) {
+    if ( scalar( @non_home_codeset_functions ) and ( $game_config->{'zx_target'} ne '48' ) ) {
         add_build_feature( 'CODESETS' );
         push @c_game_data_lines, "// global codeset functions table\n";
         push @h_game_data_lines, "// global indexes of codeset functions\n";
 
         push @c_game_data_lines, sprintf( "struct codeset_function_info_s all_codeset_functions[ %d ] = { \n",
-            scalar( @all_codeset_functions )
+            scalar( @non_home_codeset_functions )
         );
+        my $index = 0;
         foreach my $function ( @non_home_codeset_functions ) {
-            push @c_game_data_lines,  sprintf( "{ .codeset_num = %d, .local_function_num = %d },\n",
+            push @c_game_data_lines,  sprintf( "\t{ .codeset_num = %d, .local_function_num = %d },\n",
                 $function->{'codeset'},
                 $function->{'local_index'},
             );
             push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%s	(%d)\n",
                 uc( $function->{'name'} ),
-                $function->{'global_index'},
+                $index,
             );
+            $index++;
         }
-        push @c_game_data_lines, "\n};\n";
+        push @c_game_data_lines, "};\n";
         push @h_game_data_lines, "\n";
     } else {
         push @c_game_data_lines, "// No codesets defined\n";
@@ -2467,7 +2468,7 @@ EOF_CODESET_3
     # 48K mode they will be resolved to a regular function call
 
     push @h_game_data_lines, "// codeset function call macros for each function\n";
-    foreach my $function ( @non_home_codeset_functions ) {
+    foreach my $function ( @all_codeset_functions ) {
         if ( ( $game_config->{'zx_target'} eq '48' ) or ( $function->{'codeset'} eq 'home' ) ) {
             # macros for 48K mode
             push @h_game_data_lines, sprintf(
