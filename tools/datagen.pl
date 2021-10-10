@@ -65,7 +65,8 @@ my $build_dir;
 
 # codesets have their source files in their own directory for each codeset
 my $codeset_src_dir_format	= 'codesets/codeset_%s.src';
-my $c_file_codeset_format	= 'codesets/codeset_%s.src/AAAmain.c';
+my $c_file_codeset_format	= 'codesets/codeset_%s.src/main.c';
+my $asm_file_codeset_format	= 'codesets/codeset_%s.src/codeset_data.asm';
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
@@ -74,6 +75,7 @@ my $dump_file = 'internal_state.dmp';
 my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
 my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
+my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
 my @h_build_features_lines;
 my $forced_build_target;
@@ -2478,9 +2480,32 @@ sub generate_codesets {
 
         my $num_codeset_functions = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
 
-        # add the needed source lines to the 00_main.c file for this
+        # add the needed source lines to the C and ASM files for this
         # codeset: the main codeset_assets_s struct at the beginning, the
         # function table and e.g.  tiles used by these functions
+        push @{ $asm_codeset_lines->{ $codeset } }, <<EOF_CODESET_LINES_MAIN_ASM
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; We need this ASM file to force the linking of the codeset_assets_s
+;; structure exactly at start of the binary (0xC000)
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	section	code_compiler
+	org	$codeset_base_address
+
+extern	_codeset_functions
+
+_all_assets_codeset_$codeset:
+	dw	0			;; .game_state
+	dw	0			;; .banked_assets
+	dw	0			;; .home_assets
+	db	$num_codeset_functions			;; .num_functions
+	dw	_codeset_functions	;; .functions
+
+EOF_CODESET_LINES_MAIN_ASM
+;
+
         push @{ $c_codeset_lines->{ $codeset } }, <<EOF_CODESET_LINES_MAIN
 #include <stdlib.h>
 
@@ -2489,34 +2514,6 @@ sub generate_codesets {
 #include "rage1/codeset.h"
 
 #include "game_data.h"
-
-///////////////////////////////////////////////////////////////////////////////
-// Forced ORG address trick by Dom - The following does not generate any
-// code but forces the linking to be at the indicated base address.  This is
-// needed because SDCC does not allow relocating the DATA section.  See:
-// https://z88dk.org/forum/viewtopic.php?p=19796#p19796
-///////////////////////////////////////////////////////////////////////////////
-
-static void __orgit(void) __naked {
-__asm
-    org $codeset_base_address
-__endasm;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Asset index for this bank - This structure must be the first data item
-// generated in the bank: it contains pointers to the rest of the bank data
-// items!
-///////////////////////////////////////////////////////////////////////////////
-
-extern codeset_function_t codeset_functions[];
-struct codeset_assets_s all_assets_codeset_$codeset = {
-    .game_state		= NULL,
-    .banked_assets	= NULL,
-    .home_assets	= NULL,
-    .num_functions	= $num_codeset_functions,
-    .functions		= &codeset_functions[0],
-};
 
 EOF_CODESET_LINES_MAIN
 ;
@@ -2619,6 +2616,15 @@ sub output_game_data {
         open( $output_fh, ">", $c_file_codeset ) or
             die "Could not open $c_file_codeset for writing\n";
         print $output_fh join( "", @{ $c_codeset_lines->{ $i } } );
+        close $output_fh;
+    }
+
+    # output .asm file for banked codesets
+    foreach my $i ( sort grep { /\d+/ } keys %$asm_codeset_lines ) {
+        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $i );
+        open( $output_fh, ">", $asm_file_codeset ) or
+            die "Could not open $asm_file_codeset for writing\n";
+        print $output_fh join( "", @{ $asm_codeset_lines->{ $i } } );
         close $output_fh;
     }
 
