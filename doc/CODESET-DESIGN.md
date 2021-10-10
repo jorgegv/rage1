@@ -163,3 +163,57 @@ Makefile changes:
 - The Makefile has rules and targets similar to those for the DATASET
   builds, which generate more BANK_N.BIN and associated .TAP files which are
   used to build the final TAP.
+
+## Implementation Notes
+
+What DATAGEN must do for the combination of 2 different variables:
+
+- 48K / 128K mode compilation
+
+- GAME_FUNCTION directives have/do not have CODESET parameter
+
+So, 4 different cases:
+
+### Case 1: 48K MODE + NO CODESET in GAME_FUNCTION
+
+- In 48K mode, codesets are not used
+
+- Since no CODESET is specified, all GAME_FUNCTIONs go into `home` codeset
+  (low memory)
+
+- All codeset function call macros must be resolved to regular function calls
+
+- No loss of efficiency, everything is resolved at C macro level
+
+### Case 2: 48K MODE + CODESET in GAME_FUNCTION
+
+- In 48K mode, codesets are not used
+
+- Each GAME_FUNCTION has an associated codeset. The ones that do not
+  have a codeset go into `home` codeset (low memory)
+
+- Since codesets make no sense in 48K mode, they should be ignored when
+  generating code in 48K mode
+
+- All codeset function call macros must be resolved to regular function calls
+
+- No loss of efficiency, everything is resolved at C macro level
+
+### Cases 3 and 4: 128K MODE + CODESET/NO CODESET in GAME_FUNCTION
+
+- In 128K mode, codesets ARE used
+
+- Each GAME_FUNCTION has an associated codeset. The ones that do not
+  have a codeset go into `home` codeset (low memory)
+
+- For functions in `home` codeset, their function call macros must resolve
+  to a direct function call.  For functions in other codesets, their
+  function call macros must resolve to a call to codeset_call_function()
+
+- Slight efficiency loss when calling codeset functions, since a bank switch
+  is needed before and after the call
+
+- If no GAME_FUNCTIONs have an associated CODESET, they all go into the
+  `home` codeset, the BUILD_FEATURE_CODESETS macro is not defined, all
+  codeset infrastructure is not compiled, and all codeset function calls
+  must be resolved to regular function calls, so no loss of efficiency.
