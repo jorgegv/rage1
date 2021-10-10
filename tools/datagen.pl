@@ -2468,19 +2468,20 @@ EOF_CODESET_3
 
     push @h_game_data_lines, "// codeset function call macros for each function\n";
     foreach my $function ( @non_home_codeset_functions ) {
-        if ( $function->{'codeset'} ne 'home' ) {
-            # macros for 128K mode
-            push @h_game_data_lines, sprintf(
-                "#define CALL_GAME_FUNCTION_%s()	(codeset_call_function( CODESET_FUNCTION_%s ))\n",
-                uc( $function->{'name'} ),
-                uc( $function->{'name'} ),
-            );
-        } else {
+        if ( ( $game_config->{'zx_target'} eq '48' ) or ( $function->{'codeset'} eq 'home' ) ) {
             # macros for 48K mode
             push @h_game_data_lines, sprintf(
                 "#define CALL_GAME_FUNCTION_%s()    (%s())\n",
                 uc( $function->{'name'} ),
                 $function->{'name'},
+            );
+        } else {
+            # macros for 128K mode
+            add_build_feature( 'CODESETS' );
+            push @h_game_data_lines, sprintf(
+                "#define CALL_GAME_FUNCTION_%s()	(codeset_call_function( CODESET_FUNCTION_%s ))\n",
+                uc( $function->{'name'} ),
+                uc( $function->{'name'} ),
             );
         }
     }
