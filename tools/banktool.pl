@@ -121,13 +121,13 @@ sub layout_codeset_binaries {
             die "** Error: no more banks to fill, too many codesets\n";
         }
 
-        # add the bank and offset info to the codeset. Offset is the curent pos in the bank
+        # add the bank info to the codeset and update the bank layout
         $bin->{'bank'} = $codeset_valid_banks[ $current_bank_index ];
-        $current_bank_index++;
-
-        # then update the bank layout
         push @{ $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
         $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
+
+        # update used bank index
+        $current_bank_index++;
     }
 }
 
@@ -303,22 +303,21 @@ sub generate_basic_loader {
 
 # parse command options
 our( $opt_i, $opt_o, $opt_b, $opt_s, $opt_l, $opt_c );
-getopts("i:o:b:s:l:c:");
+getopts("i:o:s:l:c:");
 ( defined( $opt_i ) and defined( $opt_o ) and defined( $opt_c ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -c <codeset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-b <.bin_ext>] [-l <lowmem_output_dir>]\n";
+    die "usage: $0 -i <dataset_bin_dir> -c <codeset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-l <lowmem_output_dir>]\n";
 
 # if $lowmem_output_dir is not specified, use same as $output_dir
 my ( $input_dir_ds, $input_dir_cs, $output_dir, $lowmem_output_dir ) = ( $opt_i, $opt_c, $opt_o, $opt_l || $opt_o );
-my $bin_ext = $opt_b || '.bin';
 
 my $bank_switcher_binary = $opt_s;
 
-my $datasets = gather_datasets( $input_dir_ds, $bin_ext );
+my $datasets = gather_datasets( $input_dir_ds, '.zx0' );
 if ( not scalar( keys %$datasets ) ) {
     die "** Error: no dataset binaries found in $input_dir_ds\n";
 }
 
-my $codesets = gather_codesets( $input_dir_cs, $bin_ext );
+my $codesets = gather_codesets( $input_dir_cs, '.bin' );
 # there may be _no_ codesets after all, so no error in that case
 
 my $bank_layout = { };
