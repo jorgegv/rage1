@@ -13,6 +13,12 @@ void my_user_init(void) {
 }
 
 void my_user_game_init(void) {
+    canary[0] = 'S';
+    canary[1] = 'p';
+    canary[2] = 'A';
+    canary[3] = 'r';
+    canary[4] = 'O';
+    canary[5] = 'w';
 }
 
 void my_user_game_loop(void) {
