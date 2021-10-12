@@ -29,6 +29,7 @@
 #include "rage1/enemy.h"
 #include "rage1/hero.h"
 #include "rage1/dataset.h"
+#include "rage1/codeset.h"
 
 #include "game_data.h"
 

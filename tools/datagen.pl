@@ -1567,16 +1567,24 @@ EOF_ITEMS2
 sub generate_game_functions {
     push @h_game_data_lines, "// game config\n";
 
+    # generate extern declarations, only for functions in 'home' codeset
     push @h_game_data_lines, join( "\n", 
         map {
             sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ }{'name'} )
-        } keys %{ $game_config->{'game_functions'} } );
+        } grep {
+            ( $game_config->{'zx_target'} eq '48' ) or
+            ( $game_config->{'game_functions'}{ $_ }{'codeset'} eq 'home' )
+        } sort keys %{ $game_config->{'game_functions'} } );
     push @h_game_data_lines, "\n\n";
 
+    # generate macro calls for all functions
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ }{'name'} )
-        } keys %{ $game_config->{'game_functions'} }
+            sprintf( "#define RUN_GAME_FUNC_%-30s (%s)",
+                uc($_) . '()',
+                $game_config->{'game_functions'}{ $_ }{'codeset_function_call_macro'},
+            )
+        } sort keys %{ $game_config->{'game_functions'} }
     );
 
     push @h_game_data_lines, "\n\n";
@@ -2469,22 +2477,26 @@ EOF_CODESET_3
 
     push @h_game_data_lines, "// codeset function call macros for each function\n";
     foreach my $function ( @all_codeset_functions ) {
+        my $macro;
         if ( ( $game_config->{'zx_target'} eq '48' ) or ( $function->{'codeset'} eq 'home' ) ) {
             # macros for 48K mode
             push @h_game_data_lines, sprintf(
-                "#define CALL_GAME_FUNCTION_%s()    (%s())\n",
-                uc( $function->{'name'} ),
+                "#define CALL_GAME_FUNCTION_%-30s  (%s())\n",
+                uc( $function->{'name'} ) . '()',
                 $function->{'name'},
             );
         } else {
             # macros for 128K mode
             add_build_feature( 'CODESETS' );
             push @h_game_data_lines, sprintf(
-                "#define CALL_GAME_FUNCTION_%s()	(codeset_call_function( CODESET_FUNCTION_%s ))\n",
-                uc( $function->{'name'} ),
+                "#define CALL_GAME_FUNCTION_%-30s  (codeset_call_function( CODESET_FUNCTION_%s ))\n",
+                uc( $function->{'name'} ) . '()',
                 uc( $function->{'name'} ),
             );
         }
+        $function->{'codeset_function_call_macro'} = sprintf(
+            'CALL_GAME_FUNCTION_%s()', uc( $function->{'name'} )
+        );
     }
 
     push @h_game_data_lines, <<EOF_CODESET_2
@@ -2613,13 +2625,16 @@ sub generate_game_data {
     generate_items;
     generate_global_screen_data;
     generate_game_areas;
-    generate_game_functions;
     generate_game_config;
     generate_misc_data;
 
     # codeset items
     generate_codesets;
     generate_global_codeset_data;
+
+    # this must be generated after codesets, it needs the codeset function
+    # call macros
+    generate_game_functions;
 
     # generate conditional build features
     add_default_build_features;
