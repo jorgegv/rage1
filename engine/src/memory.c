@@ -25,21 +25,23 @@
 
 // Memory allocator settings
 #define MALLOC_HEAP_SIZE        BUILD_MAX_HEAP_SPRITE_USAGE
-#define MALLOC_HEAP_START       ((unsigned char *)(0x8000 - MALLOC_HEAP_SIZE))
 
 // memory init depends on the target
 
+// in 128K mode, heap is at the top of the 0x5B00-0x7FFF area
 #ifdef BUILD_FEATURE_ZX_TARGET_128
-// heap is specifically defined in 128K build
+    #define MALLOC_HEAP_START       ((unsigned char *)(0x8000 - MALLOC_HEAP_SIZE))
+#endif
+
+// in 48K mode, we define a heap in the BSS segment
+#ifdef BUILD_FEATURE_ZX_TARGET_48
+    #define MALLOC_HEAP_START       (&_rage1_heap[0])
+    unsigned char _rage1_heap[ MALLOC_HEAP_SIZE ];
+#endif
+
+// the following code is valid for both modes
 unsigned char *_malloc_heap;
 void init_memory(void) {
     _malloc_heap = MALLOC_HEAP_START;
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
 }
-#endif
-
-#ifdef BUILD_FEATURE_ZX_TARGET_48
-// heap is defined automatically in 48K build
-void init_memory(void) {
-}
-#endif
