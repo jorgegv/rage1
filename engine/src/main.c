@@ -18,6 +18,7 @@
 #include "rage1/game_state.h"
 #include "rage1/debug.h"
 #include "rage1/dataset.h"
+#include "rage1/codeset.h"
 
 #include "game_data.h"
 
@@ -26,6 +27,9 @@ void init_program(void) {
    init_sp1();
    init_interrupts();
    init_datasets();
+#ifdef	BUILD_FEATURE_CODESETS
+   init_codesets();
+#endif	// BUILD_FEATURE_CODESETS
    init_controllers();
    init_hero();
    init_bullets();

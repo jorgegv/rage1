@@ -44,9 +44,21 @@ frame:		db	0
 ;;
 
 public		_banked_assets
-public		_home_assets
-
 _banked_assets:
 		dw	0
+
+public		_home_assets
 _home_assets:
+		dw	0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Global pointer for the codeset assets.  It must go in low memory, so it
+;; is instead included in lowmem/asmdata.asm.  Declaration in codeset.h
+;;
+;; extern struct codeset_assets_s *codeset_assets;
+;;
+
+public		_codeset_assets
+_codeset_assets:
 		dw	0

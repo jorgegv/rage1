@@ -18,9 +18,12 @@ use Data::Dumper;
 use List::MoreUtils qw( zip );
 use Getopt::Std;
 use Data::Compare;
+use File::Path qw( make_path );
+use File::Copy;
 
-# final destination address for compilation of datasets
-my $dataset_base_address = 0x5b00;
+# final destination address for compilation of datasets and codesets
+my $dataset_base_address = 0x5B00;
+my $codeset_base_address = 0xC000;
 
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
@@ -40,6 +43,10 @@ my %item_name_to_index;
 
 my @all_rules;
 
+my @all_codeset_functions;
+my %codeset_function_name_to_index;
+my %codeset_functions_by_codeset;
+
 my $hero;
 my $game_config;
 
@@ -47,11 +54,19 @@ my $game_config;
 my %dataset_dependency;
 
 # file names
-my $c_file_game_data = 'game_data.c';
-my $c_file_dataset_format = 'datasets/dataset_%s.c';
-my $h_file_game_data = 'game_data.h';
-my $h_file_build_features = 'features.h';
+my $c_file_game_data		= 'game_data.c';
+my $c_file_dataset_format	= 'datasets/dataset_%s.c';
+my $h_file_game_data		= 'game_data.h';
+my $h_file_build_features	= 'features.h';
+
 my $output_dest_dir;
+my $game_src_dir;
+my $build_dir;
+
+# codesets have their source files in their own directory for each codeset
+my $codeset_src_dir_format	= 'codesets/codeset_%s.src';
+my $c_file_codeset_format	= 'codesets/codeset_%s.src/main.c';
+my $asm_file_codeset_format	= 'codesets/codeset_%s.src/codeset_data.asm';
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
@@ -59,9 +74,10 @@ my $dump_file = 'internal_state.dmp';
 # output lines for each of the files
 my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
+my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
+my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
 my @h_build_features_lines;
-my $build_dir;
 my $forced_build_target;
 my %conditional_build_features;
 
@@ -534,15 +550,31 @@ sub read_input_data {
                 };
                 next;
             }
-            if ( $line =~ /^GAME_FUNCTIONS\s+(\w.*)$/ ) {
+            if ( $line =~ /^GAME_FUNCTION\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = $1;
-                foreach my $a ( split( /\s+/, $args ) ) {
-                    $a =~ s/^\s*//g;	# remove leading and trailing blanks
-                    $a =~ s/\s*$//g;
-                    my ($k,$v) = split( /=/, $a );
-                    $game_config->{'game_functions'}{ lc($k) } = $v;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # add the needed codeset-related fields.  if a function has
+                # no codeset directive, it goes to the 'home' codeset
+                if ( not defined( $item->{'codeset'} ) ) {
+                    $item->{'codeset'} = 'home';
                 }
+                my $codeset = $item->{'codeset'};
+                if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
+                    $codeset_functions_by_codeset{ $codeset } = [];
+                }
+                $item->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+
+                # add the function to the codeset lists
+                push @all_codeset_functions, $item;
+                push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
+
+                # add the function to the game config
+                $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
                 next;
             }
             if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
@@ -1535,16 +1567,24 @@ EOF_ITEMS2
 sub generate_game_functions {
     push @h_game_data_lines, "// game config\n";
 
+    # generate extern declarations, only for functions in 'home' codeset
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ } )
-        } keys %{ $game_config->{'game_functions'} } );
+            sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ }{'name'} )
+        } grep {
+            ( $game_config->{'zx_target'} eq '48' ) or
+            ( $game_config->{'game_functions'}{ $_ }{'codeset'} eq 'home' )
+        } sort keys %{ $game_config->{'game_functions'} } );
     push @h_game_data_lines, "\n\n";
 
+    # generate macro calls for all functions
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "#define RUN_GAME_FUNC_%-18s (%s)", uc($_), $game_config->{'game_functions'}{ $_ } )
-        } keys %{ $game_config->{'game_functions'} }
+            sprintf( "#define RUN_GAME_FUNC_%-30s (%s)",
+                uc($_) . '()',
+                $game_config->{'game_functions'}{ $_ }{'codeset_function_call_macro'},
+            )
+        } sort keys %{ $game_config->{'game_functions'} }
     );
 
     push @h_game_data_lines, "\n\n";
@@ -1935,6 +1975,7 @@ sub generate_c_home_header {
 
 #include "rage1/inventory.h"
 #include "rage1/game_state.h"
+#include "rage1/codeset.h"
 
 #include "game_data.h"
 
@@ -2380,6 +2421,183 @@ EOF_FEATURES2
 
 }
 
+## CODESET information
+sub generate_global_codeset_data {
+    push @h_game_data_lines, <<EOF_CODESET_1
+
+//////////////////////////////////////////
+// CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_1
+;
+    push @h_game_data_lines, sprintf( "#define	NUM_CODESETS	%d\n\n", scalar( grep { "$_" ne 'home' } keys %codeset_functions_by_codeset ) );
+    push @c_game_data_lines, <<EOF_CODESET_3
+
+//////////////////////////////////////////
+// CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_3
+;
+
+    my @non_home_codeset_functions = grep { $_->{'codeset'} ne 'home' } @all_codeset_functions;
+
+    if ( scalar( @non_home_codeset_functions ) and ( $game_config->{'zx_target'} ne '48' ) ) {
+        add_build_feature( 'CODESETS' );
+        push @c_game_data_lines, "// global codeset functions table\n";
+        push @h_game_data_lines, "// global indexes of codeset functions\n";
+
+        push @c_game_data_lines, sprintf( "struct codeset_function_info_s all_codeset_functions[ %d ] = { \n",
+            scalar( @non_home_codeset_functions )
+        );
+        my $index = 0;
+        foreach my $function ( @non_home_codeset_functions ) {
+            push @c_game_data_lines,  sprintf( "\t{ .codeset_num = %d, .local_function_num = %d },\n",
+                $function->{'codeset'},
+                $function->{'local_index'},
+            );
+            push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%s	(%d)\n",
+                uc( $function->{'name'} ),
+                $index,
+            );
+            $index++;
+        }
+        push @c_game_data_lines, "};\n";
+        push @h_game_data_lines, "\n";
+    } else {
+        push @c_game_data_lines, "// No codesets defined\n";
+        push @h_game_data_lines, "// No codesets defined\n";
+    }
+
+    # Add the function call macros to the global game_data header file.
+    # All codeset functions must be called via call macros.  If in 128K
+    # mode, they will generate a call to codeset_call_function(), and if in
+    # 48K mode they will be resolved to a regular function call
+
+    push @h_game_data_lines, "// codeset function call macros for each function\n";
+    foreach my $function ( @all_codeset_functions ) {
+        my $macro;
+        if ( ( $game_config->{'zx_target'} eq '48' ) or ( $function->{'codeset'} eq 'home' ) ) {
+            # macros for 48K mode
+            push @h_game_data_lines, sprintf(
+                "#define CALL_GAME_FUNCTION_%-30s  (%s())\n",
+                uc( $function->{'name'} ) . '()',
+                $function->{'name'},
+            );
+        } else {
+            # macros for 128K mode
+            add_build_feature( 'CODESETS' );
+            push @h_game_data_lines, sprintf(
+                "#define CALL_GAME_FUNCTION_%-30s  (codeset_call_function( CODESET_FUNCTION_%s ))\n",
+                uc( $function->{'name'} ) . '()',
+                uc( $function->{'name'} ),
+            );
+        }
+        $function->{'codeset_function_call_macro'} = sprintf(
+            'CALL_GAME_FUNCTION_%s()', uc( $function->{'name'} )
+        );
+    }
+
+    push @h_game_data_lines, <<EOF_CODESET_2
+
+//////////////////////////////////////////
+// END OF CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_2
+;
+
+    push @c_game_data_lines, <<EOF_CODESET_4
+
+//////////////////////////////////////////
+// END OF CODESET DEFINITIONS
+//////////////////////////////////////////
+
+EOF_CODESET_4
+;
+}
+
+sub generate_codesets {
+
+    # If in 128K mode, for each codeset except 'home' codeset we create the
+    # needed data structures.  If we are in 48K mode, there will be no
+    # codesets besides 'home' so this will not run
+    foreach my $codeset ( grep { "$_" ne 'home' } keys %codeset_functions_by_codeset ) {
+
+        my $num_codeset_functions = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+
+        # add the needed source lines to the C and ASM files for this
+        # codeset: the main codeset_assets_s struct at the beginning, the
+        # function table and e.g.  tiles used by these functions
+        push @{ $asm_codeset_lines->{ $codeset } }, <<EOF_CODESET_LINES_MAIN_ASM
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; We need this ASM file to force the linking of the codeset_assets_s
+;; structure exactly at start of the binary (0xC000)
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	section	code_compiler
+	org	$codeset_base_address
+
+extern	_codeset_functions
+
+_all_assets_codeset_$codeset:
+	dw	0			;; .game_state
+	dw	0			;; .banked_assets
+	dw	0			;; .home_assets
+	db	$num_codeset_functions			;; .num_functions
+	dw	_codeset_functions	;; .functions
+
+EOF_CODESET_LINES_MAIN_ASM
+;
+
+        push @{ $c_codeset_lines->{ $codeset } }, <<EOF_CODESET_LINES_MAIN
+#include <stdlib.h>
+
+#include "features.h"
+
+#include "rage1/codeset.h"
+
+#include "game_data.h"
+
+EOF_CODESET_LINES_MAIN
+;
+
+        # create the destination directory
+        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
+        if ( ! -d $dst_dir ) {
+            make_path( $dst_dir ) or
+                die "** Could not create destination directory $dst_dir\n";
+        }
+
+        # copy the source files for functions associated to this codeset to the dest dir
+        # and add the needed lines to the main.c file
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            my $src_file = $game_src_dir . '/' . $function->{'file'};
+            my $dst_file = $dst_dir . '/' . $function->{'file'}; 
+            copy( $src_file, $dst_file ) or
+                die "** Could not copy $src_file to $dst_file\n";
+        }
+
+        # add extern codeset function declarations
+        push @{ $c_codeset_lines->{ $codeset } }, "// codeset functions table\n";
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            push @{ $c_codeset_lines->{ $codeset } }, sprintf( "extern void %s( void );\n", $function->{'name'} );
+        }
+
+        # add the codeset function table
+        push @{ $c_codeset_lines->{ $codeset } }, "codeset_function_t codeset_functions[ $num_codeset_functions ] = {\n";
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            push @{ $c_codeset_lines->{ $codeset } }, sprintf( "\t&%s,\n", $function->{'name'} );
+        }
+        push @{ $c_codeset_lines->{ $codeset } }, "};\n\n";
+
+    }
+
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2407,9 +2625,16 @@ sub generate_game_data {
     generate_items;
     generate_global_screen_data;
     generate_game_areas;
-    generate_game_functions;
     generate_game_config;
     generate_misc_data;
+
+    # codeset items
+    generate_codesets;
+    generate_global_codeset_data;
+
+    # this must be generated after codesets, it needs the codeset function
+    # call macros
+    generate_game_functions;
 
     # generate conditional build features
     add_default_build_features;
@@ -2434,6 +2659,24 @@ sub output_game_data {
         open( $output_fh, ">", $c_file_dataset ) or
             die "Could not open $c_file_dataset for writing\n";
         print $output_fh join( "", @{ $c_dataset_lines->{ $i } } );
+        close $output_fh;
+    }
+
+    # output .c file for banked codesets
+    foreach my $i ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
+        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $i );
+        open( $output_fh, ">", $c_file_codeset ) or
+            die "Could not open $c_file_codeset for writing\n";
+        print $output_fh join( "", @{ $c_codeset_lines->{ $i } } );
+        close $output_fh;
+    }
+
+    # output .asm file for banked codesets
+    foreach my $i ( sort grep { /\d+/ } keys %$asm_codeset_lines ) {
+        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $i );
+        open( $output_fh, ">", $asm_file_codeset ) or
+            die "Could not open $asm_file_codeset for writing\n";
+        print $output_fh join( "", @{ $asm_codeset_lines->{ $i } } );
         close $output_fh;
     }
 
@@ -2578,18 +2821,21 @@ sub dump_internal_data {
         die "Could not open $dump_file for writing\n";
 
     my $all_state = {
-        btiles			=> \@all_btiles,
-        btile_name_to_index	=> \%btile_name_to_index,
-        screens			=> \@all_screens,
-        screen_name_to_index	=> \%screen_name_to_index,
-        sprites			=> \@all_sprites,
-        sprite_name_to_index	=> \%sprite_name_to_index,
-        all_items		=> \@all_items,
-        item_name_to_index	=> \%item_name_to_index,
-        all_rules		=> \@all_rules,
-        hero			=> $hero,
-        game_config		=> $game_config,
-        dataset_dependency	=> \%dataset_dependency,
+        btiles				=> \@all_btiles,
+        btile_name_to_index		=> \%btile_name_to_index,
+        screens				=> \@all_screens,
+        screen_name_to_index		=> \%screen_name_to_index,
+        sprites				=> \@all_sprites,
+        sprite_name_to_index		=> \%sprite_name_to_index,
+        all_items			=> \@all_items,
+        item_name_to_index		=> \%item_name_to_index,
+        all_rules			=> \@all_rules,
+        hero				=> $hero,
+        game_config			=> $game_config,
+        dataset_dependency		=> \%dataset_dependency,
+        all_codeset_functions		=> \@all_codeset_functions,
+        codeset_function_name_to_index	=> \%codeset_function_name_to_index,
+        codeset_functions_by_codeset	=> \%codeset_functions_by_codeset,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
@@ -2600,8 +2846,8 @@ sub dump_internal_data {
 ## Main loop
 #########################
 
-our ( $opt_b, $opt_d, $opt_c, $opt_t );
-getopts("b:d:ct:");
+our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
+getopts("b:d:ct:s:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data = "$opt_d/$c_file_game_data";
     $h_file_game_data = "$opt_d/$h_file_game_data";
@@ -2610,6 +2856,7 @@ if ( defined( $opt_d ) ) {
     $output_dest_dir = $opt_d;
 }
 $build_dir = $opt_b || 'build';
+$game_src_dir = $opt_s || 'build/game_src';
 $forced_build_target = $opt_t || 0;
 
 # read, validate and compile input

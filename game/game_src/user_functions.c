@@ -2,10 +2,23 @@
 #include "rage1/game_state.h"
 #include "rage1/map.h"
 
+uint8_t canary[6] = { 1,2,3,4,5,6 };
 void my_user_init(void) {
+    canary[0] = 'C';
+    canary[1] = 'a';
+    canary[2] = 'N';
+    canary[3] = 'a';
+    canary[4] = 'R';
+    canary[5] = 'y';
 }
 
 void my_user_game_init(void) {
+    canary[0] = 'S';
+    canary[1] = 'p';
+    canary[2] = 'A';
+    canary[3] = 'r';
+    canary[4] = 'O';
+    canary[5] = 'w';
 }
 
 void my_user_game_loop(void) {

@@ -4,6 +4,7 @@
 *.map
 *.o
 *.dep
+*.sym
 game_data.inc
 game_data*.c
 game_data*.h

@@ -13,6 +13,7 @@ ENGINE_DIR		= engine
 BUILD_DIR		= build
 GENERATED_DIR		= $(BUILD_DIR)/generated
 GENERATED_DIR_DATASETS	= $(GENERATED_DIR)/datasets
+GENERATED_DIR_CODESETS	= $(GENERATED_DIR)/codesets
 GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
 GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
@@ -31,6 +32,11 @@ SRC_DATASETS		= $(CSRC_DATASETS)
 BIN_DATASETS		= $(CSRC_DATASETS:.c=.bin)
 ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
+
+# Codeset sources and binaries
+CODESET_DIRS		= $(wildcard $(GENERATED_DIR_CODESETS)/codeset_*.src)
+BIN_CODESETS		= $(CODESET_DIRS:.src=.bin)
+CODESET_MAXSIZE		= 16384
 
 # Bank binaries and taps
 BANK_BINS_FILE		= $(GENERATED_DIR)/bank_bins.cfg
@@ -77,7 +83,7 @@ ZX0			= z88dk-zx0
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
-CFLAGS			= +zx -vn -SO3 --c-code-in-asm --list -m -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC)
+CFLAGS			= +zx -vn -SO3 --c-code-in-asm --list -s -m -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC)
 CFLAGS_TO_ASM		= -a
 
 # generic rules
@@ -139,6 +145,20 @@ dataset_%.bin: dataset_%.c
 dataset_%.zx0: dataset_%.bin
 	@echo "Compressing DATASET $< ..."
 	@$(ZX0) $< $@ >/dev/null 2>&1
+
+##
+## Codeset compilation to standalone binaries org'ed at 0xC000
+##
+
+codesets: $(BIN_CODESETS)
+
+#codeset_%.bin: codeset_%.src/*.c codeset_%.src/*.asm
+codeset_%.bin:
+	@echo "Compiling CODESET $@ ..."
+	# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
+	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+	@if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
 
 ## Taps
 
