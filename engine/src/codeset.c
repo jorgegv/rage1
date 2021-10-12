@@ -49,24 +49,15 @@ void init_codesets( void ) {
 // call a given codeset function by its global function index
 void codeset_call_function( uint8_t global_function_num ) {
     struct codeset_function_info_s *f;
-    uint8_t local_function_num;
 
     f = &all_codeset_functions[ global_function_num ];
-
-    // FIXME: this must be copied to a local var _before_ switching banks
-    // the all_codeset_functions array might be in memory above 0xC000, but
-    // it shouldn't...
-
-    // FIXME: remove this workaround when all data that needs to be in
-    // lowmem is forced to be there
-    local_function_num = f->local_function_num;
 
     // get the bank number from the codeset info table and swicth to the
     // proper bank
     memory_switch_bank( codeset_info[ f->codeset_num ].bank_num );
 
     // call the function
-    codeset_assets->functions[ local_function_num ]();
+    codeset_assets->functions[ f->local_function_num ]();
 
     // switch back to bank 0
     memory_switch_bank( 0 );
