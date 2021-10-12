@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <arch/zx.h>
 
+#include "features.h"
+
 // Memory Banking configuration for port $7FFD:
 //
 // - Bits 0-2: RAM page (0-7) to map into memory at 0xc000 - OR'ed with the
@@ -40,8 +42,11 @@
 
 #define DEFAULT_IO_7FFD_BANK_CFG	( 0x10 )
 
+// this only makes sense in the 128K build
+#ifdef BUILD_FEATURE_ZX_TARGET_128
 void memory_switch_bank( uint8_t bank ) {
     // mask the 3 lowest bits of bank, then add it to the default value for
     // IO_7FDD
     IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
 }
+#endif
