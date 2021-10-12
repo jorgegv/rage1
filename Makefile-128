@@ -24,6 +24,13 @@ build:
 	@$(MYMAKE) -s -j8 main
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final
+	@$(MYMAKE) -s lowmemcheck
+
+## Check that certain symbols are linked in low memory
+LOWMEM_SYMBOLS = game_state all_assets_dataset_home dataset_info codeset_info all_codeset_functions
+
+lowmemcheck:
+	@./tools/lowmemsym.pl -m main.map $(LOWMEM_SYMBOLS)
 
 ## Banks
 
