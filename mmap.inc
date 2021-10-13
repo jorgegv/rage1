@@ -1,3 +1,17 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; RAGE1 CUSTOM MEMORY MODEL FOR THE LINKER
+;;
+;; See `doc/BANKING-DESIGN`, section **C Binary Linker Memory
+;; Map** for the design that led to using this file.
+;;
+;; This file is published under the same license as Z88DK
+;; itself
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; memory model ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -80,7 +94,8 @@ section rodata_clib
   ;;section rodata_error_string_end
   ;;defb 0
 section rodata_lib
-;; section rodata_compiler
+;; moved to the start of the memory map
+;;section rodata_compiler
 section rodata_user
 
 SECTION CODE_END

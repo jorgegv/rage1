@@ -427,7 +427,9 @@ Design:
   table at 0xD000-0xD100 (257 bytes), stack at 0xD101-0xD1D0 (208 bytes),
   ISR at 0xD1D1 (3 bytes), SP1 reserved data up to 0xFFFF
 
-- Automatic heap definition by standard CRT and library
+- The heap is explicitly defined as a byte array in the BSS segment, and
+  initialized at program startup with a call to heap_init() library
+  function.
 
 - The `home_assets` and `banked_assets` both point to the `home_dataset`,
   which is expected to fit in the regular 48K RAM
@@ -453,6 +455,33 @@ Design:
 
 - A specialized BASIC loader is used for loading memory bank data
 
+## C Binary Linker Memory Map
+
+When compiling for 128K models, memory banking happens at the top 16 KB of
+memory (addesses 0xC000-0xFFFF).  This means that data that should be
+accessible at all times (home dataset assets, critical program code, etc.)
+must be linked below that address.
+
+Since the regular Z88DK memory map used by the linker places object code in
+CODE->DATA->BSS order, code is places in low memory and data and bss is
+higher in memory.  As the size of the program increases, the code segment
+pushes the DATA+BSS segments up in memory, and we can reach a point where
+some data structures that should be in loe memory are placed above address
+0xC000.
+
+To prevent this, a custom Z88DK memory map is used (mmap.inc - this file),
+where all the DATA and BSS sections (named data_*, bss_* and rodata_*) have
+been moved at the start of the memory map, and the code sections are placed
+above them.
+
+Warnings:
+
+- With the regular memory map, if automatic heap management is used (#pragma
+  CLIB_MALLOC_HEAP_SIZE = -1), it is placed from end of BSS to STKBOT.  But
+  with this memory map, that area is occupied by code, so automatic heap
+  will not work.  A manually specified heap (#pragma CLIB_MALLOC_HEAP_SIZE =
+  0) must be declared as a byte array and initialized via the heap_init()
+  function.
 
 ## References
 
@@ -463,3 +492,5 @@ Design:
 - https://github.com/speccyorg/bas2tap
 
 - https://www.z88dk.org/wiki/doku.php?id=libnew:examples:sp1_ex1
+
+- https://github.com/z88dk/z88dk/wiki/CRT#user-supplied-crt
