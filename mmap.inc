@@ -3,8 +3,8 @@
 ;;
 ;; RAGE1 CUSTOM MEMORY MODEL FOR THE LINKER
 ;;
-;; See `doc/BANKING-DESIGN`, section **C Binary Linker Memory
-;; Map** for the design that led to using this file.
+;; See doc/BANKING-DESIGN, section "C Binary Linker Memory Map"
+;; for the design that led to using this file.
 ;;
 ;; This file is published under the same license as Z88DK
 ;; itself
