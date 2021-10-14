@@ -15,7 +15,10 @@
 
 #include "features.h"
 
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+extern uint8_t memory_current_memory_bank;
 void memory_switch_bank( uint8_t bank_num );
+#endif
 
 void init_memory(void);
 

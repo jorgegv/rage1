@@ -23,6 +23,9 @@
 //
 /////////////////////////////////////
 
+// more memory related code and critical data in directory
+// engine/src/lowmem/
+
 // Memory allocator settings
 #define MALLOC_HEAP_SIZE        BUILD_MAX_HEAP_SPRITE_USAGE
 
@@ -44,4 +47,5 @@ unsigned char *_malloc_heap;
 void init_memory(void) {
     _malloc_heap = MALLOC_HEAP_START;
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
+    memory_current_memory_bank = 0;
 }

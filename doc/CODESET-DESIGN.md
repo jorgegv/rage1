@@ -34,8 +34,9 @@ The design constraints for a CODESET are:
 - It can only change DATA either in the global state or in its own memory
   bank, but not in other memory banks.
 
-- It can only run or call CODE  either in the low memory area or in its own
-  memory bank, but not in other memory banks.
+- It can run or call CODE  either in the low memory area or in its own
+  memory bank, or in other memory banks via the `codeset_call_function`
+  function
 
 - The CODESET is loaded at a fixed address of 0xC000
 

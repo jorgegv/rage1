@@ -44,9 +44,15 @@
 
 // this only makes sense in the 128K build
 #ifdef BUILD_FEATURE_ZX_TARGET_128
+uint8_t memory_current_memory_bank;
+
 void memory_switch_bank( uint8_t bank ) {
+
     // mask the 3 lowest bits of bank, then add it to the default value for
     // IO_7FDD
     IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
+
+    // save the bank that is currently mapped
+    memory_current_memory_bank = bank;
 }
 #endif
