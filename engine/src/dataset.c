@@ -28,10 +28,14 @@ uint8_t dataset_currently_active = 255;
 
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 void dataset_activate( uint8_t d ) {
+    uint8_t previous_memory_bank;
 
     // if the dataset is already active, do nothing
     if ( d == dataset_currently_active )
         return;
+
+    // save previous memory bank
+    previous_memory_bank = memory_current_memory_bank;
 
     // switch the proper memory bank for the given dataset
     memory_switch_bank( dataset_info[ d ].bank_num );
@@ -41,8 +45,8 @@ void dataset_activate( uint8_t d ) {
     // beware: dzx0_* arguments are (source,dest), unlike memcpy and friends!
     dzx0_standard( (void *) ( 0xC000 + dataset_info[ d ].offset ), (void *) BANKED_DATASET_BASE_ADDRESS );
 
-    // switch back to bank 0
-    memory_switch_bank( 0 );
+    // switch back to previous memory bank
+    memory_switch_bank( previous_memory_bank );
 
     // Save the dataset that was activated - Beware!  This has to be done
     // AFTER switching back to bank 0!
