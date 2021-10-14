@@ -30,9 +30,13 @@ build:
 ## all symbols mentioned as "extern" in .h files will be accessed from
 ## outside their modules and should thus be in lowmem
 
-LOWMEM_SYMBOLS = $(shell grep -r extern engine/include/rage1/ $(GENERATED_DIR)/game_data.h |grep -Po '[\w\[\]]+;$$'|tr -d '[];' )
+ENGINE_LOWMEM_SYMBOLS	= $(shell grep -r extern engine/include/rage1/ | grep -Po '[\w\[\]]+;$$' | tr -d '[];' )
+GAME_LOWMEM_SYMBOLS	= $(shell $(NM) $(GENERATED_DIR)/game_data.o | sed '1,/  Symbols:/d' | awk '{print $$4}' )
 lowmemcheck:
-	@./tools/lowmemsym.pl -m main.map $(LOWMEM_SYMBOLS)
+	@echo "Checking engine LOWMEM symbols..."
+	@./tools/lowmemsym.pl -m main.map $(ENGINE_LOWMEM_SYMBOLS)
+	@echo "Checking game LOWMEM symbols..."
+	@./tools/lowmemsym.pl -m main.map $(GAME_LOWMEM_SYMBOLS)
 
 ## Banks
 

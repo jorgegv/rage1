@@ -18,7 +18,7 @@ open my $map, "<", $map_file or
 while ( my $line = <$map> ) {
     chomp $line;
     foreach my $sym ( @symbols ) {
-        if ( $line =~ /^_\Q$sym\E\s+=\s+\$([A-Fa-f\d]+)\s+; addr/ ) {
+        if ( $line =~ /^_?\Q$sym\E\s+=\s+\$([A-Fa-f\d]+)\s+; addr/ ) {
             my $addr = hex( "0x$1" );
             if ( $addr >= 0xC000 ) {
                 warn sprintf( "** Warning: symbol '%s' linked at address \$%X\n", $sym, $addr );

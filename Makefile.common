@@ -80,6 +80,7 @@ LIB_ENGINE_EMPTY_DIRS	= build/generated tests
 # compiler and tools
 ZCC			= zcc
 ZX0			= z88dk-zx0
+NM			= z88dk-z80nm
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
