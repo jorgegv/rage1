@@ -26,9 +26,11 @@ build:
 	@$(MYMAKE) -s final
 	@$(MYMAKE) -s lowmemcheck
 
-## Check that certain symbols are linked in low memory
-LOWMEM_SYMBOLS = game_state all_assets_dataset_home dataset_info codeset_info all_codeset_functions
+## Check that certain symbols are linked in low memory.  It is assumed that
+## all symbols mentioned as "extern" in .h files will be accessed from
+## outside their modules and should thus be in lowmem
 
+LOWMEM_SYMBOLS = $(shell grep -r extern engine/include/rage1/ $(GENERATED_DIR)/game_data.h |grep -Po '[\w\[\]]+;$$'|tr -d '[];' )
 lowmemcheck:
 	@./tools/lowmemsym.pl -m main.map $(LOWMEM_SYMBOLS)
 
