@@ -85,6 +85,8 @@ struct game_state_s {
    uint16_t enemies_alive;
    uint16_t enemies_killed;
 
+   // pointer to sound effect to play when required
+   void *sound_fx;
 };
 
 extern struct game_state_s game_state;
@@ -137,6 +139,8 @@ void game_state_switch_to_next_screen( void );
 #define F_LOOP_ENEMY_HIT		0x0010
 // an item was picked up
 #define F_LOOP_ITEM_GRABBED		0x0020
+// play pending sound effect
+#define F_LOOP_PLAY_SOUNDFX		0x0040
 
 ///////////////////////////////////////////////
 // user flags macros and definitions

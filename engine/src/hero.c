@@ -22,7 +22,7 @@
 #include "rage1/debug.h"
 #include "rage1/interrupts.h"
 #include "rage1/bullet.h"
-#include "rage1/beeper.h"
+#include "rage1/sound.h"
 #include "rage1/hotzone.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
@@ -370,7 +370,7 @@ void hero_pickup_items(void) {
                 // update inventory on screen (show)
                 inventory_show();
                 // play pickup sound
-                beep_fx( SOUND_ITEM_GRABBED );
+                sound_request_fx( SOUND_ITEM_GRABBED );
             }
         }
     }

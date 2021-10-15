@@ -16,7 +16,7 @@
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"
 #include "rage1/screen.h"
-#include "rage1/beeper.h"
+#include "rage1/sound.h"
 #include "rage1/controller.h"
 #include "rage1/sp1engine.h"
 #include "rage1/sprite.h"
@@ -59,7 +59,7 @@ void check_game_flags( void ) {
 
     // check if player has died
     if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
-       beep_fx( SOUND_HERO_DIED );
+       sound_request_fx( SOUND_HERO_DIED );
        if ( ! --game_state.hero.num_lives )
           SET_GAME_FLAG( F_GAME_OVER );
        else {
@@ -77,6 +77,12 @@ void check_game_flags( void ) {
     // check if hero needs to be redrawn
     if ( GET_LOOP_FLAG( F_LOOP_REDRAW_HERO ) ) {
         hero_draw();
+        // all loop flags are reset at the beginning of the game loop
+    }
+
+    // check if sound fx needs to be played
+    if ( GET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX ) ) {
+        sound_play_pending_fx();
         // all loop flags are reset at the beginning of the game loop
     }
 }

@@ -14,7 +14,7 @@
 #include "rage1/debug.h"
 #include "rage1/bullet.h"
 #include "rage1/screen.h"
-#include "rage1/beeper.h"
+#include "rage1/sound.h"
 #include "rage1/enemy.h"
 #include "rage1/dataset.h"
 
@@ -76,7 +76,7 @@ void collision_check_bullets_with_sprites( void ) {
                             SET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED );
                         ++game_state.enemies_killed;
                         SET_LOOP_FLAG( F_LOOP_ENEMY_HIT );
-                        beep_fx( SOUND_ENEMY_KILLED );
+                        sound_request_fx( SOUND_ENEMY_KILLED );
                     }
                 }
             }
