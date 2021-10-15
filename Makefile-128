@@ -17,7 +17,7 @@ TAPS			= $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
 -include Makefile.common
 
 build:
-	@cp $(ENGINE_DIR)/codeset_0/*/*.{c,asm} $(GENERATED_DIR_CODESETS)/codeset_0.src/
+	@-cp $(ENGINE_DIR)/codeset_0/*/*.{c,asm} $(GENERATED_DIR_CODESETS)/codeset_0.src/
 	@$(MYMAKE) -s -j8 datasets
 	@$(MYMAKE) -s -j8 codesets
 	@$(MYMAKE) -s -j8 banks

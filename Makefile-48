@@ -17,7 +17,7 @@ TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
 -include Makefile.common
 
 build:
-	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
+	@-cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
 	@cp $(ENGINE_DIR)/codeset_0/*/*.{c,asm} $(GAME_SRC_DIR)
 	@$(MYMAKE) -s -j8 main
 	@$(MYMAKE) -s -j8 taps
