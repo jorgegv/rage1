@@ -262,3 +262,10 @@ hero graphics, etc.
   a regular function call will be done, and if 128K the call will be done
   through the `codeset_call_function` trampoline.
 
+- Best initial candidates for migration to CODESET are functions that only
+  access global game state or data (i.e. no display).
+
+- Some functions may be refactored so that display calls can be diverted to
+  other moments in the main game loop (e.g. via some flag in `loop_flags`),
+  and those calls are avoided in the function, which may make it easy to
+  migrate it to a codeset.
