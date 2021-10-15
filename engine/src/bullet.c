@@ -127,17 +127,17 @@ void bullet_animate_and_move_all(void) {
         // check for obstacles
         if (
                 // moving right:
-                ( ( bs->dx > 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y ), PIXEL_TO_CELL_COORD( bs->position.x + bi->width ) ) == TT_OBSTACLE ) ) ||
-                ( ( bs->dx > 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height - 1 ), PIXEL_TO_CELL_COORD( bs->position.x + bi->width ) ) == TT_OBSTACLE ) ) ||
+                ( ( bs->dx > 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y ), 			PIXEL_TO_CELL_COORD( bs->position.x + bi->width ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height - 1 ),	PIXEL_TO_CELL_COORD( bs->position.x + bi->width ) ) == TT_OBSTACLE ) ) ) ||
                 // moving left:
-                ( ( bs->dx < 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y ), PIXEL_TO_CELL_COORD( bs->position.x - 1 ) ) == TT_OBSTACLE ) ) ||
-                ( ( bs->dx < 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height - 1 ), PIXEL_TO_CELL_COORD( bs->position.x - 1 ) ) == TT_OBSTACLE ) ) ||
+                ( ( bs->dx < 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y ),			PIXEL_TO_CELL_COORD( bs->position.x - 1 ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height - 1 ),	PIXEL_TO_CELL_COORD( bs->position.x - 1 ) ) == TT_OBSTACLE ) ) ) ||
                 // moving down:
-                ( ( bs->dy > 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height ), PIXEL_TO_CELL_COORD( bs->position.x ) ) == TT_OBSTACLE ) ) ||
-                ( ( bs->dy > 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height ), PIXEL_TO_CELL_COORD( bs->position.x + bi->width - 1 ) ) == TT_OBSTACLE ) ) ||
+                ( ( bs->dy > 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height ),		PIXEL_TO_CELL_COORD( bs->position.x ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y + bi->height ),		PIXEL_TO_CELL_COORD( bs->position.x + bi->width - 1 ) ) == TT_OBSTACLE ) ) ) ||
                 // moving up:
-                ( ( bs->dy < 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y - 1 ), PIXEL_TO_CELL_COORD( bs->position.x ) ) == TT_OBSTACLE ) ) ||
-                ( ( bs->dy < 0 ) && ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y - 1 ), PIXEL_TO_CELL_COORD( bs->position.x + bi->width - 1 ) ) == TT_OBSTACLE ) )
+                ( ( bs->dy < 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y - 1 ),			PIXEL_TO_CELL_COORD( bs->position.x ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y - 1 ),			PIXEL_TO_CELL_COORD( bs->position.x + bi->width - 1 ) ) == TT_OBSTACLE ) ) )
             ) { // then
             RESET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
             sprite_move_offscreen( bs->sprite );
