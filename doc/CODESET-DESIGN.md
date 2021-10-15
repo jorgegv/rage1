@@ -213,3 +213,52 @@ So, 4 different cases:
   `home` codeset, the BUILD_FEATURE_CODESETS macro is not defined, all
   codeset infrastructure is not compiled, and all codeset function calls
   must be resolved to regular function calls, so no loss of efficiency.
+
+## Migration of engine code to CODESET 0
+
+It is convenient to migrate some of the engine functionality to CODESET 0,
+so that more low memory is freed for assets that need to be in low memory:
+hero graphics, etc.
+
+### Design of engine code migration to CODESET 0
+
+- Engine code which runs in CODESETs must be stored separately, in
+  `engine/codeset/N`, with N being the codeset (normally 0)
+
+- Files under `engine/codeset/N` will not be included in the normal build
+  target
+
+- If building in 48K mode, files under `engine/codeset/N` will be copied to
+  `build/game_src` so that they are included in the general compilation
+
+- If building in 128K mode, files under `engine/codeset/N` will be copied to
+  `build/generated/codesets/codeset_N.src` so that they are compiled inside
+  the proper CODESET
+
+- Engine functions that are moved to a CODESET must have a definition in
+  `engine/include/rage1/codeset.h`, similar to the following:
+
+~~~
+#ifdef BUILD_FEATURE_ZX_TARGET_48
+    #define CALL_ENGINE_FUNCTION_MY_FUNCTION()	(my_function())
+#endif
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+    #define CODESET_FUNCTION_MY_FUNCTION	1
+    #define CALL_ENGINE_FUNCTION_MY_FUNCTION()	(codeset_call_function( CODESET_FUNCTION_MY_FUNCTION ))
+#endif
+~~~
+
+- Also in `engine/include/rage1/codeset.h`, the
+  `CODESET_GLOBAL_INDEX_RESERVED_MAX` must be always updated with the higher
+  function ID that has been reserved for engine codeset functions.  This is
+  meant so that user functions which are requested to be in codesets are
+  assigned IDs starting from the next free ID.  Function IDs are
+  consecutive.
+
+- Finally, functions that have been migrated to CODESET functions must be
+  always called with the above macro definition (e.g.
+  `CALL_ENGINE_FUNCTION_MY_FUNCTION()`) so that the correct function call is
+  resolved at compile time depending on the build type: if building for 48K,
+  a regular function call will be done, and if 128K the call will be done
+  through the `codeset_call_function` trampoline.
+
