@@ -223,7 +223,7 @@ void hero_animate_and_move( void ) {
             }
             anim->current_frame = 0;
             anim->last_frame_ptr = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ steady_frame ];
-            hero_draw();
+            SET_LOOP_FLAG( F_LOOP_REDRAW_HERO );
             SET_HERO_FLAG( game_state.hero, F_HERO_STEADY );
         }
         return;
@@ -325,7 +325,7 @@ void hero_animate_and_move( void ) {
         pos->xmax = pos->x + HERO_SPRITE_WIDTH - 1;
         pos->ymax = pos->y + HERO_SPRITE_HEIGHT - 1;
         anim->last_frame_ptr = animation_frame;
-        hero_draw();
+        SET_LOOP_FLAG( F_LOOP_REDRAW_HERO );
     }
 }
 

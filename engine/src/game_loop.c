@@ -73,6 +73,12 @@ void check_game_flags( void ) {
           SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
        }
     }
+
+    // check if hero needs to be redrawn
+    if ( GET_LOOP_FLAG( F_LOOP_REDRAW_HERO ) ) {
+        hero_draw();
+        // all loop flags are reset at the beginning of the game loop
+    }
 }
 
 void move_enemies(void) {
