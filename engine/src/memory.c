@@ -42,10 +42,13 @@
     unsigned char _rage1_heap[ MALLOC_HEAP_SIZE ];
 #endif
 
-// the following code is valid for both modes
+// memory initialization
 unsigned char *_malloc_heap;
 void init_memory(void) {
     _malloc_heap = MALLOC_HEAP_START;
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
+
+#ifdef BUILD_FEATURE_ZX_TARGET_128
     memory_current_memory_bank = 0;
+#endif
 }
