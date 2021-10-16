@@ -214,50 +214,6 @@ EOF_DSMAP_3
     print "OK\n";
 }
 
-sub generate_codeset_info_code_asm {
-    my ( $layout, $codesets, $outdir ) = @_;
-    my $csmap = $outdir . '/' . $codeset_info_name;
-
-    my $num_codesets = scalar( keys %$codesets );
-    if ( $num_codesets == 0 ) {
-        print "  No codesets defined\n";
-        return;
-    }
-
-    print "  Generating $codeset_info_name...";
-
-    open my $csmap_h, ">", $csmap
-        or die "\n** Error: could not open $csmap for writing\n";
-    print $csmap_h <<EOF_CSMAP_3
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Codeset Map: for a given codeset ID, maps the memory bank where it is
-;; stored
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; struct codeset_info_s codeset_info[ $num_codesets ] = { ... }
-;;
-
-section         code_crt_common
-
-public		_codeset_info
-
-_codeset_info:
-EOF_CSMAP_3
-;
-
-    print $csmap_h join( "\n",
-        map {
-            sprintf( "\t\t;; codeset %d\n\t\tdb\t%d\t;; bank number\n",
-                $_,
-                $codesets->{ $_ }{'bank'},
-            )
-        } sort keys %$codesets
-    );
-
-    close $csmap_h;
-    print "OK\n";
-}
-
 sub generate_basic_loader {
     my ( $layout, $outdir ) = @_;
     my $bas_loader = $outdir . '/' . $basic_loader_name;
@@ -329,7 +285,5 @@ generate_bank_binaries( $bank_layout, $output_dir );
 generate_bank_config( $bank_layout, $output_dir );
 
 generate_dataset_info_code_asm( $bank_layout, $datasets, $lowmem_output_dir );
-
-generate_codeset_info_code_asm( $bank_layout, $codesets, $lowmem_output_dir );
 
 generate_basic_loader( $bank_layout, $output_dir );
