@@ -24,7 +24,9 @@ use File::Copy;
 # final destination address for compilation of datasets and codesets
 my $dataset_base_address = 0x5B00;
 my $codeset_base_address = 0xC000;
-my @codeset_valid_banks = ( 4, 6, );    # non-contended banks reserved for code
+
+# banks reserved for codesets. Bank 4 is reserved for engine code
+my @codeset_valid_banks = ( 6, );	# non-contended
 
 # global program state
 # if you add any global variable here, don't forget to add a reference to it

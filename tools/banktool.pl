@@ -18,7 +18,9 @@ use Getopt::Std;
 
 # list of valid banks and size for 128K Speccy
 my @dataset_valid_banks = ( 1, 3, 7 );	# contended banks reserved for data
-my @codeset_valid_banks = ( 4, 6, );	# non-contended banks reserved for code
+# banks reserved for codesets. Bank 4 is reserved for engine code
+my @codeset_valid_banks = ( 6, );       # non-contended
+
 my $max_bank_size = 16384;
 
 # config vars
