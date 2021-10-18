@@ -49,6 +49,44 @@ void init_memory(void) {
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
 
 #ifdef BUILD_FEATURE_ZX_TARGET_128
+    // initial memory bank
     memory_current_memory_bank = 0;
+
+    // setup struct for passing global data to banked functions
+    banked_function_args.game_state = &game_state;
 #endif
 }
+
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+
+// struct for passing global data ptr to banked functions
+struct banked_function_args_s banked_function_args;
+
+// banked functions table
+struct banked_function_info_s all_banked_functions[ BANKED_FUNCTION_MAX_ID + 1 ] = {
+    { .id = BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID, .function = , },
+};
+
+// trampoline function to call banked functions
+void memory_call_banked_function( uint8_t function_id ) {
+    struct banked_function_info_s *f;
+    uint8_t previous_memory_bank;
+
+    // for efficiency
+    f = &all_banked_functions[ function_id ];
+
+    // save current memory bank
+    previous_memory_bank = memory_current_memory_bank;
+
+    // get the bank number from the codeset info table and swicth to the
+    // proper bank
+    memory_switch_bank( f->bank_num );
+
+    // call the function
+    f->function( &banked_function_args );
+
+    // switch back to previous memory bank
+    memory_switch_bank( previous_memory_bank );
+}
+
+#endif
