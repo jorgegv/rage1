@@ -38,6 +38,9 @@ CODESET_DIRS		= $(wildcard $(GENERATED_DIR_CODESETS)/codeset_*.src)
 BIN_CODESETS		= $(CODESET_DIRS:.src=.bin)
 CODESET_MAXSIZE		= 16384
 
+# Banked code binary
+BIN_BANKED_CODE		= $(ENGINE_DIR)/banked_code/banked_code.bin
+
 # Bank binaries and taps
 BANK_BINS_FILE		= $(GENERATED_DIR)/bank_bins.cfg
 BANK_BINS		= $(shell cat $(BANK_BINS_FILE) 2>/dev/null )
@@ -160,6 +163,16 @@ codeset_%.bin:
 	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
 	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
 	@if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
+
+##
+## Banked code compilation to standalone binary at 0xC000
+##
+
+banked_code: $(BIN_BANKED_CODE)
+$(BIN_BANKED_CODE):
+	@echo "Compiling BANKED CODE..."
+	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(ENGINE_DIR)/banked_code/*.c
+
 
 ## Taps
 
