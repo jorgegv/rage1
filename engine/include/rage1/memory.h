@@ -38,8 +38,8 @@
     extern struct banked_function_args_s banked_function_args;
 
     // all banked functions must be declared as
-    //   void function( struct banked_function_args_s * ) __z88dk_fastcall;
-    typedef void (*banked_function_t)( struct banked_function_args_s * ) __z88dk_fastcall;
+    //   void function( void );
+    typedef void (*banked_function_t)( void );
 
     // element for the table of banked functions
     struct banked_function_info_s {

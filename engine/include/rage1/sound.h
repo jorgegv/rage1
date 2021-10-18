@@ -19,6 +19,6 @@
 void sound_request_fx( void *sfx );
 
 // play the pending FX request
-void sound_play_pending_fx( void * ) __z88dk_fastcall;
+void sound_play_pending_fx( void );
 
 #endif //_SOUND_H
