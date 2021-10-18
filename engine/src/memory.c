@@ -64,7 +64,7 @@ struct banked_function_args_s banked_function_args;
 
 // banked functions table
 struct banked_function_info_s all_banked_functions[ BANKED_FUNCTION_MAX_ID + 1 ] = {
-    { .id = BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID, .function = , },
+    { .id = BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID, },
 };
 
 // trampoline function to call banked functions
@@ -80,10 +80,10 @@ void memory_call_banked_function( uint8_t function_id ) {
 
     // get the bank number from the codeset info table and swicth to the
     // proper bank
-    memory_switch_bank( f->bank_num );
+    memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
 
     // call the function
-    f->function( &banked_function_args );
+    f->function( );
 
     // switch back to previous memory bank
     memory_switch_bank( previous_memory_bank );

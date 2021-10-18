@@ -16,12 +16,6 @@
 #include "rage1/beeper.h"
 #include "rage1/game_state.h"
 
-void sound_request_fx( void *sfx ) {
-    game_state.sound_fx = sfx;
-    SET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX );
+void sound_play_pending_fx( void ) {
+    beep_fx( game_state.sound_fx );
 }
-
-// moved to banked_code
-//void sound_play_pending_fx( void ) {
-//    beep_fx( game_state.sound_fx );
-//}

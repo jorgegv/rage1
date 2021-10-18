@@ -41,14 +41,6 @@
     //   void function( void );
     typedef void (*banked_function_t)( void );
 
-    // element for the table of banked functions
-    struct banked_function_info_s {
-        uint8_t id;
-        banked_engine_function_t function;
-    };
-    // global table for banked functions
-    extern struct banked_function_info_s all_banked_functions[];
-
     // trampoline function to call banked functions
     void memory_call_banked_function( uint8_t function_id );
 
