@@ -1,0 +1,50 @@
+# BANKED FUNCTIONS
+
+There is the need to make more room in low memory (below 0xC000) for always
+accessible game assets, and so some engine code needs to be stored and run
+from the extra memory banks.
+
+The extra game data assets are stored compressed in DATASETs; the extra user
+game functions are stored in CODESETs; and finally the internal game
+functions stored in extra memory banks are called BANKED code.
+
+The mechanism for running functions in CODESETs and BANKED code is very
+similar, but the setup is quite simpler for the BANKED code, since all the
+configuration is static wih each RAGE1 release (in opposition to the CODESET
+game code, which varies from game to game).
+
+## Design
+
+- Each banked function is assigned a global unique ID (starting at 0)
+
+- There is a reserved memory bank for engine BANKED code (bank 4,
+  uncontended, for performance reasons)
+
+- As usual, the memory bank is mapped at address 0xC000
+
+- The first data structure of the BANKED code bank is an array of pointers
+  to the banked functions which live on the bank. It is located at address
+  0xC000 (known address), si it is easily acessible from lowmem
+
+- A function call to a given BANKED function is done by indexing the
+  function ID (known at compile time) in the banked functions array (always
+  at address 0xC000)
+
+- All BANKED functions must use the prototype `void f(void)`
+
+- All accesses from the BANKED functions to lowmem data must be done via the
+  macro definitions in `banked.h`
+
+- The `banked.h` file will include a generated file called
+  `lowmem_symbols.h` which is generted from the `main.map` file which is
+  created whe compiling the main program. This file maps the symbols in
+  `main` to their final addresses in low memory, so that the banked
+  functions can use them.
+
+- Initially, banked functions receive no parameters and return bothing, but
+  this limitation is to be revisited, since it seems easy to have a
+  structure in low memory for passing parameters and return values to the
+  BANKED functions at runtime
+
+- Compilation order: datasets - codesets - main (->main.map) - symbol macro
+  definitions -> rest of 128K build
