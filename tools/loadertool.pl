@@ -43,8 +43,6 @@ sub generate_basic_loader {
     my ( $layout, $outdir ) = @_;
     my $bas_loader = $outdir . '/' . $basic_loader_name;
 
-    print "  Generating custom BASIC loader...";
-
     # generate the lines first, we'll number them later
     my @lines;
 
@@ -75,7 +73,6 @@ sub generate_basic_loader {
         printf $bas_h "%3d %s\n", $line_number, $line;
         $line_number += 10;
     }
-    print "OK\n";
 }
 
 ##

@@ -216,45 +216,6 @@ EOF_DSMAP_3
     print "OK\n";
 }
 
-sub generate_basic_loader {
-    my ( $layout, $outdir ) = @_;
-    my $bas_loader = $outdir . '/' . $basic_loader_name;
-
-    print "  Generating custom BASIC loader...";
-
-    # generate the lines first, we'll number them later
-    my @lines;
-
-    # Bank switch routine loads at address 0x8000, CLEAR to the byte before
-    push @lines, sprintf( 'CLEAR VAL "%d"', 0x7FFF );
-
-    # load bank switching code at 0x8000 (32768)
-    # bank variable is at 0x8000, code switching entry point at 0x8001
-    push @lines, 'LOAD "" CODE';
-
-    # switch to each bank with the bank switching routine and load each bank content at 0xC000
-    foreach my $bank ( sort keys %$layout ) {
-        push @lines, sprintf( 'POKE VAL "%d", VAL "%d" : RANDOMIZE USR VAL "%d" : LOAD "" CODE', 0x8000, $bank, 0x8001 );
-    }
-
-    # switch back to bank 0
-    push @lines, sprintf( 'POKE VAL "%d", VAL "%d" : RANDOMIZE USR VAL "%d"', 0x8000, 0, 0x8001 );
-
-    # load main program code at 0x8184 and start execution
-    my $main_code_start = 0x8184;
-    push @lines, sprintf( 'LOAD "" CODE : RANDOMIZE USR VAL "%d"', $main_code_start );
-
-    # that's it, output the BASIC program
-    open my $bas_h, ">", $bas_loader
-        or die "\n** Error: could not open $bas_loader for writing\n";
-    my $line_number = 10;
-    foreach my $line ( @lines ) {
-        printf $bas_h "%3d %s\n", $line_number, $line;
-        $line_number += 10;
-    }
-    print "OK\n";
-}
-
 ##
 ## Main
 ##
@@ -287,5 +248,3 @@ generate_bank_binaries( $bank_layout, $output_dir );
 generate_bank_config( $bank_layout, $output_dir );
 
 generate_dataset_info_code_asm( $bank_layout, $datasets, $lowmem_output_dir );
-
-generate_basic_loader( $bank_layout, $output_dir );

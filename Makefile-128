@@ -23,6 +23,7 @@ build:
 	@$(MYMAKE) -s -j8 banks
 	@$(MYMAKE) -s bank_switcher
 	@$(MYMAKE) -s -j8 main
+	@$(MYMAKE) -s loader
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final
 	@$(MYMAKE) -s lowmemcheck
@@ -88,7 +89,7 @@ $(BIN_BANKED_CODE):
 ## Banks
 
 banks:
-	@echo "Building Bank binaries, BASIC loader and Dataset map..."
+	@echo "Building Bank binaries and Dataset/Codeset maps..."
 	@./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM)
 
 bank_switcher: $(BSWITCH_BIN)
@@ -97,7 +98,17 @@ $(BSWITCH_BIN):
 	@echo "Assembling bank switch routine..."
 	@$(ZCC) $(CFLAGS) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
 
+##
+## Custom BASIC loader
+##
+
+loader:
+	@echo "Creating custom BASIC loader..."
+	@./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR)
+
+##
 ## Taps
+##
 
 taps: $(TAPS)
 
@@ -116,6 +127,8 @@ $(BSWITCH_TAP): $(BSWITCH_BIN)
 	@echo "Creating TAP $@..."
 	@z88dk-appmake +zx --noloader --org 0x8000 -b $<
 
+##
 ## Run options
+##
 
 FUSE_RUN_OPTS		= --machine 128
