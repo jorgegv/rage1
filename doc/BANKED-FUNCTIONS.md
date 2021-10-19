@@ -35,11 +35,10 @@ game code, which varies from game to game).
 - All accesses from the BANKED functions to lowmem data must be done via the
   macro definitions in `banked.h`
 
-- The `banked.h` file will include a generated file called
-  `lowmem_symbols.h` which is generted from the `main.map` file which is
-  created whe compiling the main program. This file maps the symbols in
-  `main` to their final addresses in low memory, so that the banked
-  functions can use them.
+- The `banked.h` file will include a generated file called `mainsyms.h`
+  which is generated from the `main.map` file which is created whe compiling
+  the main program.  This file maps the symbols in `main` to their final
+  addresses in low memory, so that the banked functions can use them.
 
 - Initially, banked functions receive no parameters and return nothing, but
   this limitation is to be revisited, since it seems easy to have a

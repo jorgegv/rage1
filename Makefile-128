@@ -17,12 +17,13 @@ TAPS			= $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
 -include Makefile.common
 
 build:
-#	@$(MYMAKE) -s banked_code
 	@$(MYMAKE) -s -j8 datasets
 	@$(MYMAKE) -s -j8 codesets
-	@$(MYMAKE) -s -j8 banks
+	@$(MYMAKE) -s banks
 	@$(MYMAKE) -s bank_switcher
 	@$(MYMAKE) -s -j8 main
+	@$(MYMAKE) -s main_symbols
+	@$(MYMAKE) -s banked_code
 	@$(MYMAKE) -s loader
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final
@@ -83,10 +84,13 @@ codeset_%.bin:
 banked_code: $(BIN_BANKED_CODE)
 $(BIN_BANKED_CODE):
 	@echo "Compiling BANKED CODE..."
-	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(ENGINE_DIR)/banked_code/*.{asm,c}
+	@$(ZCC) $(CFLAGS) -D_BANKED_CODE_BUILD --no-crt -o $@ $(BANKED_CODE_DIR)/*.{asm,c}
+	@mv $(BANKED_CODE_DIR)/$(shell basename $@ .bin)_code_compiler.bin $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin
+	@if [ $$( stat -c%s $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin ) -gt $(BANK_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(BANK_MAXSIZE) bytes"; exit 1; fi
 
-
-## Banks
+##
+## Dataset/Codeset Banks
+##
 
 banks:
 	@echo "Building Bank binaries and Dataset/Codeset maps..."
@@ -105,6 +109,14 @@ $(BSWITCH_BIN):
 loader:
 	@echo "Creating custom BASIC loader..."
 	@./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR)
+
+##
+## Create main.map C symbol definitions so that banked code can use them
+##
+
+main_symbols:
+	@echo "Creating main.map C symbol definitions..."
+	@./tools/map2cdef.pl < main.map > $(GENERATED_DIR)/mainsyms.h
 
 ##
 ## Taps

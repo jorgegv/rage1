@@ -39,11 +39,13 @@ BIN_CODESETS		= $(CODESET_DIRS:.src=.bin)
 CODESET_MAXSIZE		= 16384
 
 # Banked code binary
-BIN_BANKED_CODE		= $(ENGINE_DIR)/banked_code/banked_code.bin
+BANKED_CODE_DIR		= $(ENGINE_DIR)/banked_code
+BIN_BANKED_CODE		= $(BANKED_CODE_DIR)/banked_code.bin
+BANK_MAXSIZE		= 16384
+BANKED_RESERVED_BANK	= 4
 
 # Bank binaries and taps
-BANK_BINS_FILE		= $(GENERATED_DIR)/bank_bins.cfg
-BANK_BINS		= $(shell cat $(BANK_BINS_FILE) 2>/dev/null )
+BANK_BINS		= $(wildcard $(GENERATED_DIR)/bank_*.bin )
 BANK_TAPS		= $(BANK_BINS:.bin=.tap)
 
 # Bank switcher routine for BASIC and tap

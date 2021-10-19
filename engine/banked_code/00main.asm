@@ -13,17 +13,12 @@
 	org	0xC000
 
 public	_all_banked_functions
-public	_banked_function_args
 
 extern	_sound_play_pending_fx
 
-;; 0xC000 (offset 0): banked_args - pointer to struct banked_function_args_s
-;; initialized at startup by init_memory
-_banked_function_args:
-	dw	0
-
-;; 0xC002 (offset 2): banked functions table
+;;
+;; 0xC000: banked functions table
+;;
 _all_banked_functions:
-	;; index 0
-	dw	_sound_play_pending_fx
+	dw	_sound_play_pending_fx		;; index 0
 	
