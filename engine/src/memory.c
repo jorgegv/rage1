@@ -51,29 +51,16 @@ void init_memory(void) {
 #ifdef BUILD_FEATURE_ZX_TARGET_128
     // initial memory bank
     memory_current_memory_bank = 0;
-
-    // setup struct for passing global data to banked functions
-    banked_function_args.game_state = &game_state;
 #endif
 }
 
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 
-// struct for passing global data ptr to banked functions
-struct banked_function_args_s banked_function_args;
-
-// banked functions table
-struct banked_function_info_s all_banked_functions[ BANKED_FUNCTION_MAX_ID + 1 ] = {
-    { .id = BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID, },
-};
-
 // trampoline function to call banked functions
 void memory_call_banked_function( uint8_t function_id ) {
-    struct banked_function_info_s *f;
+    // pointer to table of functions in bank
+    banked_function_t *f = (banked_function_t *) 0xC000;
     uint8_t previous_memory_bank;
-
-    // for efficiency
-    f = &all_banked_functions[ function_id ];
 
     // save current memory bank
     previous_memory_bank = memory_current_memory_bank;
@@ -83,7 +70,7 @@ void memory_call_banked_function( uint8_t function_id ) {
     memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
 
     // call the function
-    f->function( );
+    f[ function_id ]();
 
     // switch back to previous memory bank
     memory_switch_bank( previous_memory_bank );

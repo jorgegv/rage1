@@ -31,12 +31,6 @@
     // reserved memory bank for banked functions in engine code
     #define ENGINE_CODE_MEMORY_BANK		4
 
-    // structure for passing global game info to banked functions
-    struct banked_function_args_s {
-        struct game_state_s *game_state;
-    };
-    extern struct banked_function_args_s banked_function_args;
-
     // all banked functions must be declared as
     //   void function( void );
     typedef void (*banked_function_t)( void );
