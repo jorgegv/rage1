@@ -70,7 +70,7 @@ codesets: $(BIN_CODESETS)
 #codeset_%.bin: codeset_%.src/*.c codeset_%.src/*.asm
 codeset_%.bin:
 	@echo "Compiling CODESET $@ ..."
-	# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
+	@# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
 	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
 	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
 	@if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
