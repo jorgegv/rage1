@@ -102,7 +102,7 @@ void my_menu_screen(void) {
    }
    sp1_UpdateNow();
    in_pause(100);
-   beep_fx( SOUND_CONTROLLER_SELECTED );
+   bit_beepfx( SOUND_CONTROLLER_SELECTED );
    in_pause(500);
 
    // clear screen and exit to main game loop
@@ -188,7 +188,7 @@ void my_intro_screen(void) {
 void my_game_end_screen(void) {
    draw_text_box( &b2, " You won!" );
    sp1_UpdateNow();
-   beep_fx( SOUND_GAME_WON );
+   bit_beepfx( SOUND_GAME_WON );
 
    in_wait_nokey();
    in_wait_key();
@@ -201,7 +201,7 @@ void my_game_end_screen(void) {
 void my_game_over_screen(void) {
    draw_text_box( &b2, "GAME OVER!" );
    sp1_UpdateNow();
-   beep_fx( SOUND_GAME_OVER );
+   bit_beepfx( SOUND_GAME_OVER );
 
    in_wait_nokey();
    in_wait_key();

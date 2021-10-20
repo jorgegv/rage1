@@ -23,5 +23,5 @@ void sound_request_fx( void *sfx ) {
 
 // moved to banked_code
 //void sound_play_pending_fx( void ) {
-//    beep_fx( game_state.sound_fx );
+//    bit_beepfx( game_state.sound_fx );
 //}

@@ -18,5 +18,5 @@
 #include "rage1/banked.h"
 
 void sound_play_pending_fx( void ) {
-    beep_fx( game_state.sound_fx );
+    bit_beepfx( game_state.sound_fx );
 }
