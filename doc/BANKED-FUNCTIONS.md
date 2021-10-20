@@ -45,7 +45,7 @@ game code, which varies from game to game).
   structure in low memory for passing parameters and return values to the
   BANKED functions at runtime
 
-**NOTES:**
+**Implementation NOTES:**
 
 - Compilation order: datasets - codesets - main (->main.map) - symbol macro
   definitions -> rest of 128K build
@@ -63,3 +63,17 @@ game code, which varies from game to game).
   - The BANKED code bank binary is output separately in the Makefile, but it
     is added to the same directory as the previous dataset and codeset
     banks, so that it is found by the BASIC loasder generator
+
+## Recommendations
+
+When migrating engine functions to be banked functions, the following points
+should be taken into account:
+
+- Take care to check that the data accessed from the function is either
+  inside the bank, or in low memory
+
+- Take care with pointers passed from low memory code to banked code: some
+  of those pointers may point to data above 0xC000 and thus will be
+  unavailable when the banked function is run.
+
+- Use `make mem` to ensure that no data section is above 0xC000
