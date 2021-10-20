@@ -54,26 +54,6 @@ void init_memory(void) {
 #endif
 }
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
-
 // trampoline function to call banked functions
-void memory_call_banked_function( uint8_t function_id ) {
-    // pointer to table of functions in bank
-    banked_function_t *f = (banked_function_t *) 0xC000;
-    uint8_t previous_memory_bank;
-
-    // save current memory bank
-    previous_memory_bank = memory_current_memory_bank;
-
-    // get the bank number from the codeset info table and swicth to the
-    // proper bank
-    memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
-
-    // call the function
-    f[ function_id ]();
-
-    // switch back to previous memory bank
-    memory_switch_bank( previous_memory_bank );
-}
-
-#endif
+// void memory_call_banked_function( uint8_t function_id )
+// moved to engine/lowmem so that it is linked in low memory

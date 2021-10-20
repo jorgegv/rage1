@@ -26,7 +26,7 @@
 
 // List of valid codeset banks.  Should be in sync with the list of the same
 // name in datagen.pl and banktool.pl
-uint8_t codeset_valid_banks[2] = { 4, 6 };
+uint8_t codeset_valid_banks[1] = { 6 };
 
 // global codeset initialization called from main
 void init_codesets( void ) {

@@ -38,7 +38,7 @@ build:
 ENGINE_LOWMEM_SYMBOLS	= $(shell grep -r extern engine/include/rage1/ | grep -Po '[\w\[\]]+;$$' | tr -d '[];' )
 
 # some critical initialization and memory management functions
-ENGINE_LOWMEM_SYMBOLS	+= init_datasets init_codesets memory_switch_bank dataset_activate codeset_call_function
+ENGINE_LOWMEM_SYMBOLS	+= init_datasets init_codesets memory_switch_bank dataset_activate codeset_call_function memory_call_banked_function
 
 # all data generated in the home bank
 GAME_LOWMEM_SYMBOLS	= $(shell $(NM) $(GENERATED_DIR)/game_data.o | sed '1,/  Symbols:/d' | awk '{print $$4}' )
