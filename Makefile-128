@@ -17,12 +17,14 @@ TAPS			= $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
 -include Makefile.common
 
 build:
-	@-cp $(ENGINE_DIR)/codeset_0/*/*.{c,asm} $(GENERATED_DIR_CODESETS)/codeset_0.src/
 	@$(MYMAKE) -s -j8 datasets
 	@$(MYMAKE) -s -j8 codesets
-	@$(MYMAKE) -s -j8 banks
+	@$(MYMAKE) -s banks
 	@$(MYMAKE) -s bank_switcher
 	@$(MYMAKE) -s -j8 main
+	@$(MYMAKE) -s main_symbols
+	@$(MYMAKE) -s banked_code
+	@$(MYMAKE) -s loader
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final
 	@$(MYMAKE) -s lowmemcheck
@@ -36,7 +38,7 @@ build:
 ENGINE_LOWMEM_SYMBOLS	= $(shell grep -r extern engine/include/rage1/ | grep -Po '[\w\[\]]+;$$' | tr -d '[];' )
 
 # some critical initialization and memory management functions
-ENGINE_LOWMEM_SYMBOLS	+= init_datasets init_codesets memory_switch_bank dataset_activate codeset_call_function
+ENGINE_LOWMEM_SYMBOLS	+= init_datasets init_codesets memory_switch_bank dataset_activate codeset_call_function memory_call_banked_function
 
 # all data generated in the home bank
 GAME_LOWMEM_SYMBOLS	= $(shell $(NM) $(GENERATED_DIR)/game_data.o | sed '1,/  Symbols:/d' | awk '{print $$4}' )
@@ -45,10 +47,53 @@ GAME_LOWMEM_SYMBOLS	= $(shell $(NM) $(GENERATED_DIR)/game_data.o | sed '1,/  Sym
 lowmemcheck:
 	@./tools/lowmemsym.pl -m main.map $(ENGINE_LOWMEM_SYMBOLS) $(GAME_LOWMEM_SYMBOLS)
 
-## Banks
+##
+## Dataset compilation to standalone binaries org'ed at 0x5C00
+##
+
+datasets: $(ZX0_DATASETS)
+
+dataset_%.bin: dataset_%.c
+	@echo "Compiling DATASET $< ..."
+	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
+	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; fi
+
+dataset_%.zx0: dataset_%.bin
+	@echo "Compressing DATASET $< ..."
+	@$(ZX0) $< $@ >/dev/null 2>&1
+
+##
+## Codeset compilation to standalone binaries org'ed at 0xC000
+##
+
+codesets: $(BIN_CODESETS)
+
+#codeset_%.bin: codeset_%.src/*.c codeset_%.src/*.asm
+codeset_%.bin:
+	@echo "Compiling CODESET $@ ..."
+	@# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
+	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+	@if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
+
+##
+## Banked code compilation to standalone binary at 0xC000
+##
+
+banked_code: $(BIN_BANKED_CODE)
+$(BIN_BANKED_CODE):
+	@echo "Compiling BANKED CODE..."
+	@$(ZCC) $(CFLAGS) -D_BANKED_CODE_BUILD --no-crt -o $@ $(BANKED_CODE_DIR)/*.{asm,c}
+	@mv $(BANKED_CODE_DIR)/$(shell basename $@ .bin)_code_compiler.bin $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin
+	@if [ $$( stat -c%s $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin ) -gt $(BANK_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(BANK_MAXSIZE) bytes"; exit 1; fi
+
+##
+## Dataset/Codeset Banks
+##
 
 banks:
-	@echo "Building Bank binaries, BASIC loader and Dataset map..."
+	@echo "Building Bank binaries and Dataset/Codeset maps..."
 	@./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM)
 
 bank_switcher: $(BSWITCH_BIN)
@@ -57,7 +102,25 @@ $(BSWITCH_BIN):
 	@echo "Assembling bank switch routine..."
 	@$(ZCC) $(CFLAGS) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
 
+##
+## Custom BASIC loader
+##
+
+loader:
+	@echo "Creating custom BASIC loader..."
+	@./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR)
+
+##
+## Create main.map C symbol definitions so that banked code can use them
+##
+
+main_symbols:
+	@echo "Creating main.map C symbol definitions..."
+	@./tools/map2cdef.pl < main.map > $(GENERATED_DIR)/mainsyms.h
+
+##
 ## Taps
+##
 
 taps: $(TAPS)
 
@@ -76,6 +139,8 @@ $(BSWITCH_TAP): $(BSWITCH_BIN)
 	@echo "Creating TAP $@..."
 	@z88dk-appmake +zx --noloader --org 0x8000 -b $<
 
+##
 ## Run options
+##
 
 FUSE_RUN_OPTS		= --machine 128

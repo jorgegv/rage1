@@ -25,6 +25,9 @@ use File::Copy;
 my $dataset_base_address = 0x5B00;
 my $codeset_base_address = 0xC000;
 
+# banks reserved for codesets. Bank 4 is reserved for engine code
+my @codeset_valid_banks = ( 6, );	# non-contended
+
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
 # also in $all_state variable in dump_internal_state function at the end of
@@ -557,6 +560,13 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+
+                # check that codeset is a valid value
+                if ( defined( $item->{'codeset'} ) ) {
+                    if ( $item->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
+                        die sprintf( "CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                    }
+                }
 
                 # add the needed codeset-related fields.  if a function has
                 # no codeset directive, it goes to the 'home' codeset
@@ -2453,8 +2463,8 @@ EOF_CODESET_3
         );
         my $index = 0;
         foreach my $function ( @non_home_codeset_functions ) {
-            push @c_game_data_lines,  sprintf( "\t{ .codeset_num = %d, .local_function_num = %d },\n",
-                $function->{'codeset'},
+            push @c_game_data_lines,  sprintf( "\t{ .bank_num = %d, .local_function_num = %d },\n",
+                $codeset_valid_banks[ $function->{'codeset'} ],
                 $function->{'local_index'},
             );
             push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%s	(%d)\n",

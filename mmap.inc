@@ -38,12 +38,12 @@ section code_crt_common
 ;; the following sections have been moved from their normal places so
 ;; that game data is placed at the start of the memory map
 section rodata_input
-section rodata_sound_bit
 section rodata_compiler
+section rodata_sound_bit
 section data_compiler
-section data_sound_bit
 section data_arch
 section data_stdlib
+section data_sound_bit
 section bss_compiler
 section bss_error
 section bss_stdlib          
@@ -54,13 +54,16 @@ section code_crt_interrupt_vector_table
 
 ENDIF
 
+section code_compiler
 section code_driver
 section code_font
 section code_clib
   include "../../clib_code.inc"
 section code_lib
-section code_compiler
 section code_user
+;; place the bit_beepfx routine and pals in non-contended memory
+;; above code_compiler section
+section code_sound_bit
 
 section rodata_align_256
 align 256

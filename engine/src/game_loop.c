@@ -30,6 +30,7 @@
 #include "rage1/hero.h"
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
+#include "rage1/memory.h"
 
 #include "game_data.h"
 
@@ -82,7 +83,7 @@ void check_game_flags( void ) {
 
     // check if sound fx needs to be played
     if ( GET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX ) ) {
-        sound_play_pending_fx();
+        CALL_SOUND_PLAY_PENDING_FX();
         // all loop flags are reset at the beginning of the game loop
     }
 }

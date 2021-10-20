@@ -35,7 +35,6 @@ void init_program(void) {
    init_bullets();
 }
 
-
 void main(void)
 {
    init_program();

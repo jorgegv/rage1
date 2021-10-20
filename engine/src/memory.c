@@ -49,6 +49,11 @@ void init_memory(void) {
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
 
 #ifdef BUILD_FEATURE_ZX_TARGET_128
+    // initial memory bank
     memory_current_memory_bank = 0;
 #endif
 }
+
+// trampoline function to call banked functions
+// void memory_call_banked_function( uint8_t function_id )
+// moved to engine/lowmem so that it is linked in low memory

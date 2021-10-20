@@ -21,6 +21,7 @@ void sound_request_fx( void *sfx ) {
     SET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX );
 }
 
-void sound_play_pending_fx( void ) {
-    beep_fx( game_state.sound_fx );
-}
+// moved to banked_code
+//void sound_play_pending_fx( void ) {
+//    bit_beepfx( game_state.sound_fx );
+//}

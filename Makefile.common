@@ -38,9 +38,14 @@ CODESET_DIRS		= $(wildcard $(GENERATED_DIR_CODESETS)/codeset_*.src)
 BIN_CODESETS		= $(CODESET_DIRS:.src=.bin)
 CODESET_MAXSIZE		= 16384
 
+# Banked code binary
+BANKED_CODE_DIR		= $(ENGINE_DIR)/banked_code
+BIN_BANKED_CODE		= $(BANKED_CODE_DIR)/banked_code.bin
+BANK_MAXSIZE		= 16384
+BANKED_RESERVED_BANK	= 4
+
 # Bank binaries and taps
-BANK_BINS_FILE		= $(GENERATED_DIR)/bank_bins.cfg
-BANK_BINS		= $(shell cat $(BANK_BINS_FILE) 2>/dev/null )
+BANK_BINS		= $(wildcard $(GENERATED_DIR)/bank_*.bin )
 BANK_TAPS		= $(BANK_BINS:.bin=.tap)
 
 # Bank switcher routine for BASIC and tap
@@ -130,36 +135,6 @@ data_depend:
 	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
 	@ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
-
-##
-## Dataset compilation to standalone binaries org'ed at 0x5C00
-##
-
-datasets: $(ZX0_DATASETS)
-
-dataset_%.bin: dataset_%.c
-	@echo "Compiling DATASET $< ..."
-	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
-	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
-	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; fi
-
-dataset_%.zx0: dataset_%.bin
-	@echo "Compressing DATASET $< ..."
-	@$(ZX0) $< $@ >/dev/null 2>&1
-
-##
-## Codeset compilation to standalone binaries org'ed at 0xC000
-##
-
-codesets: $(BIN_CODESETS)
-
-#codeset_%.bin: codeset_%.src/*.c codeset_%.src/*.asm
-codeset_%.bin:
-	@echo "Compiling CODESET $@ ..."
-	# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
-	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
-	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
-	@if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
 
 ## Taps
 

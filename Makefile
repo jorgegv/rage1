@@ -35,9 +35,11 @@ help:
 clean:
 	@-rm -rf *.{lis,bin,tap,c.asm,map,log} \
 		$(BUILD_DIR)/{game_src,game_data,generated} \
-		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm} $(ENGINE_DIR)/lowmem/*.{map,lis,o,c.asm}\
-		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm} \
-		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm} \
+		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm,sym} \
+		$(ENGINE_DIR)/lowmem/*.{map,lis,o,c.asm,sym} \
+		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm,sym} \
+		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm,sym} \
+		$(BANKED_CODE_DIR)/*.{map,lis,o,c.asm,,sym,bin} \
 		2>/dev/null
 config:
 	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* 2>/dev/null

@@ -16,9 +16,12 @@ TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
 
 -include Makefile.common
 
+# some of the banked_code files must not be compiled in 48K mode
+BANKED_CODE_EXCLUDED_FROM_48_BUILD	= 00main.asm beeper.asm
 build:
 	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
-	@-cp $(ENGINE_DIR)/codeset_0/*/*.{c,asm} $(GAME_SRC_DIR)
+	@-cp $(BANKED_CODE_DIR)/*.{c,asm} $(GAME_SRC_DIR)
+	@cd $(GAME_SRC_DIR) && rm $(BANKED_CODE_EXCLUDED_FROM_48_BUILD)
 	@$(MYMAKE) -s -j8 main
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final

@@ -24,6 +24,10 @@
 // memory below 0xC000, so we put it in lowmem/asmdata.asm
 // struct codeset_assets_s *codeset_assets;
 
+// List of valid codeset banks.  Should be in sync with the list of the same
+// name in datagen.pl and banktool.pl
+uint8_t codeset_valid_banks[1] = { 6 };
+
 // global codeset initialization called from main
 void init_codesets( void ) {
     uint8_t i;
@@ -37,7 +41,7 @@ void init_codesets( void ) {
     for ( i = 0; i < NUM_CODESETS; i++ ) {
         // codeset_assets always points to 0xC000, but when switching banks
         // we access the different codeset_assets struct for each bank
-        memory_switch_bank( codeset_info[ i ].bank_num );
+        memory_switch_bank( codeset_valid_banks[ i ] );
         codeset_assets->game_state	= &game_state;
         codeset_assets->home_assets	= home_assets;
         codeset_assets->banked_assets	= banked_assets;
@@ -59,7 +63,7 @@ void codeset_call_function( uint8_t global_function_num ) {
 
     // get the bank number from the codeset info table and swicth to the
     // proper bank
-    memory_switch_bank( codeset_info[ f->codeset_num ].bank_num );
+    memory_switch_bank( f->bank_num );
 
     // call the function
     codeset_assets->functions[ f->local_function_num ]();
