@@ -15,10 +15,11 @@
 public	_all_banked_functions
 
 extern	_sound_play_pending_fx
+extern	_hero_animate_and_move
 
 ;;
 ;; 0xC000: banked functions table
 ;;
 _all_banked_functions:
 	dw	_sound_play_pending_fx		;; index 0
-	
+	dw	_hero_animate_and_move		;; index 1

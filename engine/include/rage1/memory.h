@@ -40,21 +40,24 @@
 
     // banked function IDs
     #define BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID	0
+    #define BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE	1
 
     // maximum assigned banked function ID. Keep in sync with the previous IDs
     // 128K versions
-    #define BANKED_FUNCTION_MAX_ID		0
+    #define BANKED_FUNCTION_MAX_ID		1
 
 #endif
 
 // function call macros - 128K versions
 #ifdef BUILD_FEATURE_ZX_TARGET_128
     #define CALL_SOUND_PLAY_PENDING_FX()	( memory_call_banked_function( BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID ) )
+    #define CALL_HERO_ANIMATE_AND_MOVE()	( memory_call_banked_function( BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE ) )
 #endif
 
 // function call macros - 48K versions
 #ifdef BUILD_FEATURE_ZX_TARGET_48
     #define CALL_SOUND_PLAY_PENDING_FX()	( sound_play_pending_fx() )
+    #define CALL_HERO_ANIMATE_AND_MOVE()	( hero_animate_and_move() )
 #endif
 
 

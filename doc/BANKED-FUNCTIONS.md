@@ -77,3 +77,23 @@ should be taken into account:
   unavailable when the banked function is run.
 
 - Use `make mem` to ensure that no data section is above 0xC000
+
+## Steps for migration of an engine function to banked code
+
+- The function to migrate should match the `void f( void )` prototype
+
+- Copy the file where the function is to the `banked_code` directory
+
+- All banked code filesshould `#include "rage1/banked.h`, and it should be
+  included after all needed additional RAGE1 include files have been
+  included. The `banked.h` file should be the last one of the RAGE1
+  `#includes`
+
+- Add function ID and function call macros to `memory.h`
+
+- Add the function ID to the banked function table at `00main.asm` in
+  `banked_code`
+
+- Add the needed macro definitions to `banked.h` for the low memory symbols
+  and data structures that the migrated function will access
+

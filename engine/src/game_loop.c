@@ -112,7 +112,7 @@ void check_controller(void) {
 void do_hero_actions(void) {
     RUN_ONLY_ONCE_PER_FRAME;
 
-    hero_animate_and_move();
+    CALL_HERO_ANIMATE_AND_MOVE();
     hero_pickup_items();
     if ( game_state.controller.state & IN_STICK_FIRE )
         hero_shoot_bullet();
