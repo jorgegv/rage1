@@ -82,11 +82,12 @@ should be taken into account:
 
 - The function to migrate should match the `void f( void )` prototype
 
-- Copy the file where the function is to the `banked_code` directory
+- Copy the source file which contains the function to be migrated to the
+  `banked_code` directory
 
-- All banked code filesshould `#include "rage1/banked.h`, and it should be
-  included after all needed additional RAGE1 include files have been
-  included. The `banked.h` file should be the last one of the RAGE1
+- All banked code source files should `#include "rage1/banked.h`, and it
+  should be included after all needed additional RAGE1 include files have
+  been included.  The `banked.h` file should be the last one of the RAGE1
   `#includes`
 
 - Add function ID and function call macros to `memory.h`
