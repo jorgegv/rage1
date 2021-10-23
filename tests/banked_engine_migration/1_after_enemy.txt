@@ -1,0 +1,72 @@
+
+MEMORY USAGE REPORT BY OBJECT FILE:
+-------------------------------------------------
+OBJECT FILE            CODE   DATA    BSS
+-------------------------------------------------
+btile.o                 581      0    192
+bullet.o               1510     40      0
+codeset.o               145      1      0
+collision.o             544      0      0
+controller.o             83      0      0
+dataset.o               135      1      0
+debug.o                 275     16      7
+enemy.o                 649      0      0
+flow.o                  854     70      0
+game_loop.o             469      0      4
+game_state.o            244      0     68
+hero.o                  671     38      2
+hotzone.o                60      0      0
+interrupts.o             87      0      0
+inventory.o             247      0      0
+main.o                   59      0      0
+map.o                   996      0      0
+memory.o                 23      0      2
+screen.o                  0      4      0
+sound.o                  30      0      0
+sp1engine.o              27      0      0
+sprite.o                254      0      2
+util.o                   38      0      0
+asmdata.o                10      0      0
+bswitch.o                30      0      1
+memory.o                 49      0      0
+game_data.o               0   1335      0
+game_functions.o       1244     38      5
+user_functions.o         47      6      0
+dataset_info.o           15      0      0
+-------------------------------------------------
+TOTAL                  9376   1549    283
+
+MEMORY USAGE REPORT BY BINARY SECTION:
+----------------------------------------------------------------------
+SECTION NAME          BASE           TOP            SIZE
+----------------------------------------------------------------------
+CODE                  $8184 (33156)  $8188 (33160)  5
+code_crt_main         $818B (33163)  $818B (33163)  1
+code_crt_common       $8190 (33168)  $819A (33178)  11
+rodata_input          $81A9 (33193)  $81A9 (33193)  1
+rodata_compiler       $8249 (33353)  $8304 (33540)  188
+rodata_sound_bit      $830F (33551)  $8368 (33640)  90
+data_compiler         $838A (33674)  $898E (35214)  1541
+data_sound_bit        $8997 (35223)  $8997 (35223)  1
+data_arch             $8997 (35223)  $8997 (35223)  1
+data_stdlib           $8998 (35224)  $8998 (35224)  1
+bss_compiler          $899C (35228)  $8AB3 (35507)  280
+bss_error             $8AB7 (35511)  $8AB7 (35511)  1
+bss_stdlib            $8AB9 (35513)  $8ABA (35514)  2
+code_compiler         $8ABB (35515)  $C28C (49804)  14290
+code_alloc_malloc     $AF42 (44866)  $B001 (45057)  192
+code_arch             $B00A (45066)  $B00A (45066)  1
+code_compress_zx0     $B01A (45082)  $B05F (45151)  70
+code_error            $B069 (45161)  $B092 (45202)  42
+code_im2              $B09A (45210)  $B0B1 (45233)  24
+code_input            $B0C1 (45249)  $B233 (45619)  371
+code_sound_bit        $B30F (45839)  $B3EC (46060)  222
+FREE                  $C3F6 (50166)  $D1EC (53740)  3575
+RESERVED_SP1          $D1ED (53741)  $FFFF (65535)  11795
+----------------------------------------------------------------------
+TOTAL CODE     :  15229 bytes
+TOTAL DATA     :   1823 bytes
+TOTAL BSS      :    283 bytes
+TOTAL RESERVED :  11795 bytes
+TOTAL FREE     :   3575 bytes
+----------------------------------------------------------------------

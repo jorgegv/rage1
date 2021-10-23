@@ -22,9 +22,10 @@
 
     // commodity #defines using the main symbols above may be defined here
     // remember: these #defines are only valid while compiling BANKED code
-    #define	game_state			( *( struct game_state_s *) MAIN_SYMBOL_game_state )
-    #define	screen_pos_tile_type_data	( ( uint8_t *) MAIN_SYMBOL_screen_pos_tile_type_data )
-    #define	home_assets			( *( struct dataset_assets_s **) MAIN_SYMBOL_home_assets )
+    #define	game_state				( *( struct game_state_s *) MAIN_SYMBOL_game_state )
+    #define	screen_pos_tile_type_data		( ( uint8_t *) MAIN_SYMBOL_screen_pos_tile_type_data )
+    #define	home_assets				( *( struct dataset_assets_s **) MAIN_SYMBOL_home_assets )
+    #define	banked_assets				( *( struct dataset_assets_s **) MAIN_SYMBOL_banked_assets )
 
 #endif // _BANKED_CODE_BUILD
 

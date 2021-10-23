@@ -68,8 +68,9 @@ struct enemy_info_s {
 // sets all enemies in a enemy set to initial positions and frames
 void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies );
 
-// animates and moves all enemies in a enemy set according to their rules
-void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemies );
+// animates and moves all enemies in the current screen according to their rules
+void enemy_animate_and_move_all( void );
+void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies );
 
 // redraws enemies if needed
 void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies );

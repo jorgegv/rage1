@@ -92,10 +92,8 @@ void move_enemies(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
    // move enemies
-   enemy_animate_and_move_all(
-      game_state.current_screen_ptr->enemy_data.num_enemies, 
-      game_state.current_screen_ptr->enemy_data.enemies
-   );
+   CALL_ENEMY_ANIMATE_AND_MOVE_ALL();
+//   enemy_animate_and_move_all();
 
    // redraw enemies that have changed position
    enemy_redraw_all(

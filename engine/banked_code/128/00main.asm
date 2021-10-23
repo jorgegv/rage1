@@ -16,6 +16,7 @@ public	_all_banked_functions
 
 extern	_sound_play_pending_fx
 extern	_hero_animate_and_move
+extern	_enemy_animate_and_move_all
 
 ;;
 ;; 0xC000: banked functions table
@@ -23,3 +24,4 @@ extern	_hero_animate_and_move
 _all_banked_functions:
 	dw	_sound_play_pending_fx		;; index 0
 	dw	_hero_animate_and_move		;; index 1
+	dw	_enemy_animate_and_move_all	;; index 2
