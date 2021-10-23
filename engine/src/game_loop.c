@@ -96,6 +96,12 @@ void move_enemies(void) {
       game_state.current_screen_ptr->enemy_data.num_enemies, 
       game_state.current_screen_ptr->enemy_data.enemies
    );
+
+   // redraw enemies that have changed position
+   enemy_redraw_all(
+      game_state.current_screen_ptr->enemy_data.num_enemies, 
+      game_state.current_screen_ptr->enemy_data.enemies
+   );
 }
 
 void move_bullets(void) {

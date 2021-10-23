@@ -181,9 +181,38 @@ void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemi
 
         // move/animate sprite into new position
         // sprite may need update either because of animation, movement, or both
-        sp1_MoveSprPix( e->sprite, &game_area,
-            g->frame_data.frames[ g->sequence_data.sequences[ anim->current.sequence ].frame_numbers[ anim->current.sequence_counter ] ],
-            pos->x, pos->y );
+        SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
+//        sp1_MoveSprPix( e->sprite, &game_area,
+//            g->frame_data.frames[ g->sequence_data.sequences[ anim->current.sequence ].frame_numbers[ anim->current.sequence_counter ] ],
+//            pos->x, pos->y );
+    }
+}
+
+void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
+    uint8_t n;
+    struct enemy_info_s *e;
+    struct sprite_graphic_data_s *g;
+    struct sprite_animation_data_s *anim;
+    struct position_data_s *pos;
+
+    n = num_enemies;
+    while( n-- ) {
+        e = &enemies[n];		// efficiency matters ;-)
+        if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) &&
+            ( ENEMY_NEEDS_REDRAW( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) ) ) {
+
+            // precalc some values
+            g = dataset_get_banked_sprite_ptr( e->num_graphic );
+            anim = &e->animation;
+            pos = &e->position;
+
+            // move/animate sprite into new position
+            // sprite may need update either because of animation, movement, or both
+            sp1_MoveSprPix( e->sprite, &game_area,
+                g->frame_data.frames[ g->sequence_data.sequences[ anim->current.sequence ].frame_numbers[ anim->current.sequence_counter ] ],
+                pos->x, pos->y );
+            RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
+        }
     }
 }
 
