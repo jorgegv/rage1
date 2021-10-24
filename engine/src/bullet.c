@@ -20,17 +20,6 @@
 
 #include "game_data.h"
 
-//////////////////////////////
-// Bullets definition
-//////////////////////////////
-
-struct bullet_state_data_s bullet_state_data[ BULLET_MAX_BULLETS ] = {
-	{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 },
-	{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 },
-	{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 },
-	{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 }
-};
-
 void init_bullets( void ) {
     bullet_init_sprites();
 }
