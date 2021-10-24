@@ -106,7 +106,7 @@ void move_bullets(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
    // move active shots
-   bullet_animate_and_move_all();
+   CALL_BULLET_ANIMATE_AND_MOVE_ALL();
 
    // redraw bullets that have moved
    bullet_redraw_all();
