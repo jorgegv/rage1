@@ -31,6 +31,7 @@ struct bullet_state_data_s {
     uint8_t delay_counter;	// current delay counter
     uint8_t flags;
 };
+extern struct bullet_state_data_s bullet_state_data[];
 
 struct bullet_info_s {
     uint8_t width, height;

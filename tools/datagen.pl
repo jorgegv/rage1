@@ -1506,6 +1506,20 @@ sub generate_bullets {
 EOF_BULLET4
 ;
 
+    push @c_game_data_lines, <<EOF_BULLET5
+
+//////////////////////////////
+// Bullets definition
+//////////////////////////////
+
+struct bullet_state_data_s bullet_state_data[ BULLET_MAX_BULLETS ] = {
+EOF_BULLET5
+;
+    foreach ( 1 .. $max_bullets ) {
+        push @c_game_data_lines, "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 },\n";
+    }
+    push @c_game_data_lines, "};\n\n";
+
     # bullet sprite must be always available - output sprite into home bank
 }
 
