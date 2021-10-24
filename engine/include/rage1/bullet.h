@@ -60,12 +60,14 @@ void bullet_redraw_all( void );
 // flags macros and definitions
 #define GET_BULLET_FLAG(s,f)		( (s).flags & (f) )
 #define SET_BULLET_FLAG(s,f)		( (s).flags |= (f) )
-#define RESET_BULLET_FLAG(s,f)	( (s).flags &= ~(f) )
+#define RESET_BULLET_FLAG(s,f)		( (s).flags &= ~(f) )
 
 #define F_BULLET_ACTIVE		0x01
 #define F_BULLET_NEEDS_REDRAW	0x02
+#define F_BULLET_MOVE_OFFSCREEN	0x04
 
 #define IS_BULLET_ACTIVE(s)		(GET_BULLET_FLAG((s),F_BULLET_ACTIVE))
 #define BULLET_NEEDS_REDRAW(s)		(GET_BULLET_FLAG((s),F_BULLET_NEEDS_REDRAW))
+#define BULLET_MOVE_OFFSCREEN(s)	(GET_BULLET_FLAG((s),F_BULLET_MOVE_OFFSCREEN))
 
 #endif // _BULLET_H

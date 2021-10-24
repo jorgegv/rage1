@@ -91,9 +91,16 @@ void bullet_redraw_all( void ) {
         bs = &bi->bullets[ i ];
 
         // skip if it's not active
-        if ( IS_BULLET_ACTIVE( *bs ) && BULLET_NEEDS_REDRAW( *bs ) ) {
-            sp1_MoveSprPix( bs->sprite, &game_area, bi->frames[0], bs->position.x, bs->position.y );
-            RESET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
+        if ( IS_BULLET_ACTIVE( *bs ) ) {
+            if ( BULLET_MOVE_OFFSCREEN( *bs ) ) {
+                sprite_move_offscreen( bs->sprite );
+                RESET_BULLET_FLAG( *bs, F_BULLET_MOVE_OFFSCREEN );
+                RESET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
+            }
+            if ( BULLET_NEEDS_REDRAW( *bs ) ) {
+                sp1_MoveSprPix( bs->sprite, &game_area, bi->frames[0], bs->position.x, bs->position.y );
+                RESET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
+            }
         }
     }
 }
