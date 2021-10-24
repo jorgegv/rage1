@@ -54,14 +54,18 @@ void bullet_animate_and_move_all(void);
 // reset all shots
 void bullet_reset_all(void);
 void bullet_move_offscreen_all(void);
+//redraw
+void bullet_redraw_all( void );
 
 // flags macros and definitions
 #define GET_BULLET_FLAG(s,f)		( (s).flags & (f) )
 #define SET_BULLET_FLAG(s,f)		( (s).flags |= (f) )
 #define RESET_BULLET_FLAG(s,f)	( (s).flags &= ~(f) )
 
-#define F_BULLET_ACTIVE		0x0001
+#define F_BULLET_ACTIVE		0x01
+#define F_BULLET_NEEDS_REDRAW	0x02
 
 #define IS_BULLET_ACTIVE(s)		(GET_BULLET_FLAG((s),F_BULLET_ACTIVE))
+#define BULLET_NEEDS_REDRAW(s)		(GET_BULLET_FLAG((s),F_BULLET_NEEDS_REDRAW))
 
 #endif // _BULLET_H

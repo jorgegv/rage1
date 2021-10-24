@@ -107,6 +107,9 @@ void move_bullets(void) {
 
    // move active shots
    bullet_animate_and_move_all();
+
+   // redraw bullets that have moved
+   bullet_redraw_all();
 }
 
 void check_controller(void) {

@@ -136,8 +136,26 @@ void bullet_animate_and_move_all(void) {
         // adjust xmax, ymax and move sprite to new position
         bs->position.xmax = bs->position.x + bi->width - 1;
         bs->position.ymax = bs->position.y + bi->height - 1;
-        sp1_MoveSprPix( bs->sprite, &game_area, bi->frames[0], bs->position.x, bs->position.y );
+        SET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
+    }
+}
 
+void bullet_redraw_all( void ) {
+    uint8_t i;
+    struct bullet_info_s *bi;
+    struct bullet_state_data_s *bs;
+
+    bi = &game_state.bullet;
+
+    i = bi->num_bullets;
+    while ( i-- ) {
+        bs = &bi->bullets[ i ];
+
+        // skip if it's not active
+        if ( IS_BULLET_ACTIVE( *bs ) && BULLET_NEEDS_REDRAW( *bs ) ) {
+            sp1_MoveSprPix( bs->sprite, &game_area, bi->frames[0], bs->position.x, bs->position.y );
+            RESET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
+        }
     }
 }
 
