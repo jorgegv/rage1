@@ -43,10 +43,11 @@
     #define BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE	1
     #define BANKED_FUNCTION_ENEMY_ANIMATE_AND_MOVE_ALL	2
     #define BANKED_FUNCTION_BULLET_ANIMATE_AND_MOVE_ALL	3
+    #define BANKED_FUNCTION_BULLET_ADD			4
 
     // maximum assigned banked function ID. Keep in sync with the previous IDs
     // 128K versions
-    #define BANKED_FUNCTION_MAX_ID		3
+    #define BANKED_FUNCTION_MAX_ID		4
 
 #endif
 
@@ -56,6 +57,7 @@
     #define CALL_HERO_ANIMATE_AND_MOVE()	( memory_call_banked_function( BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE ) )
     #define CALL_ENEMY_ANIMATE_AND_MOVE_ALL()	( memory_call_banked_function( BANKED_FUNCTION_ENEMY_ANIMATE_AND_MOVE_ALL ) )
     #define CALL_BULLET_ANIMATE_AND_MOVE_ALL()	( memory_call_banked_function( BANKED_FUNCTION_BULLET_ANIMATE_AND_MOVE_ALL ) )
+    #define CALL_BULLET_ADD()			( memory_call_banked_function( BANKED_FUNCTION_BULLET_ADD ) )
 #endif
 
 // function call macros - 48K versions
@@ -64,6 +66,7 @@
     #define CALL_HERO_ANIMATE_AND_MOVE()	( hero_animate_and_move() )
     #define CALL_ENEMY_ANIMATE_AND_MOVE_ALL()	( enemy_animate_and_move_all() )
     #define CALL_BULLET_ANIMATE_AND_MOVE_ALL()	( bullet_animate_and_move_all() )
+    #define CALL_BULLET_ADD()			( bullet_add() )
 #endif
 
 void init_memory(void);

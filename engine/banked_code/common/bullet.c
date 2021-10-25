@@ -27,7 +27,7 @@ void bullet_animate_and_move_all(void) {
     struct bullet_info_s *bi;
     struct bullet_state_data_s *bs;
 
-    bi = &game_state.bullet;   
+    bi = &game_state.bullet;
 
     i = bi->num_bullets;
     while ( i-- ) {
@@ -82,3 +82,59 @@ void bullet_animate_and_move_all(void) {
         SET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
     }
 }
+
+void bullet_add( void ) {
+    struct bullet_state_data_s *bs;
+    uint8_t i;
+    uint8_t h_dy, v_dx;
+    struct bullet_info_s *bi;
+    struct hero_info_s *hero;
+
+    bi = &game_state.bullet;
+    hero = &game_state.hero;
+
+    // search for an inactive slot in hero table
+    i = bi->num_bullets;
+    while ( i-- ) {
+        bs = &game_state.bullet.bullets[ i ];
+        if ( ! GET_BULLET_FLAG( *bs, F_BULLET_ACTIVE ) ) {
+            SET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
+            h_dy = ( HERO_SPRITE_HEIGHT - bi->height ) >> 1;	// divide by 2
+            v_dx = ( HERO_SPRITE_WIDTH - bi->width ) >> 1;	// divide by 2
+            switch ( hero->movement.last_direction ) {
+                case MOVE_UP:
+                    bs->position.x = hero->position.x + v_dx;
+                    bs->position.y = hero->position.y - bi->height;
+                    bs->dx = 0;
+                    bs->dy = -bi->movement.dy;
+                    break;
+                case MOVE_DOWN:
+                    bs->position.x = hero->position.x + v_dx;
+                    bs->position.y = hero->position.ymax + 1;
+                    bs->dx = 0;
+                    bs->dy = bi->movement.dy;
+                    break;
+                case MOVE_LEFT:
+                    bs->position.x = hero->position.x - bi->width;
+                    bs->position.y = hero->position.y + h_dy;
+                    bs->dx = -bi->movement.dx;
+                    bs->dy = 0;
+                    break;
+                case MOVE_RIGHT:
+                    bs->position.x = hero->position.xmax + 1;
+                    bs->position.y = hero->position.y + h_dy;
+                    bs->dx = bi->movement.dx;
+                    bs->dy = 0;
+                    break;
+            }
+            bs->position.xmax = bs->position.x + bi->width - 1;
+            bs->position.ymax = bs->position.y + bi->height - 1;
+            bs->delay_counter = bi->movement.delay;
+
+            // slot found, request sound fx and return
+            sound_request_fx( SOUND_BULLET_SHOT );
+            return;
+        }
+    }
+}
+

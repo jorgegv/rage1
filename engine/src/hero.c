@@ -26,6 +26,7 @@
 #include "rage1/hotzone.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
+#include "rage1/memory.h"
 
 #include "game_data.h"
 
@@ -139,9 +140,8 @@ void hero_shoot_bullet( void ) {
         return;
 
     // add a new bullet and load the "reload" counter
-    bullet_add();
+    CALL_BULLET_ADD();
     game_state.bullet.reloading = game_state.bullet.reload_delay;
-
 }
 
 void hero_pickup_items(void) {
