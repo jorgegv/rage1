@@ -77,16 +77,19 @@ ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' game/game_data/game_config/
 #######################################################################
 # template files and directories needed for game creation and update
 #######################################################################
-#
+
 # these are pure library files that will be overwritten when updating the library
 # do not modify these in your game!
-LIB_ENGINE_FILES	= engine tools Makefile* zpragma*.inc .gitignore env.sh
+LIB_ENGINE_FILES	= engine tools Makefile* zpragma*.inc .gitignore env.sh mmap.inc
+
 # these are game data directories that will be copied from the template when creating
 # a new game, but will _not_ be overwritten when updating the library. These contain
 # your game!
 LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
+
 # needed directories that will be created empty if they do not exist
 LIB_ENGINE_EMPTY_DIRS	= build/generated tests
+
 #######################################################################
 
 # compiler and tools
