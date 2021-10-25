@@ -90,7 +90,7 @@ should be taken into account:
   been included.  The `banked.h` file should be the last one of the RAGE1
   `#includes`
 
-- Add function ID and function call macros to `memory.h`
+- Add function ID and function call macro (for 128K mode) to `memory.h`
 
 - Add the function ID to the banked function table at `00main.asm` in
   `banked_code`

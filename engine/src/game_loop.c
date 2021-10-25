@@ -83,7 +83,7 @@ void check_game_flags( void ) {
 
     // check if sound fx needs to be played
     if ( GET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX ) ) {
-        CALL_SOUND_PLAY_PENDING_FX();
+        sound_play_pending_fx();
         // all loop flags are reset at the beginning of the game loop
     }
 }
@@ -92,8 +92,7 @@ void move_enemies(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
    // move enemies
-   CALL_ENEMY_ANIMATE_AND_MOVE_ALL();
-//   enemy_animate_and_move_all();
+   enemy_animate_and_move_all();
 
    // redraw enemies that have changed position
    enemy_redraw_all(
@@ -106,7 +105,7 @@ void move_bullets(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
    // move active shots
-   CALL_BULLET_ANIMATE_AND_MOVE_ALL();
+   bullet_animate_and_move_all();
 
    // redraw bullets that have moved
    bullet_redraw_all();
@@ -119,7 +118,7 @@ void check_controller(void) {
 void do_hero_actions(void) {
     RUN_ONLY_ONCE_PER_FRAME;
 
-    CALL_HERO_ANIMATE_AND_MOVE();
+    hero_animate_and_move();
     hero_pickup_items();
     if ( game_state.controller.state & IN_STICK_FIRE )
         hero_shoot_bullet();

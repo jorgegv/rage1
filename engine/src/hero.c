@@ -140,7 +140,7 @@ void hero_shoot_bullet( void ) {
         return;
 
     // add a new bullet and load the "reload" counter
-    CALL_BULLET_ADD();
+    bullet_add();
     game_state.bullet.reloading = game_state.bullet.reload_delay;
 }
 

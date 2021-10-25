@@ -18,7 +18,6 @@
 #include "rage1/debug.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
-#include "rage1/memory.h"
 
 #include "game_data.h"
 

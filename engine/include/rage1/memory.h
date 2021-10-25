@@ -17,6 +17,9 @@
 
 #include "rage1/game_state.h"
 
+// memory subsystem initialization (heap, banks. etc.)
+void init_memory(void);
+
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 
     extern uint8_t memory_current_memory_bank;
@@ -49,26 +52,15 @@
     // 128K versions
     #define BANKED_FUNCTION_MAX_ID		4
 
-#endif
+    // Banked function call macros (128K versions) - In 128K mode we
+    // redefine the regular calls to banked functions as calls to
+    // the trampoline memory_call_banked_function()
+    #define sound_play_pending_fx()		( memory_call_banked_function( BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID ) )
+    #define hero_animate_and_move()		( memory_call_banked_function( BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE ) )
+    #define enemy_animate_and_move_all()	( memory_call_banked_function( BANKED_FUNCTION_ENEMY_ANIMATE_AND_MOVE_ALL ) )
+    #define bullet_animate_and_move_all()	( memory_call_banked_function( BANKED_FUNCTION_BULLET_ANIMATE_AND_MOVE_ALL ) )
+    #define bullet_add()			( memory_call_banked_function( BANKED_FUNCTION_BULLET_ADD ) )
 
-// function call macros - 128K versions
-#ifdef BUILD_FEATURE_ZX_TARGET_128
-    #define CALL_SOUND_PLAY_PENDING_FX()	( memory_call_banked_function( BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID ) )
-    #define CALL_HERO_ANIMATE_AND_MOVE()	( memory_call_banked_function( BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE ) )
-    #define CALL_ENEMY_ANIMATE_AND_MOVE_ALL()	( memory_call_banked_function( BANKED_FUNCTION_ENEMY_ANIMATE_AND_MOVE_ALL ) )
-    #define CALL_BULLET_ANIMATE_AND_MOVE_ALL()	( memory_call_banked_function( BANKED_FUNCTION_BULLET_ANIMATE_AND_MOVE_ALL ) )
-    #define CALL_BULLET_ADD()			( memory_call_banked_function( BANKED_FUNCTION_BULLET_ADD ) )
 #endif
-
-// function call macros - 48K versions
-#ifdef BUILD_FEATURE_ZX_TARGET_48
-    #define CALL_SOUND_PLAY_PENDING_FX()	( sound_play_pending_fx() )
-    #define CALL_HERO_ANIMATE_AND_MOVE()	( hero_animate_and_move() )
-    #define CALL_ENEMY_ANIMATE_AND_MOVE_ALL()	( enemy_animate_and_move_all() )
-    #define CALL_BULLET_ANIMATE_AND_MOVE_ALL()	( bullet_animate_and_move_all() )
-    #define CALL_BULLET_ADD()			( bullet_add() )
-#endif
-
-void init_memory(void);
 
 #endif // _MEMORY_H
