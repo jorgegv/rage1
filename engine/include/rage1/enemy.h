@@ -50,8 +50,10 @@ struct enemy_info_s {
 #define RESET_ENEMY_FLAG(s,f)	( (s) &= ~(f) )
 
 #define F_ENEMY_ACTIVE			0x01
+#define F_ENEMY_NEEDS_REDRAW		0x02
 
 #define IS_ENEMY_ACTIVE(s)			(GET_ENEMY_FLAG((s),F_ENEMY_ACTIVE))
+#define ENEMY_NEEDS_REDRAW(s)			(GET_ENEMY_FLAG((s),F_ENEMY_NEEDS_REDRAW))
 
 // enemy movement state flags
 #define GET_ENEMY_MOVE_FLAG(s,f)	( (s).flags & (f) )
@@ -66,8 +68,12 @@ struct enemy_info_s {
 // sets all enemies in a enemy set to initial positions and frames
 void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies );
 
-// animates and moves all enemies in a enemy set according to their rules
-void enemy_animate_and_move_all( uint8_t num_enemies, struct enemy_info_s *enemies );
+// animates and moves all enemies in the current screen according to their rules
+void enemy_animate_and_move_all( void );
+void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies );
+
+// redraws enemies if needed
+void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies );
 
 void enemy_move_offscreen_all( uint8_t num_enemies, struct enemy_info_s *enemies );
 

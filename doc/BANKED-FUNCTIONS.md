@@ -77,3 +77,53 @@ should be taken into account:
   unavailable when the banked function is run.
 
 - Use `make mem` to ensure that no data section is above 0xC000
+
+## Steps for migration of an engine function to banked code
+
+- The function to migrate should match the `void f( void )` prototype
+
+- Copy the source file which contains the function to be migrated to the
+  `banked_code` directory
+
+- All banked code source files should `#include "rage1/banked.h`, and it
+  should be included after all needed additional RAGE1 include files have
+  been included.  The `banked.h` file should be the last one of the RAGE1
+  `#includes`
+
+- Add function ID and function call macros to `memory.h`
+
+- Add the function ID to the banked function table at `00main.asm` in
+  `banked_code`
+
+- Add the needed macro definitions to `banked.h` for the low memory symbols
+  and data structures that the migrated function will access
+
+- Directories under `engine/banked_code`:
+  - `common`: code in this folder will be compiled as banked code in 128K
+    mode, and will be included also when compiling in 48K mode
+  - `128`: code in this folder will only be compiled as banked code in 128K
+    mode, and it will _not_ be included in the 48K build
+
+- When moving a function from the regular build to the `banked_code` zone,
+  the main function will normally go into the `common` folder, so that the
+  function is compiled and included in both 48K and 128K builds.
+
+- If some support functions are needed for the main banked function but they
+  also need to be called from low memory code, a copy of those functions
+  shall be included in the `128` folder, so that:
+
+  - When building in 128K mode, 2 copies of the support functions will be
+    included, one in low memory (`engine/src`) and one in banked code
+    (`engine/banked_code/128`).  The code compiled in each area will call
+    the support function included in its compilation unit.
+
+  - When building in 48K mode, only the copy from `engine/src` will be
+    compiled and used, so only 1 copy of the function will exist.
+
+- This situation happens when migrating some functions from a given module
+  (e.g.  `enemy.c`) but not others: not all functions from a module need to
+  be migrated initially.  When/if later on, _all_ of the module functions
+  are migrated to `banked_code`, the support functions under
+  `banked_code/128` directory can be moved to `banked_code/common`, so that
+  they are always compiled as banked code in 128K mode and as low memory in
+  48K mode.

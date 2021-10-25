@@ -16,12 +16,12 @@ TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
 
 -include Makefile.common
 
-# some of the banked_code files must not be compiled in 48K mode
-BANKED_CODE_EXCLUDED_FROM_48_BUILD	= 00main.asm beeper.asm
+# add SRC and OBJS for 48K build
+SRC			+= $(BANKED_CODE_SRC_COMMON)
+OBJS			+= $(BANKED_CODE_OBJS_COMMON)
+
 build:
 	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
-	@-cp $(BANKED_CODE_DIR)/*.{c,asm} $(GAME_SRC_DIR)
-	@cd $(GAME_SRC_DIR) && rm $(BANKED_CODE_EXCLUDED_FROM_48_BUILD)
 	@$(MYMAKE) -s -j8 main
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final
@@ -34,6 +34,10 @@ taps: $(TAPS)
 $(MAIN_TAP): $(MAIN_BIN)
 	@echo "Creating TAP $@..."
 	@z88dk-appmake +zx --noloader --org 0x5F00 -b $<
+
+$(MAIN_BIN): $(OBJS)
+	@echo "Bulding $(MAIN_BIN)...."
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
 
 ## Run options
 

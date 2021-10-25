@@ -84,7 +84,7 @@ codeset_%.bin:
 banked_code: $(BIN_BANKED_CODE)
 $(BIN_BANKED_CODE):
 	@echo "Compiling BANKED CODE..."
-	@$(ZCC) $(CFLAGS) -D_BANKED_CODE_BUILD --no-crt -o $@ $(BANKED_CODE_DIR)/*.{asm,c}
+	@$(ZCC) $(CFLAGS) -D_BANKED_CODE_BUILD --no-crt -o $@ $(BANKED_CODE_SRC_128) $(BANKED_CODE_SRC_COMMON)
 	@mv $(BANKED_CODE_DIR)/$(shell basename $@ .bin)_code_compiler.bin $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin
 	@if [ $$( stat -c%s $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin ) -gt $(BANK_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(BANK_MAXSIZE) bytes"; exit 1; fi
 
@@ -138,6 +138,15 @@ $(MAIN_TAP): $(MAIN_BIN)
 $(BSWITCH_TAP): $(BSWITCH_BIN)
 	@echo "Creating TAP $@..."
 	@z88dk-appmake +zx --noloader --org 0x8000 -b $<
+
+##
+## Main
+##
+
+$(MAIN_BIN): $(OBJS)
+	@echo "Bulding $(MAIN_BIN)...."
+	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
+
 
 ##
 ## Run options

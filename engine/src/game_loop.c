@@ -92,7 +92,11 @@ void move_enemies(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
    // move enemies
-   enemy_animate_and_move_all(
+   CALL_ENEMY_ANIMATE_AND_MOVE_ALL();
+//   enemy_animate_and_move_all();
+
+   // redraw enemies that have changed position
+   enemy_redraw_all(
       game_state.current_screen_ptr->enemy_data.num_enemies, 
       game_state.current_screen_ptr->enemy_data.enemies
    );
@@ -102,7 +106,10 @@ void move_bullets(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
    // move active shots
-   bullet_animate_and_move_all();
+   CALL_BULLET_ANIMATE_AND_MOVE_ALL();
+
+   // redraw bullets that have moved
+   bullet_redraw_all();
 }
 
 void check_controller(void) {
@@ -112,7 +119,7 @@ void check_controller(void) {
 void do_hero_actions(void) {
     RUN_ONLY_ONCE_PER_FRAME;
 
-    hero_animate_and_move();
+    CALL_HERO_ANIMATE_AND_MOVE();
     hero_pickup_items();
     if ( game_state.controller.state & IN_STICK_FIRE )
         hero_shoot_bullet();

@@ -15,8 +15,10 @@
 #include "rage1/sound.h"
 #include "rage1/beeper.h"
 #include "rage1/game_state.h"
+
 #include "rage1/banked.h"
 
-void sound_play_pending_fx( void ) {
-    bit_beepfx( game_state.sound_fx );
+void sound_request_fx( void *sfx ) {
+    game_state.sound_fx = sfx;
+    SET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX );
 }

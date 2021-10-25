@@ -40,6 +40,8 @@ clean:
 		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm,sym} \
 		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm,sym} \
 		$(BANKED_CODE_DIR)/*.{map,lis,o,c.asm,,sym,bin} \
+		$(BANKED_CODE_DIR_COMMON)/*.{map,lis,o,c.asm,,sym,bin} \
+		$(BANKED_CODE_DIR_128)/*.{map,lis,o,c.asm,,sym,bin} \
 		2>/dev/null
 config:
 	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* 2>/dev/null
