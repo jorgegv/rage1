@@ -46,9 +46,9 @@ clean:
 config:
 	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* 2>/dev/null
 	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/ $(GENERATED_DIR_CODESETS)/ $(GENERATED_DIR_LOWMEM)/
-	@cp -r game/game_data/* $(GAME_DATA_DIR)/
-	@cp -r game/game_src/* $(GAME_SRC_DIR)/
-	@echo "Build config: REGULAR GAME"
+	@cp -r $(TARGET_GAME)/game_data/* $(GAME_DATA_DIR)/
+	@cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
+	@echo "Build config: REGULAR GAME"	# change for the name of the game!
 	@grep -qE 'ZX_TARGET.+(48|128)$$' game/game_data/game_config/*.gdata || \
 		( echo "** Error: ZX_TARGET must be defined as 48|128" && exit 1 )
 	@echo "Build target: $(ZX_TARGET)K"

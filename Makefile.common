@@ -18,6 +18,11 @@ GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
 GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
+# by default, build the test game
+# override this in the build command line (with e.g. "make build128 target_game=../famargon") to build your own game
+DEFAULT_TARGET_GAME	= game
+TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
+
 # Main sources and objs
 LOWMEM_CSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.c) $(wildcard $(GENERATED_DIR_LOWMEM)/*.c)
 LOWMEM_ASMSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.asm) $(wildcard $(GENERATED_DIR_LOWMEM)/*.asm)
