@@ -18,6 +18,11 @@ GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
 GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
+# by default, build the test game
+# override this in the build command line (with e.g. "make build128 target_game=../famargon") to build your own game
+DEFAULT_TARGET_GAME	= game
+TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
+
 # Main sources and objs
 LOWMEM_CSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.c) $(wildcard $(GENERATED_DIR_LOWMEM)/*.c)
 LOWMEM_ASMSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.asm) $(wildcard $(GENERATED_DIR_LOWMEM)/*.asm)
@@ -72,23 +77,7 @@ MAIN_TAP		= $(MAIN_BIN:.bin=.tap)
 FINAL_TAP		= game.tap
 
 # the default zx target matches the one in datagen.pl when no target is defined
-ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' game/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')
-
-#######################################################################
-# template files and directories needed for game creation and update
-#######################################################################
-
-# these are pure library files that will be overwritten when updating the library
-# do not modify these in your game!
-LIB_ENGINE_FILES	= engine tools Makefile* zpragma*.inc .gitignore env.sh mmap.inc
-
-# these are game data directories that will be copied from the template when creating
-# a new game, but will _not_ be overwritten when updating the library. These contain
-# your game!
-LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
-
-# needed directories that will be created empty if they do not exist
-LIB_ENGINE_EMPTY_DIRS	= build/generated tests
+ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')
 
 #######################################################################
 
@@ -164,7 +153,7 @@ main: $(MAIN_BIN)
 ##
 
 show:
-	@echo " Game Configuration: $(shell grep -E '^\s*NAME\s+' build/game_data/game_config/Game.gdata | head -1 | awk '{print $$2}' )"
+	@echo "Game Configuration : $(shell grep -E '^\s*NAME\s+' build/game_data/game_config/Game.gdata | head -1 | awk '{print $$2}' )"
 	@echo "Build Configuration: $(ZX_TARGET)K"
 
 ##
@@ -209,25 +198,22 @@ textbox: tests/textbox.c $(TEXTBOX_OBJS)
 ## Update and sync targets for games using the library. See USAGE-OVERVIEW.md document
 ##
 
+#######################################################################
+# template files and directories needed for game creation and update
+#######################################################################
+
+# these are game data directories that will be copied from the template when creating
+# a new game
+LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
+
 # create a minimal game using the library
 new-game:
 	@if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
-	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, use 'make update-game' instead"; exit 2; fi
+	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, won't overwrite!"; exit 2; fi
 	@echo "Creating game directory $(target)..."
-	@mkdir -p "$(target)/game"
+	@mkdir -p "$(target)/"
 	@echo -n "Syncing library and game template files... "
-	@rsync -ap $(LIB_ENGINE_FILES) "$(target)"
-	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)/game"
-	@for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done
-	@echo "Done!"
-
-# update the library for an existing game
-update-game:
-	@if [ -z "$(target)" ]; then echo "Usage: make update-game target=<game-directory>"; exit 1; fi
-	@if [ ! -d "$(target)" ]; then echo "Game directory $(target) not found, use 'make new-game' instead"; exit 2; fi
-	@echo -n "Syncing library and game template files... "
-	@rsync -ap --delete $(LIB_ENGINE_FILES) "$(target)"
-	@-for i in $(LIB_ENGINE_EMPTY_DIRS); do mkdir -p "$(target)/$$i"; done 2>/dev/null
+	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)"
 	@echo "Done!"
 
 # tools

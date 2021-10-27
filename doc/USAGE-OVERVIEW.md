@@ -41,40 +41,17 @@ The `path-to-new-game-dir` will be created if it does not exist and all
 library and auxiliary files needed to get a fully working game will be
 copied there.
 
-When this command is finished, you can just `cd <path-to-new-game-dir>` and
-then run  `source env.sh; make build` to build the new game.
+When this command is finished, you can just `make build
+target_game=<new_game_directory>` to build the new game.
 
 After you have compiled and tested the new game, you can commit it to your
 game repo and start customizing it to your design.
 
-## Updating the library for an already created game
+## Building an already created game with an updated library version
 
-When you create a new game, you'll get the engine files from the library
-version you used to create the game.
-
-But the library will be updated afterwards, and you want to get all library
-enhancements into your game, so you need to sync the library again with your
-sources.
-
-This is as easy as the following:
-
-```
-# cd to the RAGE1 directory
-cd rage1
-# get all library updates
-git checkout master
-git pull
-# update your game with latest library code!
-make update-game target=<your-game-directory>
-```
-
-This will update your code with the latest enhancements to the library.
-After this is done, you can commit those changes to your game repository
-with a meaningful message, i.e. "Updated RAGE1 lib to release X.X.X"
-
-Remember to do a `make build` again just after updating the library files,
-to test that your game compiles with the changes, and also test your game
-again.
+Just update your RAGE1 installation, and then do a `make build
+target_game=<new_game_directory>` just as when building the game for the
+first time. Your game will be compiled with the new version of the library!
 
 ## Game Entities
 
