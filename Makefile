@@ -27,11 +27,6 @@ help:
 	@echo "* Use 'make update-game' for updating library code in an existing game"
 	@echo ""
 
-# include minimal game configuration.  If the Makefile has been copied to a
-# Game directory 'make build' works as usual.  If it is the Makefile on the
-# RAGE1 directory, it will include minimal-game config and allow to use it
--include minimal-game.mk
-
 clean:
 	@-rm -rf *.{lis,bin,tap,c.asm,map,log,sym} \
 		$(BUILD_DIR)/{game_src,game_data,generated} \
@@ -50,11 +45,19 @@ config:
 	@cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
 	@make show	# shows game name and build configuration
 
+# build: starts a build in the mode specified in the game config
 build:
+	@if [ -z "$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')" ]; then echo "** Error: ZX_TARGET must be configured in the game if using default build"; exit 1; fi
 	@$(MAKE) -s clean
-	@$(MAKE) -s config
-	@$(MAKE) -s data
-	@$(MAKE) -s -f Makefile-$(ZX_TARGET) build
+	@$(MAKE) -s ZX_TARGET=$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') config
+	@$(MAKE) -s ZX_TARGET=$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') data
+	@$(MAKE) -s -f Makefile-$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') build
+
+build-minimal:
+	@$(MAKE) -s clean
+	@$(MAKE) -s ZX_TARGET=48 config target_game=minimal_game
+	@$(MAKE) -s ZX_TARGET=48 data
+	@$(MAKE) -s -f Makefile-48 build
 
 build48:
 	@$(MAKE) -s clean
@@ -67,3 +70,4 @@ build128:
 	@$(MAKE) -s ZX_TARGET=128 config
 	@$(MAKE) -s ZX_TARGET=128 data
 	@$(MAKE) -s -f Makefile-128 build
+
