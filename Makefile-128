@@ -8,7 +8,7 @@
 ## 
 ################################################################################
 
-MYMAKE			= $(MAKE) -f Makefile-128
+MYMAKE			= $(MAKE) -f Makefile-128 -j8
 ZPRAGMA_INC             = zpragma-128.inc
 
 # All taps
@@ -16,18 +16,20 @@ TAPS			= $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
 
 -include Makefile.common
 
+.PHONY: datasets codesets taps
+
 build:
-	@$(MYMAKE) -s -j8 datasets
-	@$(MYMAKE) -s -j8 codesets
-	@$(MYMAKE) -s banks
-	@$(MYMAKE) -s bank_switcher
-	@$(MYMAKE) -s -j8 main
-	@$(MYMAKE) -s main_symbols
-	@$(MYMAKE) -s banked_code
-	@$(MYMAKE) -s loader
-	@$(MYMAKE) -s -j8 taps
-	@$(MYMAKE) -s final
-	@$(MYMAKE) -s lowmemcheck
+	@$(MYMAKE) datasets
+	@$(MYMAKE) codesets
+	@$(MYMAKE) banks
+	@$(MYMAKE) bank_switcher
+	@$(MYMAKE) main
+	@$(MYMAKE) main_symbols
+	@$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
+	@$(MYMAKE) loader
+	@$(MYMAKE) taps
+	@$(MYMAKE) final
+	@$(MYMAKE) lowmemcheck
 
 ## Check that certain symbols are linked in low memory.  It is assumed that
 ## all symbols mentioned as "extern" in .h files will be accessed from
@@ -55,7 +57,7 @@ datasets: $(ZX0_DATASETS)
 
 dataset_%.bin: dataset_%.c
 	@echo "Compiling DATASET $< ..."
-	@$(ZCC) $(CFLAGS) --no-crt -o $@ $<
+	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $<
 	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
 	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; fi
 
@@ -73,7 +75,7 @@ codesets: $(BIN_CODESETS)
 codeset_%.bin:
 	@echo "Compiling CODESET $@ ..."
 	@# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
-	@$(ZCC) $(CFLAGS) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
 	@mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
 	@if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
 
@@ -82,9 +84,10 @@ codeset_%.bin:
 ##
 
 banked_code: $(BIN_BANKED_CODE)
-$(BIN_BANKED_CODE):
-	@echo "Compiling BANKED CODE..."
-	@$(ZCC) $(CFLAGS) -D_BANKED_CODE_BUILD --no-crt -o $@ $(BANKED_CODE_SRC_128) $(BANKED_CODE_SRC_COMMON)
+
+$(BIN_BANKED_CODE): $(BANKED_CODE_OBJS_COMMON) $(BANKED_CODE_OBJS_128)
+	@echo "Building $@..."
+	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(BANKED_CFLAGS) --no-crt -o $@ $(BANKED_CODE_OBJS_128) $(BANKED_CODE_OBJS_COMMON)
 	@mv $(BANKED_CODE_DIR)/$(shell basename $@ .bin)_code_compiler.bin $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin
 	@if [ $$( stat -c%s $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin ) -gt $(BANK_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(BANK_MAXSIZE) bytes"; exit 1; fi
 
@@ -100,7 +103,7 @@ bank_switcher: $(BSWITCH_BIN)
 
 $(BSWITCH_BIN):
 	@echo "Assembling bank switch routine..."
-	@$(ZCC) $(CFLAGS) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
+	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
 
 ##
 ## Custom BASIC loader
@@ -145,8 +148,7 @@ $(BSWITCH_TAP): $(BSWITCH_BIN)
 
 $(MAIN_BIN): $(OBJS)
 	@echo "Bulding $(MAIN_BIN)...."
-	$(ZCC) $(CFLAGS) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
-
+	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
 
 ##
 ## Run options
