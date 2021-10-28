@@ -756,7 +756,7 @@ sub extract_colors_from_cell {
         }
     }
     my $bg = $l[0];
-    my $fg = $l[1];
+    my $fg = $l[1] || $l[0];	# just in case there is only 1 color
     # if one of them is black, it is preferred as bg color, swap them if needed
     if ( $fg eq '000000' ) {
         my $tmp = $bg;
