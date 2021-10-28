@@ -15,6 +15,8 @@
 #include <arch/spectrum.h>
 #include <games/sp1.h>
 
+#include "features.h"
+
 #include "rage1/inventory.h"
 #include "rage1/game_state.h"
 #include "rage1/map.h"
@@ -22,6 +24,8 @@
 #include "rage1/screen.h"
 
 #include "game_data.h"
+
+#ifdef BUILD_FEATURE_INVENTORY
 
 void inventory_reset_all(void) {
     uint8_t i;
@@ -64,3 +68,5 @@ void inventory_add_item( struct inventory_info_s *inv, uint8_t item ) {
     if ( game_state.inventory.owned_items == INVENTORY_ALL_ITEMS_MASK )
         SET_GAME_FLAG( F_GAME_GOT_ALL_ITEMS );
 }
+
+#endif // BUILD_FEATURE_INVENTORY

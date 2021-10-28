@@ -1529,6 +1529,11 @@ EOF_BULLET5
 
 sub generate_items {
 
+    # do not generate anything related to inventory if no items defined
+    return if ( not scalar( @all_items ) );
+
+    add_build_feature( 'INVENTORY' );
+
     my $max_items = scalar( @all_items );
     my $all_items_mask = 0;
     my $mask = 1;
@@ -1748,13 +1753,13 @@ sub validate_and_compile_rule {
     foreach my $chk ( @{ $rule->{'check'} } ) {
         my ( $check, $check_data ) = split( /\s+/, $chk );
         my $id = sprintf( 'FLOW_RULE_CHECK_%s', uc( $check ) );
-        $conditional_build_features{ $id }++;
+        add_build_feature( $id );
     }
     foreach my $do ( @{ $rule->{'do'} } ) {
         $do =~ m/^(\w+)\s*(.*)$/;
         my ( $action, $action_data ) = ( $1, $2 );
         my $id = sprintf( 'FLOW_RULE_ACTION_%s', uc( $action ) );
-        $conditional_build_features{ $id }++;
+        add_build_feature( $id );
     }
 
     1;
@@ -2216,8 +2221,9 @@ EOF_MAP
                 scalar( @{$_->{'enemies'}} ), ( scalar( @{$_->{'enemies'}} ) ? sprintf( 'screen_%s_enemies', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.hero_data = { %d, %d },\t// hero_data\n",
                 $_->{'hero'}{'startup_xpos'}, $_->{'hero'}{'startup_ypos'} ) .
-            sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
-                scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) ) .
+            ( scalar( @all_items) ? sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
+                scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) )
+                : '' ) .
             sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
             join( "\n", map {
@@ -2240,7 +2246,7 @@ EOF_MAP
                     $_->{'background'}{'row'}, $_->{'background'}{'col'},
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
                 ) :
-                "\t\t.background_data = { NULL, 0, { 0,0,0,0 } }\t// background_data\n" ) .
+                "\t\t.background_data = { 0, 0, { 0,0,0,0 } }\t// background_data\n" ) .
             "\t}"
         } @dataset_screens );
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";

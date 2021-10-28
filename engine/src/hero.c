@@ -14,6 +14,8 @@
 #include <input.h>
 #include <arch/spectrum.h>
 
+#include "features.h"
+
 #include "rage1/hero.h"
 #include "rage1/game_state.h"
 #include "rage1/btile.h"
@@ -144,6 +146,7 @@ void hero_shoot_bullet( void ) {
     game_state.bullet.reloading = game_state.bullet.reload_delay;
 }
 
+#ifdef BUILD_FEATURE_INVENTORY
 void hero_pickup_items(void) {
     struct sp1_ss *s;
     uint8_t i,j,cols,r,c,item;
@@ -178,6 +181,7 @@ void hero_pickup_items(void) {
         }
     }
 }
+#endif // BUILD_FEATURE_INVENTORY
 
 // printing context
 struct sp1_pss lives_display_ctx = {

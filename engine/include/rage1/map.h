@@ -44,10 +44,12 @@ struct map_screen_s {
     struct {
         uint8_t	startup_x,startup_y;
     } hero_data;
+#ifdef BUILD_FEATURE_INVENTORY
     struct {
         uint8_t num_items;
         struct item_location_s *items;
     } item_data;
+#endif
     struct {
         uint8_t num_hotzones;
         struct hotzone_info_s *hotzones;

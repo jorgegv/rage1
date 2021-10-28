@@ -13,6 +13,8 @@
 #include <input.h>
 #include <stdlib.h>
 
+#include "features.h"
+
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"
 #include "rage1/screen.h"
@@ -119,7 +121,11 @@ void do_hero_actions(void) {
     RUN_ONLY_ONCE_PER_FRAME;
 
     hero_animate_and_move();
+
+#ifdef BUILD_FEATURE_INVENTORY
     hero_pickup_items();
+#endif
+
     if ( game_state.controller.state & IN_STICK_FIRE )
         hero_shoot_bullet();
 }
@@ -150,7 +156,10 @@ void run_main_game_loop(void) {
    // reset game vars and setup initial state
    game_state_reset_initial();
    hero_update_lives_display();
+
+#ifdef BUILD_FEATURE_INVENTORY
    inventory_show();
+#endif
 
    // run user game initialization, if any
 #ifdef RUN_GAME_FUNC_USER_GAME_INIT

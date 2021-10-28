@@ -23,7 +23,6 @@
 void map_draw_screen(struct map_screen_s *s) {
     uint8_t i,r,c, maxr, maxc, btwidth, btheight;
     struct btile_pos_s *t;
-    struct item_location_s *it;
     struct btile_s *bt;
 
     // clear screen
@@ -64,16 +63,20 @@ void map_draw_screen(struct map_screen_s *s) {
             btile_draw( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ), t->type, &game_area );
     }
 
+#ifdef BUILD_FEATURE_INVENTORY
     // draw items
     i = s->item_data.num_items;
     while ( i-- ) {
+        struct item_location_s *it;
         it = &s->item_data.items[i];
         if ( ! IS_ITEM_ACTIVE( all_items[ it->item_num ] ) )
             continue;
         btile_draw( it->row, it->col, &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
     }
+#endif // BUILD_FEATURE_INVENTORY
 }
 
+#ifdef BUILD_FEATURE_INVENTORY
 struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col ) {
     uint8_t i, rmax, cmax;
     struct item_location_s *it;
@@ -89,6 +92,7 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     }
     return NULL;	// no object
 }
+#endif // BUILD_FEATURE_INVENTORY
 
 void map_enter_screen( uint8_t screen_num ) {
     // If we are in 128 mode, we need to switch to the dataset where the
