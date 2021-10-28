@@ -8,6 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "features.h"
+
 #include "rage1/map.h"
 #include "rage1/game_state.h"
 #include "rage1/hero.h"
@@ -52,7 +54,11 @@ void game_state_reset_initial(void) {
    // reset everything
    hero_reset_all();
    bullet_reset_all();
+
+#ifdef BUILD_FEATURE_INVENTORY
    inventory_reset_all();
+#endif
+
    game_state_assets_reset_all();
 
    // Enemies tally
