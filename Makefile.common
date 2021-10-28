@@ -92,7 +92,7 @@ ZCC_TARGET		= +zx
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
-CFLAGS			= -vn -SO3 -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC)
+CFLAGS			= -vn -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC)
 CFLAGS_TO_ASM		= -a
 CFLAGS_LIST		= --list -s -m --c-code-in-asm
 
