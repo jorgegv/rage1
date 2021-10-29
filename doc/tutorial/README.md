@@ -33,10 +33,8 @@ _WARNING: This tutorial is a Work In Progress, so you can expect to find
 broken links and sections still not written.  This warning will be removed
 when the tutorial is finished._
 
-**Special note for Windows users:** please accept my apologies in advance.
+**Special note for Windows users:** please accept my apologies in advance. 
 My main development environment for RAGE1 is Linux, so this tutorial may
-show a heavy bias towards the Linux way of doing things. I'd gladly accept
-any comments, suggestions and pull requests for addressing Windows-related
-concerns.
-
-
+show a heavy bias towards the Linux way of doing things.  I will gladly
+accept any comments, suggestions and pull requests for addressing
+Windows-related concerns.
