@@ -17,17 +17,17 @@ Test Game that comes included with it.  Refer to the main
 
 Tutorial Table of Contents (WIP):
 
-- [Introduction to RAGE1](INTRO.md)
-- [Game story and goals](STORY.md)
-- [Creating the game skeleton](SKELETON.md)
-- [Designing the hero](HERO.md)
-- [Designing the map](MAP.md)
-- [Creating the tiles](BTILES.md)
-- [Designing the screens](SCREENS.md)
-- [Adding some enemies](ENEMIES.md)
-- [Adding inventory items](INVENTORY.md)
-- [Adding behaviour rules](RULES.md)
-- [Special game functions](FUNCTIONS.md)
+1. [Introduction to RAGE1](INTRO.md)
+1. [Game story and goals](STORY.md)
+1. [Creating the game skeleton](SKELETON.md)
+1. [Designing the hero](HERO.md)
+1. [Designing the map](MAP.md)
+1. [Creating the tiles](BTILES.md)
+1. [Designing the screens](SCREENS.md)
+1. [Adding some enemies](ENEMIES.md)
+1. [Adding inventory items](INVENTORY.md)
+1. [Adding behaviour rules](RULES.md)
+1. [Special game functions](FUNCTIONS.md)
 
 _WARNING: This tutorial is a Work In Progress, so you can expect to find
 broken links and sections still not written.  This warning will be removed
