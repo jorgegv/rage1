@@ -10,11 +10,12 @@ ZX Spectrum, FAMARGON, using RAGE1.  I'll be documenting the development
 process for FAMARGON, and explain how to work with the engine features while
 showing practical examples with the game.
 
-_WARNING: This document is still a work in progress, so you can expect to
-find broken links and sections still not written.  This warning will be
-removed when the tutorial is finished._
+It is assumed that you have a working copy of the RAGE1 repository, you have
+configured the [Requirements](../REQUIREMENTS.md) and successfully built the
+Test Game that comes included with it.  Refer to the main
+[README](../../README.md) for a quick installation guide.
 
-Table of Contents:
+Tutorial Table of Contents (WIP):
 
 - [Introduction to RAGE1](INTRO.md)
 - [Game story and goals](STORY.md)
@@ -27,3 +28,15 @@ Table of Contents:
 - [Adding inventory items](INVENTORY.md)
 - [Adding behaviour rules](RULES.md)
 - [Special game functions](FUNCTIONS.md)
+
+_WARNING: This tutorial is a Work In Progress, so you can expect to find
+broken links and sections still not written.  This warning will be removed
+when the tutorial is finished._
+
+**Special note for Windows users:** please accept my apologies in advance.
+My main development environment for RAGE1 is Linux, so this tutorial may
+show a heavy bias towards the Linux way of doing things. I'd gladly accept
+any comments, suggestions and pull requests for addressing Windows-related
+concerns.
+
+
