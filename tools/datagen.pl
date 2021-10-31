@@ -2557,6 +2557,9 @@ sub generate_codesets {
 
         my $num_codeset_functions = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
 
+        push @h_game_data_lines, "// codeset assets struct - only valid in codesets";
+        push @h_game_data_lines, "extern struct codeset_assets_s all_codeset_assets;\n";
+
         # add the needed source lines to the C and ASM files for this
         # codeset: the main codeset_assets_s struct at the beginning, the
         # function table and e.g.  tiles used by these functions
@@ -2573,7 +2576,7 @@ sub generate_codesets {
 
 extern	_codeset_functions
 
-_all_assets_codeset_$codeset:
+_all_codeset_assets:
 	dw	0			;; .game_state
 	dw	0			;; .banked_assets
 	dw	0			;; .home_assets
