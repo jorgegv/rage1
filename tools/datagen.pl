@@ -2262,6 +2262,7 @@ sub generate_h_header {
 #include <games/sp1.h>
 
 #include "rage1/dataset.h"
+#include "rage1/codeset.h"
 
 extern struct dataset_assets_s all_assets_dataset_home;
 
@@ -2575,6 +2576,7 @@ sub generate_codesets {
 	org	$codeset_base_address
 
 extern	_codeset_functions
+public	_all_codeset_assets
 
 _all_codeset_assets:
 	dw	0			;; .game_state
@@ -2607,11 +2609,20 @@ EOF_CODESET_LINES_MAIN
 
         # copy the source files for functions associated to this codeset to the dest dir
         # and add the needed lines to the main.c file
+        my %files_to_copy;
         foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
-            my $src_file = $game_src_dir . '/' . $function->{'file'};
-            my $dst_file = $dst_dir . '/' . $function->{'file'}; 
-            copy( $src_file, $dst_file ) or
-                die "** Could not copy $src_file to $dst_file\n";
+            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
+                $files_to_copy{ $function->{'file'} } = {
+                    src => $game_src_dir . '/' . $function->{'file'},
+                    dst => $dst_dir . '/' . $function->{'file'},
+                };
+            }
+        }
+        foreach my $file ( keys %files_to_copy ) {
+            my $src_file = $files_to_copy{ $file }{'src'};
+            my $dst_file = $files_to_copy{ $file }{'dst'};
+            move( $src_file, $dst_file ) or
+                die "** Could not move $src_file to $dst_file\n";
         }
 
         # add extern codeset function declarations
