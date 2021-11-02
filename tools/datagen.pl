@@ -58,18 +58,23 @@ my %dataset_dependency;
 
 # file names
 my $c_file_game_data		= 'game_data.c';
-my $c_file_dataset_format	= 'datasets/dataset_%s.c';
+my $asm_file_game_data		= 'asm_game_data.asm';
 my $h_file_game_data		= 'game_data.h';
 my $h_file_build_features	= 'features.h';
 
+# global directories
 my $output_dest_dir;
 my $game_src_dir;
 my $build_dir;
 
-# codesets have their source files in their own directory for each codeset
+# codesets and datasets have their source files in their own directory for each one
 my $codeset_src_dir_format	= 'codesets/codeset_%s.src';
 my $c_file_codeset_format	= 'codesets/codeset_%s.src/main.c';
 my $asm_file_codeset_format	= 'codesets/codeset_%s.src/codeset_data.asm';
+
+my $dataset_src_dir_format	= 'datasets/dataset_%s.src';
+my $c_file_dataset_format	= 'datasets/dataset_%s.src/main.c';
+my $asm_file_dataset_format	= 'datasets/dataset_%s.src/dataset_data.asm';
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
@@ -77,6 +82,7 @@ my $dump_file = 'internal_state.dmp';
 # output lines for each of the files
 my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
+my $asm_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
 my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
@@ -2024,10 +2030,10 @@ sub generate_c_banked_header {
     my $num_flow_rules	= scalar( @{ $dataset_dependency{ $dataset }{'rules'} } );
     my $num_screens	= scalar( @{ $dataset_dependency{ $dataset }{'screens'} } );
 
-    my $all_btiles_ptr		= ( $num_btiles ?	'&all_btiles[0]'		: 'NULL' );
-    my $all_sprites_ptr		= ( $num_sprites ?	'&all_sprite_graphics[0]'	: 'NULL' );
-    my $all_flow_rules_ptr	= ( $num_flow_rules ?	'&all_flow_rules[0]'		: 'NULL' );
-    my $all_screens_ptr		= ( $num_screens ?	'&all_screens[0]'		: 'NULL' );
+    my $all_btiles_ptr		= ( $num_btiles ?	'_all_btiles'		: '0' );
+    my $all_sprites_ptr		= ( $num_sprites ?	'_all_sprite_graphics'	: '0' );
+    my $all_flow_rules_ptr	= ( $num_flow_rules ?	'_all_flow_rules'	: '0' );
+    my $all_screens_ptr		= ( $num_screens ?	'_all_screens'		: '0' );
 
     if ( $dataset =~ /^\d+$/ ) {
         push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER
@@ -2053,40 +2059,40 @@ sub generate_c_banked_header {
 // This _must_ be included - Datasets may reference assets from the home dataset!
 #include "game_data.h"
 
-///////////////////////////////////////////////////////////////////////////////
-// Forced ORG address trick by Dom - The following does not generate any
-// code but forces the linking to be at the indicated base address.  This is
-// needed because SDCC does not allow relocating the DATA section.  See:
-// https://z88dk.org/forum/viewtopic.php?p=19796#p19796
-///////////////////////////////////////////////////////////////////////////////
-
-static void __orgit(void) __naked {
-__asm
-    org $dataset_base_address
-__endasm;
-}
-
 EOF_HEADER
-    ;
+;
+
+        push @{ $asm_dataset_lines->{ $dataset } }, <<EOF_HEADER
+        org	$dataset_base_address
+EOF_HEADER
+;
     }
 
-    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER2
-///////////////////////////////////////////////////////////////////////////////
-// Asset index for this bank - This structure must be the first data item
-// generated in the bank: it contains pointers to the rest of the bank data
-// items!
-///////////////////////////////////////////////////////////////////////////////
+    push @{ $asm_dataset_lines->{ $dataset } }, <<EOF_HEADER2
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Asset index for this bank - This structure must be the first data item
+;; generated in the bank: it contains pointers to the rest of the bank data
+;; items!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-struct dataset_assets_s all_assets_dataset_$dataset = {
-    .num_btiles			= $num_btiles,
-    .all_btiles			= $all_btiles_ptr,
-    .num_sprite_graphics	= $num_sprites,
-    .all_sprite_graphics	= $all_sprites_ptr,
-    .num_flow_rules		= $num_flow_rules,
-    .all_flow_rules		= $all_flow_rules_ptr,
-    .num_screens		= $num_screens,
-    .all_screens		= $all_screens_ptr,
-};
+        section	data_compiler
+
+extern	_all_btiles
+extern	_all_sprite_graphics
+extern	_all_flow_rules
+extern	_all_screens
+
+public	_all_assets_dataset_$dataset
+
+_all_assets_dataset_$dataset:
+    db	$num_btiles		;; .num_btiles
+    dw	$all_btiles_ptr		;; .all_btiles
+    db	$num_sprites		;; .num_sprite_graphics
+    dw	$all_sprites_ptr	;; .all_sprite_graphics
+    db	$num_flow_rules		;; .num_flow_rules
+    dw	$all_flow_rules_ptr	;; .all_flow_rules
+    db	$num_screens		;; .num_screens
+    dw	$all_screens_ptr	;; .all_screens
 
 EOF_HEADER2
 ;
@@ -2607,31 +2613,6 @@ EOF_CODESET_LINES_MAIN_ASM
 EOF_CODESET_LINES_MAIN
 ;
 
-        # create the destination directory
-        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
-        if ( ! -d $dst_dir ) {
-            make_path( $dst_dir ) or
-                die "** Could not create destination directory $dst_dir\n";
-        }
-
-        # copy the source files for functions associated to this codeset to the dest dir
-        # and add the needed lines to the main.c file
-        my %files_to_copy;
-        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
-            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
-                $files_to_copy{ $function->{'file'} } = {
-                    src => $game_src_dir . '/' . $function->{'file'},
-                    dst => $dst_dir . '/' . $function->{'file'},
-                };
-            }
-        }
-        foreach my $file ( keys %files_to_copy ) {
-            my $src_file = $files_to_copy{ $file }{'src'};
-            my $dst_file = $files_to_copy{ $file }{'dst'};
-            move( $src_file, $dst_file ) or
-                die "** Could not move $src_file to $dst_file\n";
-        }
-
         # add extern codeset function declarations
         push @{ $c_codeset_lines->{ $codeset } }, "// codeset functions table\n";
         foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
@@ -2646,7 +2627,6 @@ EOF_CODESET_LINES_MAIN
         push @{ $c_codeset_lines->{ $codeset } }, "};\n\n";
 
     }
-
 }
 
 # this function is called from main
@@ -2704,31 +2684,82 @@ sub output_game_data {
     print $output_fh join( "", @c_game_data_lines, @{ $c_dataset_lines->{'home'} } );
     close $output_fh;
 
-    # output .c file for banked datasets
-    foreach my $i ( sort grep { /\d+/ } keys %$c_dataset_lines ) {
-        my $c_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_dataset_format, $i );
+    # output .asm file for home bank and dataset
+    open( $output_fh, ">", $asm_file_game_data ) or
+        die "Could not open $asm_file_game_data for writing\n";
+    print $output_fh join( "", @{ $asm_dataset_lines->{'home'} } );
+    close $output_fh;
+
+    # output banked datasets
+    foreach my $dataset ( sort grep { /\d+/ } keys %$c_dataset_lines ) {
+
+        # create the destination directory
+        my $dst_dir = sprintf( $output_dest_dir . '/' . $dataset_src_dir_format, $dataset );
+        if ( ! -d $dst_dir ) {
+            make_path( $dst_dir ) or
+                die "** Could not create destination directory $dst_dir\n";
+        }
+
+        # output .c file for banked datasets
+        my $c_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_dataset_format, $dataset );
         open( $output_fh, ">", $c_file_dataset ) or
             die "Could not open $c_file_dataset for writing\n";
-        print $output_fh join( "", @{ $c_dataset_lines->{ $i } } );
+        print $output_fh join( "", @{ $c_dataset_lines->{ $dataset } } );
+        close $output_fh;
+
+        # output .asm file for banked datasets
+        my $asm_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_dataset_format, $dataset );
+        open( $output_fh, ">", $asm_file_dataset ) or
+            die "Could not open $asm_file_dataset for writing\n";
+        print $output_fh join( "", @{ $asm_dataset_lines->{ $dataset } } );
         close $output_fh;
     }
 
-    # output .c file for banked codesets
-    foreach my $i ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
-        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $i );
+    # output banked codesets
+    my %files_to_copy;
+    foreach my $codeset ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
+
+        # create the destination directory
+        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
+        if ( ! -d $dst_dir ) {
+            make_path( $dst_dir ) or
+                die "** Could not create destination directory $dst_dir\n";
+        }
+
+        # note the files to be moved to the codeset source dir
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
+                $files_to_copy{ $function->{'file'} } = {
+                    src => $game_src_dir . '/' . $function->{'file'},
+                    dst => $dst_dir . '/' . $function->{'file'},
+                };
+            }
+        }
+
+        # output .c file for the codeset
+        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $codeset );
         open( $output_fh, ">", $c_file_codeset ) or
             die "Could not open $c_file_codeset for writing\n";
-        print $output_fh join( "", @{ $c_codeset_lines->{ $i } } );
+        print $output_fh join( "", @{ $c_codeset_lines->{ $codeset } } );
+        close $output_fh;
+
+        # output .asm file for banked codesets
+        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $codeset );
+        open( $output_fh, ">", $asm_file_codeset ) or
+            die "Could not open $asm_file_codeset for writing\n";
+        print $output_fh join( "", @{ $asm_codeset_lines->{ $codeset } } );
         close $output_fh;
     }
 
-    # output .asm file for banked codesets
-    foreach my $i ( sort grep { /\d+/ } keys %$asm_codeset_lines ) {
-        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $i );
-        open( $output_fh, ">", $asm_file_codeset ) or
-            die "Could not open $asm_file_codeset for writing\n";
-        print $output_fh join( "", @{ $asm_codeset_lines->{ $i } } );
-        close $output_fh;
+    # move the source files for functions associated to this codeset to the dest dir
+    # only if compiling for 128K
+    if ( $game_config->{'zx_target'} eq '128' ) {
+        foreach my $file ( keys %files_to_copy ) {
+            my $src_file = $files_to_copy{ $file }{'src'};
+            my $dst_file = $files_to_copy{ $file }{'dst'};
+            move( $src_file, $dst_file ) or
+                die "** Could not move $src_file to $dst_file\n";
+        }
     }
 
     # output game_data.h file
@@ -2901,6 +2932,7 @@ our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
 getopts("b:d:ct:s:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data = "$opt_d/$c_file_game_data";
+    $asm_file_game_data = "$opt_d/$asm_file_game_data";
     $h_file_game_data = "$opt_d/$h_file_game_data";
     $h_file_build_features = "$opt_d/$h_file_build_features";
     $dump_file = "$opt_d/$dump_file";

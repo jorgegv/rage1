@@ -55,10 +55,11 @@ lowmemcheck:
 
 datasets: $(ZX0_DATASETS)
 
-dataset_%.bin: dataset_%.c
-	@echo "Compiling DATASET $< ..."
-	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $<
-	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+dataset_%.bin:
+	@echo "Compiling DATASET $@ ..."
+	@# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
+	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	@cp $@ $@.save
 	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; fi
 
 dataset_%.zx0: dataset_%.bin
@@ -66,6 +67,7 @@ dataset_%.zx0: dataset_%.bin
 	@cp $< $<.save
 	@$(ZX0) $< $@ >/dev/null 2>&1
 	@mv $<.save $<
+
 ##
 ## Codeset compilation to standalone binaries org'ed at 0xC000
 ##
