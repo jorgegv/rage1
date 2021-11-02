@@ -2600,31 +2600,6 @@ EOF_CODESET_LINES_MAIN_ASM
 EOF_CODESET_LINES_MAIN
 ;
 
-        # create the destination directory
-        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
-        if ( ! -d $dst_dir ) {
-            make_path( $dst_dir ) or
-                die "** Could not create destination directory $dst_dir\n";
-        }
-
-        # copy the source files for functions associated to this codeset to the dest dir
-        # and add the needed lines to the main.c file
-        my %files_to_copy;
-        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
-            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
-                $files_to_copy{ $function->{'file'} } = {
-                    src => $game_src_dir . '/' . $function->{'file'},
-                    dst => $dst_dir . '/' . $function->{'file'},
-                };
-            }
-        }
-        foreach my $file ( keys %files_to_copy ) {
-            my $src_file = $files_to_copy{ $file }{'src'};
-            my $dst_file = $files_to_copy{ $file }{'dst'};
-            move( $src_file, $dst_file ) or
-                die "** Could not move $src_file to $dst_file\n";
-        }
-
         # add extern codeset function declarations
         push @{ $c_codeset_lines->{ $codeset } }, "// codeset functions table\n";
         foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
@@ -2639,7 +2614,6 @@ EOF_CODESET_LINES_MAIN
         push @{ $c_codeset_lines->{ $codeset } }, "};\n\n";
 
     }
-
 }
 
 # this function is called from main
@@ -2706,22 +2680,48 @@ sub output_game_data {
         close $output_fh;
     }
 
-    # output .c file for banked codesets
-    foreach my $i ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
-        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $i );
+    # output banked codesets
+    my %files_to_copy;
+    foreach my $codeset ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
+
+        # create the destination directory
+        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
+        if ( ! -d $dst_dir ) {
+            make_path( $dst_dir ) or
+                die "** Could not create destination directory $dst_dir\n";
+        }
+
+        # note the files to be moved to the codeset source dir
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
+                $files_to_copy{ $function->{'file'} } = {
+                    src => $game_src_dir . '/' . $function->{'file'},
+                    dst => $dst_dir . '/' . $function->{'file'},
+                };
+            }
+        }
+
+        # output .c file for the codeset
+        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $codeset );
         open( $output_fh, ">", $c_file_codeset ) or
             die "Could not open $c_file_codeset for writing\n";
-        print $output_fh join( "", @{ $c_codeset_lines->{ $i } } );
+        print $output_fh join( "", @{ $c_codeset_lines->{ $codeset } } );
+        close $output_fh;
+
+        # output .asm file for banked codesets
+        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $codeset );
+        open( $output_fh, ">", $asm_file_codeset ) or
+            die "Could not open $asm_file_codeset for writing\n";
+        print $output_fh join( "", @{ $asm_codeset_lines->{ $codeset } } );
         close $output_fh;
     }
 
-    # output .asm file for banked codesets
-    foreach my $i ( sort grep { /\d+/ } keys %$asm_codeset_lines ) {
-        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $i );
-        open( $output_fh, ">", $asm_file_codeset ) or
-            die "Could not open $asm_file_codeset for writing\n";
-        print $output_fh join( "", @{ $asm_codeset_lines->{ $i } } );
-        close $output_fh;
+    # copy the source files for functions associated to this codeset to the dest dir
+    foreach my $file ( keys %files_to_copy ) {
+        my $src_file = $files_to_copy{ $file }{'src'};
+        my $dst_file = $files_to_copy{ $file }{'dst'};
+        move( $src_file, $dst_file ) or
+            die "** Could not move $src_file to $dst_file\n";
     }
 
     # output game_data.h file
