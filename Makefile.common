@@ -32,9 +32,10 @@ SRC			= $(LOWMEM_ASMSRC) $(LOWMEM_CSRC) $(CSRC) $(ASMSRC)
 OBJS			= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 
 # Dataset sources and binaries
-CSRC_DATASETS		= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
-SRC_DATASETS		= $(CSRC_DATASETS)
-BIN_DATASETS		= $(CSRC_DATASETS:.c=.bin)
+DATASET_DIRS		= $(wildcard $(GENERATED_DIR_DATASETS)/dataset_*.src)
+#CSRC_DATASETS		= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
+#SRC_DATASETS		= $(CSRC_DATASETS)
+BIN_DATASETS		= $(DATASET_DIRS:.src=.bin)
 ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
 
