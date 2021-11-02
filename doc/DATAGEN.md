@@ -245,6 +245,7 @@ Example `SCREEN` definition:
 BEGIN_SCREEN
 	NAME		Screen01
 	DATASET		0
+	TITLE		'The Cavern'
 
 	OBSTACLE	NAME=Tree01	ROW=8 COL=4
 	OBSTACLE	NAME=Rock01	ROW=10 COL=12
@@ -275,6 +276,8 @@ END_SCREEN
 * `DATASET`: the number of the dataset where the screen should go.  It can
 be an integer number starting at 0, or the special name `home`. If no
 dataset is defined for a screen, the default value `home` is used.
+* `TITLE`: an optional title for the screen that can be used in the game.
+The title must be enclosed between single quotes ('')
 * `OBSTACLE`: places an element on the screen. The Hero can not go through
 this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the Btile that will be used to draw this obstacle
