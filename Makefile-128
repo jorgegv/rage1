@@ -64,7 +64,6 @@ dataset_%.bin:
 
 dataset_%.zx0: dataset_%.bin
 	@echo "Compressing DATASET $< ..."
-	@cp $< $<.save
 	@$(ZX0) $< $@ >/dev/null 2>&1
 
 ##

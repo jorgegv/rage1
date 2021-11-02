@@ -319,6 +319,10 @@ sub read_input_data {
                 $cur_screen->{'dataset'} = $1;
                 next;
             }
+            if ( $line =~ /^TITLE\s+'(.+)'$/ ) {
+                $cur_screen->{'title'} = $1;
+                next;
+            }
             if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = "$1 TYPE=DECORATION";
@@ -2221,6 +2225,7 @@ EOF_MAP
             my $screen = $_;
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.global_screen_num = %d,\n", $screen_name_to_index{ $_->{'name'} } ) .
+            sprintf( "\t\t.title = %s,\n", ( defined( $screen->{'title'} ) ? '"'.$screen->{'title'}.'"' : 'NULL' ) ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.enemy_data = { %d, %s },\t// enemy_data\n",
@@ -2389,6 +2394,7 @@ sub generate_global_screen_data {
         );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
+
     # global table of asset state tables for all screens
     push @{ $c_dataset_lines->{ $dataset } }, "// Global table of asset state tables for all screens\n";
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_table_s all_screen_asset_state_tables[ %d ] = {\n\t",
@@ -2401,6 +2407,7 @@ sub generate_global_screen_data {
         } @all_screens
     );
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+
 }
 
 # generate data that does not logically fit elsewhere

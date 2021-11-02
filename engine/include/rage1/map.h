@@ -32,6 +32,10 @@
 struct map_screen_s {
     // global screen number
     uint8_t	global_screen_num;
+
+    // Screen title (can be null)
+    char *title;
+
     // data
     struct {
         uint8_t num_btiles;

@@ -43,7 +43,7 @@ config:
 	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/ $(GENERATED_DIR_CODESETS)/ $(GENERATED_DIR_LOWMEM)/
 	@cp -r $(TARGET_GAME)/game_data/* $(GAME_DATA_DIR)/
 	@cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
-	@make -s show	# shows game name and build configuration
+	@$(MAKE) -s show	# shows game name and build configuration
 
 # build: starts a build in the mode specified in the game config
 build:
