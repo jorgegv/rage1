@@ -1680,8 +1680,8 @@ sub validate_and_compile_rule {
     grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
         die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
 
-    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
-        die "At least one CHECK clause must be specified\n";
+#    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
+#        die "At least one CHECK clause must be specified\n";
 
     defined( $rule->{'do'} ) and scalar( @{ $rule->{'do'} } ) or
         die "At least one DO clause must be specified\n";
@@ -1820,6 +1820,9 @@ my $action_data_output_format = {
 sub generate_rule_checks {
     my ( $rule, $index ) = @_;
     my $num_checks = scalar( @{ $rule->{'check'} } );
+
+    return if ( not scalar( @{ $rule->{'check'} } ) );
+
     my $output = sprintf( "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
         $index, $num_checks );
     foreach my $ch ( @{ $rule->{'check'} } ) {
@@ -1845,6 +1848,9 @@ sub generate_rule_actions {
             $action,
             sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
         );
+        if ( lc( $action ) eq 'call_custom_function' ) {
+            push @h_game_data_lines, sprintf( "void %s( void );\n", $action_data );
+        }
     }
     $output .= "};\n\n";
     return $output;
@@ -1886,8 +1892,10 @@ FLOW_DATA_C_1
         push @{ $c_dataset_lines->{ $dataset } }, "struct flow_rule_s all_flow_rules[ FLOW_NUM_RULES ] = {\n";
         foreach my $i ( 0 .. scalar( @dataset_rules )-1 ) {
             push @{ $c_dataset_lines->{ $dataset } }, "\t{";
-            push @{ $c_dataset_lines->{ $dataset } }, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
-                scalar( @{ $dataset_rules[ $i ]{'check'} } ), $i );
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( " .num_checks = %d, .checks = %s,",
+                scalar( @{ $dataset_rules[ $i ]{'check'} } ),
+                ( scalar( @{ $dataset_rules[ $i ]{'check'} } ) ? sprintf( "&flow_rule_checks_%05d[0]", $i ) : 'NULL' )
+            );
             push @{ $c_dataset_lines->{ $dataset } }, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
                 scalar( @{ $dataset_rules[ $i ]{'do'} } ), $i );
             push @{ $c_dataset_lines->{ $dataset } }, " },\n";
