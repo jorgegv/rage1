@@ -46,6 +46,10 @@ my %item_name_to_index;
 
 my @all_rules;
 
+# lists of custom function checks and actions
+my @check_custom_functions;
+my @action_custom_functions;
+
 my @all_codeset_functions;
 my %codeset_function_name_to_index;
 my %codeset_functions_by_codeset;
@@ -1699,6 +1703,15 @@ sub validate_and_compile_rule {
             $chk = sprintf( "%s\t%d", $check, $check_data );
         }
 
+        # check custom function filtering
+        if ( $check =~ /^CALL_CUSTOM_FUNCTION/ ) {
+            my $index = scalar( @check_custom_functions );
+            push @check_custom_functions, {
+                index => $index,
+                function => $check_data,
+            };
+            $chk = sprintf( "%s\t%d", $check, $index );
+        }
     }
 
     # action filtering
@@ -1757,6 +1770,15 @@ sub validate_and_compile_rule {
             $do = sprintf( "%s\t%s", $action, $action_data );
         }
 
+        # custom action function filtering
+        if ( $action =~ /^CALL_CUSTOM_FUNCTION/ ) {
+            my $index = scalar( @action_custom_functions );
+            push @action_custom_functions, {
+                index => $index,
+                function => $action_data,
+            };
+            $do = sprintf( "%s\t%d", $action, $index );
+        }
     }
 
     # generate conditional build features for this rule: checks and actions
@@ -1792,7 +1814,7 @@ my $check_data_output_format = {
     ENEMIES_KILLED_EQUAL	=> ".data.enemies.count = %d",
     ENEMIES_KILLED_MORE_THAN	=> ".data.enemies.count = %d",
     ENEMIES_KILLED_LESS_THAN	=> ".data.enemies.count = %d",
-    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function_id = %d",
     ITEM_IS_OWNED		=> ".data.item.item_id = %s",
     HERO_OVER_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
     SCREEN_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
@@ -1804,7 +1826,7 @@ my $action_data_output_format = {
     RESET_USER_FLAG		=> ".data.user_flag.flag = %s",
     INC_LIVES			=> ".data.lives.count = %s",
     PLAY_SOUND			=> ".data.play_sound.sound_id = %s",
-    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function_id = %d",
     END_OF_GAME			=> ".data.unused = %d",
     WARP_TO_SCREEN		=> ".data.warp_to_screen = %s",
     ENABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
@@ -1848,9 +1870,6 @@ sub generate_rule_actions {
             $action,
             sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
         );
-        if ( lc( $action ) eq 'call_custom_function' ) {
-            push @h_game_data_lines, sprintf( "void %s( void );\n", $action_data );
-        }
     }
     $output .= "};\n\n";
     return $output;
@@ -2637,6 +2656,43 @@ EOF_CODESET_LINES_MAIN
     }
 }
 
+sub generate_custom_function_tables {
+    if ( scalar( @check_custom_functions ) ) {
+
+        push @h_game_data_lines, "// Check custom functions table\n";
+        push @h_game_data_lines, "extern check_custom_function_t check_custom_functions[];\n\n";
+        push @h_game_data_lines, "// Check custom function prototypes\n";
+
+        push @c_game_data_lines, "// Check custom functions table\n";
+        push @c_game_data_lines, sprintf( "check_custom_function_t check_custom_functions[ %d ] = {\n",
+            scalar( @check_custom_functions )
+        );
+        foreach my $f ( @check_custom_functions ) {
+            push @h_game_data_lines, sprintf( "uint8_t %s( void );\n", $f->{'function'} );
+            push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
+        }
+        push @h_game_data_lines, "\n";
+        push @c_game_data_lines, "};\n\n";
+    }
+    if ( scalar( @action_custom_functions ) ) {
+
+        push @h_game_data_lines, "// Action custom functions table\n";
+        push @h_game_data_lines, "extern action_custom_function_t action_custom_functions[];\n\n";
+        push @h_game_data_lines, "// Action custom function prototypes\n";
+
+        push @c_game_data_lines, "// Action custom function table\n";
+        push @c_game_data_lines, sprintf( "action_custom_function_t action_custom_functions[ %d ] = {\n",
+            scalar( @action_custom_functions )
+        );
+        foreach my $f ( @action_custom_functions ) {
+            push @h_game_data_lines, sprintf( "void %s( void );\n", $f->{'function'} );
+            push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
+        }
+        push @h_game_data_lines, "\n";
+        push @c_game_data_lines, "};\n\n";
+    }
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2674,6 +2730,9 @@ sub generate_game_data {
     # this must be generated after codesets, it needs the codeset function
     # call macros
     generate_game_functions;
+
+    # generate custom function tables
+    generate_custom_function_tables;
 
     # generate conditional build features
     add_default_build_features;
@@ -2926,6 +2985,8 @@ sub dump_internal_data {
         all_codeset_functions		=> \@all_codeset_functions,
         codeset_function_name_to_index	=> \%codeset_function_name_to_index,
         codeset_functions_by_codeset	=> \%codeset_functions_by_codeset,
+        check_custom_functions		=> \@check_custom_functions,
+        action_custom_functions		=> \@action_custom_functions,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );

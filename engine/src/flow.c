@@ -187,7 +187,7 @@ uint8_t do_rule_check_enemies_killed_less_than( struct flow_rule_check_s *check 
 
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_CALL_CUSTOM_FUNCTION
 uint8_t do_rule_check_call_custom_function( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return check->data.custom.function();
+    return check_custom_functions[ check->data.custom.function_id ]();
 }
 #endif
 
@@ -259,7 +259,7 @@ void do_rule_action_inc_lives( struct flow_rule_action_s *action ) __z88dk_fastc
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_CALL_CUSTOM_FUNCTION
 void do_rule_action_call_custom_function( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    action->data.custom.function();
+    action_custom_functions[ action->data.custom.function_id]();
 }
 #endif
 

@@ -53,7 +53,7 @@ struct flow_rule_check_s {
         struct { uint8_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*, SCREEN_FLAG
         struct { uint8_t	count; }		lives;		// INC_LIVES
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
-        struct { uint8_t	(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint8_t	function_id; }		custom;		// CALL_CUSTOM_FUNCTION
         struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
         struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
     } data;
@@ -93,7 +93,7 @@ struct flow_rule_action_s {
         struct { void		*sound_id; }		play_sound;	// PLAY_SOUND
         struct { uint8_t	flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
-        struct { void		(*function)(void); }	custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint8_t	function_id; }		custom;		// CALL_CUSTOM_FUNCTION
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
         struct { uint8_t	num_btile; }		btile;		// ENABLE/DISABLE_BTILE
         struct { 
@@ -129,6 +129,9 @@ struct flow_rule_table_s {
     struct flow_rule_s **rules;
 };
 
+// function types for custom checks/actions
+typedef int (*check_custom_function_t)( void );
+typedef void (*action_custom_function_t)( void );
 
 // executes user flow rules
 void check_flow_rules(void);
