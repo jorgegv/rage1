@@ -43,13 +43,13 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
     struct flow_rule_action_s *action;
     for ( i = 0; i < t->num_rules; i++ ) {
         struct flow_rule_s *r = t->rules[i];
-        // run the checks in order, return as soon as one returns false
+        // run the checks in order, skip to next rule as soon as one check returns false
         for ( j = 0; j < r->num_checks; j++ ) {
             check = &r->checks[j];
             if ( ! rule_check_fn[ check->type ]( check ) )
                 goto next_rule;
         }
-        // if we reach here, all checks were true; run the actions in order
+        // if we reach here, all checks were true, or there were no checks; run the actions in order
         for ( j = 0; j < r->num_actions; j++ ) {
             action = &r->actions[j];
             rule_action_fn[ action->type ]( action );
@@ -74,6 +74,13 @@ void check_flow_rules(void) {
     // WHEN_ENTER_SCREEN and WHEN_EXIT_SCREEN rules
     ////////////////////////////////////////////////////////
     
+    // run ENTER_SCREEN rules for the initial screen at game start
+    if ( GET_GAME_FLAG( F_GAME_START ) ) {
+        if ( game_state.current_screen_ptr->flow_data.rule_tables.enter_screen.num_rules )
+            run_flow_rule_table( &game_state.current_screen_ptr->flow_data.rule_tables.enter_screen );
+    }
+
+    // run rules when switching screens
     if ( GET_LOOP_FLAG( F_LOOP_WARP_TO_SCREEN ) ) {
         // run EXIT_SCREEN rules for the previous screen
         if ( game_state.current_screen_ptr->flow_data.rule_tables.exit_screen.num_rules )
