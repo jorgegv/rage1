@@ -455,6 +455,7 @@ BEGIN_GAME_CONFIG
         LIVES_AREA      TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
         INVENTORY_AREA  TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
         DEBUG_AREA      TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
+	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 END_GAME_CONFIG
 ```
 
@@ -501,7 +502,7 @@ END_GAME_CONFIG
   * `CODESET`: (optional) the codeset where the function must reside. If not
     specified, or we are compiling for 48K model, all GAME_FUNCTIONs will go
     into lowmem area
-* `GAME_AREA`, `LIVES_ARES`, `INVENTORY_AREA`, `DEBUG_AREA`: definitions for
-the different screen areas used by the game. All of then accept the
-following aguments:
+* `GAME_AREA`, `LIVES_ARES`, `INVENTORY_AREA`, `DEBUG_AREA`, `TITLE_AREA`:
+definitions for the different screen areas used by the game.  All of then
+accept the following aguments:
   * `TOP`, `LEFT`, `BOTTOM`, `RIGHT`: (values are obvious)

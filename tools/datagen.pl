@@ -613,7 +613,7 @@ sub read_input_data {
                 }
                 next;
             }
-            if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA)\s+(\w.*)$/ ) {
+            if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA|TITLE_AREA)\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my ( $directive, $args ) = ( $1, $2 );
                 $game_config->{ lc( $directive ) } = {
@@ -1164,6 +1164,11 @@ sub validate_and_compile_screen {
 
     ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
         die "Screen '$screen->{name}' has no Btiles\n";
+
+    # if any screen has a title, activate the corresponding build feature
+    if ( defined( $screen->{'title'} ) ) {
+        add_build_feature( 'SCREEN_TITLES' );
+    }
 }
 
 # SCREEN_DATA and DEFINE compilation
@@ -1633,16 +1638,13 @@ sub generate_game_functions {
     push @h_game_data_lines, "\n\n";
 }
 
-sub generate_game_areas {
-    # output game areas
-    push @c_game_data_lines, "// screen areas\n";
+sub generate_single_game_area {
+    my $area = shift;
     push @c_game_data_lines, "\n" . join( "\n", map {
         sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )
-        } qw( game_area lives_area inventory_area debug_area )
-    ) . "\n\n";
-
-    # output definitions for screen areas
+        } ( $area )
+    ) . "\n";
     push @h_game_data_lines, "\n" . join( "\n", map {
             "// " .uc( $_ ). " definitions\n" .
             sprintf( "#define %s_TOP	%d\n", uc( $_ ), $game_config->{ $_ }{'top'} ) .
@@ -1652,8 +1654,26 @@ sub generate_game_areas {
             sprintf( "#define %s_WIDTH	( %s_RIGHT - %s_LEFT + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
             sprintf( "#define %s_HEIGHT	( %s_BOTTOM - %s_TOP + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
             sprintf( "extern struct sp1_Rect %s;\n", $_ )
-        } qw( game_area lives_area inventory_area debug_area )
-    );
+        } ( $area )
+    ) . "\n\n";
+}
+
+sub generate_game_areas {
+
+    # output mandatory game areas
+    push @c_game_data_lines, "// screen areas\n";
+    foreach my $area ( qw( game_area lives_area debug_area ) ) {
+        generate_single_game_area( $area );
+    }
+
+    # output optional game areas
+    if ( is_build_feature_enabled( 'INVENTORY' ) ) {
+        generate_single_game_area( 'inventory_area' );
+    }
+    if ( is_build_feature_enabled( 'SCREEN_TITLES' ) ) {
+        generate_single_game_area( 'title_area' );
+    }
+
 }
 
 ###################################
@@ -2008,6 +2028,17 @@ sub check_game_config_is_valid {
     if ( $forced_build_target ) {
         $game_config->{'zx_target'} = $forced_build_target;
     }
+
+    if ( is_build_feature_enabled( 'INVENTORY') and not defined( $game_config->{'inventory_area'} ) ) {
+        warn "Game Config: using INVENTORY feature, but no INVENTORY_AREA defined\n";
+        $errors++;
+    }
+
+    if ( is_build_feature_enabled( 'SCREEN_TITLES') and not defined( $game_config->{'title_area'} ) ) {
+        warn "Game Config: using SCREEN_TITLES feature, but no TITLE_AREA defined\n";
+        $errors++;
+    }
+
     return $errors;
 }
 
@@ -2452,6 +2483,11 @@ sub generate_misc_data {
 sub add_build_feature {
     my $f = shift;
     $conditional_build_features{ $f }++;
+}
+
+sub is_build_feature_enabled {
+    my $f = shift;
+    return defined( $conditional_build_features{ $f } );
 }
 
 sub add_default_build_features {
