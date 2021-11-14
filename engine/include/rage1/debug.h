@@ -17,8 +17,9 @@
 #include "features.h"
 
 void debug_out( char * );
-void debug_waitkey(void);
-void debug_flush(void);
+void debug_waitkey( void );
+void debug_flush( void );
+void debug_panic( void );
 
 char *itohex( uint16_t );
 char *i8toa( uint8_t i );
@@ -27,5 +28,7 @@ extern uint16_t debug_flags;
 #define GET_DEBUG_FLAG(f)	( debug_flags & (f) )
 #define SET_DEBUG_FLAG(f)	( debug_flags |= (f) )
 #define RESET_DEBUG_FLAG(f)	( debug_flags &= ~(f) )
+
+#define DEBUG_ASSERT(a)	do { if ( !(a) ) debug_panic(); } while (0)
 
 #endif // _DEBUG_H
