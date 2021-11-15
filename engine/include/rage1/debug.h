@@ -29,6 +29,10 @@ extern uint16_t debug_flags;
 #define SET_DEBUG_FLAG(f)	( debug_flags |= (f) )
 #define RESET_DEBUG_FLAG(f)	( debug_flags &= ~(f) )
 
-#define DEBUG_ASSERT(a)	do { if ( !(a) ) debug_panic(); } while (0)
+#ifdef RAGE1_DEBUG
+    #define DEBUG_ASSERT(a);	do { if ( !(a) ) debug_panic(); } while (0)
+#else
+    #define DEBUG_ASSERT(a);
+#endif
 
 #endif // _DEBUG_H
