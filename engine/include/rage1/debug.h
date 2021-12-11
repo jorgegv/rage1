@@ -19,7 +19,12 @@
 void debug_out( char * );
 void debug_waitkey( void );
 void debug_flush( void );
-void debug_panic( void );
+
+// debug panic will store the given panic code at fixed address $FFFF
+// and then will halt the machine with a fancy color screen. You will
+// then be able to launch the debugger and examine memory to get the
+// panic cause. Panic codes must be defined below.
+void debug_panic( uint8_t code );
 
 char *itohex( uint16_t );
 char *i8toa( uint8_t i );
@@ -30,9 +35,13 @@ extern uint16_t debug_flags;
 #define RESET_DEBUG_FLAG(f)	( debug_flags &= ~(f) )
 
 #ifdef RAGE1_DEBUG
-    #define DEBUG_ASSERT(a);	do { if ( !(a) ) debug_panic(); } while (0)
+    #define DEBUG_ASSERT(a,b)	do { if ( !(a) ) debug_panic((b)); } while (0)
 #else
-    #define DEBUG_ASSERT(a);
+    #define DEBUG_ASSERT(a,b)
 #endif
+
+// DEBUG_PANIC codes
+#define PANIC_GENERIC		0x40
+#define PANIC_SPRITE_IS_NULL	0x41
 
 #endif // _DEBUG_H

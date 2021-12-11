@@ -71,7 +71,9 @@ void debug_pause( uint16_t delay ) __z88dk_fastcall {
     while ( delay-- );
 }
 
-void debug_panic( void ) {
+#define DEBUG_PANIC_CODE_ADDRESS	((uint8_t *)0xffff)
+void debug_panic( uint8_t code ) {
+    *DEBUG_PANIC_CODE_ADDRESS = code;
     while (1) {
         zx_border( INK_BLACK );
         debug_pause( 81 );
