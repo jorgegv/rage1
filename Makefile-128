@@ -45,9 +45,15 @@ ENGINE_LOWMEM_SYMBOLS	+= init_datasets init_codesets memory_switch_bank dataset_
 # all data generated in the home bank
 GAME_LOWMEM_SYMBOLS	= $(shell $(NM) $(GENERATED_DIR)/game_data.o | sed '1,/  Symbols:/d' | awk '{print $$4}' )
 
+# all code generated in the home bank
+CODE_LOWMEM_SYMBOLS	= $(shell for i in $(ENGINE_DIR)/{src,lowmem}/*.o; do $(NM) $$i | sed '1,/  Symbols:/d' | awk '{print $$4}' ; done )
+
+# sum it all
+ALL_LOWMEM_SYMBOLS	= $(ENGINE_LOWMEM_SYMBOLS) $(GAME_LOWMEM_SYMBOLS) $(CODE_LOWMEM_SYMBOLS)
+
 # target for doing the real check
 lowmemcheck:
-	@./tools/lowmemsym.pl -m main.map $(ENGINE_LOWMEM_SYMBOLS) $(GAME_LOWMEM_SYMBOLS)
+	@./tools/lowmemsym.pl -m main.map $(ALL_LOWMEM_SYMBOLS)
 
 ##
 ## Dataset compilation to standalone binaries org'ed at 0x5C00
