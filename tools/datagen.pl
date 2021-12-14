@@ -107,6 +107,8 @@ my $syntax = {
     valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
 };
 
+my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop );
+
 ##########################################
 ## Input data parsing and state machine
 ##########################################
@@ -596,6 +598,11 @@ sub read_input_data {
                 # add the function to the codeset lists
                 push @all_codeset_functions, $item;
                 push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
+
+                # check that the type is a valid function type
+                if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
+                    die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                }
 
                 # add the function to the game config
                 $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
@@ -1628,11 +1635,13 @@ sub generate_game_functions {
     # generate macro calls for all functions
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "#define RUN_GAME_FUNC_%-30s (%s)",
-                uc($_) . '()',
-                $game_config->{'game_functions'}{ $_ }{'codeset_function_call_macro'},
+            sprintf( "#define run_game_function_%-30s %s",
+                lc( $_ ) . '()',
+                ( defined( $game_config->{'game_functions'}{ $_ } ) ?
+                  $game_config->{'game_functions'}{ $_ }{'codeset_function_call_macro'} :
+                  '' ),
             )
-        } sort keys %{ $game_config->{'game_functions'} }
+        } sort @valid_game_functions
     );
 
     push @h_game_data_lines, "\n\n";

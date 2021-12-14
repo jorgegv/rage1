@@ -162,9 +162,7 @@ void run_main_game_loop(void) {
 #endif
 
    // run user game initialization, if any
-#ifdef RUN_GAME_FUNC_USER_GAME_INIT
-   RUN_GAME_FUNC_USER_GAME_INIT();
-#endif
+   run_game_function_user_game_init();
 
    // run main game loop
    while ( ! ( GET_GAME_FLAG( F_GAME_OVER ) || GET_GAME_FLAG( F_GAME_END ) ) ) {
@@ -207,9 +205,7 @@ void run_main_game_loop(void) {
       check_game_flags();
 
       // run user game loop function, if any
-#ifdef RUN_GAME_FUNC_USER_GAME_LOOP
-      RUN_GAME_FUNC_USER_GAME_LOOP();
-#endif
+      run_game_function_user_game_loop();
 
       // update screen
       sp1_UpdateNow();
