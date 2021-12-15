@@ -47,4 +47,3 @@ foreach my $sym ( @symbols ) {
 }
 
 print ( $errors ? "\n" : "OK\n" );
-exit 1 if $errors;
