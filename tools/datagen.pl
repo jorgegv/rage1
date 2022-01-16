@@ -2570,19 +2570,22 @@ EOF_CODESET_3
 
     if ( scalar( @non_home_codeset_functions ) and ( $game_config->{'zx_target'} ne '48' ) ) {
         add_build_feature( 'CODESETS' );
-        push @c_game_data_lines, "// global codeset functions table\n";
-        push @h_game_data_lines, "// global indexes of codeset functions\n";
 
-        push @c_game_data_lines, sprintf( "struct codeset_function_info_s all_codeset_functions[ %d ] = { \n",
-            scalar( @non_home_codeset_functions )
-        );
+        push @c_game_data_lines, "// global codeset functions table\n";
+
+        push @h_game_data_lines, "// Number of codeset functions outside the 'home' codeset\n";
+        push @h_game_data_lines, sprintf( "#define NUM_CODESET_FUNCTIONS %d\n\n", scalar( @non_home_codeset_functions ) );
+
+        push @h_game_data_lines, "// global indexes of codeset functions\n";
+        push @c_game_data_lines, "struct codeset_function_info_s all_codeset_functions[ NUM_CODESET_FUNCTIONS ] = { \n";
+
         my $index = 0;
         foreach my $function ( @non_home_codeset_functions ) {
             push @c_game_data_lines,  sprintf( "\t{ .bank_num = %d, .local_function_num = %d },\n",
                 $codeset_valid_banks[ $function->{'codeset'} ],
                 $function->{'local_index'},
             );
-            push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%s	(%d)\n",
+            push @h_game_data_lines, sprintf( "#define CODESET_FUNCTION_%-30s	0x%02x\n",
                 uc( $function->{'name'} ),
                 $index,
             );

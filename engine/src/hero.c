@@ -21,7 +21,6 @@
 #include "rage1/btile.h"
 #include "rage1/screen.h"
 #include "rage1/sprite.h"
-#include "rage1/debug.h"
 #include "rage1/interrupts.h"
 #include "rage1/bullet.h"
 #include "rage1/sound.h"
@@ -29,6 +28,7 @@
 #include "rage1/util.h"
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
+#include "rage1/debug.h"
 
 #include "game_data.h"
 
@@ -121,6 +121,10 @@ void hero_reset_all(void) {
 }
 
 void hero_draw( void ) {
+    DEBUG_ASSERT( game_state.hero.position.x    >= GAME_AREA_LEFT * 8,           PANIC_HERO_DRAW_INVALID_X );
+    DEBUG_ASSERT( game_state.hero.position.xmax <  ( GAME_AREA_RIGHT + 1 ) * 8,  PANIC_HERO_DRAW_INVALID_XMAX );
+    DEBUG_ASSERT( game_state.hero.position.y    >= GAME_AREA_TOP * 8,            PANIC_HERO_DRAW_INVALID_Y );
+    DEBUG_ASSERT( game_state.hero.position.ymax <  ( GAME_AREA_BOTTOM + 1 ) * 8, PANIC_HERO_DRAW_INVALID_YMAX );
     sp1_MoveSprPix(
         game_state.hero.sprite,
         &game_area,

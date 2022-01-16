@@ -42,6 +42,7 @@ void dataset_activate( uint8_t d ) {
     DEBUG_ASSERT( previous_memory_bank < 8, PANIC_DATASET_INVALID_PREVIOUS_BANK );
 
     // switch the proper memory bank for the given dataset
+    DEBUG_ASSERT( dataset_info[ d ].bank_num < 8, PANIC_DATASET_INVALID_NEW_BANK );
     memory_switch_bank( dataset_info[ d ].bank_num );
 
     // copy dataset data into LOWMEM buffer

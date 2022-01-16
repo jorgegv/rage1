@@ -15,6 +15,7 @@
 #include "rage1/codeset.h"
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
+#include "rage1/debug.h"
 
 #include "game_data.h"
 
@@ -57,15 +58,19 @@ void codeset_call_function( uint8_t global_function_num ) {
 
     // save current memory bank
     previous_memory_bank = memory_current_memory_bank;
+    DEBUG_ASSERT( previous_memory_bank < 8, PANIC_CODESET_INVALID_PREVIOUS_BANK );
 
     // for efficiency
+    DEBUG_ASSERT( global_function_num < NUM_CODESET_FUNCTIONS, PANIC_CODESET_INVALID_FUNCTION );
     f = &all_codeset_functions[ global_function_num ];
 
     // get the bank number from the codeset info table and swicth to the
     // proper bank
+    DEBUG_ASSERT( f->bank_num < 8, PANIC_CODESET_INVALID_NEW_BANK );
     memory_switch_bank( f->bank_num );
 
     // call the function
+    DEBUG_ASSERT( (uint16_t) codeset_assets->functions[ f->local_function_num ] >= 0xC000, PANIC_CODESET_INVALID_FUNCTION_POINTER );
     codeset_assets->functions[ f->local_function_num ]();
 
     // switch back to previous memory bank
