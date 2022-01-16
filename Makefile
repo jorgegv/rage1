@@ -53,6 +53,9 @@ build:
 	@$(MAKE) -s ZX_TARGET=$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') data
 	@$(MAKE) -s -f Makefile-$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') build
 
+build-debug:
+	@export RAGE1_DEBUG=1 && $(MAKE) -s build
+
 build-minimal:
 	@$(MAKE) -s clean
 	@$(MAKE) -s ZX_TARGET=48 config target_game=minimal_game
