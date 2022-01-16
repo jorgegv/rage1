@@ -41,7 +41,9 @@ extern uint16_t debug_flags;
 #endif
 
 // DEBUG_PANIC codes
-#define PANIC_GENERIC		0x40
-#define PANIC_SPRITE_IS_NULL	0x41
+#define PANIC_GENERIC					0x40
+#define PANIC_SPRITE_IS_NULL				0x41
+#define PANIC_DATASET_INVALID_PREVIOUS_BANK		0x42
+#define PANIC_DATASET_ACTIVATE_INVALID			0x43
 
 #endif // _DEBUG_H

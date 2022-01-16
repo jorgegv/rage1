@@ -31,7 +31,7 @@
 
 // memory init depends on the target
 
-// in 128K mode, heap is at the top of the 0x5B00-0x7FFF area
+// in 128K mode, heap is a reserved area at the top of the 0x5B00-0x7FFF area
 #ifdef BUILD_FEATURE_ZX_TARGET_128
     #define MALLOC_HEAP_START       ((unsigned char *)(0x8000 - MALLOC_HEAP_SIZE))
 #endif

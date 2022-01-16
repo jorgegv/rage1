@@ -24,7 +24,7 @@
 /////////////////////////////////////
 
 void init_sp1(void) {
-   // Initialize SP1.LIB
+   // Initialize SP1.LIB and clear screen with default attributes
    zx_border(INK_BLACK);
    sp1_Initialize(SP1_IFLAG_MAKE_ROTTBL | SP1_IFLAG_OVERWRITE_TILES | SP1_IFLAG_OVERWRITE_DFILE,
       DEFAULT_BG_ATTR, ' ');

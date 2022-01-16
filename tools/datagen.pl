@@ -2485,8 +2485,17 @@ sub generate_misc_data {
     foreach my $screen ( @all_screens ) {
         $count += scalar( @{ $screen->{'enemies'} } );
     }
-    push @h_game_data_lines, "\n// Total number of enemies in the game\n";
+    push @h_game_data_lines, "\n";
+
+    push @h_game_data_lines, "// Total number of enemies in the game\n";
     push @h_game_data_lines, sprintf( "#define\tGAME_NUM_TOTAL_ENEMIES\t%d\n\n", $count );
+
+    # if there are datasets besides 'home' datasets, output the number
+    if ( scalar keys %dataset_dependency > 1 ) {
+        push @h_game_data_lines, "// Number of datasets besides the 'home' dataset\n";
+        push @h_game_data_lines, sprintf( "#define NUM_DATASETS %d\n\n", ( ( scalar keys %dataset_dependency ) - 1 ) );
+    }
+
 }
 
 sub add_build_feature {

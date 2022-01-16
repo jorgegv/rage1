@@ -16,6 +16,7 @@
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
 #include "rage1/game_state.h"
+#include "rage1/debug.h"
 
 #include "game_data.h"
 
@@ -30,12 +31,15 @@ uint8_t dataset_currently_active = 255;
 void dataset_activate( uint8_t d ) {
     uint8_t previous_memory_bank;
 
+    DEBUG_ASSERT( d < NUM_DATASETS, PANIC_DATASET_ACTIVATE_INVALID );
+
     // if the dataset is already active, do nothing
     if ( d == dataset_currently_active )
         return;
 
     // save previous memory bank
     previous_memory_bank = memory_current_memory_bank;
+    DEBUG_ASSERT( previous_memory_bank < 8, PANIC_DATASET_INVALID_PREVIOUS_BANK );
 
     // switch the proper memory bank for the given dataset
     memory_switch_bank( dataset_info[ d ].bank_num );
