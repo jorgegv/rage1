@@ -16,6 +16,7 @@
 #include "rage1/game_state.h"
 #include "rage1/inventory.h"
 #include "rage1/screen.h"
+#include "rage1/debug.h"
 
 #include "game_data.h"
 
@@ -34,6 +35,8 @@ void map_draw_screen(struct map_screen_s *s) {
     uint8_t i,r,c, maxr, maxc, btwidth, btheight;
     struct btile_pos_s *t;
     struct btile_s *bt;
+
+    DEBUG_ASSERT( s != NULL, PANIC_MAP_DRAW_SCREEN_NULL_PTR );
 
     // clear screen
     sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
@@ -65,6 +68,7 @@ void map_draw_screen(struct map_screen_s *s) {
 
     // draw tiles
     i = s->btile_data.num_btiles;
+    DEBUG_ASSERT( i > 0, PANIC_MAP_DRAW_SCREEN_NO_BTILES );
     while ( i-- ) {
         t = &s->btile_data.btiles_pos[i];
         // we draw if there is no state ( no state = always active ), or if the btile is active
@@ -118,6 +122,8 @@ void map_enter_screen( uint8_t screen_num ) {
     // screen resides.  If in 48 mode, this is not needed since everything
     // is in home dataset
 
+    DEBUG_ASSERT( screen_num < MAP_NUM_SCREENS, PANIC_MAP_ENTER_SCREEN_INVALID );
+
 #ifdef BUILD_FEATURE_ZX_TARGET_128
     // We can just call dataset_activate with the screen dataset number.
     // The function returns immediately if the current dataset is already
@@ -130,6 +136,7 @@ void map_enter_screen( uint8_t screen_num ) {
 }
 
 void map_exit_screen( struct map_screen_s *s ) {
+    DEBUG_ASSERT( s != NULL, PANIC_MAP_EXIT_SCREEN_NULL_PTR );
     map_free_sprites( s );
 }
 
@@ -150,12 +157,11 @@ void map_allocate_sprites( struct map_screen_s *m ) {
     }
 }
 
-// this function can be used generically, since the only data needed for
-// free is the pointer itself, and we know the number of sprites from
-// map_screen_s struct
 void map_free_sprites( struct map_screen_s *s ) {
     uint8_t i;
     i = s->enemy_data.num_enemies;
-    while ( i-- )
+    while ( i-- ) {
+        DEBUG_ASSERT( s->enemy_data.enemies[ i ].sprite != NULL, PANIC_MAP_FREE_SPRITES_NULL_PTR );
         sp1_DeleteSpr( s->enemy_data.enemies[ i ].sprite );
+    }
 }
