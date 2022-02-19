@@ -9,7 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
-#include <arch/zx.h>
+#include <arch/zx/spectrum.h>
 
 #include "features.h"
 

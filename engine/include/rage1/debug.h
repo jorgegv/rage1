@@ -16,7 +16,7 @@
 
 #include "features.h"
 
-void debug_out( char * );
+void debug_out( unsigned char * );
 void debug_waitkey( void );
 void debug_flush( void );
 

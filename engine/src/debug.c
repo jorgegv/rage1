@@ -8,8 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <arch/spectrum.h>
-#include <games/sp1.h>
+#include <arch/zx/spectrum.h>
+#include <arch/zx/sprites/sp1.h>
 #include <input.h>
 
 #include "rage1/debug.h"
@@ -22,7 +22,7 @@ uint16_t debug_flags = 0;
 
 struct sp1_pss debug_ctx = { &debug_area, SP1_PSSFLAG_INVALIDATE, 0, 0, 0, INK_WHITE | PAPER_BLACK, 0, 0 };
 
-void debug_out( char *txt ) {
+void debug_out( unsigned char *txt ) {
     if ( ! initialized ) {
         sp1_SetPrintPos( &debug_ctx, 0, 0 );
         initialized++;
@@ -59,8 +59,8 @@ char *i8toa( uint8_t i ){
 }
 
 void debug_waitkey(void) {
-    in_wait_key();
-    in_wait_nokey();
+    in_WaitForKey();
+    in_WaitForNoKey();
 }
 
 void debug_flush(void) {

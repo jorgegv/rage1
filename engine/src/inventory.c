@@ -12,8 +12,8 @@
 // implementation of inventory and item grabbing
 //
 
-#include <arch/spectrum.h>
-#include <games/sp1.h>
+#include <arch/zx/spectrum.h>
+#include <arch/zx/sprites/sp1.h>
 
 #include "features.h"
 

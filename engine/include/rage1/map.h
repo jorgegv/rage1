@@ -12,7 +12,7 @@
 #define _MAP_H
 
 #include <stddef.h>
-#include <games/sp1.h>
+#include <arch/zx/sprites/sp1.h>
 #include <stdint.h>
 
 #include "features.h"
@@ -34,7 +34,7 @@ struct map_screen_s {
     uint8_t	global_screen_num;
 
     // Screen title (can be null)
-    char *title;
+    unsigned char *title;
 
     // data
     struct {

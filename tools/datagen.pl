@@ -1306,7 +1306,7 @@ sub generate_screen {
             scalar( @{$screen->{'btiles'}} ) );
 
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf("\t{ .type = TT_%s, .row = %d, .col = %d, .btile_id = %d, .state_index = %s }",
+                sprintf("\t{ TT_%s, %d, %d, %d, %s }",
                     uc($_->{'type'}), $_->{'row'}, $_->{'col'},
                     $btile_global_to_dataset_index->{ $btile_name_to_index{ $_->{'btile'} } },
                     ( "$_->{'asset_state_index'}" eq 'ASSET_NO_STATE' ? 'ASSET_NO_STATE' : $_->{'asset_state_index'} ) )
@@ -1878,7 +1878,7 @@ sub generate_rule_checks {
         $index, $num_checks );
     foreach my $ch ( @{ $rule->{'check'} } ) {
         my ( $check, $check_data ) = split( /\s+/, $ch );
-        $output .= sprintf( "\t{ .type = RULE_CHECK_%s, %s },\n",
+        $output .= sprintf( "\t{ RULE_CHECK_%s, %s },\n",
             $check,
             sprintf( $check_data_output_format->{ $check }, $check_data || 0 )
         );
@@ -1895,7 +1895,7 @@ sub generate_rule_actions {
     foreach my $ac ( @{ $rule->{'do'} } ) {
         $ac =~ m/^(\w+)\s*(.*)$/;
         my ( $action, $action_data ) = ( $1, $2 );
-        $output .= sprintf( "\t{ .type = RULE_ACTION_%s, %s },\n",
+        $output .= sprintf( "\t{ RULE_ACTION_%s, %s },\n",
             $action,
             sprintf( $action_data_output_format->{ $action }, $action_data || 0 )
         );
@@ -2075,9 +2075,8 @@ sub generate_c_home_header {
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include <arch/spectrum.h>
-#include <sound/bit.h>
-#include <arch/zx/sp1.h>
+#include <arch/zx/spectrum.h>
+#include <arch/zx/sprites/sp1.h>
 
 #include "rage1/inventory.h"
 #include "rage1/game_state.h"
@@ -2110,8 +2109,7 @@ sub generate_c_banked_header {
 //
 ////////////////////////////////&//////////////////////////////////////////
 
-#include <arch/spectrum.h>
-#include <sound/bit.h>
+#include <arch/zx/spectrum.h>
 
 #include "rage1/map.h"
 #include "rage1/sprite.h"
@@ -2234,7 +2232,7 @@ EOF_SPRITES
     push @{ $c_dataset_lines->{ $dataset } }, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
     push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\n\t", map {
         my $sprite = $_;
-        sprintf( "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = %s }",
+        sprintf( "{ %d, %d, { %d, &sprite_%s_frames[0] }, { %d, %s } }",
             $_->{'cols'} * 8, $_->{'rows'} * 8,
             $_->{'frames'}, $_->{'name'},
             scalar( @{ $sprite->{'sequences'} } ),	# number of animation sequences
@@ -2337,7 +2335,7 @@ sub generate_h_header {
 #define _GAME_DATA_H
 
 #include <stdint.h>
-#include <games/sp1.h>
+#include <arch/zx/sprites/sp1.h>
 
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
@@ -2438,7 +2436,7 @@ sub generate_global_screen_data {
     foreach my $global_screen_index ( 0 .. ( scalar( @all_screens) - 1 ) ) {
         my $screen = $all_screens[ $global_screen_index ];
         my $screen_dataset = ( $game_config->{'zx_target'} eq '48' ? 'home' : $screen->{'dataset'} );
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ .dataset_num = %d, .dataset_local_screen_num = %d },\t// Screen '%s'\n",
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ %d, %d },\t// Screen '%s'\n",
             $screen->{'dataset'},
             $dataset_dependency{ $screen_dataset }{'screen_global_to_dataset_index'}{ $global_screen_index },
             $screen->{'name'}
@@ -2454,7 +2452,7 @@ sub generate_global_screen_data {
         );
         push @{ $c_dataset_lines->{ $dataset } }, join( "\n\t",
             map {
-                sprintf( "{ .asset_state = %s, .asset_initial_state = %s },\t// %s",
+                sprintf( "{ %s, %s },\t// %s",
                     $_->{'value'}, $_->{'value'}, $_->{'comment'},
                 )
             } @{ $screen->{'asset_states'} }
@@ -2468,7 +2466,7 @@ sub generate_global_screen_data {
         scalar( @all_screens ) );
     push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t",
         map {
-            sprintf( "{ .num_states = %d, .states = &screen_%s_asset_state[0] }",
+            sprintf( "{ %d, &screen_%s_asset_state[0] }",
                 scalar( @{$_->{ 'asset_states' } } ), $_->{'name'}
             )
         } @all_screens

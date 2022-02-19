@@ -8,7 +8,7 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <arch/spectrum.h>
+#include <arch/zx/spectrum.h>
 #include <intrinsic.h>
 #include <input.h>
 #include <stdlib.h>
@@ -38,9 +38,9 @@
 
 void check_game_pause(void) {
    if ( controller_pause_key_pressed() ) {
-      in_wait_nokey();
+      in_WaitForNoKey();
       while ( ! controller_pause_key_pressed() ) ;
-      in_wait_nokey();
+      in_WaitForNoKey();
    }
 }
 
@@ -126,7 +126,7 @@ void do_hero_actions(void) {
     hero_pickup_items();
 #endif
 
-    if ( game_state.controller.state & IN_STICK_FIRE )
+    if ( game_state.controller.state & in_FIRE )
         hero_shoot_bullet();
 }
 

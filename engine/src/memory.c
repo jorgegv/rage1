@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <alloc.h>
+#include <alloc/malloc.h>
 
 #include "rage1/memory.h"
 #include "rage1/debug.h"

@@ -11,7 +11,7 @@
 #ifndef _SCREEN_H
 #define _SCREEN_H
 
-#include <games/sp1.h>
+#include <arch/zx/sprites/sp1.h>
 #include <stdint.h>
 
 #include "features.h"

@@ -8,8 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <arch/spectrum.h>
-#include <games/sp1.h>
+#include <arch/zx/spectrum.h>
+#include <arch/zx/sprites/sp1.h>
 
 #include "rage1/sp1engine.h"
 #include "rage1/screen.h"

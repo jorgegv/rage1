@@ -12,7 +12,7 @@
 #define _BULLET_H
 
 #include <stdint.h>
-#include <games/sp1.h>
+#include <arch/zx/sprites/sp1.h>
 
 #include "features.h"
 

@@ -12,7 +12,7 @@
 #define _HERO_H
 
 #include <input.h>
-#include <games/sp1.h>
+#include <arch/zx/sprites/sp1.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -43,10 +43,10 @@ struct hero_animation_data_s {
 
 // movement data for the hero sprite
 #define MOVE_NONE	0
-#define MOVE_UP		IN_STICK_UP
-#define MOVE_DOWN	IN_STICK_DOWN
-#define MOVE_LEFT	IN_STICK_LEFT
-#define MOVE_RIGHT	IN_STICK_RIGHT
+#define MOVE_UP		in_UP
+#define MOVE_DOWN	in_DOWN
+#define MOVE_LEFT	in_LEFT
+#define MOVE_RIGHT	in_RIGHT
 #define MOVE_ALL	( MOVE_UP | MOVE_DOWN | MOVE_LEFT | MOVE_RIGHT )
 struct hero_movement_data_s {
     uint8_t last_direction;

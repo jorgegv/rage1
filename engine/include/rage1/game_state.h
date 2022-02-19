@@ -11,7 +11,6 @@
 #ifndef _GAME_STATE_H
 #define _GAME_STATE_H
 
-//#include <spectrum.h>
 #include <input.h>
 #include <stdint.h>
 

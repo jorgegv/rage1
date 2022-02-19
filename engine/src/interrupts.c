@@ -18,7 +18,7 @@
 #include <im2.h>
 #include <string.h>
 #include <intrinsic.h>
-#include <z80.h>
+#include <arch/z80.h>
 
 #include "rage1/interrupts.h"
 #include "rage1/debug.h"
@@ -30,8 +30,7 @@
 // moved to lowmem/asmdata.asm to ensure it is placed in memory below 0xC000
 
 // timer tick routine
-IM2_DEFINE_ISR(do_timer_tick)
-{
+M_BEGIN_ISR(do_timer_tick)
    if ( ++current_time.frame == 50 ) {		// 50 frames per second
       current_time.frame = 0;
       if ( ++current_time.sec == 60 ) {
@@ -42,7 +41,7 @@ IM2_DEFINE_ISR(do_timer_tick)
          }
       }
    }
-}
+M_END_ISR
 
 // Initialize interrupts in IM2 mode
 // IV_ADDR must be 256-byte aligned
@@ -70,8 +69,8 @@ IM2_DEFINE_ISR(do_timer_tick)
 void init_interrupts(void) {
    intrinsic_di();
    memset( IV_ADDR, IV_BYTE, 257);
-   z80_bpoke( ISR_ADDR, Z80_OPCODE_JP );
-   z80_wpoke( ISR_ADDR + 1, (uint16_t) do_timer_tick );
-   im2_init( IV_ADDR );
+   bpoke( ISR_ADDR, Z80_OPCODE_JP );
+   wpoke( ISR_ADDR + 1, (uint16_t) do_timer_tick );
+   im2_Init( IV_ADDR );
    intrinsic_ei();
 }

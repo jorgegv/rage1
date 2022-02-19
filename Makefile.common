@@ -93,7 +93,9 @@ ZCC_TARGET		= +zx
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
-CFLAGS			= -vn -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
+#CFLAGS			= -vn -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
+CFLAGS			= -vn -compiler=sdcc -SO3 --opt-code-size --reserve-regs-iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
+#CFLAGS			= -vn -SO3 --opt-code-size -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
 CFLAGS_TO_ASM		= -a
 CFLAGS_LIST		= --list -s -m --c-code-in-asm
 ifeq ($(RAGE1_DEBUG),1)

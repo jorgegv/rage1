@@ -11,7 +11,8 @@
 #ifndef _FLOW_H
 #define _FLOW_H
 
-#include <arch/spectrum.h>
+#include <arch/zx/spectrum.h>
+#include <stdint.h>
 
 #include "features.h"
 
