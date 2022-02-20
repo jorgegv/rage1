@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <alloc/malloc.h>
+#include <malloc.h>
 
 #include "rage1/memory.h"
 #include "rage1/debug.h"
@@ -43,10 +43,13 @@
 #endif
 
 // memory initialization
-unsigned char *_malloc_heap;
+//unsigned char *_malloc_heap;
+long heap;
 void init_memory(void) {
-    _malloc_heap = MALLOC_HEAP_START;
-    heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
+//    _malloc_heap = MALLOC_HEAP_START;
+//    heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
+    mallinit();
+    sbrk( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
 
 #ifdef BUILD_FEATURE_ZX_TARGET_128
     // initial memory bank
