@@ -19,42 +19,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Defensive definitions ;-)
-
-IFNDEF CRT_ORG_BANK_0
-    defc CRT_ORG_BANK_0 = 0xc000
-ENDIF
-
-IFNDEF CRT_ORG_BANK_1
-    defc CRT_ORG_BANK_1 = 0xc000
-ENDIF
-
-IFNDEF CRT_ORG_BANK_2
-    defc CRT_ORG_BANK_2 = 0xc000
-ENDIF
-
-IFNDEF CRT_ORG_BANK_3
-    defc CRT_ORG_BANK_3 = 0xc000
-ENDIF
-
-IFNDEF CRT_ORG_BANK_4
-    defc CRT_ORG_BANK_4 = 0xc000
-ENDIF
-
-IFNDEF CRT_ORG_BANK_5
-    defc CRT_ORG_BANK_5 = 0xc000
-ENDIF
-
-IFNDEF CRT_ORG_BANK_6
-    defc CRT_ORG_BANK_6 = 0xc000
-ENDIF
-
-IFNDEF CRT_ORG_BANK_7
-    defc CRT_ORG_BANK_7 = 0xc000
-ENDIF
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 SECTION CODE
 
 org __crt_org_code
