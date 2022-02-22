@@ -29,12 +29,12 @@ struct controller_info_s {
 };
 
 // Keyboard controller settings
-#define KBD_UP			(in_LookupKey('q'))
-#define KBD_DOWN		(in_LookupKey('a'))
-#define KBD_LEFT		(in_LookupKey('o'))
-#define KBD_RIGHT		(in_LookupKey('p'))
-#define KBD_FIRE		(in_LookupKey(' '))
-#define KBD_PAUSE		(in_LookupKey('y'))
+#define KBD_UP			IN_KEY_SCANCODE_q
+#define KBD_DOWN		IN_KEY_SCANCODE_a
+#define KBD_LEFT		IN_KEY_SCANCODE_o
+#define KBD_RIGHT		IN_KEY_SCANCODE_p
+#define KBD_FIRE		IN_KEY_SCANCODE_SPACE
+#define KBD_PAUSE		IN_KEY_SCANCODE_y
 
 // controller types
 #define CTRL_TYPE_UNDEFINED	0
