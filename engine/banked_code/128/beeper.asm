@@ -13,11 +13,11 @@
 
         SECTION code_compiler
 
-; void bit_beepfx_fastcall(void *bfx) __z88dk_fastcall
+; void bit_beepfx(void *bfx) __z88dk_fastcall
 
-PUBLIC _bit_beepfx_fastcall
+PUBLIC _bit_beepfx
 
-_bit_beepfx_fastcall:
+_bit_beepfx:
 
 .sound_play
 	

@@ -18,7 +18,7 @@
 // this is a private copy of bit_beepfx function
 // effect definitions are the same and compatible, so we can use them
 
-extern void bit_beepfx_fastcall(void *bfx) __z88dk_fastcall;
-#define bit_beepfx(a) bit_beepfx_fastcall(a)
+extern void bit_beepfx(void *bfx) __z88dk_fastcall;
+//#define bit_beepfx(a) bit_beepfx_fastcall(a)
 
 #endif // _BEEPER_H
