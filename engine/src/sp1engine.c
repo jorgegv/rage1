@@ -10,6 +10,7 @@
 
 #include <arch/zx/spectrum.h>
 #include <arch/zx/sprites/sp1.h>
+#include <stdlib.h>
 
 #include "rage1/sp1engine.h"
 #include "rage1/screen.h"
@@ -22,6 +23,14 @@
 // SP1 library initialization
 //
 /////////////////////////////////////
+
+void *u_malloc(uint size) {
+return malloc(size);
+}
+
+void u_free(void *addr) {
+free(addr);
+}
 
 void init_sp1(void) {
    // Initialize SP1.LIB
