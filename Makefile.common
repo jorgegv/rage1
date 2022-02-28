@@ -101,6 +101,7 @@ CFLAGS_LIST		= --list -s -m --c-code-in-asm
 ifeq ($(RAGE1_DEBUG),1)
 	DEBUG_FLAGS := -DRAGE1_DEBUG
 endif
+LIBS			= -lsp1-zx
 
 # generic rules
 %.o: %.c
