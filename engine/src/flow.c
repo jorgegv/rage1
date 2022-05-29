@@ -234,19 +234,19 @@ uint8_t do_rule_check_screen_flag_is_reset( struct flow_rule_check_s *check ) __
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_EQUAL
-uint8_t do_rule_check_flowvar_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
+uint8_t do_rule_check_flow_var_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( all_flow_vars[ check->data.flow_var.var_id ] == check->data.flow_var.value );
 }
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_MORE_THAN
-uint8_t do_rule_check_flowvar_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
+uint8_t do_rule_check_flow_var_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( all_flow_vars[ check->data.flow_var.var_id ] > check->data.flow_var.value );
 }
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_LESS_THAN
-uint8_t do_rule_check_flowvar_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
+uint8_t do_rule_check_flow_var_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
     return ( all_flow_vars[ check->data.flow_var.var_id ] < check->data.flow_var.value );
 }
 #endif

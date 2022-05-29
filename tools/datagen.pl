@@ -1910,7 +1910,8 @@ sub generate_rule_checks {
     my $output = sprintf( "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
         $index, $num_checks );
     foreach my $ch ( @{ $rule->{'check'} } ) {
-        my ( $check, $check_data ) = split( /\s+/, $ch );
+        $ch =~ m/^(\w+)\s*(.*)$/;
+        my ( $check, $check_data ) = ( $1, $2 );
         $output .= sprintf( "\t{ .type = RULE_CHECK_%s, %s },\n",
             $check,
             sprintf( $check_data_output_format->{ $check }, $check_data || 0 )
