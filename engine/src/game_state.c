@@ -21,6 +21,19 @@
 
 /////////////////////////////////////
 //
+// Game state data
+//
+/////////////////////////////////////
+
+// running game state
+struct game_state_s game_state;
+
+#ifdef BUILD_FEATURE_FLOW_VARS
+uint8_t all_flow_vars[ GAME_NUM_FLOW_VARS ];
+#endif
+
+/////////////////////////////////////
+//
 // Game functions
 //
 /////////////////////////////////////
@@ -34,9 +47,6 @@ struct asset_state_s *get_current_screen_asset_state_table_ptr( void ) {
     return &all_screen_asset_state_tables[ game_state.current_screen ].states[ 0 ];
 }
 
-
-// running game state
-struct game_state_s game_state;
 
 void game_state_reset_initial(void) {
 
@@ -60,6 +70,10 @@ void game_state_reset_initial(void) {
 #endif
 
    game_state_assets_reset_all();
+
+#ifdef BUILD_FEATURE_FLOW_VARS
+   game_state_flow_vars_reset_all();
+#endif
 
    // Enemies tally
    game_state.enemies_alive = GAME_NUM_TOTAL_ENEMIES;
@@ -116,3 +130,11 @@ void game_state_assets_reset_all(void) {
         }
     }
 }
+
+#ifdef BUILD_FEATURE_FLOW_VARS
+void game_state_flow_vars_reset_all(void) {
+    uint8_t i;
+    i = GAME_NUM_FLOW_VARS;
+    while ( i-- ) all_flow_vars[ i ] = 0;
+}
+#endif

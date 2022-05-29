@@ -43,8 +43,11 @@
 #define RULE_CHECK_HERO_OVER_HOTZONE		17
 #define RULE_CHECK_SCREEN_FLAG_IS_SET		18
 #define RULE_CHECK_SCREEN_FLAG_IS_RESET		19
+#define RULE_CHECK_FLOW_VAR_EQUAL		20
+#define RULE_CHECK_FLOW_VAR_MORE_THAN		21
+#define RULE_CHECK_FLOW_VAR_LESS_THAN		22
 
-#define RULE_CHECK_MAX				19
+#define RULE_CHECK_MAX				22
 
 struct flow_rule_check_s {
     uint8_t type;
@@ -56,6 +59,7 @@ struct flow_rule_check_s {
         struct { uint8_t	function_id; }		custom;		// CALL_CUSTOM_FUNCTION
         struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
         struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
+        struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
     } data;
 };
 
@@ -82,8 +86,13 @@ struct flow_rule_check_s {
 #define RULE_ACTION_REMOVE_FROM_INVENTORY	12
 #define RULE_ACTION_SET_SCREEN_FLAG		13
 #define RULE_ACTION_RESET_SCREEN_FLAG		14
+#define RULE_ACTION_FLOW_VAR_STORE		15
+#define RULE_ACTION_FLOW_VAR_INC		16
+#define RULE_ACTION_FLOW_VAR_ADD		17
+#define RULE_ACTION_FLOW_VAR_DEC		18
+#define RULE_ACTION_FLOW_VAR_SUB		19
 
-#define RULE_ACTION_MAX				14
+#define RULE_ACTION_MAX				19
 
 struct flow_rule_action_s {
     uint8_t type;
@@ -103,10 +112,8 @@ struct flow_rule_action_s {
             uint8_t	flags;
             }						warp_to_screen;	// WARP_TO_SCREEN
         struct { uint16_t	item_id; }		item;		// ADD_TO/REMOVE_FROM_INVENTORY
-        struct {
-            uint8_t	num_screen;
-            uint8_t	flag;
-            }						screen_flag;	// SET/RESET_SCREEN_FLAG
+        struct { uint8_t	num_screen, flag; }	screen_flag;	// SET/RESET_SCREEN_FLAG
+        struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
     } data;
 };
 
