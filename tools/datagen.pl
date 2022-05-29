@@ -326,7 +326,7 @@ sub read_input_data {
                 $cur_screen->{'dataset'} = $1;
                 next;
             }
-            if ( $line =~ /^TITLE\s+'(.+)'$/ ) {
+            if ( $line =~ /^TITLE\s+"(.+)"$/ ) {
                 $cur_screen->{'title'} = $1;
                 next;
             }
