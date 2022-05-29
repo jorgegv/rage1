@@ -1724,7 +1724,8 @@ sub validate_and_compile_rule {
 
     # check filtering
     foreach my $chk ( @{ $rule->{'check'} } ) {
-        my ( $check, $check_data ) = split( /\s+/, $chk );
+        $chk =~ m/^(\w+)\s*(.*)$/;
+        my ( $check, $check_data ) = ( $1, $2 );
 
         # hotzone filtering
         if ( $check =~ /^HERO_OVER_HOTZONE$/ ) {
