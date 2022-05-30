@@ -233,6 +233,24 @@ uint8_t do_rule_check_screen_flag_is_reset( struct flow_rule_check_s *check ) __
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_EQUAL
+uint8_t do_rule_check_flow_var_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( all_flow_vars[ check->data.flow_var.var_id ] == check->data.flow_var.value );
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_MORE_THAN
+uint8_t do_rule_check_flow_var_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( all_flow_vars[ check->data.flow_var.var_id ] > check->data.flow_var.value );
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_LESS_THAN
+uint8_t do_rule_check_flow_var_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( all_flow_vars[ check->data.flow_var.var_id ] < check->data.flow_var.value );
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -354,6 +372,36 @@ void do_rule_action_reset_screen_flag( struct flow_rule_action_s *action ) __z88
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_STORE
+void do_rule_action_flow_var_store( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    all_flow_vars[ action->data.flow_var.var_id ] = action->data.flow_var.value;
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_INC
+void do_rule_action_flow_var_inc( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    all_flow_vars[ action->data.flow_var.var_id ]++;
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_ADD
+void do_rule_action_flow_var_add( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    all_flow_vars[ action->data.flow_var.var_id ] += action->data.flow_var.value;
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_DEC
+void do_rule_action_flow_var_dec( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    all_flow_vars[ action->data.flow_var.var_id ]--;
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_SUB
+void do_rule_action_flow_var_sub( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    all_flow_vars[ action->data.flow_var.var_id ] -= action->data.flow_var.value;
+}
+#endif
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -459,6 +507,21 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
 #else
     NULL,
 #endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_EQUAL
+    do_rule_check_flow_var_equal,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_MORE_THAN
+    do_rule_check_flow_var_more_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_LESS_THAN
+    do_rule_check_flow_var_less_than,
+#else
+    NULL,
+#endif
 };
 
 // Table of action functions.  The 'action' value from the rule is used to
@@ -536,6 +599,31 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_RESET_SCREEN_FLAG
     do_rule_action_reset_screen_flag,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_STORE
+    do_rule_action_flow_var_store,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_INC
+    do_rule_action_flow_var_inc,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_ADD
+    do_rule_action_flow_var_add,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_DEC
+    do_rule_action_flow_var_dec,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_SUB
+    do_rule_action_flow_var_sub,
 #else
     NULL,
 #endif

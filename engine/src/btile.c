@@ -11,6 +11,8 @@
 #include <arch/zx/spectrum.h>
 #include <arch/zx/sprites/sp1.h>
 
+#include "features.h"
+
 #include "rage1/btile.h"
 
 #include "game_data.h"
