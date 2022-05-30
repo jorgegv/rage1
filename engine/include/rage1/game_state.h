@@ -23,6 +23,8 @@
 #include "rage1/bullet.h"
 #include "rage1/inventory.h"
 
+#include "game_data.h"
+
 // a structure for holding the runtime state for an asset and its value at reset
 // if this structure is ever changed, its size _must_ be a power of 2!
 struct asset_state_s {
@@ -40,6 +42,14 @@ extern struct asset_state_table_s all_screen_asset_state_tables[];
 
 // resets state for all game assets in all screens
 void game_state_assets_reset_all(void);
+
+#ifdef BUILD_FEATURE_FLOW_VARS
+// table of all flow vars
+extern uint8_t all_flow_vars[];
+
+// resets flow vars in all screens
+void game_state_flow_vars_reset_all(void);
+#endif
 
 // definition for an offset value that means "NO STATE" for an asset
 #define	ASSET_NO_STATE	(0xff)

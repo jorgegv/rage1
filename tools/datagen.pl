@@ -45,6 +45,7 @@ my @all_items;
 my %item_name_to_index;
 
 my @all_rules;
+my $max_flow_var_id = undef;
 
 # lists of custom function checks and actions
 my @check_custom_functions;
@@ -325,7 +326,7 @@ sub read_input_data {
                 $cur_screen->{'dataset'} = $1;
                 next;
             }
-            if ( $line =~ /^TITLE\s+'(.+)'$/ ) {
+            if ( $line =~ /^TITLE\s+"(.+)"$/ ) {
                 $cur_screen->{'title'} = $1;
                 next;
             }
@@ -657,7 +658,7 @@ sub read_input_data {
                 validate_and_compile_rule( $cur_rule );
 
                 # we must delete WHEN and SCREEN for deduplicating rules,
-                # bt we must keep them for properly storing the rule
+                # but we must keep them for properly storing the rule
                 my $when = $cur_rule->{'when'};
                 delete $cur_rule->{'when'};
                 my $screen = $cur_rule->{'screen'};
@@ -1723,13 +1724,12 @@ sub validate_and_compile_rule {
 
     # check filtering
     foreach my $chk ( @{ $rule->{'check'} } ) {
-        my ( $check, $check_data ) = split( /\s+/, $chk );
+        $chk =~ m/^(\w+)\s*(.*)$/;
+        my ( $check, $check_data ) = ( $1, $2 );
 
         # hotzone filtering
         if ( $check =~ /^HERO_OVER_HOTZONE$/ ) {
             $check_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
-            # regenerate the value with the filtered data
-            $chk = sprintf( "%s\t%d", $check, $check_data );
         }
 
         # check custom function filtering
@@ -1739,8 +1739,25 @@ sub validate_and_compile_rule {
                 index => $index,
                 function => $check_data,
             };
-            $chk = sprintf( "%s\t%d", $check, $index );
+            $check_data = $index;
         }
+
+        # flow_vars specifics
+        if ( $check =~ /^FLOW_VAR/ ) {
+            add_build_feature( 'FLOW_VARS' );
+            my $vars = {
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $check_data )
+            };
+            if ( not defined( $max_flow_var_id ) or ( $vars->{'var_id'} > $max_flow_var_id ) ) {
+                $max_flow_var_id = $vars->{'var_id'};
+            }
+            $check_data = sprintf( "{ .var_id = %s, .value = %s }",
+                $vars->{'var_id'}, $vars->{'value'} );
+        }
+
+        # regenerate the check with filtered data
+        $chk = sprintf( "%s\t%s", $check, $check_data );
     }
 
     # action filtering
@@ -1751,8 +1768,6 @@ sub validate_and_compile_rule {
         # hotzone filtering
         if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
             $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%d", $action, $action_data );
         }
 
         # warp_to_screen filtering
@@ -1774,15 +1789,11 @@ sub validate_and_compile_rule {
                 ( $vars->{'dest_hero_x'} || 0 ), ( $vars->{'dest_hero_y'} || 0 ),
                 $flags,
             );
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%s", $action, $action_data );
         }
 
         # btile filtering
         if ( $action =~ /^(ENABLE|DISABLE)_BTILE$/ ) {
             $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%d", $action, $action_data );
         }
 
         # set/reset screen flag filtering
@@ -1795,8 +1806,6 @@ sub validate_and_compile_rule {
                 $screen_name_to_index{ $vars->{'screen'} },
                 ( $vars->{'flag'} || 0 ),
             );
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%s", $action, $action_data );
         }
 
         # custom action function filtering
@@ -1806,8 +1815,25 @@ sub validate_and_compile_rule {
                 index => $index,
                 function => $action_data,
             };
-            $do = sprintf( "%s\t%d", $action, $index );
+            $action_data = $index;
         }
+
+        # flow_vars specifics
+        if ( $action =~ /^FLOW_VAR/ ) {
+            add_build_feature( 'FLOW_VARS' );
+            my $vars = {
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $action_data )
+            };
+            if ( not defined( $max_flow_var_id ) or ( $vars->{'var_id'} > $max_flow_var_id ) ) {
+                $max_flow_var_id = $vars->{'var_id'};
+            }
+            $action_data = sprintf( "{ .var_id = %s, .value = %s }",
+                $vars->{'var_id'}, $vars->{'value'} || 0 );
+        }
+
+        # regenerate the value with the filtered data
+        $do = sprintf( "%s\t%s", $action, $action_data );
     }
 
     # generate conditional build features for this rule: checks and actions
@@ -1848,6 +1874,9 @@ my $check_data_output_format = {
     HERO_OVER_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
     SCREEN_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
     SCREEN_FLAG_IS_RESET	=> ".data.flag_state.flag = %s",
+    FLOW_VAR_EQUAL		=> ".data.flow_var = %s",
+    FLOW_VAR_MORE_THAN		=> ".data.flow_var = %s",
+    FLOW_VAR_LESS_THAN		=> ".data.flow_var = %s",
 };
 
 my $action_data_output_format = {
@@ -1866,6 +1895,11 @@ my $action_data_output_format = {
     REMOVE_FROM_INVENTORY	=> ".data.item.item_id = %s",
     SET_SCREEN_FLAG		=> ".data.screen_flag = %s",
     RESET_SCREEN_FLAG		=> ".data.screen_flag = %s",
+    FLOW_VAR_STORE		=> ".data.flow_var = %s",
+    FLOW_VAR_INC		=> ".data.flow_var = %s",
+    FLOW_VAR_ADD		=> ".data.flow_var = %s",
+    FLOW_VAR_DEC		=> ".data.flow_var = %s",
+    FLOW_VAR_SUB		=> ".data.flow_var = %s",
 };
 
 sub generate_rule_checks {
@@ -1877,7 +1911,8 @@ sub generate_rule_checks {
     my $output = sprintf( "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
         $index, $num_checks );
     foreach my $ch ( @{ $rule->{'check'} } ) {
-        my ( $check, $check_data ) = split( /\s+/, $ch );
+        $ch =~ m/^(\w+)\s*(.*)$/;
+        my ( $check, $check_data ) = ( $1, $2 );
         $output .= sprintf( "\t{ .type = RULE_CHECK_%s, %s },\n",
             $check,
             sprintf( $check_data_output_format->{ $check }, $check_data || 0 )
@@ -2496,6 +2531,11 @@ sub generate_misc_data {
         push @h_game_data_lines, sprintf( "#define NUM_DATASETS %d\n\n", ( ( scalar keys %dataset_dependency ) - 1 ) );
     }
 
+    # number of flow vars
+    if ( defined( $max_flow_var_id ) ) {
+        push @h_game_data_lines, "\n// Total number of flow vars in the game\n";
+        push @h_game_data_lines, sprintf( "#define\tGAME_NUM_FLOW_VARS\t%d\n\n", ( $max_flow_var_id + 1 ) );
+    }
 }
 
 sub add_build_feature {
