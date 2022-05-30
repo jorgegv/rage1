@@ -628,7 +628,3 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     NULL,
 #endif
 };
-
-#ifdef BUILD_FEATURE_FLOW_VARS
-uint8_t flow_vars[ GAME_NUM_FLOW_VARS ];
-#endif
