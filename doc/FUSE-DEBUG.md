@@ -25,3 +25,21 @@ br 32769
 br {_main}
 br {_init_program}
 ```
+
+The expressions in brackets may be just simple symbols, or may have the
+syntax `{symbol+offset}` or `{symbol-offset}`. `offset` can be specified as
+a decimal number, or in hex by prefixing it with `0x` or `$`. Examples:
+
+```
+br {_main+12}		# set breakpoint at _main+12 bytes
+br {_main+0x0c}		# same
+br {_main-$2f}		# set breakpoint at _main-0x2f bytes
+
+```
+
+This feature allows you to set break points in the middle of functions. 
+Just open the `.c.lis` file which will be generated during compilation, and
+there you will find the generated ASM annotated with your C source and the
+byte offsets at the left.  You can use those offsets to calculate the offset
+you want from the beginning of the function you want to set the breakpoint
+into.

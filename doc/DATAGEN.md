@@ -245,6 +245,7 @@ Example `SCREEN` definition:
 BEGIN_SCREEN
 	NAME		Screen01
 	DATASET		0
+	TITLE		"The Cavern"
 
 	OBSTACLE	NAME=Tree01	ROW=8 COL=4
 	OBSTACLE	NAME=Rock01	ROW=10 COL=12
@@ -275,6 +276,8 @@ END_SCREEN
 * `DATASET`: the number of the dataset where the screen should go.  It can
 be an integer number starting at 0, or the special name `home`. If no
 dataset is defined for a screen, the default value `home` is used.
+* `TITLE`: an optional title for the screen that can be used in the game.
+The title must be enclosed between double quotes ("")
 * `OBSTACLE`: places an element on the screen. The Hero can not go through
 this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the Btile that will be used to draw this obstacle
@@ -452,6 +455,7 @@ BEGIN_GAME_CONFIG
         LIVES_AREA      TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
         INVENTORY_AREA  TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
         DEBUG_AREA      TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
+	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 END_GAME_CONFIG
 ```
 
@@ -498,7 +502,7 @@ END_GAME_CONFIG
   * `CODESET`: (optional) the codeset where the function must reside. If not
     specified, or we are compiling for 48K model, all GAME_FUNCTIONs will go
     into lowmem area
-* `GAME_AREA`, `LIVES_ARES`, `INVENTORY_AREA`, `DEBUG_AREA`: definitions for
-the different screen areas used by the game. All of then accept the
-following aguments:
+* `GAME_AREA`, `LIVES_ARES`, `INVENTORY_AREA`, `DEBUG_AREA`, `TITLE_AREA`:
+definitions for the different screen areas used by the game.  All of then
+accept the following aguments:
   * `TOP`, `LEFT`, `BOTTOM`, `RIGHT`: (values are obvious)

@@ -19,6 +19,16 @@
 
 #include "game_data.h"
 
+#ifdef BUILD_FEATURE_SCREEN_TITLES
+struct sp1_pss title_ctx = {
+   &title_area,				// bounds
+   SP1_PSSFLAG_INVALIDATE,		// flags
+   0,0,					// initial position x,y
+   0, DEFAULT_BG_ATTR,			// attr mask and attribute
+   0,0					// RESERVED
+};
+#endif // BUILD_FEATURE_SCREEN_TITLES
+
 // draw a given screen
 void map_draw_screen(struct map_screen_s *s) {
     uint8_t i,r,c, maxr, maxc, btwidth, btheight;
@@ -74,6 +84,15 @@ void map_draw_screen(struct map_screen_s *s) {
         btile_draw( it->row, it->col, &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
     }
 #endif // BUILD_FEATURE_INVENTORY
+
+#ifdef BUILD_FEATURE_SCREEN_TITLES
+    sp1_ClearRectInv( &title_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    if ( game_state.current_screen_ptr->title ) {
+        sp1_SetPrintPos( &title_ctx, 0, 0 );
+        sp1_PrintString( &title_ctx, game_state.current_screen_ptr->title );
+    }
+#endif // BUILD_FEATURE_SCREEN_TITLES
+
 }
 
 #ifdef BUILD_FEATURE_INVENTORY

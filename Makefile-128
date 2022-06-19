@@ -45,9 +45,15 @@ ENGINE_LOWMEM_SYMBOLS	+= init_datasets init_codesets memory_switch_bank dataset_
 # all data generated in the home bank
 GAME_LOWMEM_SYMBOLS	= $(shell $(NM) $(GENERATED_DIR)/game_data.o | sed '1,/  Symbols:/d' | awk '{print $$4}' )
 
+# all code generated in the home bank
+CODE_LOWMEM_SYMBOLS	= $(shell for i in $(ENGINE_DIR)/{src,lowmem}/*.o; do $(NM) $$i | sed '1,/  Symbols:/d' | awk '{print $$4}' ; done )
+
+# sum it all
+ALL_LOWMEM_SYMBOLS	= $(ENGINE_LOWMEM_SYMBOLS) $(GAME_LOWMEM_SYMBOLS) $(CODE_LOWMEM_SYMBOLS)
+
 # target for doing the real check
 lowmemcheck:
-	@./tools/lowmemsym.pl -m main.map $(ENGINE_LOWMEM_SYMBOLS) $(GAME_LOWMEM_SYMBOLS)
+	@./tools/lowmemsym.pl -m main.map $(ALL_LOWMEM_SYMBOLS)
 
 ##
 ## Dataset compilation to standalone binaries org'ed at 0x5C00
@@ -55,10 +61,11 @@ lowmemcheck:
 
 datasets: $(ZX0_DATASETS)
 
-dataset_%.bin: dataset_%.c
-	@echo "Compiling DATASET $< ..."
-	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $<
-	@mv $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+dataset_%.bin:
+	@echo "Compiling DATASET $@ ..."
+	@# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
+	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	@cp $@ $@.save
 	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; fi
 
 dataset_%.zx0: dataset_%.bin

@@ -32,9 +32,10 @@ SRC			= $(LOWMEM_ASMSRC) $(LOWMEM_CSRC) $(CSRC) $(ASMSRC)
 OBJS			= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 
 # Dataset sources and binaries
-CSRC_DATASETS		= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
-SRC_DATASETS		= $(CSRC_DATASETS)
-BIN_DATASETS		= $(CSRC_DATASETS:.c=.bin)
+DATASET_DIRS		= $(wildcard $(GENERATED_DIR_DATASETS)/dataset_*.src)
+#CSRC_DATASETS		= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
+#SRC_DATASETS		= $(CSRC_DATASETS)
+BIN_DATASETS		= $(DATASET_DIRS:.src=.bin)
 ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
 
@@ -92,9 +93,12 @@ ZCC_TARGET		= +zx
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
-CFLAGS			= -vn -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC)
+CFLAGS			= -vn -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
 CFLAGS_TO_ASM		= -a
 CFLAGS_LIST		= --list -s -m --c-code-in-asm
+ifeq ($(RAGE1_DEBUG),1)
+	DEBUG_FLAGS := -DRAGE1_DEBUG
+endif
 
 # generic rules
 %.o: %.c

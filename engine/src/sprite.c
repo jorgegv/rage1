@@ -41,6 +41,8 @@ struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
         0,		// left column graphic offset
         0		// z-plane
     );
+    // ensure s is not NULL
+    DEBUG_ASSERT( s, PANIC_SPRITE_IS_NULL );
 
     // add all remaining columns
     for ( c = 1; c <= cols - 1; c++ ) {

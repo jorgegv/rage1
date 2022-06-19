@@ -45,6 +45,11 @@ my @all_items;
 my %item_name_to_index;
 
 my @all_rules;
+my $max_flow_var_id = undef;
+
+# lists of custom function checks and actions
+my @check_custom_functions;
+my @action_custom_functions;
 
 my @all_codeset_functions;
 my %codeset_function_name_to_index;
@@ -58,18 +63,23 @@ my %dataset_dependency;
 
 # file names
 my $c_file_game_data		= 'game_data.c';
-my $c_file_dataset_format	= 'datasets/dataset_%s.c';
+my $asm_file_game_data		= 'asm_game_data.asm';
 my $h_file_game_data		= 'game_data.h';
 my $h_file_build_features	= 'features.h';
 
+# global directories
 my $output_dest_dir;
 my $game_src_dir;
 my $build_dir;
 
-# codesets have their source files in their own directory for each codeset
+# codesets and datasets have their source files in their own directory for each one
 my $codeset_src_dir_format	= 'codesets/codeset_%s.src';
 my $c_file_codeset_format	= 'codesets/codeset_%s.src/main.c';
 my $asm_file_codeset_format	= 'codesets/codeset_%s.src/codeset_data.asm';
+
+my $dataset_src_dir_format	= 'datasets/dataset_%s.src';
+my $c_file_dataset_format	= 'datasets/dataset_%s.src/main.c';
+my $asm_file_dataset_format	= 'datasets/dataset_%s.src/dataset_data.asm';
 
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
@@ -77,6 +87,7 @@ my $dump_file = 'internal_state.dmp';
 # output lines for each of the files
 my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
+my $asm_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
 my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
@@ -96,6 +107,8 @@ my @default_build_features = qw(
 my $syntax = {
     valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
 };
+
+my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop );
 
 ##########################################
 ## Input data parsing and state machine
@@ -311,6 +324,10 @@ sub read_input_data {
             }
             if ( $line =~ /^DATASET\s+(\w+)$/ ) {
                 $cur_screen->{'dataset'} = $1;
+                next;
+            }
+            if ( $line =~ /^TITLE\s+"(.+)"$/ ) {
+                $cur_screen->{'title'} = $1;
                 next;
             }
             if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
@@ -583,6 +600,11 @@ sub read_input_data {
                 push @all_codeset_functions, $item;
                 push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
 
+                # check that the type is a valid function type
+                if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
+                    die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                }
+
                 # add the function to the game config
                 $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
                 next;
@@ -599,7 +621,7 @@ sub read_input_data {
                 }
                 next;
             }
-            if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA)\s+(\w.*)$/ ) {
+            if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA|TITLE_AREA)\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my ( $directive, $args ) = ( $1, $2 );
                 $game_config->{ lc( $directive ) } = {
@@ -636,7 +658,7 @@ sub read_input_data {
                 validate_and_compile_rule( $cur_rule );
 
                 # we must delete WHEN and SCREEN for deduplicating rules,
-                # bt we must keep them for properly storing the rule
+                # but we must keep them for properly storing the rule
                 my $when = $cur_rule->{'when'};
                 delete $cur_rule->{'when'};
                 my $screen = $cur_rule->{'screen'};
@@ -1150,6 +1172,11 @@ sub validate_and_compile_screen {
 
     ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
         die "Screen '$screen->{name}' has no Btiles\n";
+
+    # if any screen has a title, activate the corresponding build feature
+    if ( defined( $screen->{'title'} ) ) {
+        add_build_feature( 'SCREEN_TITLES' );
+    }
 }
 
 # SCREEN_DATA and DEFINE compilation
@@ -1609,26 +1636,25 @@ sub generate_game_functions {
     # generate macro calls for all functions
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "#define RUN_GAME_FUNC_%-30s (%s)",
-                uc($_) . '()',
-                $game_config->{'game_functions'}{ $_ }{'codeset_function_call_macro'},
+            sprintf( "#define run_game_function_%-30s %s",
+                lc( $_ ) . '()',
+                ( defined( $game_config->{'game_functions'}{ $_ } ) ?
+                  $game_config->{'game_functions'}{ $_ }{'codeset_function_call_macro'} :
+                  '' ),
             )
-        } sort keys %{ $game_config->{'game_functions'} }
+        } sort @valid_game_functions
     );
 
     push @h_game_data_lines, "\n\n";
 }
 
-sub generate_game_areas {
-    # output game areas
-    push @c_game_data_lines, "// screen areas\n";
+sub generate_single_game_area {
+    my $area = shift;
     push @c_game_data_lines, "\n" . join( "\n", map {
         sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )
-        } qw( game_area lives_area inventory_area debug_area )
-    ) . "\n\n";
-
-    # output definitions for screen areas
+        } ( $area )
+    ) . "\n";
     push @h_game_data_lines, "\n" . join( "\n", map {
             "// " .uc( $_ ). " definitions\n" .
             sprintf( "#define %s_TOP	%d\n", uc( $_ ), $game_config->{ $_ }{'top'} ) .
@@ -1638,8 +1664,26 @@ sub generate_game_areas {
             sprintf( "#define %s_WIDTH	( %s_RIGHT - %s_LEFT + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
             sprintf( "#define %s_HEIGHT	( %s_BOTTOM - %s_TOP + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
             sprintf( "extern struct sp1_Rect %s;\n", $_ )
-        } qw( game_area lives_area inventory_area debug_area )
-    );
+        } ( $area )
+    ) . "\n\n";
+}
+
+sub generate_game_areas {
+
+    # output mandatory game areas
+    push @c_game_data_lines, "// screen areas\n";
+    foreach my $area ( qw( game_area lives_area debug_area ) ) {
+        generate_single_game_area( $area );
+    }
+
+    # output optional game areas
+    if ( is_build_feature_enabled( 'INVENTORY' ) ) {
+        generate_single_game_area( 'inventory_area' );
+    }
+    if ( is_build_feature_enabled( 'SCREEN_TITLES' ) ) {
+        generate_single_game_area( 'title_area' );
+    }
+
 }
 
 ###################################
@@ -1670,8 +1714,8 @@ sub validate_and_compile_rule {
     grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
         die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
 
-    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
-        die "At least one CHECK clause must be specified\n";
+#    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
+#        die "At least one CHECK clause must be specified\n";
 
     defined( $rule->{'do'} ) and scalar( @{ $rule->{'do'} } ) or
         die "At least one DO clause must be specified\n";
@@ -1680,15 +1724,40 @@ sub validate_and_compile_rule {
 
     # check filtering
     foreach my $chk ( @{ $rule->{'check'} } ) {
-        my ( $check, $check_data ) = split( /\s+/, $chk );
+        $chk =~ m/^(\w+)\s*(.*)$/;
+        my ( $check, $check_data ) = ( $1, $2 );
 
         # hotzone filtering
         if ( $check =~ /^HERO_OVER_HOTZONE$/ ) {
             $check_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $check_data };
-            # regenerate the value with the filtered data
-            $chk = sprintf( "%s\t%d", $check, $check_data );
         }
 
+        # check custom function filtering
+        if ( $check =~ /^CALL_CUSTOM_FUNCTION/ ) {
+            my $index = scalar( @check_custom_functions );
+            push @check_custom_functions, {
+                index => $index,
+                function => $check_data,
+            };
+            $check_data = $index;
+        }
+
+        # flow_vars specifics
+        if ( $check =~ /^FLOW_VAR/ ) {
+            add_build_feature( 'FLOW_VARS' );
+            my $vars = {
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $check_data )
+            };
+            if ( not defined( $max_flow_var_id ) or ( $vars->{'var_id'} > $max_flow_var_id ) ) {
+                $max_flow_var_id = $vars->{'var_id'};
+            }
+            $check_data = sprintf( "{ .var_id = %s, .value = %s }",
+                $vars->{'var_id'}, $vars->{'value'} );
+        }
+
+        # regenerate the check with filtered data
+        $chk = sprintf( "%s\t%s", $check, $check_data );
     }
 
     # action filtering
@@ -1699,8 +1768,6 @@ sub validate_and_compile_rule {
         # hotzone filtering
         if ( $action =~ /^(ENABLE|DISABLE)_HOTZONE$/ ) {
             $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'hotzone_name_to_index'}{ $action_data };
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%d", $action, $action_data );
         }
 
         # warp_to_screen filtering
@@ -1722,15 +1789,11 @@ sub validate_and_compile_rule {
                 ( $vars->{'dest_hero_x'} || 0 ), ( $vars->{'dest_hero_y'} || 0 ),
                 $flags,
             );
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%s", $action, $action_data );
         }
 
         # btile filtering
         if ( $action =~ /^(ENABLE|DISABLE)_BTILE$/ ) {
             $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%d", $action, $action_data );
         }
 
         # set/reset screen flag filtering
@@ -1743,10 +1806,34 @@ sub validate_and_compile_rule {
                 $screen_name_to_index{ $vars->{'screen'} },
                 ( $vars->{'flag'} || 0 ),
             );
-            # regenerate the value with the filtered data
-            $do = sprintf( "%s\t%s", $action, $action_data );
         }
 
+        # custom action function filtering
+        if ( $action =~ /^CALL_CUSTOM_FUNCTION/ ) {
+            my $index = scalar( @action_custom_functions );
+            push @action_custom_functions, {
+                index => $index,
+                function => $action_data,
+            };
+            $action_data = $index;
+        }
+
+        # flow_vars specifics
+        if ( $action =~ /^FLOW_VAR/ ) {
+            add_build_feature( 'FLOW_VARS' );
+            my $vars = {
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $action_data )
+            };
+            if ( not defined( $max_flow_var_id ) or ( $vars->{'var_id'} > $max_flow_var_id ) ) {
+                $max_flow_var_id = $vars->{'var_id'};
+            }
+            $action_data = sprintf( "{ .var_id = %s, .value = %s }",
+                $vars->{'var_id'}, $vars->{'value'} || 0 );
+        }
+
+        # regenerate the value with the filtered data
+        $do = sprintf( "%s\t%s", $action, $action_data );
     }
 
     # generate conditional build features for this rule: checks and actions
@@ -1782,11 +1869,14 @@ my $check_data_output_format = {
     ENEMIES_KILLED_EQUAL	=> ".data.enemies.count = %d",
     ENEMIES_KILLED_MORE_THAN	=> ".data.enemies.count = %d",
     ENEMIES_KILLED_LESS_THAN	=> ".data.enemies.count = %d",
-    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function_id = %d",
     ITEM_IS_OWNED		=> ".data.item.item_id = %s",
     HERO_OVER_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
     SCREEN_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
     SCREEN_FLAG_IS_RESET	=> ".data.flag_state.flag = %s",
+    FLOW_VAR_EQUAL		=> ".data.flow_var = %s",
+    FLOW_VAR_MORE_THAN		=> ".data.flow_var = %s",
+    FLOW_VAR_LESS_THAN		=> ".data.flow_var = %s",
 };
 
 my $action_data_output_format = {
@@ -1794,7 +1884,7 @@ my $action_data_output_format = {
     RESET_USER_FLAG		=> ".data.user_flag.flag = %s",
     INC_LIVES			=> ".data.lives.count = %s",
     PLAY_SOUND			=> ".data.play_sound.sound_id = %s",
-    CALL_CUSTOM_FUNCTION	=> ".data.custom.function = %s",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom.function_id = %d",
     END_OF_GAME			=> ".data.unused = %d",
     WARP_TO_SCREEN		=> ".data.warp_to_screen = %s",
     ENABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
@@ -1805,15 +1895,24 @@ my $action_data_output_format = {
     REMOVE_FROM_INVENTORY	=> ".data.item.item_id = %s",
     SET_SCREEN_FLAG		=> ".data.screen_flag = %s",
     RESET_SCREEN_FLAG		=> ".data.screen_flag = %s",
+    FLOW_VAR_STORE		=> ".data.flow_var = %s",
+    FLOW_VAR_INC		=> ".data.flow_var = %s",
+    FLOW_VAR_ADD		=> ".data.flow_var = %s",
+    FLOW_VAR_DEC		=> ".data.flow_var = %s",
+    FLOW_VAR_SUB		=> ".data.flow_var = %s",
 };
 
 sub generate_rule_checks {
     my ( $rule, $index ) = @_;
     my $num_checks = scalar( @{ $rule->{'check'} } );
+
+    return if ( not scalar( @{ $rule->{'check'} } ) );
+
     my $output = sprintf( "struct flow_rule_check_s flow_rule_checks_%05d[%d] = {\n",
         $index, $num_checks );
     foreach my $ch ( @{ $rule->{'check'} } ) {
-        my ( $check, $check_data ) = split( /\s+/, $ch );
+        $ch =~ m/^(\w+)\s*(.*)$/;
+        my ( $check, $check_data ) = ( $1, $2 );
         $output .= sprintf( "\t{ .type = RULE_CHECK_%s, %s },\n",
             $check,
             sprintf( $check_data_output_format->{ $check }, $check_data || 0 )
@@ -1876,8 +1975,10 @@ FLOW_DATA_C_1
         push @{ $c_dataset_lines->{ $dataset } }, "struct flow_rule_s all_flow_rules[ FLOW_NUM_RULES ] = {\n";
         foreach my $i ( 0 .. scalar( @dataset_rules )-1 ) {
             push @{ $c_dataset_lines->{ $dataset } }, "\t{";
-            push @{ $c_dataset_lines->{ $dataset } }, sprintf( " .num_checks = %d, .checks = &flow_rule_checks_%05d[0],",
-                scalar( @{ $dataset_rules[ $i ]{'check'} } ), $i );
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( " .num_checks = %d, .checks = %s,",
+                scalar( @{ $dataset_rules[ $i ]{'check'} } ),
+                ( scalar( @{ $dataset_rules[ $i ]{'check'} } ) ? sprintf( "&flow_rule_checks_%05d[0]", $i ) : 'NULL' )
+            );
             push @{ $c_dataset_lines->{ $dataset } }, sprintf( " .num_actions = %d, .actions = &flow_rule_actions_%05d[0],",
                 scalar( @{ $dataset_rules[ $i ]{'do'} } ), $i );
             push @{ $c_dataset_lines->{ $dataset } }, " },\n";
@@ -1971,6 +2072,17 @@ sub check_game_config_is_valid {
     if ( $forced_build_target ) {
         $game_config->{'zx_target'} = $forced_build_target;
     }
+
+    if ( is_build_feature_enabled( 'INVENTORY') and not defined( $game_config->{'inventory_area'} ) ) {
+        warn "Game Config: using INVENTORY feature, but no INVENTORY_AREA defined\n";
+        $errors++;
+    }
+
+    if ( is_build_feature_enabled( 'SCREEN_TITLES') and not defined( $game_config->{'title_area'} ) ) {
+        warn "Game Config: using SCREEN_TITLES feature, but no TITLE_AREA defined\n";
+        $errors++;
+    }
+
     return $errors;
 }
 
@@ -2020,10 +2132,10 @@ sub generate_c_banked_header {
     my $num_flow_rules	= scalar( @{ $dataset_dependency{ $dataset }{'rules'} } );
     my $num_screens	= scalar( @{ $dataset_dependency{ $dataset }{'screens'} } );
 
-    my $all_btiles_ptr		= ( $num_btiles ?	'&all_btiles[0]'		: 'NULL' );
-    my $all_sprites_ptr		= ( $num_sprites ?	'&all_sprite_graphics[0]'	: 'NULL' );
-    my $all_flow_rules_ptr	= ( $num_flow_rules ?	'&all_flow_rules[0]'		: 'NULL' );
-    my $all_screens_ptr		= ( $num_screens ?	'&all_screens[0]'		: 'NULL' );
+    my $all_btiles_ptr		= ( $num_btiles ?	'_all_btiles'		: '0' );
+    my $all_sprites_ptr		= ( $num_sprites ?	'_all_sprite_graphics'	: '0' );
+    my $all_flow_rules_ptr	= ( $num_flow_rules ?	'_all_flow_rules'	: '0' );
+    my $all_screens_ptr		= ( $num_screens ?	'_all_screens'		: '0' );
 
     if ( $dataset =~ /^\d+$/ ) {
         push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER
@@ -2049,40 +2161,40 @@ sub generate_c_banked_header {
 // This _must_ be included - Datasets may reference assets from the home dataset!
 #include "game_data.h"
 
-///////////////////////////////////////////////////////////////////////////////
-// Forced ORG address trick by Dom - The following does not generate any
-// code but forces the linking to be at the indicated base address.  This is
-// needed because SDCC does not allow relocating the DATA section.  See:
-// https://z88dk.org/forum/viewtopic.php?p=19796#p19796
-///////////////////////////////////////////////////////////////////////////////
-
-static void __orgit(void) __naked {
-__asm
-    org $dataset_base_address
-__endasm;
-}
-
 EOF_HEADER
-    ;
+;
+
+        push @{ $asm_dataset_lines->{ $dataset } }, <<EOF_HEADER
+        org	$dataset_base_address
+EOF_HEADER
+;
     }
 
-    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_HEADER2
-///////////////////////////////////////////////////////////////////////////////
-// Asset index for this bank - This structure must be the first data item
-// generated in the bank: it contains pointers to the rest of the bank data
-// items!
-///////////////////////////////////////////////////////////////////////////////
+    push @{ $asm_dataset_lines->{ $dataset } }, <<EOF_HEADER2
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Asset index for this bank - This structure must be the first data item
+;; generated in the bank: it contains pointers to the rest of the bank data
+;; items!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-struct dataset_assets_s all_assets_dataset_$dataset = {
-    .num_btiles			= $num_btiles,
-    .all_btiles			= $all_btiles_ptr,
-    .num_sprite_graphics	= $num_sprites,
-    .all_sprite_graphics	= $all_sprites_ptr,
-    .num_flow_rules		= $num_flow_rules,
-    .all_flow_rules		= $all_flow_rules_ptr,
-    .num_screens		= $num_screens,
-    .all_screens		= $all_screens_ptr,
-};
+        section	data_compiler
+
+extern	_all_btiles
+extern	_all_sprite_graphics
+extern	_all_flow_rules
+extern	_all_screens
+
+public	_all_assets_dataset_$dataset
+
+_all_assets_dataset_$dataset:
+    db	$num_btiles		;; .num_btiles
+    dw	$all_btiles_ptr		;; .all_btiles
+    db	$num_sprites		;; .num_sprite_graphics
+    dw	$all_sprites_ptr	;; .all_sprite_graphics
+    db	$num_flow_rules		;; .num_flow_rules
+    dw	$all_flow_rules_ptr	;; .all_flow_rules
+    db	$num_screens		;; .num_screens
+    dw	$all_screens_ptr	;; .all_screens
 
 EOF_HEADER2
 ;
@@ -2215,6 +2327,7 @@ EOF_MAP
             my $screen = $_;
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
             sprintf( "\t\t.global_screen_num = %d,\n", $screen_name_to_index{ $_->{'name'} } ) .
+            sprintf( "\t\t.title = %s,\n", ( defined( $screen->{'title'} ) ? '"'.$screen->{'title'}.'"' : 'NULL' ) ) .
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
             sprintf( "\t\t.enemy_data = { %d, %s },\t// enemy_data\n",
@@ -2262,6 +2375,7 @@ sub generate_h_header {
 #include <games/sp1.h>
 
 #include "rage1/dataset.h"
+#include "rage1/codeset.h"
 
 extern struct dataset_assets_s all_assets_dataset_home;
 
@@ -2382,6 +2496,7 @@ sub generate_global_screen_data {
         );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
+
     # global table of asset state tables for all screens
     push @{ $c_dataset_lines->{ $dataset } }, "// Global table of asset state tables for all screens\n";
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_table_s all_screen_asset_state_tables[ %d ] = {\n\t",
@@ -2394,6 +2509,7 @@ sub generate_global_screen_data {
         } @all_screens
     );
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+
 }
 
 # generate data that does not logically fit elsewhere
@@ -2406,11 +2522,22 @@ sub generate_misc_data {
     }
     push @h_game_data_lines, "\n// Total number of enemies in the game\n";
     push @h_game_data_lines, sprintf( "#define\tGAME_NUM_TOTAL_ENEMIES\t%d\n\n", $count );
+
+    # number of flow vars
+    if ( defined( $max_flow_var_id ) ) {
+        push @h_game_data_lines, "\n// Total number of flow vars in the game\n";
+        push @h_game_data_lines, sprintf( "#define\tGAME_NUM_FLOW_VARS\t%d\n\n", ( $max_flow_var_id + 1 ) );
+    }
 }
 
 sub add_build_feature {
     my $f = shift;
     $conditional_build_features{ $f }++;
+}
+
+sub is_build_feature_enabled {
+    my $f = shift;
+    return defined( $conditional_build_features{ $f } );
 }
 
 sub add_default_build_features {
@@ -2557,6 +2684,9 @@ sub generate_codesets {
 
         my $num_codeset_functions = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
 
+        push @h_game_data_lines, "// codeset assets struct - only valid in codesets\n";
+        push @h_game_data_lines, "extern struct codeset_assets_s all_codeset_assets;\n";
+
         # add the needed source lines to the C and ASM files for this
         # codeset: the main codeset_assets_s struct at the beginning, the
         # function table and e.g.  tiles used by these functions
@@ -2572,8 +2702,9 @@ sub generate_codesets {
 	org	$codeset_base_address
 
 extern	_codeset_functions
+public	_all_codeset_assets
 
-_all_assets_codeset_$codeset:
+_all_codeset_assets:
 	dw	0			;; .game_state
 	dw	0			;; .banked_assets
 	dw	0			;; .home_assets
@@ -2595,22 +2726,6 @@ EOF_CODESET_LINES_MAIN_ASM
 EOF_CODESET_LINES_MAIN
 ;
 
-        # create the destination directory
-        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
-        if ( ! -d $dst_dir ) {
-            make_path( $dst_dir ) or
-                die "** Could not create destination directory $dst_dir\n";
-        }
-
-        # copy the source files for functions associated to this codeset to the dest dir
-        # and add the needed lines to the main.c file
-        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
-            my $src_file = $game_src_dir . '/' . $function->{'file'};
-            my $dst_file = $dst_dir . '/' . $function->{'file'}; 
-            copy( $src_file, $dst_file ) or
-                die "** Could not copy $src_file to $dst_file\n";
-        }
-
         # add extern codeset function declarations
         push @{ $c_codeset_lines->{ $codeset } }, "// codeset functions table\n";
         foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
@@ -2625,7 +2740,43 @@ EOF_CODESET_LINES_MAIN
         push @{ $c_codeset_lines->{ $codeset } }, "};\n\n";
 
     }
+}
 
+sub generate_custom_function_tables {
+    if ( scalar( @check_custom_functions ) ) {
+
+        push @h_game_data_lines, "// Check custom functions table\n";
+        push @h_game_data_lines, "extern check_custom_function_t check_custom_functions[];\n\n";
+        push @h_game_data_lines, "// Check custom function prototypes\n";
+
+        push @c_game_data_lines, "// Check custom functions table\n";
+        push @c_game_data_lines, sprintf( "check_custom_function_t check_custom_functions[ %d ] = {\n",
+            scalar( @check_custom_functions )
+        );
+        foreach my $f ( @check_custom_functions ) {
+            push @h_game_data_lines, sprintf( "uint8_t %s( void );\n", $f->{'function'} );
+            push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
+        }
+        push @h_game_data_lines, "\n";
+        push @c_game_data_lines, "};\n\n";
+    }
+    if ( scalar( @action_custom_functions ) ) {
+
+        push @h_game_data_lines, "// Action custom functions table\n";
+        push @h_game_data_lines, "extern action_custom_function_t action_custom_functions[];\n\n";
+        push @h_game_data_lines, "// Action custom function prototypes\n";
+
+        push @c_game_data_lines, "// Action custom function table\n";
+        push @c_game_data_lines, sprintf( "action_custom_function_t action_custom_functions[ %d ] = {\n",
+            scalar( @action_custom_functions )
+        );
+        foreach my $f ( @action_custom_functions ) {
+            push @h_game_data_lines, sprintf( "void %s( void );\n", $f->{'function'} );
+            push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
+        }
+        push @h_game_data_lines, "\n";
+        push @c_game_data_lines, "};\n\n";
+    }
 }
 
 # this function is called from main
@@ -2666,6 +2817,9 @@ sub generate_game_data {
     # call macros
     generate_game_functions;
 
+    # generate custom function tables
+    generate_custom_function_tables;
+
     # generate conditional build features
     add_default_build_features;
     generate_conditional_build_features;
@@ -2683,31 +2837,82 @@ sub output_game_data {
     print $output_fh join( "", @c_game_data_lines, @{ $c_dataset_lines->{'home'} } );
     close $output_fh;
 
-    # output .c file for banked datasets
-    foreach my $i ( sort grep { /\d+/ } keys %$c_dataset_lines ) {
-        my $c_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_dataset_format, $i );
+    # output .asm file for home bank and dataset
+    open( $output_fh, ">", $asm_file_game_data ) or
+        die "Could not open $asm_file_game_data for writing\n";
+    print $output_fh join( "", @{ $asm_dataset_lines->{'home'} } );
+    close $output_fh;
+
+    # output banked datasets
+    foreach my $dataset ( sort grep { /\d+/ } keys %$c_dataset_lines ) {
+
+        # create the destination directory
+        my $dst_dir = sprintf( $output_dest_dir . '/' . $dataset_src_dir_format, $dataset );
+        if ( ! -d $dst_dir ) {
+            make_path( $dst_dir ) or
+                die "** Could not create destination directory $dst_dir\n";
+        }
+
+        # output .c file for banked datasets
+        my $c_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_dataset_format, $dataset );
         open( $output_fh, ">", $c_file_dataset ) or
             die "Could not open $c_file_dataset for writing\n";
-        print $output_fh join( "", @{ $c_dataset_lines->{ $i } } );
+        print $output_fh join( "", @{ $c_dataset_lines->{ $dataset } } );
+        close $output_fh;
+
+        # output .asm file for banked datasets
+        my $asm_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_dataset_format, $dataset );
+        open( $output_fh, ">", $asm_file_dataset ) or
+            die "Could not open $asm_file_dataset for writing\n";
+        print $output_fh join( "", @{ $asm_dataset_lines->{ $dataset } } );
         close $output_fh;
     }
 
-    # output .c file for banked codesets
-    foreach my $i ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
-        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $i );
+    # output banked codesets
+    my %files_to_copy;
+    foreach my $codeset ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
+
+        # create the destination directory
+        my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
+        if ( ! -d $dst_dir ) {
+            make_path( $dst_dir ) or
+                die "** Could not create destination directory $dst_dir\n";
+        }
+
+        # note the files to be moved to the codeset source dir
+        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
+                $files_to_copy{ $function->{'file'} } = {
+                    src => $game_src_dir . '/' . $function->{'file'},
+                    dst => $dst_dir . '/' . $function->{'file'},
+                };
+            }
+        }
+
+        # output .c file for the codeset
+        my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $codeset );
         open( $output_fh, ">", $c_file_codeset ) or
             die "Could not open $c_file_codeset for writing\n";
-        print $output_fh join( "", @{ $c_codeset_lines->{ $i } } );
+        print $output_fh join( "", @{ $c_codeset_lines->{ $codeset } } );
+        close $output_fh;
+
+        # output .asm file for banked codesets
+        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $codeset );
+        open( $output_fh, ">", $asm_file_codeset ) or
+            die "Could not open $asm_file_codeset for writing\n";
+        print $output_fh join( "", @{ $asm_codeset_lines->{ $codeset } } );
         close $output_fh;
     }
 
-    # output .asm file for banked codesets
-    foreach my $i ( sort grep { /\d+/ } keys %$asm_codeset_lines ) {
-        my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $i );
-        open( $output_fh, ">", $asm_file_codeset ) or
-            die "Could not open $asm_file_codeset for writing\n";
-        print $output_fh join( "", @{ $asm_codeset_lines->{ $i } } );
-        close $output_fh;
+    # move the source files for functions associated to this codeset to the dest dir
+    # only if compiling for 128K
+    if ( $game_config->{'zx_target'} eq '128' ) {
+        foreach my $file ( keys %files_to_copy ) {
+            my $src_file = $files_to_copy{ $file }{'src'};
+            my $dst_file = $files_to_copy{ $file }{'dst'};
+            move( $src_file, $dst_file ) or
+                die "** Could not move $src_file to $dst_file\n";
+        }
     }
 
     # output game_data.h file
@@ -2866,6 +3071,8 @@ sub dump_internal_data {
         all_codeset_functions		=> \@all_codeset_functions,
         codeset_function_name_to_index	=> \%codeset_function_name_to_index,
         codeset_functions_by_codeset	=> \%codeset_functions_by_codeset,
+        check_custom_functions		=> \@check_custom_functions,
+        action_custom_functions		=> \@action_custom_functions,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
@@ -2880,6 +3087,7 @@ our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
 getopts("b:d:ct:s:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data = "$opt_d/$c_file_game_data";
+    $asm_file_game_data = "$opt_d/$asm_file_game_data";
     $h_file_game_data = "$opt_d/$h_file_game_data";
     $h_file_build_features = "$opt_d/$h_file_build_features";
     $dump_file = "$opt_d/$dump_file";

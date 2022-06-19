@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////
+//////l//////////////////////////////////////////////////////////////////////////
 //
 // RAGE1 - Retro Adventure Game Engine, release 1
 // (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
@@ -40,30 +40,15 @@ void main(void)
    init_program();
 
    // run one-time initialization, if any
-#ifdef RUN_GAME_FUNC_USER_INIT
-   RUN_GAME_FUNC_USER_INIT();
-#endif
-
+   run_game_function_user_init();
    while (1) {
-
-#ifdef RUN_GAME_FUNC_MENU
-      RUN_GAME_FUNC_MENU();
-#endif
-
-#ifdef RUN_GAME_FUNC_INTRO
-      RUN_GAME_FUNC_INTRO();
-#endif
-
+      run_game_function_menu();
+      run_game_function_intro();
       run_main_game_loop();
-
       if ( GET_GAME_FLAG( F_GAME_OVER ) ) {
-#ifdef RUN_GAME_FUNC_GAME_OVER
-         RUN_GAME_FUNC_GAME_OVER();
-#endif
+         run_game_function_game_over();
       } else {
-#ifdef RUN_GAME_FUNC_GAME_END
-         RUN_GAME_FUNC_GAME_END();
-#endif
+         run_game_function_game_end();
       }
    }
 }
