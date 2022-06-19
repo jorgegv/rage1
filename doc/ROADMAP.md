@@ -28,7 +28,7 @@ New features:
 - New enemy animations
 - Devel doc for implementation of common behaviours and events
 
-## 0.4.0 - Expected release: 2021-10-31
+## 0.4.0 - Released: 2021-10-02
 
 New features:
 
