@@ -20,8 +20,8 @@ directives:
 ~~~
 
 In the above code, if the C macro `BUILD_FEATURE_MY_OPTIONAL_FEATURE` is
-defined at compile time, the code will be compiled, and otherwise it won't,
-and will not be included in the main binary.
+defined at compile time, the code will be compiled; otherwise it won't, and
+will not be included in the main binary.
 
 The DATAGEN tool has been modified to generate a new `features.h` file, with
 all the macro definitions for the features that are used in the game data. 
@@ -30,7 +30,7 @@ Also, all RAGE1 header files have been also modified to include the
 compilation macros are available early during the compilation process.
 
 All code that is to be conditionally compiled (either in RAGE1 or in your
-game) must inclufe the `features.h` file as the first non-system include
+game) must include the `features.h` file as the first non-system include
 file, for those same reasons.
 
 ## Conditional Compilation of Flow checks and rules
@@ -55,7 +55,7 @@ following rules must be followed:
 
 - The function check/action name in `flow.c` must be named
   `do_rule_check_<my_new_check>` or `do_rule_action_<my_new_action>`
-  (replace the "my_new_..." text with your check name
+  (replace the "my_new_..." text with your check/action name
 
 - The name of the check in GDATA files and the function name must match:
   i.e. for the `MY_NEW_CHECK` check, the function must be named
