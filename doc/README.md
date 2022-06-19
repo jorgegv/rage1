@@ -2,9 +2,9 @@
 
 ## Quick Start
 
-* **NEW!** [TUTORIAL](tutorial/INDEX.md): a detailed walkthrough of a full
-  game creation, using as an example the first phase of Famargon, my little
-  Spectrum family game
+* **NEW!** [TUTORIAL](tutorial/README.md): a detailed walkthrough of the
+  creation of a full game, using the first phase of Famargon as an example. 
+  Famargon is my little Spectrum family game
 
 * [REQUIREMENTS.md](REQUIREMENTS.md): requirements needed to compile and run
 
