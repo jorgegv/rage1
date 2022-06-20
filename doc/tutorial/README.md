@@ -25,28 +25,44 @@ understanding of the process of developing a game with RAGE1, from the early
 design phases to the finished game.
 
 Any comment, addition, fix or whatever you want to add to this document is
-very welcome.  You can mail me at `zx@jogv.es` or issue a Pull Request in
+very welcome.  You can mail me at [`zx@jogv.es`](mailto:zx@jogv.es) or issue a Pull Request in
 GitHub (preferred!)
 
 Tutorial Table of Contents (WIP):
 
-0. [Introduction to RAGE1](INTRO.md)
-1. [Ensure RAGE1 requirements are installed and working](REQUIREMENTS.md)
-2. [Game structure and design](SKELETON.md)
-3. [Game story and goals](STORY.md)
-4. [Design the hero](HERO.md)
-5. [Design the screens](SCREENS.md)
-6. [Create the decorations](BTILES.md)
-7. [Design the map and move between screens](MAP.md)
-8. [Add some enemies](ENEMIES.md)
-9. [Add inventory items and manage inventory](INVENTORY.md)
-10. [Add gameplay rules](RULES.md)
-11. [Implement special game functions](FUNCTIONS.md)
-12. [Add sound effects](SOUND.md)
-13. [Compile for 128K](BUILD128.md)
-14. [Adding music for 128K](MUSIC128.md)
-15. [Using extra memory banks for game data](DATASETS.md)
-16. [Using extra memory banks for game code](CODESETS.md)
+0. [Introduction to RAGE1](TUT000-INTRO.md)
+
+1. [Ensure RAGE1 requirements are installed and working](TUT010-REQUIREMENTS.md) _[To be completed]_
+
+2. [Game structure and design](TUT020-SKELETON.md)
+
+3. [Game story and goals](TUT030-STORY.md) _[To be completed]_
+
+4. [Design the hero](TUT040-HERO.md) _[To be completed]_
+
+5. [Design the screens](TUT050-SCREENS.md) _[To be completed]_
+
+6. [Create the decorations](TUT060-BTILES.md) _[To be completed]_
+
+7. [Design the map and move between screens](TUT070-MAP.md) _[To be completed]_
+
+8. [Add some enemies](TUT080-ENEMIES.md) _[To be completed]_
+
+9. [Add inventory items and manage inventory](TUT090-INVENTORY.md) _[To be completed]_
+
+10. [Add gameplay rules](TUT100-RULES.md) _[To be completed]_
+
+11. [Implement special game functions](TUT110-FUNCTIONS.md) _[To be completed]_
+
+12. [Add sound effects](TUT120-SOUND.md) _[To be completed]_
+
+13. [Compile for 128K](TUT130-BUILD128.md) _[To be completed]_
+
+14. [Adding music for 128K](TUT140-MUSIC128.md) _[To be completed]_
+
+15. [Using extra memory banks for game data](TUT150-DATASETS.md) _[To be completed]_
+
+16. [Using extra memory banks for game code](TUT160-CODESETS.md) _[To be completed]_
 
 _WARNING: This tutorial is a Work In Progress, so you can expect to find
 broken links and sections still not written.  This warning will be removed
