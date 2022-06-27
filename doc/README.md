@@ -28,9 +28,9 @@
 
 ## Design details
 
-THe following documents decribe the internals of several subsystems in RAGE1
-and their implementation details. Please read carefully if you wish to
-contribute to the engine!
+The following documents describe the internals of several subsystems in
+RAGE1 and their implementation details.  Please read carefully if you wish
+to contribute to the engine!
 
 * [DESIGN.md](DESIGN.md): general design of the game flow and main loop
 

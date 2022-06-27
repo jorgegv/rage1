@@ -25,10 +25,20 @@ understanding of the process of developing a game with RAGE1, from the early
 design phases to the finished game.
 
 Any comment, addition, fix or whatever you want to add to this document is
-very welcome.  You can mail me at [`zx@jogv.es`](mailto:zx@jogv.es) or issue a Pull Request in
-GitHub (preferred!)
+very welcome.  You can mail me at [`zx@jogv.es`](mailto:zx@jogv.es) or issue
+a Pull Request in GitHub (preferred!)
 
-Tutorial Table of Contents (WIP):
+_WARNING! This tutorial is a Work In Progress, so you can expect to find
+broken links and sections still not written.  This warning will be removed
+when the tutorial is finished._
+
+**Special note for Windows users:** please accept my apologies in advance. 
+My main development environment for RAGE1 is Linux, so this tutorial may
+show a heavy bias towards the Linux way of doing things.  I will gladly
+accept any comments, suggestions and pull requests for addressing
+Windows-related concerns.
+
+## Tutorial Table of Contents (WIP):
 
 0. [Introduction to RAGE1](TUT000-INTRO.md)
 
@@ -64,12 +74,3 @@ Tutorial Table of Contents (WIP):
 
 16. [Using extra memory banks for game code](TUT160-CODESETS.md) _[To be completed]_
 
-_WARNING: This tutorial is a Work In Progress, so you can expect to find
-broken links and sections still not written.  This warning will be removed
-when the tutorial is finished._
-
-**Special note for Windows users:** please accept my apologies in advance. 
-My main development environment for RAGE1 is Linux, so this tutorial may
-show a heavy bias towards the Linux way of doing things.  I will gladly
-accept any comments, suggestions and pull requests for addressing
-Windows-related concerns.

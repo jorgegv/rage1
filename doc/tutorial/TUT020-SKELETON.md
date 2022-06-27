@@ -69,5 +69,5 @@ game from the TAP file.
 Don't worry about the directory structure, you won't need to create it
 manually: there are tools in RAGE1 that allow you to create a minimal but
 fully functional game that compiles out of the box and that you can use to
-build your game upon: you start with a minimal working game and starting
-adding features and elements.
+build your game upon: you start with a minimal working game and then
+add features and elements.
