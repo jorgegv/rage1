@@ -1,29 +1,8 @@
 # Game Design and Structure
 
-## General Design Procedure
+## Defining a workspace
 
-The procedure that I followed with Famargon was the following:
-
-1.  Think of an adventure idea or plot: make up a general story, think about
-    the main characters, goals, possible enemies, items, etc.  You don't
-    need to be too concise, just something to get you started.
-
-2.  Make a draft of your hero graphics, items, enemies (paper)
-
-3.  Draw a few (2 or 3) of the initial screens (paper) and connect them in a
-    map
-
-4.  Draw your graphics in some graphics tool (e.g.  GIMP, Photoshop), export
-    them in a format that RAGE1 can load (PNG), define them in RAGE1 data
-    files
-
-5.  Create data files for the game map screens: add tiles, enemies, rules,
-    etc.
-
-6.  Test the game and continue adding elements (map screens, tiles, enemies,
-    rules, items) to support your game story
-
-7.  Repeat until you are satisfied with your game
+## Creating a minimal working game
 
 ## Directory Layout
 
