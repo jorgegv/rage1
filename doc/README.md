@@ -8,7 +8,7 @@
 
 * [REQUIREMENTS.md](REQUIREMENTS.md): requirements needed to compile and run
 
-* [USAGE-OVERVIEW.md](USAGE.md): how to use the engine to create your own
+* [USAGE-OVERVIEW.md](USAGE-OVERVIEW.md): how to use the engine to create your own
   game - Start with this one!
 
 ## General information
