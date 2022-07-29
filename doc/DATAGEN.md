@@ -375,11 +375,11 @@ characters long.
 
 The order in which the elements are placed on the screen is the following:
 
-- If SCREEN_DATA lines exist, there must be exactly 24 lines, and exactly of
-64 characters each (not counting the enclosing quotes). That is a 32x24
-character-cell screen.
-- SCREEN_DATA elements are generated
-- Remaining elements are positioned over the previous ones if needed
+- If SCREEN_DATA lines exist, SCREEN_DATA elements are generated.  There
+  must be exactly GAME_AREA_HEIGHT lines, and each line must be 2 x
+  GAME_AREA_WIDTH characters long (not counting the enclosing quotes).
+
+- Remaining elements are positioned over the previous ones if there are any.
 
 ### HERO data
 
