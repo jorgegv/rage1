@@ -8,6 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <input.h>
+
 #include "rage1/memory.h"
 #include "rage1/sp1engine.h"
 #include "rage1/interrupts.h"
@@ -38,6 +40,11 @@ void init_program(void) {
 void main(void)
 {
    init_program();
+
+#ifdef BUILD_FEATURE_LOADING_SCREEN_WAIT_ANY_KEY
+   in_wait_key();
+   in_wait_nokey();
+#endif
 
    // run one-time initialization, if any
    run_game_function_user_init();

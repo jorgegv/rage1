@@ -40,7 +40,7 @@ sub gather_bank_binaries {
 }
 
 sub generate_basic_loader {
-    my ( $layout, $outdir ) = @_;
+    my ( $layout, $outdir, $loading_screen ) = @_;
     my $bas_loader = $outdir . '/' . $basic_loader_name;
 
     # generate the lines first, we'll number them later
@@ -48,6 +48,11 @@ sub generate_basic_loader {
 
     # Bank switch routine loads at address 0x8000, CLEAR to the byte before
     push @lines, sprintf( 'CLEAR VAL "%d"', 0x7FFF );
+
+    # if we want an initial SCREEN$, generate loading code and disable output to screen
+    if ( $loading_screen ) {
+        push @lines, 'LOAD "" SCREEN$:POKE VAL "23739", VAL "111"';
+    }
 
     # load bank switching code at 0x8000 (32768)
     # bank variable is at 0x8000, code switching entry point at 0x8001
@@ -80,14 +85,18 @@ sub generate_basic_loader {
 ##
 
 # parse command options
-our( $opt_i, $opt_o );
+# -i and -o: input bin dir and output file
+# -s: add instructions to load an initial SCREEN$ (optional)
+our( $opt_i, $opt_o, $opt_s );
 getopts("i:o:");
 ( defined( $opt_i ) and defined( $opt_o ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir>\n";
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s]\n";
+
+my $loading_screen = $opt_s;
 
 # if $lowmem_output_dir is not specified, use same as $output_dir
 my ( $input_dir, $output_dir ) = ( $opt_i, $opt_o );
 
 my $bins = gather_bank_binaries( $input_dir );
 
-generate_basic_loader( $bins, $output_dir );
+generate_basic_loader( $bins, $output_dir, $loading_screen );

@@ -630,6 +630,15 @@ sub read_input_data {
                 };
                 next;
             }
+            if ( $line =~ /^LOADING_SCREEN\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                $game_config->{'loading_screen'} = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                next;
+            }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
                 next;
@@ -2457,6 +2466,12 @@ EOF_BLDCFG1
 
     add_build_feature( sprintf( "ZX_TARGET_%s\n", $game_config->{'zx_target'} ) );
 
+    if ( defined( $game_config->{'loading_screen'} ) ) {
+        add_build_feature( "LOADING_SCREEN" );
+        if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
+            add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
+        }
+    }
 }
 
 # this function generates screen data that needs to be stored in the home
