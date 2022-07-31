@@ -12,7 +12,7 @@ MYMAKE			= $(MAKE) -f Makefile-128 -j8
 ZPRAGMA_INC             = zpragma-128.inc
 
 # All taps
-TAPS			= $(BAS_LOADER_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
 
 -include Makefile.common
 

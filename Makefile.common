@@ -153,6 +153,9 @@ $(FINAL_TAP): $(TAPS)
 	@cat $(TAPS) > $(FINAL_TAP)
 	@echo "Build completed SUCCESSFULLY"
 
+screen.tap:
+	@./tools/png2scr.pl 
+
 ## Main game
 
 main: $(MAIN_BIN)

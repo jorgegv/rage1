@@ -12,7 +12,7 @@ MYMAKE			= $(MAKE) -f Makefile-48
 ZPRAGMA_INC		= zpragma-48.inc
 
 # All taps
-TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(MAIN_TAP)
 
 -include Makefile.common
 
