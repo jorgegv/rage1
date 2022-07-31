@@ -301,10 +301,12 @@ sub output_scr_file {
 ## Main loop
 ##
 my $file = $ARGV[0];
+my $out_file = $ARGV[1];
+
 my $png = load_png_file( $file );
 ( ( scalar( @$png ) == 192 ) and ( scalar( @{$png->[0]} ) == 256 ) ) or
     die "** Error: PNG image must be exactly 256x192 pixels\n";
 
 my $img = png_to_pixels_and_attrs( $file, 0, 0, 256, 192 );
 compile_to_zx_data( $img );
-output_scr_file( $img, "$file.scr" );
+output_scr_file( $img, $out_file || "$file.scr" );
