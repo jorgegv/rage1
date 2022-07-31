@@ -23,7 +23,7 @@ SRC			+= $(BANKED_CODE_SRC_COMMON)
 OBJS			+= $(BANKED_CODE_OBJS_COMMON)
 
 build:
-	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
+	@cp $(ENGINE_DIR)/loader48/$(LOADER48) $(BAS_LOADER)
 	@$(MYMAKE) -s -j8 main
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final

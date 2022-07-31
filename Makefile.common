@@ -81,7 +81,13 @@ MAIN_TAP		= $(MAIN_BIN:.bin=.tap)
 FINAL_TAP		= game.tap
 
 # the default zx target matches the one in datagen.pl when no target is defined
-ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')
+ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|grep -vP '^\s*//'|head -1|awk '{print $$2}')
+
+# the TAP for the loading SCREEN$ if the game is configured for it
+LOADING_SCREEN_TAP	= $(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "screen.tap")
+LOADING_SCREEN_PNG	= $(shell grep -oP '^\s*LOADING_SCREEN.*' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|grep -oEi 'PNG=.* '|sed 's#png=#$(BUILD_DIR)/#gi')
+LOADING_SCREEN_FLAG	= $(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "-s")
+LOADER48		= loader$(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "-with-screen").bas
 
 #######################################################################
 
@@ -154,7 +160,10 @@ $(FINAL_TAP): $(TAPS)
 	@echo "Build completed SUCCESSFULLY"
 
 screen.tap:
-	@./tools/png2scr.pl 
+	@echo "Adding loading SCREEN$$ from $(LOADING_SCREEN_PNG)..."
+	@-rm -f /tmp/screen.scr 2>/dev/null
+	@./tools/png2scr.pl $(LOADING_SCREEN_PNG) /tmp/screen.scr
+	@z88dk-appmake +zx --noloader --org 16384 -b /tmp/screen.scr -o screen.tap
 
 ## Main game
 

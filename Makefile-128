@@ -118,7 +118,7 @@ $(BSWITCH_BIN):
 
 loader:
 	@echo "Creating custom BASIC loader..."
-	@./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR)
+	@./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR) $(LOADING_SCREEN_FLAG)
 
 ##
 ## Create main.map C symbol definitions so that banked code can use them

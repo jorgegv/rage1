@@ -51,6 +51,7 @@ sub generate_basic_loader {
 
     # if we want an initial SCREEN$, generate loading code and disable output to screen
     if ( $loading_screen ) {
+        push @lines, 'BORDER VAL "0": PAPER VAL "0": INK VAL "0": CLS';
         push @lines, 'LOAD "" SCREEN$:POKE VAL "23739", VAL "111"';
     }
 
@@ -88,7 +89,7 @@ sub generate_basic_loader {
 # -i and -o: input bin dir and output file
 # -s: add instructions to load an initial SCREEN$ (optional)
 our( $opt_i, $opt_o, $opt_s );
-getopts("i:o:");
+getopts("i:o:s");
 ( defined( $opt_i ) and defined( $opt_o ) ) or
     die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s]\n";
 

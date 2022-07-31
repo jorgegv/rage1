@@ -441,6 +441,7 @@ Example `GAME_CONFIG` definition:
 BEGIN_GAME_CONFIG
         NAME            TestGame
 	ZX_TARGET	48
+	LOADING_SCREEN	PNG=loadscreen.png WAIT_ANY_KEY=1
         SCREEN          INITIAL=1
         DEFAULT_BG_ATTR INK_CYAN | PAPER_BLACK
         SOUND           ENEMY_KILLED=2
@@ -464,6 +465,11 @@ END_GAME_CONFIG
 * `NAME`: the name of the game (Imagine :-)
 * `ZX_TARGET`: set this to `48` or `128` to compile in those modes. `128`
   mode includes automatic memory banking of assets.
+* `LOADING_SCREEN`: allows to specify a 256x192 PNG image which will be used
+  as a loading screen. The PNG will be converted to ZX format. Option
+  `WAIT_ANY_KEY` can be optionally set to 1 and the game will stop just
+  after loading and wait for a keypress (so that the loading screen can be
+  enjoyed :-) )
 * `SCREEN`: screen related settings. Arguments:
   * `INITIAL`: sets the initial screen for the game
 * `DEFAULT_BG_ATTR`: default background attributes, defined as OR'ed

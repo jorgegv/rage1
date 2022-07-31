@@ -39,12 +39,12 @@ void init_program(void) {
 
 void main(void)
 {
-   init_program();
-
 #ifdef BUILD_FEATURE_LOADING_SCREEN_WAIT_ANY_KEY
    in_wait_key();
    in_wait_nokey();
 #endif
+
+   init_program();
 
    // run one-time initialization, if any
    run_game_function_user_init();
