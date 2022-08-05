@@ -1,6 +1,7 @@
 BEGIN_GAME_CONFIG
 	NAME		TestGame
-	LOADING_SCREEN	PNG=game_data/png/loading_screen.png WAIT_ANY_KEY=1
+//	LOADING_SCREEN	PNG=game_data/png/loading_screen.png WAIT_ANY_KEY=1
+	LOADING_SCREEN	SCR=game_data/png/loading_screen.scr WAIT_ANY_KEY=1
 	ZX_TARGET	128
 	SCREEN		INITIAL=Screen02
 	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK

@@ -85,7 +85,8 @@ ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' $(BUILD_DIR)/game_data/game
 
 # the TAP for the loading SCREEN$ if the game is configured for it
 LOADING_SCREEN_TAP	= $(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "screen.tap")
-LOADING_SCREEN_PNG	= $(shell grep -oP '^\s*LOADING_SCREEN.*' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|grep -oEi 'PNG=.* '|sed 's#png=#$(BUILD_DIR)/#gi')
+LOADING_SCREEN_PNG	= $(shell grep -oP '^\s*LOADING_SCREEN.*' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|perl -ne '/PNG=(.*?)\s/i; print $$1;')
+LOADING_SCREEN_SCR	= $(shell grep -oP '^\s*LOADING_SCREEN.*' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|perl -ne '/SCR=(.*?)\s/i; print $$1;')
 LOADING_SCREEN_FLAG	= $(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "-s")
 LOADER48		= loader$(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "-with-screen").bas
 
@@ -160,9 +161,13 @@ $(FINAL_TAP): $(TAPS)
 	@echo "Build completed SUCCESSFULLY"
 
 screen.tap:
-	@echo "Adding loading SCREEN$$ from $(LOADING_SCREEN_PNG)..."
+	@echo "Adding loading SCREEN$$..."
 	@-rm -f /tmp/screen.scr 2>/dev/null
-	@./tools/png2scr.pl $(LOADING_SCREEN_PNG) /tmp/screen.scr
+#	@echo "PNG:" '"$(LOADING_SCREEN_PNG)"'
+#	@echo "SCR:" '"$(LOADING_SCREEN_SCR)"'
+	@if [ ! -z "$(LOADING_SCREEN_SCR)" ] && [ ! -z "$(LOADING_SCREEN_PNG)" ]; then echo "** Error: LOADING_SCREEN: PNG and SCR cannot de used at the same time"; exit 1; fi
+	@if [ ! -z "$(LOADING_SCREEN_SCR)" ]; then cp "$(BUILD_DIR)/$(LOADING_SCREEN_SCR)" /tmp/screen.scr; else ./tools/png2scr.pl "$(BUILD_DIR)/$(LOADING_SCREEN_PNG)" /tmp/screen.scr; fi
+	@if [ "$$(wc -c /tmp/screen.scr | awk '{print $$1}')" -ne 6912 ]; then echo "** Error: LOADING_SCREEN must be exactly 6912 bytes long"; exit 1 ; fi
 	@z88dk-appmake +zx --noloader --org 16384 -b /tmp/screen.scr -o screen.tap
 
 ## Main game

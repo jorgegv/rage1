@@ -465,11 +465,16 @@ END_GAME_CONFIG
 * `NAME`: the name of the game (Imagine :-)
 * `ZX_TARGET`: set this to `48` or `128` to compile in those modes. `128`
   mode includes automatic memory banking of assets.
-* `LOADING_SCREEN`: allows to specify a 256x192 PNG image which will be used
-  as a loading screen. The PNG will be converted to ZX format. Option
-  `WAIT_ANY_KEY` can be optionally set to 1 and the game will stop just
-  after loading and wait for a keypress (so that the loading screen can be
-  enjoyed :-) )
+* `LOADING_SCREEN`: allows to specify a 256x192 PNG/SCR image which will be used
+  as a loading screen. One of `PNG` or `SCR` is mandatory, and only one can
+  be specified. Arguments:
+  * `PNG`: The specified PNG will be converted to ZX format (SCR) and used
+  for the SCREEN$ block
+  * `SCR`: The specified SCR file (exactly 6912 bytes long) will be used
+  as-is for the SCREEN$ block
+  * `WAIT_ANY_KEY`: (optional) if set to 1, the game will stop just after
+  loading and wait for a keypress (so that the loading screen can be enjoyed
+  :-) ). If not set or set to 0, game will start right after loading.
 * `SCREEN`: screen related settings. Arguments:
   * `INITIAL`: sets the initial screen for the game
 * `DEFAULT_BG_ATTR`: default background attributes, defined as OR'ed
