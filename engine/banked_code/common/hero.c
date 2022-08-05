@@ -109,22 +109,21 @@ void hero_animate_and_move( void ) {
 
     if ( ( controller & MOVE_ALL ) == MOVE_NONE ) {
         if ( ! IS_HERO_STEADY( game_state.hero ) ) {
-            switch ( move->last_direction ) {
-                case MOVE_UP:
-                    steady_frame = HERO_SPRITE_STEADY_FRAME_UP;
-                    break;
-                case MOVE_DOWN:
-                    steady_frame = HERO_SPRITE_STEADY_FRAME_DOWN;
-                    break;
-                case MOVE_LEFT:
-                    steady_frame = HERO_SPRITE_STEADY_FRAME_LEFT;
-                    break;
-                case MOVE_RIGHT:
-                    steady_frame = HERO_SPRITE_STEADY_FRAME_RIGHT;
-                    break;
-                default:
-                    steady_frame = 0;
-            }
+
+            steady_frame = 0;	// default value
+
+            if ( move->last_direction & MOVE_UP )
+                steady_frame = HERO_SPRITE_STEADY_FRAME_UP;
+
+            if ( move->last_direction & MOVE_DOWN )
+                steady_frame = HERO_SPRITE_STEADY_FRAME_DOWN;
+
+            if ( move->last_direction & MOVE_LEFT )
+                steady_frame = HERO_SPRITE_STEADY_FRAME_LEFT;
+
+            if ( move->last_direction & MOVE_RIGHT )
+                steady_frame = HERO_SPRITE_STEADY_FRAME_RIGHT;
+
             anim->current_frame = 0;
             anim->last_frame_ptr = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ steady_frame ];
             SET_LOOP_FLAG( F_LOOP_REDRAW_HERO );
@@ -144,71 +143,64 @@ void hero_animate_and_move( void ) {
     oldy = y = pos->y;
 
     // operate on the hero following controller state
-    // isolate only movements for checking
-    // only allow single direction moves
-    switch ( controller & MOVE_ALL ) {
-        case MOVE_UP:
-            // reset animation in case of direction change
-            if ( move->last_direction != MOVE_UP ) {
-                anim->current_frame = 0;
-                move->last_direction = MOVE_UP;
-                anim->current_sequence = anim->sequence_up;
-            }
-            // check if can move to new coordinate
-            newy = pos->y - move->dy;
-            if ( newy <= CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
-                pos->y = CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
-            else 
-                if ( hero_can_move_in_direction( MOVE_UP ) )
-                    pos->y = newy;
-            break;
-        // remaining cases are managed in the same way
-        case MOVE_DOWN:
-            if ( move->last_direction != MOVE_DOWN ) {
-                anim->current_frame = 0;
-                move->last_direction = MOVE_DOWN;
-                anim->current_sequence = anim->sequence_down;
-            }
-            newy = pos->y + move->dy;
-            // coordinate of the bottommost pixel
-            allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - HERO_SPRITE_HEIGHT;
-            if ( newy >= allowed )
-                pos->y = allowed;
-            else
-                if ( hero_can_move_in_direction( MOVE_DOWN ) )
-                    pos->y = newy;
-            break;
-        case MOVE_LEFT:
-            if ( move->last_direction != MOVE_LEFT ) {
-                anim->current_frame = 0;
-                move->last_direction = MOVE_LEFT;
-                anim->current_sequence = anim->sequence_left;
-            }
-            newx = pos->x - move->dx;
-            if ( newx <= CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
-                pos->x = CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
-            else
-                if ( hero_can_move_in_direction( MOVE_LEFT ) )
-                    pos->x = newx;
-            break;
-        case MOVE_RIGHT:
-            if ( move->last_direction != MOVE_RIGHT ) {
-                anim->current_frame = 0;
-                move->last_direction = MOVE_RIGHT;
-                anim->current_sequence = anim->sequence_right;
-            }
-            newx = pos->x + move->dx;
-            // coordinate of the rightmost pixel
-            allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - HERO_SPRITE_WIDTH;
-            if ( newx >= allowed )
-                pos->x = allowed;
-            else
-                if ( hero_can_move_in_direction( MOVE_RIGHT ) )
-                    pos->x = newx;
-            break;
-        default:	// reset movement direction
-            break;            
+    if ( controller & MOVE_UP ) {
+        // reset animation in case of direction change
+        if ( ! ( move->last_direction & MOVE_UP ) ) {
+            anim->current_frame = 0;
+            anim->current_sequence = anim->sequence_up;
+        }
+        // check if can move to new coordinate
+        newy = pos->y - move->dy;
+        if ( newy <= CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
+            pos->y = CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
+        else
+            if ( hero_can_move_in_direction( MOVE_UP ) )
+                pos->y = newy;
     }
+    // remaining cases are managed in the same way
+    if ( controller & MOVE_DOWN ) {
+        if ( ! ( move->last_direction & MOVE_DOWN ) ) {
+            anim->current_frame = 0;
+            anim->current_sequence = anim->sequence_down;
+        }
+        newy = pos->y + move->dy;
+        // coordinate of the bottommost pixel
+        allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - HERO_SPRITE_HEIGHT;
+        if ( newy >= allowed )
+            pos->y = allowed;
+        else
+            if ( hero_can_move_in_direction( MOVE_DOWN ) )
+                pos->y = newy;
+    }
+    if ( controller & MOVE_LEFT ) {
+        if ( ! ( move->last_direction & MOVE_LEFT ) ) {
+            anim->current_frame = 0;
+            anim->current_sequence = anim->sequence_left;
+        }
+        newx = pos->x - move->dx;
+        if ( newx <= CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
+            pos->x = CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
+        else
+            if ( hero_can_move_in_direction( MOVE_LEFT ) )
+                pos->x = newx;
+    }
+    if ( controller & MOVE_RIGHT ) {
+        if ( ! ( move->last_direction & MOVE_RIGHT ) ) {
+            anim->current_frame = 0;
+            anim->current_sequence = anim->sequence_right;
+        }
+        newx = pos->x + move->dx;
+        // coordinate of the rightmost pixel
+        allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - HERO_SPRITE_WIDTH;
+        if ( newx >= allowed )
+            pos->x = allowed;
+        else
+            if ( hero_can_move_in_direction( MOVE_RIGHT ) )
+                pos->x = newx;
+    }
+
+    // update last movement direction
+    move->last_direction = controller & MOVE_ALL;
 
     // set pointer to animation frame
     animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[

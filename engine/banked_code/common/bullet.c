@@ -101,31 +101,30 @@ void bullet_add( void ) {
             SET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
             h_dy = ( HERO_SPRITE_HEIGHT - bi->height ) >> 1;	// divide by 2
             v_dx = ( HERO_SPRITE_WIDTH - bi->width ) >> 1;	// divide by 2
-            switch ( hero->movement.last_direction ) {
-                case MOVE_UP:
+
+            if ( hero->movement.last_direction & MOVE_UP ) {
                     bs->position.x = hero->position.x + v_dx;
                     bs->position.y = hero->position.y - bi->height;
                     bs->dx = 0;
                     bs->dy = -bi->movement.dy;
-                    break;
-                case MOVE_DOWN:
+            }
+            if ( hero->movement.last_direction & MOVE_DOWN ) {
                     bs->position.x = hero->position.x + v_dx;
                     bs->position.y = hero->position.ymax + 1;
                     bs->dx = 0;
                     bs->dy = bi->movement.dy;
-                    break;
-                case MOVE_LEFT:
+            }
+            if ( hero->movement.last_direction & MOVE_LEFT ) {
                     bs->position.x = hero->position.x - bi->width;
                     bs->position.y = hero->position.y + h_dy;
                     bs->dx = -bi->movement.dx;
                     bs->dy = 0;
-                    break;
-                case MOVE_RIGHT:
+            }
+            if ( hero->movement.last_direction & MOVE_RIGHT ) {
                     bs->position.x = hero->position.xmax + 1;
                     bs->position.y = hero->position.y + h_dy;
                     bs->dx = bi->movement.dx;
                     bs->dy = 0;
-                    break;
             }
             bs->position.xmax = bs->position.x + bi->width - 1;
             bs->position.ymax = bs->position.y + bi->height - 1;
