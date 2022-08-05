@@ -634,13 +634,17 @@ sub read_input_data {
                 };
                 next;
             }
-            if ( $line =~ /^LOADING_SCREEN\s+(\w.*)$/ ) {
+            if ( $line =~ /^LOADING_SCREEN\s+(.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = $1;
                 $game_config->{'loading_screen'} = {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                print Dumper( $game_config->{'loading_screen'} );
+                if ( scalar( grep { defined } map { $game_config->{'loading_screen'}{ $_ } } qw( png scr ) ) != 1 ) {
+                    die "LOADING_SCREEN: exactly one of PNG or SCR options (but not both) must be specified\n";
+                }
                 next;
             }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
