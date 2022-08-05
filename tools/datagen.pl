@@ -546,6 +546,10 @@ sub read_input_data {
             }
             if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
                 $game_config->{'zx_target'} = $1;
+                if ( ( $game_config->{'zx_target'} ne '48' ) and
+                    ( $game_config->{'zx_target'} ne '128' ) ) {
+                        die "ZX_TARGET must be either 48 or 128\n";
+                    }
                 next;
             }
             if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
