@@ -641,7 +641,6 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                print Dumper( $game_config->{'loading_screen'} );
                 if ( scalar( grep { defined } map { $game_config->{'loading_screen'}{ $_ } } qw( png scr ) ) != 1 ) {
                     die "LOADING_SCREEN: exactly one of PNG or SCR options (but not both) must be specified\n";
                 }
