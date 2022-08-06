@@ -104,10 +104,10 @@ void hero_animate_and_move( void ) {
     anim = &h->animation;
     move = &h->movement;
 
-    // get controller state
-    controller = game_state.controller.state;
+    // get controller movement state
+    controller = game_state.controller.state & MOVE_ALL;
 
-    if ( ( controller & MOVE_ALL ) == MOVE_NONE ) {
+    if ( controller == MOVE_NONE ) {
         if ( ! IS_HERO_STEADY( game_state.hero ) ) {
 
             steady_frame = 0;	// default value
@@ -145,7 +145,7 @@ void hero_animate_and_move( void ) {
     // operate on the hero following controller state
     if ( controller & MOVE_UP ) {
         // reset animation in case of direction change
-        if ( ! ( move->last_direction & MOVE_UP ) ) {
+        if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_up;
         }
@@ -157,9 +157,8 @@ void hero_animate_and_move( void ) {
             if ( hero_can_move_in_direction( MOVE_UP ) )
                 pos->y = newy;
     }
-    // remaining cases are managed in the same way
     if ( controller & MOVE_DOWN ) {
-        if ( ! ( move->last_direction & MOVE_DOWN ) ) {
+        if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_down;
         }
@@ -173,7 +172,7 @@ void hero_animate_and_move( void ) {
                 pos->y = newy;
     }
     if ( controller & MOVE_LEFT ) {
-        if ( ! ( move->last_direction & MOVE_LEFT ) ) {
+        if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_left;
         }
@@ -185,7 +184,7 @@ void hero_animate_and_move( void ) {
                 pos->x = newx;
     }
     if ( controller & MOVE_RIGHT ) {
-        if ( ! ( move->last_direction & MOVE_RIGHT ) ) {
+        if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_right;
         }
@@ -200,7 +199,7 @@ void hero_animate_and_move( void ) {
     }
 
     // update last movement direction
-    move->last_direction = controller & MOVE_ALL;
+    move->last_direction = controller;
 
     // set pointer to animation frame
     animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[
