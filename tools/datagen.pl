@@ -646,6 +646,23 @@ sub read_input_data {
                 }
                 next;
             }
+            if ( $line =~ /^CUSTOM_CHARSET\s+(.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                $game_config->{'custom_charset'} = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $game_config->{'custom_charset'}{'file'} ) ) {
+                    die "CUSTOM_CHARSET: FILE must be specified\n";
+                }
+                if ( defined( $game_config->{'custom_charset'}{'range'} ) ) {
+                    if ( $game_config->{'custom_charset'}{'range'} !~ m/^\d+\-\d+$/ ) {
+                        die "CUSTOM_CHARSET: RANGE option must be integers MM-NN\n";
+                    }
+                }
+                next;
+            }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
                 next;
@@ -2471,13 +2488,28 @@ sub generate_game_config {
 EOF_BLDCFG1
 ;
 
+    # add ZX_TARGET definition
     add_build_feature( sprintf( "ZX_TARGET_%s\n", $game_config->{'zx_target'} ) );
 
+    # add LOADING_SCREEN definitions if present
     if ( defined( $game_config->{'loading_screen'} ) ) {
         add_build_feature( "LOADING_SCREEN" );
         if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
             add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
         }
+    }
+
+    # add CUSTOM_CHARSET definitions of present
+    if ( defined( $game_config->{'custom_charset'} ) ) {
+        add_build_feature( "CUSTOM_CHARSET" );
+        my ( $char_min, $char_max ) = ( 32, 127 );	# defaults: all ZX ASCII range
+        if ( $game_config->{'loading_screen'}{'range'} ) {
+            $game_config->{'loading_screen'}{'range'} =~ m/^(\d+)\-(\d+)$/;
+            ( $char_min, $char_max ) = ( $1, $2 );
+        }
+        push @h_game_data_lines, "\n// custom charset minimum and maximum characters\n";
+        push @h_game_data_lines, sprintf( "#define CUSTOM_CHARSET_MIN_CHAR %d\n", $char_min );
+        push @h_game_data_lines, sprintf( "#define CUSTOM_CHARSET_MAX_CHAR %d\n", $char_max );
     }
 }
 

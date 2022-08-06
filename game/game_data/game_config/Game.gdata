@@ -1,6 +1,8 @@
 BEGIN_GAME_CONFIG
 	NAME		TestGame
 	LOADING_SCREEN	SCR=game_data/png/loading_screen.scr WAIT_ANY_KEY=1
+	CUSTOM_CHARSET	FILE=game_data/png/cinema.ch8
+//	CUSTOM_CHARSET	FILE=game_data/png/cinema.ch8 RANGE=32-90
 	ZX_TARGET	128
 	SCREEN		INITIAL=Screen02
 	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK

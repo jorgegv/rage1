@@ -56,3 +56,7 @@ Spectrum Emulator):
   make run
   ```
 * NOTE: In Windows it is not necessary to source `env.sh`
+
+# CREDITS:
+
+- "Cinema" Spectrum font by Damien: https://damieng.com/typography/zx-origins/cinema/

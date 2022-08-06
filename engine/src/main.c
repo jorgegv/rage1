@@ -21,6 +21,7 @@
 #include "rage1/debug.h"
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
+#include "rage1/charset.h"
 
 #include "game_data.h"
 
@@ -35,6 +36,9 @@ void init_program(void) {
    init_controllers();
    init_hero();
    init_bullets();
+#ifdef	BUILD_FEATURE_CUSTOM_CHARSET
+   init_custom_charset();
+#endif	// BUILD_FEATURE_CUSTOM_CHARSET
 }
 
 void main(void)
