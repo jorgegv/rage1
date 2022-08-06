@@ -442,6 +442,7 @@ BEGIN_GAME_CONFIG
         NAME            TestGame
 	ZX_TARGET	48
 	LOADING_SCREEN	PNG=loadscreen.png WAIT_ANY_KEY=1
+	CUSTOM_CHARSET	FILE=character_data.ch8 RANGE=32-90
         SCREEN          INITIAL=1
         DEFAULT_BG_ATTR INK_CYAN | PAPER_BLACK
         SOUND           ENEMY_KILLED=2
@@ -475,6 +476,15 @@ END_GAME_CONFIG
   * `WAIT_ANY_KEY`: (optional) if set to 1, the game will stop just after
   loading and wait for a keypress (so that the loading screen can be enjoyed
   :-) ). If not set or set to 0, game will start right after loading.
+* `CUSTOM_CHARSET`: allows to specify a custom character set for the game.
+  Arguments:
+  * `FILE`: the file with character data, 8 bytes per character.  It must be
+  exactly 768 bytes long (CH8 format)
+  * `RANGE`: (optional) two integer values seperated by a dash (e.g. 
+  32-90).  Restricts the character range that will be replaced by the custom
+  character set.  Only the data for the replaced chars will be included in
+  the final game, so this is a way for reducing memory usage for the font if
+  you are not using all characters in your game texts.
 * `SCREEN`: screen related settings. Arguments:
   * `INITIAL`: sets the initial screen for the game
 * `DEFAULT_BG_ATTR`: default background attributes, defined as OR'ed

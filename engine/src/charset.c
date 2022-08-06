@@ -22,15 +22,16 @@
 #ifdef BUILD_FEATURE_CUSTOM_CHARSET
 
 // pointer to custom character set: generated in game_data.c
-uint8_t custom_charset[8] = { 0,1,2,3,4,5,6,7 };
+// extern uint8_t custom_charset[];
 
 // custom character set initialization function
 void init_custom_charset( void ) {
-    uint8_t offset = 0;
-    uint8_t i;
-    for ( i = CUSTOM_CHARSET_MIN_CHAR; i <= CUSTOM_CHARSET_MAX_CHAR; i++ ) {
+    uint16_t offset = 0;
+    uint8_t i = CUSTOM_CHARSET_MIN_CHAR;
+    while( i <= CUSTOM_CHARSET_MAX_CHAR ) {
         sp1_TileEntry( i, &custom_charset[ offset ] );
         offset += 8;
+        i++;
     }
 }
 

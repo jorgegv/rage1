@@ -2503,14 +2503,32 @@ EOF_BLDCFG1
     if ( defined( $game_config->{'custom_charset'} ) ) {
         add_build_feature( "CUSTOM_CHARSET" );
         my ( $char_min, $char_max ) = ( 32, 127 );	# defaults: all ZX ASCII range
-        if ( $game_config->{'loading_screen'}{'range'} ) {
-            $game_config->{'loading_screen'}{'range'} =~ m/^(\d+)\-(\d+)$/;
+        if ( $game_config->{'custom_charset'}{'range'} ) {
+            $game_config->{'custom_charset'}{'range'} =~ m/^(\d+)\-(\d+)$/;
             ( $char_min, $char_max ) = ( $1, $2 );
         }
         push @h_game_data_lines, "\n// custom charset minimum and maximum characters\n";
         push @h_game_data_lines, sprintf( "#define CUSTOM_CHARSET_MIN_CHAR %d\n", $char_min );
         push @h_game_data_lines, sprintf( "#define CUSTOM_CHARSET_MAX_CHAR %d\n", $char_max );
+
+        # ...and CUSTOM_CHARSET data to game_data.c
+        open( CHAR_DATA, "$build_dir/$game_config->{'custom_charset'}{'file'}" ) or
+            die "CUSTOM_CHARSET: could not open $game_config->{'custom_charset'}{'file'} for reading\n";
+        binmode CHAR_DATA;
+        my $data;
+        my $data_offset = ( $char_min - 32 ) * 8;
+        my $data_size = ( $char_max - $char_min + 1 ) * 8;
+        if ( read( CHAR_DATA, $data, $data_size, $data_offset ) != $data_size ) {
+            die "CUSTOM_CHARSET: error reading $data_size bytes from $game_config->{'custom_charset'}{'file'}, offset $data_offset\n";
+        }
+        close CHAR_DATA;
+        push @c_game_data_lines, "\n// custom charset binary data\n";
+        push @c_game_data_lines, sprintf( "// first char: %d ('%c'), last char: %d ('%c')\n", $char_min, $char_min, $char_max, $char_max );
+        push @c_game_data_lines, "uint8_t custom_charset[ ( CUSTOM_CHARSET_MAX_CHAR - CUSTOM_CHARSET_MIN_CHAR + 1 ) * 8 ] = {\n";
+        push @c_game_data_lines, "\t" . join( ", ", map { sprintf "0x%02x", $_ } unpack('C*', $data ) ) . "\n";
+        push @c_game_data_lines, "};\n\n";
     }
+
 }
 
 # this function generates screen data that needs to be stored in the home
