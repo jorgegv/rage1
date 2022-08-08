@@ -663,6 +663,29 @@ sub read_input_data {
                 }
                 next;
             }
+            if ( $line =~ /^BINARY_DATA\s+(.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $blob_info = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $blob_info->{'file'} ) ) {
+                    die "BINARY_DATA: FILE must be specified\n";
+                }
+                if ( not defined( $blob_info->{'symbol'} ) ) {
+                    die "BINARY_DATA: SYMBOL must be specified\n";
+                }
+                if ( defined( $blob_info->{'compress'} ) ) {
+                    if ( $blob_info->{'compress'} !~ m/^[01]$/ ) {
+                        die "BINARY_DATA: COMPRESS option must be 0 or 1\n";
+                    }
+                }
+                # there can be more than one instance of BINARY_DATA for
+                # different pieces of data
+                push @{ $game_config->{'binary_data'} }, $blob_info;
+                next;
+            }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
                 next;
@@ -2851,6 +2874,58 @@ sub generate_custom_function_tables {
     }
 }
 
+sub file_to_bytes {
+    my $f = shift;
+    open DATA, $f or
+        die "Could not open $f for reading\n";
+    binmode DATA;
+    my $data;
+    { local $/; $data = <DATA>; }
+    close DATA;
+    return unpack('C*', $data );
+}
+
+sub generate_binary_data_items {
+    # return if no binary_data instances
+    return if not scalar( @{ $game_config->{'binary_data'} } );
+
+    if ( $game_config->{'zx_target'} eq '48' ) {
+
+        # logic for 48K mode - easy: all goes into game_data.c
+        push @h_game_data_lines, "// extern declarations for binary data items\n";
+
+        push @c_game_data_lines, "//////////////////////////////////////////\n";
+        push @c_game_data_lines, "// BINARY DATA ITEMS\n";
+        push @c_game_data_lines, "//////////////////////////////////////////\n\n";
+
+        foreach my $item ( @{ $game_config->{'binary_data'} } ) {
+            # slurp binary data from file into byte list
+            my @bytes = file_to_bytes( "$build_dir/$item->{'file'}" );
+
+            # generate extern declaration
+            push @h_game_data_lines, sprintf( "extern uint8_t %s[];\n", $item->{'symbol'} );
+
+            # generate data definition
+            push @c_game_data_lines, sprintf( "// binary data item '%s'\n", $item->{'symbol'} );
+            push @c_game_data_lines, sprintf( "uint8_t %s[ %d ] = {\n", $item->{'symbol'}, scalar( @bytes ) );
+
+            my @byte16_groups;	# group in 16-byte-or-less pieces for easier reading/checking
+            push @byte16_groups, [ splice @bytes, 0, 16 ]  while @bytes;
+            push @c_game_data_lines, join( ",\n", map { "\t" . join( ", ", map { sprintf( "0x%02x", $_ ) } @{ $_ } ) } @byte16_groups );
+
+            push @c_game_data_lines, "\n};\n\n";
+        }
+
+        push @c_game_data_lines, "//////////////////////////////////////////\n";
+        push @c_game_data_lines, "// END OF BINARY DATA ITEMS\n";
+        push @c_game_data_lines, "//////////////////////////////////////////\n";
+
+    } else {
+
+        # logic for 128K mode
+    }
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -2884,6 +2959,10 @@ sub generate_game_data {
     # codeset items
     generate_codesets;
     generate_global_codeset_data;
+
+    # binary data items
+    # this needs to be done after codeset generation, since codesets may be needed
+    generate_binary_data_items;
 
     # this must be generated after codesets, it needs the codeset function
     # call macros
