@@ -2885,6 +2885,17 @@ sub file_to_bytes {
     return unpack('C*', $data );
 }
 
+sub file_to_compressed_bytes {
+    my $f = shift;
+    system( "z88dk-zx0 -f $f" );
+    if ( $? == -1 ) {
+        die "Could not execute z88dk-zx0\n";
+    } elsif ( $? & 127 ) {
+        die "Error executing z88dk-zx0\n";
+    }
+    return file_to_bytes( "$f.zx0" );
+}
+
 sub generate_binary_data_items {
     # return if no binary_data instances
     return if not scalar( @{ $game_config->{'binary_data'} } );
@@ -2899,8 +2910,13 @@ sub generate_binary_data_items {
         push @c_game_data_lines, "//////////////////////////////////////////\n\n";
 
         foreach my $item ( @{ $game_config->{'binary_data'} } ) {
-            # slurp binary data from file into byte list
-            my @bytes = file_to_bytes( "$build_dir/$item->{'file'}" );
+            # slurp binary data from file into byte list, taking COMPRESS into account
+            my @bytes;
+            if ( $item->{'compress'} ) {
+                @bytes = file_to_compressed_bytes( "$build_dir/$item->{'file'}" );
+            } else {
+                @bytes = file_to_bytes( "$build_dir/$item->{'file'}" );
+            }
 
             # generate extern declaration
             push @h_game_data_lines, sprintf( "extern uint8_t %s[];\n", $item->{'symbol'} );
