@@ -2918,7 +2918,7 @@ sub file_to_compressed_bytes {
 
 sub generate_binary_data_items {
     # return if no binary_data instances
-    return if not scalar( @{ $game_config->{'binary_data'} } );
+    return if ( not defined( $game_config->{'binary_data'} ) or not scalar( @{ $game_config->{'binary_data'} } ) );
 
     # general data
     push @h_game_data_lines, "// extern declarations for binary data items\n";
