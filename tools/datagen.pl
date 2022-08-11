@@ -2875,71 +2875,107 @@ sub generate_custom_function_tables {
 }
 
 sub file_to_bytes {
-    my $f = shift;
+    my ( $f, $offset, $size ) = @_;
+
     open DATA, $f or
         die "Could not open $f for reading\n";
     binmode DATA;
     my $data;
-    { local $/; $data = <DATA>; }
+
+    if ( defined( $offset ) and defined( $size ) ) {
+        seek( DATA, $offset, 0 );
+        if ( read( DATA, $data, $size ) != $size ) {
+            die "Error: could not read $size bytes from $f, offset $offset\n";
+        }
+    } else {
+        { local $/; $data = <DATA>; }
+    }
+
     close DATA;
     return unpack('C*', $data );
 }
 
 sub file_to_compressed_bytes {
-    my $f = shift;
-    system( "z88dk-zx0 -f $f" );
+    my ( $f, $offset, $size ) = @_;
+
+    # get the bytes and write them to a temporary file
+    my @bytes = file_to_bytes( $f, $offset, $size );
+    open( DATA, ">/tmp/bytes.dat" ) or
+        die "Error: could not open temporary /tmp/bytes.dat for writing\n";
+    binmode DATA;
+    print DATA pack( "C*", @bytes );
+    close DATA;
+
+    # compress the temporary, then return the compressed bytes
+    system( "z88dk-zx0 -f /tmp/bytes.dat" );
     if ( $? == -1 ) {
         die "Could not execute z88dk-zx0\n";
     } elsif ( $? & 127 ) {
         die "Error executing z88dk-zx0\n";
     }
-    return file_to_bytes( "$f.zx0" );
+    return file_to_bytes( '/tmp/bytes.dat.zx0' );
 }
 
 sub generate_binary_data_items {
     # return if no binary_data instances
     return if not scalar( @{ $game_config->{'binary_data'} } );
 
-    if ( $game_config->{'zx_target'} eq '48' ) {
+    # general data
+    push @h_game_data_lines, "// extern declarations for binary data items\n";
+    push @c_game_data_lines, "//////////////////////////////////////////\n";
+    push @c_game_data_lines, "// BINARY DATA ITEMS\n";
+    push @c_game_data_lines, "//////////////////////////////////////////\n\n";
 
-        # logic for 48K mode - easy: all goes into game_data.c
-        push @h_game_data_lines, "// extern declarations for binary data items\n";
+    # process each of the binary blobs and generate its code
+    foreach my $item ( @{ $game_config->{'binary_data'} } ) {
 
-        push @c_game_data_lines, "//////////////////////////////////////////\n";
-        push @c_game_data_lines, "// BINARY DATA ITEMS\n";
-        push @c_game_data_lines, "//////////////////////////////////////////\n\n";
+        # first, generate .h and .c lines for the binary. Later we'll place them
+        # where they belong, depending on 48 or 128 mode
 
-        foreach my $item ( @{ $game_config->{'binary_data'} } ) {
-            # slurp binary data from file into byte list, taking COMPRESS into account
-            my @bytes;
-            if ( $item->{'compress'} ) {
-                @bytes = file_to_compressed_bytes( "$build_dir/$item->{'file'}" );
-            } else {
-                @bytes = file_to_bytes( "$build_dir/$item->{'file'}" );
-            }
-
-            # generate extern declaration
-            push @h_game_data_lines, sprintf( "extern uint8_t %s[];\n", $item->{'symbol'} );
-
-            # generate data definition
-            push @c_game_data_lines, sprintf( "// binary data item '%s'\n", $item->{'symbol'} );
-            push @c_game_data_lines, sprintf( "uint8_t %s[ %d ] = {\n", $item->{'symbol'}, scalar( @bytes ) );
-
-            my @byte16_groups;	# group in 16-byte-or-less pieces for easier reading/checking
-            push @byte16_groups, [ splice @bytes, 0, 16 ]  while @bytes;
-            push @c_game_data_lines, join( ",\n", map { "\t" . join( ", ", map { sprintf( "0x%02x", $_ ) } @{ $_ } ) } @byte16_groups );
-
-            push @c_game_data_lines, "\n};\n\n";
+        my ( @h_lines, @c_lines );
+        # slurp binary data from file into byte list, taking COMPRESS into account
+        my @bytes;
+        if ( $item->{'compress'} ) {
+            @bytes = file_to_compressed_bytes( "$build_dir/$item->{'file'}", $item->{'offset'}, $item->{'size'} );
+        } else {
+            @bytes = file_to_bytes( "$build_dir/$item->{'file'}", $item->{'offset'}, $item->{'size'} );
         }
 
-        push @c_game_data_lines, "//////////////////////////////////////////\n";
-        push @c_game_data_lines, "// END OF BINARY DATA ITEMS\n";
-        push @c_game_data_lines, "//////////////////////////////////////////\n";
+        # generate extern declaration
+        push @h_lines, sprintf( "extern uint8_t %s[];\n", $item->{'symbol'} );
 
-    } else {
+        # generate data definition
+        push @c_lines, sprintf( "// binary data item '%s'%s\n", $item->{'symbol'}, ( $item->{'compress'} ? ' (ZX0 compressed)': '' ) );
+        push @c_lines, sprintf( "uint8_t %s[ %d ] = {\n", $item->{'symbol'}, scalar( @bytes ) );
 
-        # logic for 128K mode
+        my @byte16_groups;	# group in 16-byte-or-less pieces for easier reading/checking
+        push @byte16_groups, [ splice @bytes, 0, 16 ]  while @bytes;
+        push @c_lines, join( ",\n", map { "\t" . join( ", ", map { sprintf( "0x%02x", $_ ) } @{ $_ } ) } @byte16_groups );
+
+        push @c_lines, "\n};\n\n";
+
+        # ...now place the generated code where it belongs
+        if ( $game_config->{'zx_target'} eq '48' ) {
+            # logic for 48K mode - easy, all into game_data.c and .h. CODESET setting is ignored
+            push @h_game_data_lines, @h_lines;
+            push @c_game_data_lines, @c_lines;
+        } else {
+            # logic for 128K mode - store the binary data into the specified CODESET or home if none specified
+            my $codeset = defined( $item->{'codeset'} ) ? $item->{'codeset'} : 'home';
+            push @h_game_data_lines, @h_lines;
+            if ( $codeset eq 'home' ) {
+                push @c_game_data_lines, @c_lines;
+            } else {
+                push @{ $c_codeset_lines->{ $codeset } }, @c_lines;
+            }
+        }
     }
+
+    push @h_game_data_lines, "\n";
+    push @c_game_data_lines, "//////////////////////////////////////////\n";
+    push @c_game_data_lines, "// END OF BINARY DATA ITEMS\n";
+    push @c_game_data_lines, "//////////////////////////////////////////\n";
+
 }
 
 # this function is called from main

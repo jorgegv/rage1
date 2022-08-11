@@ -458,6 +458,7 @@ BEGIN_GAME_CONFIG
         INVENTORY_AREA  TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
         DEBUG_AREA      TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
 	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
+	BINARY_DATA     FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
 END_GAME_CONFIG
 ```
 
@@ -527,6 +528,29 @@ END_GAME_CONFIG
 definitions for the different screen areas used by the game.  All of then
 accept the following aguments:
   * `TOP`, `LEFT`, `BOTTOM`, `RIGHT`: (values are obvious)
+* `BINARY_DATA`: allows to include pieces of binary data from a given file
+in your game.  Useful for embedding data that can be generated with external
+tools.  More than one instance of `BINARY_DATA` can be specified, for
+including different data pieces.  Arguments:
+  * `FILE`: mandatory, specifies the file that contains the raw data that
+    will be included in the game.
+  * `OFFSET` and `SIZE`: optional, both specify the initial offset and size
+    in bytes of the binary data that will be extracted from the file.  Ie
+    they are not specified, the whole file is included
+  * `SYMBOL`: mandatory, it specifies the name of the C symbol that your
+    data will be made known as inside the program (that is, the variable
+    name).  This symbol is declared as a byte array ( `uint8_t
+    my_symbol_name[]` )
+  * `CODESET`: optional, if using 128K mode it indicates the CODESET where
+    the data will be loaded.  If not specified, the data block will be
+    loaded in the home bank, and so it will be available from any function
+    in your game.  If it is specified, the data will be available only from
+    the functions that live in the same CODESET as the data. If compiling in
+    48K mode, this setting is ignored and the data goes into the the main
+    codeset.
+  * `COMPRESS`: optional, if set to 1 the data will be stored compressed in
+    the generated variable, ready to decompress with one of the ZX0
+    decompression functions.
 
 # FLOWGEN
 

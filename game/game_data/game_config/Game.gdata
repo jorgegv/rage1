@@ -3,7 +3,7 @@ BEGIN_GAME_CONFIG
 	LOADING_SCREEN	SCR=game_data/png/loading_screen.scr WAIT_ANY_KEY=1
 //	CUSTOM_CHARSET	FILE=game_data/png/cinema.ch8
 	CUSTOM_CHARSET	FILE=game_data/png/cinema.ch8 RANGE=32-90
-	ZX_TARGET	48
+	ZX_TARGET	128
 	SCREEN		INITIAL=Screen02
 	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK
 	SOUND		ENEMY_KILLED=BEEPFX_HIT_3
@@ -27,5 +27,5 @@ BEGIN_GAME_CONFIG
 	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 
 	// arbitrary binary data
-	BINARY_DATA	FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1
+	BINARY_DATA	FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
 END_GAME_CONFIG
