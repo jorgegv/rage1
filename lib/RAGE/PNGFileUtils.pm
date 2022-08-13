@@ -64,13 +64,25 @@ sub load_png_file {
     return \@pixels;
 }
 
-# get PNG dimensions
-sub png_get_width {
+# get PNG dimensions in pixels and cells
+sub png_get_width_pixels {
+    my $png = shift;
     return scalar( @{ $png->[0] } );
 }
 
-sub png_get_height {
+sub png_get_height_pixels {
+    my $png = shift;
     return scalar( @{ $png } );
+}
+
+sub png_get_width_cells {
+    my $png = shift;
+    return png_get_width_pixels( $png ) / 8;
+}
+
+sub png_get_height_cells {
+    my $png = shift;
+    return png_get_height_pixels( $png ) / 8;
 }
 
 # extracts pixel data in GDATA format from a PNG structure
@@ -314,6 +326,11 @@ sub png_get_cell_data_at {
 # returns: listref - [ [ cell_0_0_data, cell_0_1_data, ...], [ cell_1_0_data, cell_1_1_data, ...], ... ]
 sub png_get_all_cell_data {
     my ( $png, $row, $col, $width, $height ) = @_;
+    if ( not defined( $row ) or not defined( $col ) or not defined( $width ) or not defined( $height ) ) {
+        $row = $col = 0;
+        $width = png_get_width_cells( $png );
+        $height = png_get_height_cells( $png );
+    }
     my @rows;
     foreach my $r ( $row .. ( $row + $height - 1 ) ) {
         push @rows, [
