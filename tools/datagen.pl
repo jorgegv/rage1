@@ -14,6 +14,12 @@ use warnings;
 use strict;
 use utf8;
 
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+require RAGE::PNGFileUtils;
+require RAGE::FileUtils;
+
 use Data::Dumper;
 use List::MoreUtils qw( zip );
 use Getopt::Std;
@@ -94,11 +100,6 @@ my @h_game_data_lines;
 my @h_build_features_lines;
 my $forced_build_target;
 my %conditional_build_features;
-
-# build features that always selected no matter what
-my @default_build_features = qw(
-    BTILE_PACKED_TYPE_MAP
-);
 
 ######################################################
 ## Configuration syntax definitions and lists
@@ -747,186 +748,29 @@ sub read_input_data {
     }
 }
 
-# Loads a PNG file
-# Returns a ref to a list of refs to lists of pixels
-# i.e. each pixel can addressed as $png->[y][x]
-my $png_file_cache;
-sub load_png_file {
-    my $file = shift;
+######################################
+## Build Feature functions
+######################################
 
-    # if data exists in cache for the file, just return it
-    if ( exists( $png_file_cache->{ $file } ) ) {
-        return $png_file_cache->{ $file };
-    }
-
-    # ..else, build it...
-    my $command = sprintf( "pngtopam '%s' | pamtable", $file );
-    my @pixel_lines = `$command`;
-    chomp @pixel_lines;
-    my @pixels = map {			# for each line...
-        s/(\d+)/sprintf("%02X",$1)/ge;	# replace decimals by upper hex equivalent
-        s/ //g;				# remove spaces
-       [ split /\|/ ];			# split each pixel data by '|' and return listref of pixels
-    } @pixel_lines;
-
-    # ...store in cache for later use...
-    $png_file_cache->{ $file } = \@pixels;
-
-    # ..and return it
-    return \@pixels;
-}
-
-# extracts pixel data from a PNG file
-sub pick_pixel_data_by_color_from_png {
-    my ( $file, $xpos, $ypos, $width, $height, $hex_fgcolor, $hmirror, $vmirror ) = @_;
-    my $png = load_png_file( $file );
-    my @pixels = map {
-        join( "",
-            map {
-                $_ eq $hex_fgcolor ? "##" : "..";		# filter color
-                } @$_[ $xpos .. ( $xpos + $width - 1 ) ]	# select cols
-        )
-    } @$png[ $ypos .. ( $ypos + $height - 1 ) ];		# select rows
-    if ( $hmirror ) {
-        my @tmp = map { scalar reverse } @pixels;
-        @pixels = @tmp;
-    }
-    if ( $vmirror ) {
-        my @tmp = reverse @pixels;
-        @pixels = @tmp;
-    }
-    return \@pixels;
-}
-
-# calculates best attributes for a 8x8 cell out of PNG data
-my %zx_colors = (
-    '000000' => 'BLACK',
-    '0000C0' => 'BLUE',
-    '00C000' => 'GREEN',
-    '00C0C0' => 'CYAN',
-    'C00000' => 'RED',
-    'C000C0' => 'MAGENTA',
-    'C0C000' => 'YELLOW',
-    'C0C0C0' => 'WHITE',
-    '0000FF' => 'BLUE',
-    '00FF00' => 'GREEN',
-    '00FFFF' => 'CYAN',
-    'FF0000' => 'RED',
-    'FF00FF' => 'MAGENTA',
-    'FFFF00' => 'YELLOW',
-    'FFFFFF' => 'WHITE',
+# build features that always selected no matter what
+my @default_build_features = qw(
+    BTILE_PACKED_TYPE_MAP
 );
 
-sub extract_colors_from_cell {
-    my ( $png, $xpos, $ypos ) = @_;
-    my %histogram;
-    foreach my $x ( $xpos .. ( $xpos + 7 ) ) {
-        foreach my $y ( $ypos .. ( $ypos + 7 ) ) {
-            my $pixel_color = $png->[$y][$x];
-            $histogram{$pixel_color}++;
-        }
-    }
-    my @l = sort { $histogram{ $a } > $histogram{ $b } } keys %histogram;
-    if (scalar( @l ) > 2 ) {
-        foreach my $e ( 3 .. $#l ) {
-            printf STDERR "Warning: color #%s (%s)  detected but ignored\n",
-                $l[$e], $zx_colors{ $l[$e] };
-        }
-    }
-    my $bg = $l[0];
-    my $fg = $l[1] || $l[0];	# just in case there is only 1 color
-    # if one of them is black, it is preferred as bg color, swap them if needed
-    if ( $fg eq '000000' ) {
-        my $tmp = $bg;
-        $bg = $fg;
-        $fg = $tmp;
-    }
-    return { 'bg' => $bg, 'fg' => $fg };
+sub add_build_feature {
+    my $f = shift;
+    $conditional_build_features{ $f }++;
 }
 
-sub extract_attr_from_cell {
-    my ( $png, $xpos, $ypos ) = @_;
-    my $colors = extract_colors_from_cell( $png, $xpos, $ypos );
-    my ( $bg, $fg ) = map { $colors->{$_} } qw( bg fg );
-    my $attr = sprintf "INK_%s | PAPER_%s", $zx_colors{ $fg }, $zx_colors{ $bg };
-    if ( ( $fg =~ /FF/ ) or ( $bg =~ /FF/ ) ) { $attr .= " | BRIGHT"; }
-    return $attr;
+sub is_build_feature_enabled {
+    my $f = shift;
+    return defined( $conditional_build_features{ $f } );
 }
 
-sub attr_data_from_png {
-    my ( $file, $xpos, $ypos, $width, $height, $hmirror, $vmirror ) = @_;
-    my $png = load_png_file( $file );
-    my @attrs;
-    # extract attr from cells left-right, top-bottom order
-    my $y = $ypos;
-    while ( $y < ( $ypos + $height ) ) {
-        my $x = $xpos;
-        while ( $x < ( $xpos + $width ) ) {
-            push @attrs, extract_attr_from_cell( $png, $x, $y );
-            $x += 8;
-        }
-        $y += 8;
+sub add_default_build_features {
+    foreach my $f ( @default_build_features ) {
+        add_build_feature( $f );
     }
-    my $c_width = $width / 8;
-    my $c_height = $height / 8;
-    if ( $hmirror ) {
-        my @tmp;
-        foreach my $c ( ( $c_width - 1 ) .. 0 ) {	# columns: reverse order
-            foreach my $r ( 0 .. ( $c_height - 1 ) ) {	# rows: direct order
-                push @tmp, $attrs[ $r * $c_width + $c ];
-            }
-        }
-        @attrs = @tmp;
-    }
-    if ( $vmirror ) {
-        my @tmp;
-        foreach my $c ( 0 .. ( $c_width - 1 ) ) {	# columns: direct order
-            foreach my $r ( ( $c_height - 1 ) .. 0 ) {	# rows: reverse order
-                push @tmp, $attrs[ $r * $c_width + $c ];
-            }
-        }
-        @attrs = @tmp;
-    }
-    return \@attrs;
-}
-
-sub png_to_pixels_and_attrs {
-    my ( $file, $xpos, $ypos, $width, $height ) = @_;
-    my $png = load_png_file( $file );
-
-    # extract color and pixel data from cells left-right, top-bottom order
-    my @colors;
-    my @pixels;
-    my $y = $ypos;
-    while ( $y < ( $ypos + $height ) ) {
-        my $x = $xpos;
-        while ( $x < ( $xpos + $width ) ) {
-            my $c = extract_colors_from_cell( $png, $x, $y );
-            push @colors, $c;
-            push @pixels, pick_pixel_data_by_color_from_png( $file, $x, $y, 8, 8, $c->{'fg'} );
-            $x += 8;
-        }
-        $y += 8;
-    }
-
-    # we need to rearrange pixel data
-    my @pixel_data_lines;
-    my $nrows = $height / 8;
-    my $ncols = $width / 8;
-    foreach my $r ( 0 .. ( $nrows - 1 ) ) {
-        foreach my $l ( 0 .. 7 ) {
-            my $pixel_data_line;
-            foreach my $c ( 0 .. ( $ncols - 1 ) ) {
-                $pixel_data_line .= $pixels[ $r * $ncols + $c ][ $l ];
-            }
-            push @pixel_data_lines, $pixel_data_line;
-        }
-    }
-
-    return {
-            'pixels'	=> \@pixel_data_lines,
-            'attrs'	=> attr_data_from_png( $file, $xpos, $ypos, $width, $height ),
-    };
 }
 
 ######################################
@@ -2625,22 +2469,6 @@ sub generate_misc_data {
     }
 }
 
-sub add_build_feature {
-    my $f = shift;
-    $conditional_build_features{ $f }++;
-}
-
-sub is_build_feature_enabled {
-    my $f = shift;
-    return defined( $conditional_build_features{ $f } );
-}
-
-sub add_default_build_features {
-    foreach my $f ( @default_build_features ) {
-        add_build_feature( $f );
-    }
-}
-
 sub generate_conditional_build_features {
 
     # output build features for conditional compiles
@@ -2874,48 +2702,6 @@ sub generate_custom_function_tables {
     }
 }
 
-sub file_to_bytes {
-    my ( $f, $offset, $size ) = @_;
-
-    open DATA, $f or
-        die "Could not open $f for reading\n";
-    binmode DATA;
-    my $data;
-
-    if ( defined( $offset ) and defined( $size ) ) {
-        seek( DATA, $offset, 0 );
-        if ( read( DATA, $data, $size ) != $size ) {
-            die "Error: could not read $size bytes from $f, offset $offset\n";
-        }
-    } else {
-        { local $/; $data = <DATA>; }
-    }
-
-    close DATA;
-    return unpack('C*', $data );
-}
-
-sub file_to_compressed_bytes {
-    my ( $f, $offset, $size ) = @_;
-
-    # get the bytes and write them to a temporary file
-    my @bytes = file_to_bytes( $f, $offset, $size );
-    open( DATA, ">/tmp/bytes.dat" ) or
-        die "Error: could not open temporary /tmp/bytes.dat for writing\n";
-    binmode DATA;
-    print DATA pack( "C*", @bytes );
-    close DATA;
-
-    # compress the temporary, then return the compressed bytes
-    system( "z88dk-zx0 -f /tmp/bytes.dat" );
-    if ( $? == -1 ) {
-        die "Could not execute z88dk-zx0\n";
-    } elsif ( $? & 127 ) {
-        die "Error executing z88dk-zx0\n";
-    }
-    return file_to_bytes( '/tmp/bytes.dat.zx0' );
-}
-
 sub generate_binary_data_items {
     # return if no binary_data instances
     return if ( not defined( $game_config->{'binary_data'} ) or not scalar( @{ $game_config->{'binary_data'} } ) );
@@ -3024,8 +2810,8 @@ sub generate_game_data {
     generate_custom_function_tables;
 
     # generate conditional build features
-    add_default_build_features;
-    generate_conditional_build_features;
+    add_default_build_features();
+    generate_conditional_build_features();
 
     # generate ending lines if needed
     generate_h_ending;
