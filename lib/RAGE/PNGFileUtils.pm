@@ -43,7 +43,7 @@ sub load_png_file {
     return \@pixels;
 }
 
-# extracts pixel data from a PNG file
+# extracts pixel data in GDATA format from a PNG file
 sub pick_pixel_data_by_color_from_png {
     my ( $file, $xpos, $ypos, $width, $height, $hex_fgcolor, $hmirror, $vmirror ) = @_;
     my $png = load_png_file( $file );
