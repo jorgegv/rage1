@@ -18,6 +18,7 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 
 require RAGE::PNGFileUtils;
+require RAGE::FileUtils;
 
 use Data::Dumper;
 use List::MoreUtils qw( zip );
@@ -99,11 +100,6 @@ my @h_game_data_lines;
 my @h_build_features_lines;
 my $forced_build_target;
 my %conditional_build_features;
-
-# build features that always selected no matter what
-my @default_build_features = qw(
-    BTILE_PACKED_TYPE_MAP
-);
 
 ######################################################
 ## Configuration syntax definitions and lists
@@ -749,6 +745,31 @@ sub read_input_data {
         } else {
             die "Unknown state '$state'\n";
         }
+    }
+}
+
+######################################
+## Build Feature functions
+######################################
+
+# build features that always selected no matter what
+my @default_build_features = qw(
+    BTILE_PACKED_TYPE_MAP
+);
+
+sub add_build_feature {
+    my $f = shift;
+    $conditional_build_features{ $f }++;
+}
+
+sub is_build_feature_enabled {
+    my $f = shift;
+    return defined( $conditional_build_features{ $f } );
+}
+
+sub add_default_build_features {
+    foreach my $f ( @default_build_features ) {
+        add_build_feature( $f );
     }
 }
 
@@ -2448,22 +2469,6 @@ sub generate_misc_data {
     }
 }
 
-sub add_build_feature {
-    my $f = shift;
-    $conditional_build_features{ $f }++;
-}
-
-sub is_build_feature_enabled {
-    my $f = shift;
-    return defined( $conditional_build_features{ $f } );
-}
-
-sub add_default_build_features {
-    foreach my $f ( @default_build_features ) {
-        add_build_feature( $f );
-    }
-}
-
 sub generate_conditional_build_features {
 
     # output build features for conditional compiles
@@ -2697,48 +2702,6 @@ sub generate_custom_function_tables {
     }
 }
 
-sub file_to_bytes {
-    my ( $f, $offset, $size ) = @_;
-
-    open DATA, $f or
-        die "Could not open $f for reading\n";
-    binmode DATA;
-    my $data;
-
-    if ( defined( $offset ) and defined( $size ) ) {
-        seek( DATA, $offset, 0 );
-        if ( read( DATA, $data, $size ) != $size ) {
-            die "Error: could not read $size bytes from $f, offset $offset\n";
-        }
-    } else {
-        { local $/; $data = <DATA>; }
-    }
-
-    close DATA;
-    return unpack('C*', $data );
-}
-
-sub file_to_compressed_bytes {
-    my ( $f, $offset, $size ) = @_;
-
-    # get the bytes and write them to a temporary file
-    my @bytes = file_to_bytes( $f, $offset, $size );
-    open( DATA, ">/tmp/bytes.dat" ) or
-        die "Error: could not open temporary /tmp/bytes.dat for writing\n";
-    binmode DATA;
-    print DATA pack( "C*", @bytes );
-    close DATA;
-
-    # compress the temporary, then return the compressed bytes
-    system( "z88dk-zx0 -f /tmp/bytes.dat" );
-    if ( $? == -1 ) {
-        die "Could not execute z88dk-zx0\n";
-    } elsif ( $? & 127 ) {
-        die "Error executing z88dk-zx0\n";
-    }
-    return file_to_bytes( '/tmp/bytes.dat.zx0' );
-}
-
 sub generate_binary_data_items {
     # return if no binary_data instances
     return if ( not defined( $game_config->{'binary_data'} ) or not scalar( @{ $game_config->{'binary_data'} } ) );
@@ -2847,8 +2810,8 @@ sub generate_game_data {
     generate_custom_function_tables;
 
     # generate conditional build features
-    add_default_build_features;
-    generate_conditional_build_features;
+    add_default_build_features();
+    generate_conditional_build_features();
 
     # generate ending lines if needed
     generate_h_ending;
