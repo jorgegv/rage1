@@ -14,6 +14,11 @@ use warnings;
 use strict;
 use utf8;
 
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+require RAGE::FileUtils;
+
 use Data::Dumper;
 use List::MoreUtils qw( zip );
 use Getopt::Std;
@@ -745,35 +750,6 @@ sub read_input_data {
             die "Unknown state '$state'\n";
         }
     }
-}
-
-# Loads a PNG file
-# Returns a ref to a list of refs to lists of pixels
-# i.e. each pixel can addressed as $png->[y][x]
-my $png_file_cache;
-sub load_png_file {
-    my $file = shift;
-
-    # if data exists in cache for the file, just return it
-    if ( exists( $png_file_cache->{ $file } ) ) {
-        return $png_file_cache->{ $file };
-    }
-
-    # ..else, build it...
-    my $command = sprintf( "pngtopam '%s' | pamtable", $file );
-    my @pixel_lines = `$command`;
-    chomp @pixel_lines;
-    my @pixels = map {			# for each line...
-        s/(\d+)/sprintf("%02X",$1)/ge;	# replace decimals by upper hex equivalent
-        s/ //g;				# remove spaces
-       [ split /\|/ ];			# split each pixel data by '|' and return listref of pixels
-    } @pixel_lines;
-
-    # ...store in cache for later use...
-    $png_file_cache->{ $file } = \@pixels;
-
-    # ..and return it
-    return \@pixels;
 }
 
 # extracts pixel data from a PNG file
