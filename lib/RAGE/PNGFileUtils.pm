@@ -14,10 +14,31 @@ use strict;
 use warnings;
 use utf8;
 
+# standard ZX Spectrum color palette
+my %zx_colors = (
+    '000000' => 'BLACK',
+    '0000C0' => 'BLUE',
+    '00C000' => 'GREEN',
+    '00C0C0' => 'CYAN',
+    'C00000' => 'RED',
+    'C000C0' => 'MAGENTA',
+    'C0C000' => 'YELLOW',
+    'C0C0C0' => 'WHITE',
+    '0000FF' => 'BLUE',
+    '00FF00' => 'GREEN',
+    '00FFFF' => 'CYAN',
+    'FF0000' => 'RED',
+    'FF00FF' => 'MAGENTA',
+    'FFFF00' => 'YELLOW',
+    'FFFFFF' => 'WHITE',
+);
+
 # Loads a PNG file
 # Returns a ref to a list of refs to lists of pixels
 # i.e. each pixel can addressed as $png->[y][x]
+# Each pixel is represented as RRGGBB, with the components in hex format, e.g. FFCB00
 my $png_file_cache;
+
 sub load_png_file {
     my $file = shift;
 
@@ -43,10 +64,11 @@ sub load_png_file {
     return \@pixels;
 }
 
-# extracts pixel data in GDATA format from a PNG file
+# extracts pixel data in GDATA format from a PNG structure
+# example: ##..####....##.. (for 10110010 - ##: pixel on; ..: pixel off)
+# returns: listref - [ line1_data, line2_data, ... ]
 sub pick_pixel_data_by_color_from_png {
-    my ( $file, $xpos, $ypos, $width, $height, $hex_fgcolor, $hmirror, $vmirror ) = @_;
-    my $png = load_png_file( $file );
+    my ( $png, $xpos, $ypos, $width, $height, $hex_fgcolor, $hmirror, $vmirror ) = @_;
     my @pixels = map {
         join( "",
             map {
@@ -65,27 +87,11 @@ sub pick_pixel_data_by_color_from_png {
     return \@pixels;
 }
 
-# calculates best attributes for a 8x8 cell out of PNG data
-my %zx_colors = (
-    '000000' => 'BLACK',
-    '0000C0' => 'BLUE',
-    '00C000' => 'GREEN',
-    '00C0C0' => 'CYAN',
-    'C00000' => 'RED',
-    'C000C0' => 'MAGENTA',
-    'C0C000' => 'YELLOW',
-    'C0C0C0' => 'WHITE',
-    '0000FF' => 'BLUE',
-    '00FF00' => 'GREEN',
-    '00FFFF' => 'CYAN',
-    'FF0000' => 'RED',
-    'FF00FF' => 'MAGENTA',
-    'FFFF00' => 'YELLOW',
-    'FFFFFF' => 'WHITE',
-);
-
+# extracts fg and bg color for a given 8x8 cell
+# returns: hashref - { fg => <fg_color>, bg => <bg_color> }
 sub extract_colors_from_cell {
     my ( $png, $xpos, $ypos ) = @_;
+
     my %histogram;
     foreach my $x ( $xpos .. ( $xpos + 7 ) ) {
         foreach my $y ( $ypos .. ( $ypos + 7 ) ) {
@@ -111,6 +117,8 @@ sub extract_colors_from_cell {
     return { 'bg' => $bg, 'fg' => $fg };
 }
 
+# extracts attribute value for a 8x8 cell out of PNG data, in text form
+# returns: attribute text representation - 'INK_xxx | PAPER_yyy | BRIGHT'
 sub extract_attr_from_cell {
     my ( $png, $xpos, $ypos ) = @_;
     my $colors = extract_colors_from_cell( $png, $xpos, $ypos );
@@ -120,9 +128,11 @@ sub extract_attr_from_cell {
     return $attr;
 }
 
+# extracts attribute data in text form from a PNG - window pos and size and
+# h/v mirror flags are accepted.
+# returns: listref - [ 'INK_xxx | PAPER_yyy | BRIGHT', ... ]
 sub attr_data_from_png {
-    my ( $file, $xpos, $ypos, $width, $height, $hmirror, $vmirror ) = @_;
-    my $png = load_png_file( $file );
+    my ( $png, $xpos, $ypos, $width, $height, $hmirror, $vmirror ) = @_;
     my @attrs;
     # extract attr from cells left-right, top-bottom order
     my $y = $ypos;
@@ -157,9 +167,11 @@ sub attr_data_from_png {
     return \@attrs;
 }
 
+# processes a PNG and returns two lists with pixel data in GDATA format and
+# attributes in text form, as needed for GDATA files.
+# returns: hashref - { pixels => [ [ ... ], [ ... ], ...], attrs => [ ... ] }
 sub png_to_pixels_and_attrs {
-    my ( $file, $xpos, $ypos, $width, $height ) = @_;
-    my $png = load_png_file( $file );
+    my ( $png, $xpos, $ypos, $width, $height ) = @_;
 
     # extract color and pixel data from cells left-right, top-bottom order
     my @colors;
@@ -170,7 +182,7 @@ sub png_to_pixels_and_attrs {
         while ( $x < ( $xpos + $width ) ) {
             my $c = extract_colors_from_cell( $png, $x, $y );
             push @colors, $c;
-            push @pixels, pick_pixel_data_by_color_from_png( $file, $x, $y, 8, 8, $c->{'fg'} );
+            push @pixels, pick_pixel_data_by_color_from_png( $png, $x, $y, 8, 8, $c->{'fg'} );
             $x += 8;
         }
         $y += 8;
@@ -192,12 +204,14 @@ sub png_to_pixels_and_attrs {
 
     return {
             'pixels'	=> \@pixel_data_lines,
-            'attrs'	=> attr_data_from_png( $file, $xpos, $ypos, $width, $height ),
+            'attrs'	=> attr_data_from_png( $png, $xpos, $ypos, $width, $height ),
     };
 }
 
 my %color_map_cache;
 
+# for a given color, returns the nearest color from the standard ZX color palette
+# returns: nearest color in RRGGBB format
 sub zx_colors_best_fit {
     my $color = shift;
 
@@ -220,6 +234,7 @@ sub zx_colors_best_fit {
     return $color_map_cache{ $color };
 }
 
+# processes a PNG replacing each pixel's color with the nearest ZX color
 sub map_png_colors_to_zx_colors {
     my $png = shift;
     foreach my $r ( 0 .. $#{ $png } ) {
@@ -229,6 +244,10 @@ sub map_png_colors_to_zx_colors {
     }
 }
 
+# compiles a pixel line in GDATA format ( ##..##...etc) to the real bytes by
+# grouping every 8 pixels.  The length of the pixel line must be a multiple
+# of 16 (1 byte -> 16 GDATA characters)
+# returns: list of byte values (0-255)
 sub compile_pixel_line {
     my $pixels = shift;
     $pixels =~ s/\.{2}/0/g;
@@ -237,8 +256,9 @@ sub compile_pixel_line {
     return @bytes; 
 }
 
+# array for calculation of the numerical value of attributes in text form
 my %attr_value = (
-    'INK_BLACK'		=> 0,
+    'INK_BLACK'		=> 0,		# INK values (bits 0-2)
     'INK_BLUE'		=> 1,
     'INK_RED'		=> 2,
     'INK_MAGENTA'	=> 3,
@@ -246,7 +266,7 @@ my %attr_value = (
     'INK_CYAN'		=> 5,
     'INK_YELLOW'	=> 6,
     'INK_WHITE'		=> 7,
-    'PAPER_BLACK'	=> 0 << 3,
+    'PAPER_BLACK'	=> 0 << 3,	# PAPER values (bits 3-5)
     'PAPER_BLUE'	=> 1 << 3,
     'PAPER_RED'		=> 2 << 3,
     'PAPER_MAGENTA'	=> 3 << 3,
@@ -254,9 +274,11 @@ my %attr_value = (
     'PAPER_CYAN'	=> 5 << 3,
     'PAPER_YELLOW'	=> 6 << 3,
     'PAPER_WHITE'	=> 7 << 3,
-    'BRIGHT'		=> 1 << 6,
+    'BRIGHT'		=> 1 << 6,	# BRIGHT value (bit 6)
 );
 
+# converts an attribute in text form into its numerical value
+# returns: numeric attr value (0-255)
 sub numeric_attr_value {
     my $attr = shift;
     my $value = 0;
