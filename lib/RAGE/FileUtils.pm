@@ -10,6 +10,10 @@
 ## 
 ################################################################################
 
+# reads a file and returns its bytes as a list of values 0-255.  Optionally,
+# an offset and size can be specified and the data extarcted from the file
+# will only be in that range
+# returns: list of bytes with file data
 sub file_to_bytes {
     my ( $f, $offset, $size ) = @_;
 
@@ -31,6 +35,10 @@ sub file_to_bytes {
     return unpack('C*', $data );
 }
 
+# reads a file, compresses its bytes with ZX0 and returns them as a list of
+# values 0-255.  Optionally, an offset and size can be specified and the
+# data extracted from the file will only be in that range
+# returns: list of bytes with compressed file data in ZX0 format
 sub file_to_compressed_bytes {
     my ( $f, $offset, $size ) = @_;
 

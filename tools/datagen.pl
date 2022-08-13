@@ -211,8 +211,9 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
                 my $data = png_to_pixels_and_attrs(
-                    $build_dir . '/' . $vars->{'file'},
+                    $png,
                     $vars->{'xpos'}, $vars->{'ypos'},
                     $vars->{'width'}, $vars->{'height'},
                 );
@@ -271,12 +272,13 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
-                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
+                    $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 push @{$cur_sprite->{'png_attr'}}, @{ attr_data_from_png(
-                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
+                    $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 next;
@@ -288,8 +290,9 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
                 push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
-                    $build_dir . '/' . $vars->{'file'}, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
+                    $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
                 next;
             }
