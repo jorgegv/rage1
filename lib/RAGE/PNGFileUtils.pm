@@ -196,4 +196,72 @@ sub png_to_pixels_and_attrs {
     };
 }
 
+my %color_map_cache;
+
+sub zx_colors_best_fit {
+    my $color = shift;
+
+    # if the mapping has not been calculated before, calculate and put it
+    # into the cache
+    if ( not exists $color_map_cache{ $color } ) {
+        $color =~ m/(\w\w)(\w\w)(\w\w)/;
+        my ( $color_r, $color_g, $color_b ) = map { hex } ( $1, $2, $3 );
+        my %distance = map {
+            my $zxc = $_;
+            $zxc =~ m/(\w\w)(\w\w)(\w\w)/;
+            my ( $zx_r, $zx_g, $zx_b ) = map { hex } ( $1, $2, $3 );
+            ( $zxc => ( ( $zx_r - $color_r )**2 + ( $zx_g - $color_g )**2 + ( $zx_b - $color_b )**2 ) );
+        } keys %zx_colors;
+        my @sorted = sort { $distance{ $a } <=> $distance{ $b } } keys %zx_colors;
+        $color_map_cache{ $color } = $sorted[0];
+    }
+
+    # now it is positively in the cache, return it
+    return $color_map_cache{ $color };
+}
+
+sub map_png_colors_to_zx_colors {
+    my $png = shift;
+    foreach my $r ( 0 .. $#{ $png } ) {
+        foreach my $c ( 0 .. $#{ $png->[$r] } ) {
+            $png->[$r][$c] = zx_colors_best_fit( $png->[$r][$c] );
+        }
+    }
+}
+
+sub compile_pixel_line {
+    my $pixels = shift;
+    $pixels =~ s/\.{2}/0/g;
+    $pixels =~ s/\#{2}/1/g;
+    my @bytes = map { oct( '0b' . $_ ) } ( $pixels =~ /([01]{8})/g );
+    return @bytes; 
+}
+
+my %attr_value = (
+    'INK_BLACK'		=> 0,
+    'INK_BLUE'		=> 1,
+    'INK_RED'		=> 2,
+    'INK_MAGENTA'	=> 3,
+    'INK_GREEN'		=> 4,
+    'INK_CYAN'		=> 5,
+    'INK_YELLOW'	=> 6,
+    'INK_WHITE'		=> 7,
+    'PAPER_BLACK'	=> 0 << 3,
+    'PAPER_BLUE'	=> 1 << 3,
+    'PAPER_RED'		=> 2 << 3,
+    'PAPER_MAGENTA'	=> 3 << 3,
+    'PAPER_GREEN'	=> 4 << 3,
+    'PAPER_CYAN'	=> 5 << 3,
+    'PAPER_YELLOW'	=> 6 << 3,
+    'PAPER_WHITE'	=> 7 << 3,
+    'BRIGHT'		=> 1 << 6,
+);
+
+sub numeric_attr_value {
+    my $attr = shift;
+    my $value = 0;
+    foreach my $v ( split( /\s*\|\s*/, $attr ) ) { $value += $attr_value{ $v } };
+    return $value;
+}
+
 1;
