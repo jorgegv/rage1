@@ -312,9 +312,12 @@ sub numeric_attr_value {
 sub png_get_cell_data_at {
     my ( $png, $row, $col ) = @_;
     my $cell_data = png_to_pixels_and_attrs( $png, $col * 8, $row * 8, 8, 8 );
+    my @bytes = map { ( compile_pixel_line( $_ ) )[0] } @{ $cell_data->{'pixels'} };
+    my $attr = numeric_attr_value( $cell_data->{'attrs'}[0] );
     return {
-        bytes => [ map { ( compile_pixel_line( $_ ) )[0] } @{ $cell_data->{'pixels'} } ],
-        attr => numeric_attr_value( $cell_data->{'attrs'}[0] )
+        bytes => \@bytes,
+        attr => $attr,
+        hexdump => join( '', map { sprintf( "%02X", $_ ) } ( @bytes, $attr ) ), 
     };
 }
 
