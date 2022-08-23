@@ -212,7 +212,7 @@ sub match_btile_in_map {
         }
     }
 
-    # the btile matched the cells on the map, so return true
+    # all btile cells matched the cells on the map, so return true
     return 1;
 }
 
