@@ -317,7 +317,7 @@ sub png_get_cell_data_at {
     return {
         bytes => \@bytes,
         attr => $attr,
-        hexdump => join( '', map { sprintf( "%02X", $_ ) } ( @bytes, $attr ) ), 
+        hexdump => join( '', map { sprintf( "%02X", $_ ) } ( @bytes, $attr ) ),
     };
 }
 
