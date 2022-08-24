@@ -106,16 +106,15 @@ foreach my $png_file ( @btile_files ) {
         my $current_btile_index = scalar( @all_btiles );
 
         # store the btile cell data into the main btile list
-        push @all_btiles, $btile_data;
+        push @all_btiles, {
+            cell_data	=> $btile_data,
+            name	=> $tiledef->{'name'},
+        };
 
         # ...and update the index
         push @{ $btile_index{ $btile_data->[0][0]{'hexdump'} } }, $current_btile_index;
     }
 }
-
-# At this point, we have a global list of BTILEs ( @all_btiles ) and a index
-# of hashes for the top-left cell of each one of them ( %btile_index ), so
-# that we can quickly search for all the tiles that have that cell
 
 # Since there may be more than one BTILE with the same top-left cell, we now
 # sort the lists associated to the cell hashes, in descending size order
@@ -129,9 +128,17 @@ sub btile_cell_size {
 }
 
 foreach my $hash ( keys %btile_index ) {
-    my @sorted = sort { btile_cell_size( $all_btiles[ $a ] ) <=> $all_btiles[ $b ]} @{ $btile_index{ $hash } };
+    my @sorted = sort {
+        btile_cell_size( $all_btiles[ $b ]{'cell_data'} )
+        <=>
+        btile_cell_size( $all_btiles[ $a ]{'cell_data'} ) 
+    } @{ $btile_index{ $hash } };
     $btile_index{ $hash } = \@sorted;
 }
+
+# At this point, we have a global list of BTILEs ( @all_btiles ) and a index
+# of hashes for the top-left cell of each one of them ( %btile_index ), so
+# that we can quickly search for all the tiles that have that cell
 
 # 3. Process the main map image:
 #   - Get the full list of cell data for it
@@ -244,7 +251,7 @@ foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
                 $checked_cells->[ $global_cell_row ][ $global_cell_col ]++;
 
                 # get the hash of the top-left cell
-                my $top_left_cell_hash = $main_map_cell_data->[ $global_cell_row ][ $global_cell_col ];
+                my $top_left_cell_hash = $main_map_cell_data->[ $global_cell_row ][ $global_cell_col ]{'hexdump'};
 
                 # if there are one or more btiles with that cell hash as its
                 # top-left, try to match all btiles from the list.
@@ -254,7 +261,7 @@ foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
                     # the biggest btile will be matched first.  First match
                     # wins
                     foreach my $btile_index ( @{ $btile_index{ $top_left_cell_hash } } ) {
-                        my $btile_data = $all_btiles[ $btile_index ];
+                        my $btile_data = $all_btiles[ $btile_index ]{'cell_data'};
                         my $btile_rows = scalar( @$btile_data );
                         my $btile_cols = scalar( @{ $btile_data->[0] } );
                         if ( match_btile_in_map( $main_map_cell_data, $btile_data, $global_cell_row, $global_cell_col ) ) {
@@ -269,10 +276,13 @@ foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
                                 global_cell_col	=> $global_cell_col,
                                 btile_index	=> $btile_index,
                             };
+#                            printf "** MATCH: screen:(%2d,%2d) - pos:(%2d,%2d) - global_pos:(%2d,%2d) - btile:%3d (%s)\n",
+#                                $screen_row,$screen_col,$cell_row,$cell_col,$global_cell_row,$global_cell_col,
+#                                $btile_index, $all_btiles[ $btile_index ]{'name'};
 
                             # we also mark all of its cells as checked
-                            foreach my $r ( 0 .. ( ) ) {
-                                foreach my $c ( 0 .. ( ) ) {
+                            foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
+                                foreach my $c ( 0 .. ( $btile_cols - 1 ) ) {
                                     $checked_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
                                 }
                             } # end of mark-as-checked
@@ -299,12 +309,15 @@ foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
 #   - A bidimensional array of cell status, with the same dimensions as the
 #     cell data for the main map
 
+#print Dumper( $checked_cells );
+#print Dumper( \@matched_btiles );
+
 # 5.  Check thet all cells in the status map are in state "checked".  This
 # means that the whole map has been compiled successfully
 
 my @non_checked_cells;
-foreach my $r ( 0 .. ( ) ) {
-    foreach my $c ( 0 .. ( ) ) {
+foreach my $r ( 0 .. ( $map_rows - 1 ) ) {
+    foreach my $c ( 0 .. ( $map_cols - 1 ) ) {
         if ( not $checked_cells->[ $r ][ $c ] ) {
             push @non_checked_cells, "  Cell ($r,$c) was not checked";
         }
