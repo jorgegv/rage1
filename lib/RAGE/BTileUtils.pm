@@ -37,9 +37,13 @@ sub btile_read_png_tiledefs {
         $line =~ s/#.*$//g;		# remove comments
         next if $line =~ m/^$/;		# skip line if empty
         $line =~ s/\s+/ /g;		# replace multiple spaces with one
-        my ( $name, $row, $col, $width, $height ) = split( /\s+/, $line );
+        my ( $name, $row, $col, $width, $height, $type ) = split( /\s+/, $line );
+        my $default_type = uc( $type || 'OBSTACLE' );
+        grep { $default_type } qw( OBSTACLE ITEM DECORATION ) or
+            die "$tiledef_file: '$type' is not a valid BTILE type\n";
         push @tiledefs, {
             name		=> $name,
+            default_type	=> $default_type,
             cell_row		=> $row,
             cell_col		=> $col,
             cell_width		=> $width,

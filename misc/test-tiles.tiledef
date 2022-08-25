@@ -1,21 +1,21 @@
-candy			0 0 2 2
-candy_holder		0 2 2 2
-spot_1			0 4 2 2
-spot_2			0 6 2 2
-ball			0 8 2 2
-ball_holder		0 10 2 2
-desk			0 12 4 3
-chair_right		0 16 2 2
-chair_left		0 18 2 2
-truck			2 0 2 2
-truck_holder		2 2 2 2
-shovel			2 4 2 2
-shovel_holder		2 6 2 2
-pencil			2 8 2 2
-pencil_holder		2 10 2 2
-bed			4 0 5 3
-wall_1x1        4 5 1 1
-wall_2x1        4 5 2 1
-wall_1x2        4 5 1 2
-wall_2x2        4 5 2 2
-wall_4x2        4 5 4 2
+candy			0 0 2 2 item
+candy_holder		0 2 2 2 decoration
+spot_1			0 4 2 2 decoration
+spot_2			0 6 2 2 decoration
+ball			0 8 2 2 item
+ball_holder		0 10 2 2 decoration
+desk			0 12 4 3 obstacle
+chair_right		0 16 2 2 obstacle
+chair_left		0 18 2 2 obstacle
+truck			2 0 2 2 item
+truck_holder		2 2 2 2 decoration
+shovel			2 4 2 2 item
+shovel_holder		2 6 2 2 decoration
+pencil			2 8 2 2 item
+pencil_holder		2 10 2 2 decoration
+bed			4 0 5 3 obstacle
+wall_1x1        4 5 1 1 obstacle
+wall_2x1        4 5 2 1 obstacle
+wall_1x2        4 5 1 2 obstacle
+wall_2x2        4 5 2 2 obstacle
+wall_4x2        4 5 4 2 obstacle

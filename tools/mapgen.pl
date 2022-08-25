@@ -107,8 +107,9 @@ foreach my $png_file ( @btile_files ) {
 
         # store the btile cell data into the main btile list
         push @all_btiles, {
-            cell_data	=> $btile_data,
-            name	=> $tiledef->{'name'},
+            cell_data		=> $btile_data,
+            name		=> $tiledef->{'name'},
+            default_type	=> $tiledef->{'default_type'},
         };
 
         # ...and update the index
@@ -294,7 +295,6 @@ foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
                                 global_cell_row	=> $global_cell_row,
                                 global_cell_col	=> $global_cell_col,
                                 btile_index	=> $btile_index,
-                                btile_type	=> 'OBSTACLE',
                             };
 #                            printf "** MATCH: screen:(%2d,%2d) - pos:(%2d,%2d) - global_pos:(%2d,%2d) - btile:%3d (%s)\n",
 #                                $screen_row,$screen_col,$cell_row,$cell_col,$global_cell_row,$global_cell_col,
@@ -391,7 +391,7 @@ EOF_GDATA_HEADER
         my $btile_instance_name = sprintf( 'AutoBTile_%d', $btile_counter++ );
         my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
         printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
-            $btile->{'btile_type'},
+            $btile_data->{'default_type'},
             $btile_instance_name,
             $btile_data->{'name'},
             $btile->{'cell_row'},
