@@ -201,20 +201,39 @@ my $main_map_cell_data = png_get_all_cell_data( $png );
 # order the cells inside each screen.  The row and column indexes for the
 # current screen will be held in vars $screen_row and $screen_col
 
-# returns true if a given btile matches the cells in the map at position
-# (row,col).  Btile must be completely inside the map, if it is partially
-# outside, it will return false
-sub match_btile_in_map {
-    my ( $map, $btile_data, $test_row, $test_col ) = @_;
-    foreach my $r ( 0 .. ( @$btile_data - 1 ) ) {
-        foreach my $c ( 0 .. ( @{ $btile_data->[0] } - 1 ) ) {
+# This var will hold the checked and matched cells.  We do not want to
+# re-check the cells corresponding to an already matched btile.  At the end
+# of matching, this bidimensional array should have the same size as the
+# main map (in cells), and all values should be defined and == 1
+my $checked_cells;
+my $matched_cells;
 
-            # return undef if out of the map
-            return undef if ( ( $test_row + $r ) >= $map_rows );
-            return undef if ( ( $test_col + $c ) >= $map_cols );
+# this list will hold the matched btiles, with all associated metadata
+my @matched_btiles;
+
+# returns true if a given btile matches the cells in the map at position
+# (row,col), restricted to a given screen.  Btile must be completely inside
+# the screen, if it is partially outside, it will return false
+sub match_btile_in_map {
+    my ( $map, $screen_top, $screen_left, $screen_bottom, $screen_right, $btile_data, $pos_row, $pos_col ) = @_;
+
+    # return undef if out of the screen
+    return undef if ( $pos_row < $screen_top );
+    return undef if ( $pos_col < $screen_left );
+
+    foreach my $r ( 0 .. ( scalar( @$btile_data ) - 1 ) ) {
+        foreach my $c ( 0 .. ( scalar( @{ $btile_data->[0] } ) - 1 ) ) {
+
+            # return undef if out of the screen
+            return undef if ( ( $pos_row + $r ) > $screen_bottom );
+            return undef if ( ( $pos_col + $c ) > $screen_right );
+
+            # return undef if the cell has already been matched by a
+            # previous btile
+            return undef if $matched_cells->[ $pos_row + $r ][ $pos_col + $c ];
 
             # return undef as soon as there is a cell mismatch
-            return undef if ( $map->[ $test_row + $r ][ $test_col + $c ]{'hexdump'} ne
+            return undef if ( $map->[ $pos_row + $r ][ $pos_col + $c ]{'hexdump'} ne
                 $btile_data->[ $r ][ $c ]{'hexdump'} );
         }
     }
@@ -223,18 +242,15 @@ sub match_btile_in_map {
     return 1;
 }
 
-# This var will hold the checked cells.  We do not want to re-check the
-# cells corresponding to a matched btile.  At the end of matching, this
-# bidimensional array should have the same size as the main map (in cells),
-# and all values should be defined and >=1
-my $checked_cells;
-
-# this list will hold the matched btiles, with all associated metadata
-my @matched_btiles;
-
 # walk the screen array
 foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
     foreach my $screen_col ( 0 .. ( $map_cols / $screen_cols - 1 ) ) {
+
+        # temporary values
+        my $global_screen_top = $screen_row * $screen_rows;
+        my $global_screen_left = $screen_col * $screen_cols;
+        my $global_screen_bottom = $global_screen_top + $screen_rows - 1;
+        my $global_screen_right = $global_screen_left + $screen_cols - 1;
 
         # walk the cell array on each screen
         foreach my $cell_row ( 0 .. ( $screen_rows - 1 ) ) {
@@ -264,7 +280,10 @@ foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
                         my $btile_data = $all_btiles[ $btile_index ]{'cell_data'};
                         my $btile_rows = scalar( @$btile_data );
                         my $btile_cols = scalar( @{ $btile_data->[0] } );
-                        if ( match_btile_in_map( $main_map_cell_data, $btile_data, $global_cell_row, $global_cell_col ) ) {
+                        if ( match_btile_in_map( $main_map_cell_data,
+                            $global_screen_top, $global_screen_left, $global_screen_bottom, $global_screen_right,
+                            $btile_data,
+                            $global_cell_row, $global_cell_col ) ) {
 
                             # if a match was found, add it to the list of matched btiles
                             push @matched_btiles, {
@@ -275,17 +294,19 @@ foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
                                 global_cell_row	=> $global_cell_row,
                                 global_cell_col	=> $global_cell_col,
                                 btile_index	=> $btile_index,
+                                btile_type	=> 'OBSTACLE',
                             };
 #                            printf "** MATCH: screen:(%2d,%2d) - pos:(%2d,%2d) - global_pos:(%2d,%2d) - btile:%3d (%s)\n",
 #                                $screen_row,$screen_col,$cell_row,$cell_col,$global_cell_row,$global_cell_col,
 #                                $btile_index, $all_btiles[ $btile_index ]{'name'};
 
-                            # we also mark all of its cells as checked
+                            # we also mark all of its cells as checked and matched
                             foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
                                 foreach my $c ( 0 .. ( $btile_cols - 1 ) ) {
                                     $checked_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
+                                    $matched_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
                                 }
-                            } # end of mark-as-checked
+                            } # end of mark-as-checked-and-matched
 
                             # whenever we find a match, skip the rest of btiles
                             last;
@@ -333,3 +354,55 @@ if ( scalar( @non_checked_cells ) ) {
 #   - BTILE definitions
 #   - HOTZONE definitions
 #   - ITEM definitions
+
+# First we create a hash with the matches for each screen, so that only
+# screens with matched btiles generate output
+my %screen_data;
+foreach my $match ( @matched_btiles ) {
+    my $screen_name = sprintf( "AutoScreen_%03d_%03d", $match->{'screen_row'}, $match->{'screen_col'} );
+    push @{ $screen_data{ $screen_name }{'btiles'} }, $match;
+    # TBC: add screen metadata
+}
+
+# Now we can output GDATA files for each screen and all its contained
+# elements
+my $btile_counter = 0;
+
+foreach my $screen_name ( sort keys %screen_data ) {
+    my $screen_data = $screen_data{ $screen_name };
+    my $output_file = sprintf( "%s/%s.gdata", $output_dir, $screen_name );
+    open GDATA,">$output_file" or
+        die "Could not open file $output_file for writing\n";
+
+    print GDATA <<EOF_GDATA_HEADER
+BEGIN_SCREEN
+EOF_GDATA_HEADER
+;
+
+    printf GDATA "\tNAME\t%s\n", $screen_name;
+
+    printf GDATA "\tDATASET\t%d\n", $screen_data->{'dataset'} || 0;
+
+    if ( defined( $screen_data->{'title'} ) ) {
+        printf GDATA "\tTITLE\t\"%s\"\n", $screen_data->{'title'};
+    }
+
+    foreach my $btile ( @{ $screen_data->{'btiles'} } ) {
+        my $btile_instance_name = sprintf( 'AutoBTile_%d', $btile_counter++ );
+        my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
+        printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
+            $btile->{'btile_type'},
+            $btile_instance_name,
+            $btile_data->{'name'},
+            $btile->{'cell_row'},
+            $btile->{'cell_col'},
+        ;
+    }
+
+    print GDATA <<EOF_GDATA_END
+END_SCREEN
+EOF_GDATA_END
+;
+
+    close GDATA;
+}

@@ -14,8 +14,8 @@ shovel_holder		2 6 2 2
 pencil			2 8 2 2
 pencil_holder		2 10 2 2
 bed			4 0 5 3
-wall_1x1        4 6 1 1
-wall_1x2        4 6 2 1
-wall_2x1        4 6 1 2
-wall_2x2        4 6 2 2
-wall_2x4        4 6 4 2
+wall_1x1        4 5 1 1
+wall_2x1        4 5 2 1
+wall_1x2        4 5 1 2
+wall_2x2        4 5 2 2
+wall_4x2        4 5 4 2
