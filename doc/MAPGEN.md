@@ -121,18 +121,20 @@ Input data:
 
 Output:
 
-- One GDATA file per screen, inside a given output directory
+- One GDATA file per screen, inside the screen output directory.  Each
+  screen GDATA file contains all BTILES that form the screen, HOTZONE
+  definitions (which connect to adjacent screens) and positioning data for
+  all items of any type
 
-- Each GDATA contains all BTILES that form the screen, HOTZONE definitions
-  (which connect to adjacent screens) and positioning data for all items of
-  both types
+- One single GDATA file with all flow rules needed for HOTZONEs, inside the
+  flow rules output directory
 
 Remarks:
 
 - Only non-empty screens are generated.  Even if the map is MxN screens in
   size, empty screens will not be generated
 
-### MAPGEN design hints
+### MAPGEN design hints for BTILE matching
 
 The main map will be processed in 8x8 cells.
 
@@ -170,4 +172,8 @@ After all BTILEs have been read and processed, the main map is processed:
   can be considered a success, and otherwise report that some of the BTILEs
   could not be identified. Similar code to that of the SCREEN definition
   with digraphs, etc.
+
+### MAPGEN design hints for HOTZONE identification
+
+The main map will be processed by pixels.
 
