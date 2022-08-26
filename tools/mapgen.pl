@@ -25,7 +25,7 @@ use File::Basename;
 use Getopt::Std;
 
 # arguments: 2 or more PNG files, plus some required switches (screen
-# dimensions an output directory)
+# dimensions, output directory, etc.)
 
 our( $opt_w, $opt_h, $opt_o );
 getopts('w:h:o:');
@@ -48,7 +48,7 @@ my @png_files = @ARGV;	# remaining args after option processing
 # PNGs for which a corresponding TILEDEF file exists will be considered as
 # containing BTILES.  A PNG that does not have a matching TILEDEF file will
 # be considered the main map.  There can be only one PNG without TILEDEF
-# file.
+# file.  The map file can have an optional MAPDEF file with screen metadata.
 
 my @btile_files;
 my @map_files;
@@ -143,6 +143,7 @@ foreach my $hash ( keys %btile_index ) {
 
 # 3. Process the main map image:
 #   - Get the full list of cell data for it
+#   - Process the MAPDEF file if it exists and get the screen metadata
 
 # load the PNG and convert it to the ZX Spectrum color palette
 my $png = load_png_file( $map_png_file );
@@ -166,12 +167,61 @@ if ( ( $map_cols % $screen_cols ) ) {
     die "Cell columns of PNG map file $map_png_file ($map_cols) must be a multiple of screen width ($screen_cols columns)\n";
 }
 
+# precalculate the size of the map, in vertical and horizontal screens
+my $map_screen_rows = $map_rows / $screen_rows;
+my $map_screen_cols = $map_cols / $screen_cols;
+
 # load cell data from PNG
 my $main_map_cell_data = png_get_all_cell_data( $png );
 
-# At this point we also have the cell data for the main map.  Now we only
-# need to walk the main map cells trying to match them with the BTILEs we
-# know
+
+# this variable holds the screen metadata from the MAPDEF file. Initially undef for all screens.
+my $screen_metadata;
+push @$screen_metadata, [ (undef) x $map_screen_cols ] for ( 0 .. ( $map_screen_rows - 1 ) );
+
+# load screen metadata from MAPDEF file if it exists
+my $mapdef_file = dirname( $map_png_file ) . '/' . basename( $map_png_file, '.png', '.PNG' ) . '.mapdef';
+if ( -e $mapdef_file ) {
+    open MAPDEF, $mapdef_file or
+        die "Could not open MAPDEF file $mapdef_file for reading\n";
+
+    while ( my $line = <MAPDEF> ) {
+        chomp( $line );
+        $line =~ s/#.*$//g;		# remove comments
+        next if ( $line =~ /^$/ );	# skip blank lines
+
+        # The first two fields are the screen row and column numbers in the
+        # main map.  The metadata is the rest of the fields, which are in
+        # the form key=value, space separated
+        my ( $map_screen_row, $map_screen_col, @rest ) = split( /\s+/, $line );
+
+        # bound checking
+        if ( $map_screen_row >= $map_screen_rows ) {
+            die sprintf( "Screen(%d,%d): row %d is outside of the map (max allowed: %d)\n", 
+                $map_screen_row, $map_screen_col, $map_screen_row, $map_screen_rows - 1 );
+        }
+        if ( $map_screen_col >= $map_screen_cols ) {
+            die sprintf( "Screen(%d,%d): column %d is outside of the map (max allowed: %d)\n", 
+                $map_screen_row, $map_screen_col, $map_screen_col, $map_screen_cols - 1 );
+        }
+
+        # process and save screen metadata at the proper position
+        $screen_metadata->[ $map_screen_row ][ $map_screen_col ] = {
+            map {
+                my ($k,$v) = split( /=/, $_ );		# split into key=value
+                $k = lc($k);				# canonicalize key
+                $v =~ s/_/ /g if ( $k eq 'title' );	# replace _ with ' ' in titles
+                ( $k, $v ) 				# return the pair for the hash
+            } @rest
+        };
+    }
+
+    close MAPDEF;
+}
+
+# At this point we also have the cell data and optional screen metadata for
+# the main map.  Now we only need to walk the main map cells trying to match
+# them with the BTILEs we know
 
 # 4. Walk the main map cells (MxN size) for each map screen (RxC size):
 #   - Check it the status is not "matched" (it may habe been marked as such
@@ -244,8 +294,8 @@ sub match_btile_in_map {
 }
 
 # walk the screen array
-foreach my $screen_row ( 0 .. ( $map_rows / $screen_rows - 1 ) ) {
-    foreach my $screen_col ( 0 .. ( $map_cols / $screen_cols - 1 ) ) {
+foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
+    foreach my $screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
 
         # temporary values
         my $global_screen_top = $screen_row * $screen_rows;
@@ -359,9 +409,23 @@ if ( scalar( @non_checked_cells ) ) {
 # screens with matched btiles generate output
 my %screen_data;
 foreach my $match ( @matched_btiles ) {
-    my $screen_name = sprintf( "AutoScreen_%03d_%03d", $match->{'screen_row'}, $match->{'screen_col'} );
+    my $screen_name = $screen_metadata->[ $match->{'screen_row'} ][ $match->{'screen_col'} ]{'name'} ||
+        sprintf( "AutoScreen_%03d_%03d", $match->{'screen_row'}, $match->{'screen_col'} );
     push @{ $screen_data{ $screen_name }{'btiles'} }, $match;
-    # TBC: add screen metadata
+    $screen_data{ $screen_name }{'screen_row'} = $match->{'screen_row'};
+    $screen_data{ $screen_name }{'screen_col'} = $match->{'screen_col'};
+}
+
+# now we merge the remaining metadata for each screen
+foreach my $screen_name ( keys %screen_data ) {
+    my $screen_row = $screen_data{ $screen_name }{'screen_row'};
+    my $screen_col = $screen_data{ $screen_name }{'screen_col'};
+    if ( defined( $screen_metadata->[ $screen_row ][ $screen_col ] ) ) {
+        $screen_data{ $screen_name } = { 
+            %{ $screen_data{ $screen_name } },				# old hash
+            %{ $screen_metadata->[ $screen_row ][ $screen_col ] }	# new hash
+        };
+    }
 }
 
 # Now we can output GDATA files for each screen and all its contained

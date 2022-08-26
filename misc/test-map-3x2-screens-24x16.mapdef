@@ -1,0 +1,4 @@
+0 0 name=StartScreen dataset=0 hero_startup_xpos=20 hero_startup_ypos=20 title=The_Start
+0 1 name=Corridor title=The_Corridor
+0 2 name=Dungeon title=The_Dungeon
+1 1 name=Stairs title=The_Stairs
