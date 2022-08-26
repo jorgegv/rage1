@@ -22,28 +22,59 @@ require RAGE::BTileUtils;
 
 use Data::Dumper;
 use File::Basename;
-use Getopt::Std;
+use Getopt::Long;
 
 # arguments: 2 or more PNG files, plus some required switches (screen
 # dimensions, output directory, etc.)
 
-our( $opt_w, $opt_h, $opt_o, $opt_f, $opt_t, $opt_l );
-getopts('w:h:o:f:t:l:');
-(   defined( $opt_w ) and		# screen width (cells)
-    defined( $opt_h ) and		# screen height (cells)
-    defined( $opt_o ) and		# output directory for screen GDATA files
-    defined( $opt_f ) and		# output directory for flow rules GDATA files
-    defined( $opt_t ) and		# game area: top cell position
-    defined( $opt_l ) and		# game area: left cell position
-#    definef( $opt_			# hero sprite: width (pixels)
-#    definef( $opt_			# hero sprite: height (pixels)
-    ( scalar( @ARGV ) >= 2 )
-    ) or
-    die "usage: " . basename( $0 ) . " -w <screen_cols> -h <screen_rows> -o <out_dir> <map_png> <btile_png> [<btile_png>]...\n";
+my ( $screen_cols, $screen_rows, $screen_output_dir );
+my ( $flow_output_dir, $game_area_top, $game_area_left );
+my ( $hero_sprite_width, $hero_sprite_height );
+my ( $auto_hotzones );
 
-# collect arguments
-my ( $screen_cols, $screen_rows, $screen_output_dir ) = ( $opt_w, $opt_h, $opt_o );
-my ( $flow_output_dir, $game_area_top, $game_area_left ) = ( $opt_f, $opt_t, $opt_l );
+(
+    GetOptions(
+        "screen-cols=i"		=> \$screen_cols,
+        "screen-rows=i"		=> \$screen_rows,
+        "screen-output-dir=s"	=> \$screen_output_dir,
+        "flow-output-dir=s"		=> \$flow_output_dir,
+        "game-area-top=i"		=> \$game_area_top,
+        "game-area-left=i"		=> \$game_area_left,
+        "hero-sprite-width=i"	=> \$hero_sprite_width,
+        "hero-sprite-height=i"	=> \$hero_sprite_height,
+        "auto-hotzones"		=> \$auto_hotzones,
+    )
+    and ( scalar( @ARGV ) >= 2 )
+    and defined( $screen_cols )
+    and defined( $screen_rows )
+    and defined( $screen_output_dir )
+#    and defined( $flow_output_dir )
+#    and defined( $game_area_top )
+#    and defined( $game_area_left )
+#    and defined( $hero_sprite_width )
+#    and defined( $hero_sprite_height )
+) or die "usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
+
+<options> can be the following:
+
+Required:
+
+    --screen-cols <cols>		Width of each screen, in 8x8 cells
+    --screen-rows <rows>		Height of each screen, in 8x8 cells
+    --screen-output-dir <dir>		Output directory for Screen GDATA files
+    --flow-output-dir <dir>		Output directory for Flow rules GDATA files
+    --game-area-top <row>		Top row of the Game Area
+    --game-area-left <col>		Left column of the Game Area
+    --hero-sprite-width <width>		Width of the Hero sprite, in pixels
+    --hero-sprite-height <height>	Height of the Hero sprite, in pixels
+
+Optional:
+
+    --auto-hotzones			Autodetects HOTZONEs between screens
+
+EOF_HELP
+;
+
 my @png_files = @ARGV;	# remaining args after option processing
 
 # Stages:
