@@ -27,17 +27,23 @@ use Getopt::Std;
 # arguments: 2 or more PNG files, plus some required switches (screen
 # dimensions, output directory, etc.)
 
-our( $opt_w, $opt_h, $opt_o );
-getopts('w:h:o:');
-( defined( $opt_w ) and
-    defined( $opt_h ) and
-    defined( $opt_o ) and
+our( $opt_w, $opt_h, $opt_o, $opt_f, $opt_t, $opt_l );
+getopts('w:h:o:f:t:l:');
+(   defined( $opt_w ) and		# screen width (cells)
+    defined( $opt_h ) and		# screen height (cells)
+    defined( $opt_o ) and		# output directory for screen GDATA files
+    defined( $opt_f ) and		# output directory for flow rules GDATA files
+    defined( $opt_t ) and		# game area: top cell position
+    defined( $opt_l ) and		# game area: left cell position
+#    definef( $opt_			# hero sprite: width (pixels)
+#    definef( $opt_			# hero sprite: height (pixels)
     ( scalar( @ARGV ) >= 2 )
     ) or
     die "usage: " . basename( $0 ) . " -w <screen_cols> -h <screen_rows> -o <out_dir> <map_png> <btile_png> [<btile_png>]...\n";
 
 # collect arguments
-my ($screen_cols, $screen_rows, $output_dir ) = ( $opt_w, $opt_h, $opt_o );
+my ( $screen_cols, $screen_rows, $screen_output_dir ) = ( $opt_w, $opt_h, $opt_o );
+my ( $flow_output_dir, $game_area_top, $game_area_left ) = ( $opt_f, $opt_t, $opt_l );
 my @png_files = @ARGV;	# remaining args after option processing
 
 # Stages:
@@ -399,7 +405,13 @@ if ( scalar( @non_checked_cells ) ) {
         join( "\n", @non_checked_cells ) . "\n";
 }
 
-# 6.  Walk the screen list and create the associated GDATA file for tat
+# 6. Identify HOTZONEs in the main map PNG file
+
+# At this point we have a list of the HOTZONEs found in the main map, with
+# their associated data: screen A, screen B, screen A position and size, and
+# screen B position and size
+
+# 7.  Walk the screen list and create the associated GDATA file for tat
 # screen with all its associated data:
 #   - BTILE definitions
 #   - HOTZONE definitions
@@ -434,7 +446,7 @@ my $btile_counter = 0;
 
 foreach my $screen_name ( sort keys %screen_data ) {
     my $screen_data = $screen_data{ $screen_name };
-    my $output_file = sprintf( "%s/%s.gdata", $output_dir, $screen_name );
+    my $output_file = sprintf( "%s/%s.gdata", $screen_output_dir, $screen_name );
     open GDATA,">$output_file" or
         die "Could not open file $output_file for writing\n";
 
@@ -470,3 +482,6 @@ EOF_GDATA_END
 
     close GDATA;
 }
+
+# 8.  Walk the HOTZONE list and generate the GDATA files with FLOWGEN rules
+# associated to the HOTZONES
