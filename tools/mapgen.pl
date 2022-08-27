@@ -55,7 +55,7 @@ my ( $auto_hotzones );
 #    and defined( $hero_sprite_height )
 ) or die "usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
 
-<options> can be the following:
+Where <options> can be the following:
 
 Required:
 
@@ -70,7 +70,7 @@ Required:
 
 Optional:
 
-    --auto-hotzones			Autodetects HOTZONEs between screens
+    --auto-hotzones			Autodetects HOTZONEs between adjacent screens
 
 EOF_HELP
 ;
@@ -436,7 +436,53 @@ if ( scalar( @non_checked_cells ) ) {
         join( "\n", @non_checked_cells ) . "\n";
 }
 
-# 6. Identify HOTZONEs in the main map PNG file
+# 6. Identify HOTZONEs in the main map PNG file - TBD
+#
+# Requirements:
+#
+# - A predefined color is selected as the HOTZONE marker with a command line
+#   argument (RRGGBB format)
+#
+# - HOTZONEs are marked on the map as solid rectangles of the predefined
+#   color
+#
+# - They must have minimum dimensions (8x8 pixels)
+#
+# - They must not be greater than maximum dimensions (1 screen wide/high)
+#
+# - If a HOTZONE is completely contained inside a given screen, it is
+#   defined as is and no Flow rules are generated, they should be manually
+#   written
+#
+# - If a HOTZONE overlaps two adjacent screens, it is split into two
+#   different HOTZONEs, one for each screen, and Flow rules are generated
+#   for automatic screen switching
+
+# When auto-hotzones is NOT selected:
+#
+# - Walk the pixel data for all the map:
+#
+#   - Identify a pixel of the marker color
+#
+#   - Walk right until a pixel of different color is found, and mark each pixel as checked
+#
+#   - Ensure minimum width and note the found width
+#
+#   - Walk down matching full lines of pixels with the marker color and the
+#     same width, until a line is found with different color
+#
+#   - Ensure minimum height
+#
+#   - If the above procedure has found a new HOTZONE, then:
+#
+#     - If the hotzone is fully contained in a single screen, then save the
+#       HOTZONE, mark the pixels as matched and checked, and continue
+#       matching
+#
+#     - If the hotzone overlaps two screens, split into two hotzones which
+#       are each contained in single screens, associate each hotzone with
+#       the other one, mark the pixels as matched and checked, and continue
+#       matching
 
 # At this point we have a list of the HOTZONEs found in the main map, with
 # their associated data: screen A, screen B, screen A position and size, and
@@ -515,4 +561,4 @@ EOF_GDATA_END
 }
 
 # 8.  Walk the HOTZONE list and generate the GDATA files with FLOWGEN rules
-# associated to the HOTZONES
+# associated to the HOTZONEs
