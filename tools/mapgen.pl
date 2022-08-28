@@ -82,6 +82,10 @@ EOF_HELP
 
 my @png_files = @ARGV;	# remaining args after option processing
 
+# screen dimensions in pixels
+my $screen_width = $screen_cols * 8;
+my $screen_height = $screen_rows * 8;
+
 # Stages:
 
 # 1.  Process the list of PNG files and classify them as BTILE or MAP
@@ -556,6 +560,9 @@ my $matched_pixels;
 # this will contain the list of matched hotzones
 my @matched_hotzones;
 
+# this will contain the final list of hotzones, with additional metadata
+my @all_hotzones;
+
 # Steps when auto-hotzones IS selected:
 #
 # Requirements:
@@ -665,15 +672,150 @@ if ( not $auto_hotzones ) {
         }
     }
 
-    # split the hotzones that overlap two screens
+    # Process hotzones: associate the screen where they are, splitting the
+    # hotzones that overlap two screens if necessary and converting global
+    # coordinates (map) to local ones (screen).  Error if a hotzone overlaps
+    # more than 2 screens, they are not supported.  Remember that dimensions
+    # ae in pixels, but the screen position is (row,col)
+    foreach my $hotzone ( @matched_hotzones ) {
+
+        # calculate all the screens that are covered by this hotzone
+        my %covered_screens = map {
+                # map screen row: y / screen_height
+                # map screen col: x / screen_width
+                my $screen_row = int( $_->[1] / $screen_height );
+                my $screen_col = int( $_->[0] / $screen_width );
+                ( 
+                    sprintf( "%03d_%03d", $screen_row, $screen_col ),
+                    { row => $screen_row, col => $screen_col }
+                ) 
+            } ( 
+            [ $hotzone->{'x_min'}, $hotzone->{'y_min'} ],	# process the four corners
+            [ $hotzone->{'x_max'}, $hotzone->{'y_min'} ],
+            [ $hotzone->{'x_min'}, $hotzone->{'y_max'} ],
+            [ $hotzone->{'x_max'}, $hotzone->{'y_max'} ],
+            );
+
+        if ( scalar( keys %covered_screens ) == 1 ) {
+            # if only one screen is covered, just save the hotzone to the final list
+            my ( $screen ) = map { $covered_screens{ $_ } } keys %covered_screens;
+            my $index = scalar( @all_hotzones );
+            push @all_hotzones, {
+                index		=> $index,
+                screen_row	=> $screen->{'row'},
+                screen_col	=> $screen->{'col'},
+                global_x_min	=> $hotzone->{'x_min'},
+                global_x_max	=> $hotzone->{'x_max'},
+                global_y_min	=> $hotzone->{'y_min'},
+                global_y_max	=> $hotzone->{'y_max'},
+                local_x_min	=> $hotzone->{'x_min'} % $screen_width,
+                local_x_max	=> $hotzone->{'x_max'} % $screen_width,
+                local_y_min	=> $hotzone->{'y_min'} % $screen_height,
+                local_y_max	=> $hotzone->{'y_max'} % $screen_height,
+            };
+        } elsif ( scalar( keys %covered_screens ) == 2 ) {
+            # if two screens are covered, split the hotzone in two and associate them
+            my ( $screen_a, $screen_b ) = map { $covered_screens{ $_ } } sort keys %covered_screens;
+
+            # save the indexes that they will have, for future reference
+            my $index_a = scalar( @all_hotzones );
+            my $index_b = $index_a + 1;
+
+            # now with the hotzone split...
+            my $hotzone_a;
+            my $hotzone_b;
+
+            # check if we need to split horizontally or vertically
+            if ( $screen_a->{'row'} eq $screen_b->{'row'} ) {
+                # screens on the same row => vertical split
+                # global y_min and y_max coords are the same in both
+                my $x_min_a = $hotzone->{'x_min'};
+                my $x_max_a = $screen_b->{'col'} * 8 - 1;
+                my $x_min_b = $screen_b->{'col'} * 8;
+                my $x_max_b = $hotzone->{'x_max'};
+                $hotzone_a = {
+                    index		=> $index_a,
+                    screen_row		=> $screen_a->{'row'},
+                    screen_col		=> $screen_a->{'col'},
+                    global_x_min	=> $x_min_a,
+                    global_x_max	=> $x_max_a,
+                    global_y_min	=> $hotzone->{'y_min'},
+                    global_y_max	=> $hotzone->{'y_max'},
+                    local_x_min		=> $x_min_a % $screen_width,
+                    local_x_max		=> $x_max_a % $screen_width,
+                    local_y_min		=> $hotzone->{'y_min'} % $screen_height,
+                    local_y_max		=> $hotzone->{'y_max'} % $screen_height,
+                    linked_hotzone	=> $index_b,
+                };
+                $hotzone_b = {
+                    index		=> $index_b,
+                    screen_row		=> $screen_b->{'row'},
+                    screen_col		=> $screen_b->{'col'},
+                    global_x_min	=> $x_min_b,
+                    global_x_max	=> $x_max_b,
+                    global_y_min	=> $hotzone->{'y_min'},
+                    global_y_max	=> $hotzone->{'y_max'},
+                    local_x_min		=> $x_min_b % $screen_width,
+                    local_x_max		=> $x_max_b % $screen_width,
+                    local_y_min		=> $hotzone->{'y_min'} % $screen_height,
+                    local_y_max		=> $hotzone->{'y_max'} % $screen_height,
+                    linked_hotzone	=> $index_a,
+                };
+            } else {
+                # screens on the same column => horizontal split
+                # global x_min and x_max coords are the same in both
+                my $y_min_a = $hotzone->{'y_min'};
+                my $y_max_a = $screen_b->{'row'} * 8 - 1;
+                my $y_min_b = $screen_b->{'row'} * 8;
+                my $y_max_b = $hotzone->{'y_max'};
+                $hotzone_a = {
+                    index		=> $index_a,
+                    screen_row		=> $screen_a->{'row'},
+                    screen_col		=> $screen_a->{'col'},
+                    global_x_min	=> $hotzone->{'x_min'},
+                    global_x_max	=> $hotzone->{'x_max'},
+                    global_y_min	=> $y_min_a,
+                    global_y_max	=> $y_max_a,
+                    local_x_min		=> $hotzone->{'x_min'} % $screen_width,
+                    local_x_max		=> $hotzone->{'x_max'} % $screen_width,
+                    local_y_min		=> $y_min_a % $screen_height,
+                    local_y_max		=> $y_max_a % $screen_height,
+                    linked_hotzone	=> $index_b,
+                };
+                $hotzone_b = {
+                    index		=> $index_b,
+                    screen_row		=> $screen_b->{'row'},
+                    screen_col		=> $screen_b->{'col'},
+                    global_x_min	=> $hotzone->{'x_min'},
+                    global_x_max	=> $hotzone->{'x_max'},
+                    global_y_min	=> $y_min_b,
+                    global_y_max	=> $y_max_b,
+                    local_x_min		=> $hotzone->{'x_min'} % $screen_width,
+                    local_x_max		=> $hotzone->{'x_max'} % $screen_width,
+                    local_y_min		=> $y_min_b % $screen_height,
+                    local_y_max		=> $y_max_b % $screen_height,
+                    linked_hotzone	=> $index_a,
+                };
+            }
+
+            # save hotzones in order: screen A, then screen B
+            push @all_hotzones, $hotzone_a, $hotzone_b;
+
+        } else {
+            # if more than two screens are covered, error
+            die sprintf( "Error: Hotzone (%d,%d)-(%d,%d) covers more than 2 screens\n",
+                map { $hotzone->{ $_ } } qw( x_min y_min x_max y_max )
+            );
+        }
+    }
 
 }
 
-print Dumper( \@matched_hotzones );
+print Dumper( \@all_hotzones );
 
 # At this point we have a list of the HOTZONEs found in the main map, with
-# their associated data: screen A, screen B, screen A position and size, and
-# screen B position and size
+# all their own metadata (x_min,y_min), (x_max,y_max) in local and global
+# coords, and the index of the linked one, when applicable
 
 # 7.  Walk the screen list and create the associated GDATA file for tat
 # screen with all its associated data:
