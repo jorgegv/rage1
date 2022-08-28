@@ -30,19 +30,22 @@ use Getopt::Long;
 my ( $screen_cols, $screen_rows, $screen_output_dir );
 my ( $flow_output_dir, $game_area_top, $game_area_left );
 my ( $hero_sprite_width, $hero_sprite_height );
-my ( $auto_hotzones );
-
+my $auto_hotzones;
+my $hotzone_color = '00FF00';
+my $hotzone_bgcolor = '000000';
 (
     GetOptions(
         "screen-cols=i"		=> \$screen_cols,
         "screen-rows=i"		=> \$screen_rows,
         "screen-output-dir=s"	=> \$screen_output_dir,
-        "flow-output-dir=s"		=> \$flow_output_dir,
-        "game-area-top=i"		=> \$game_area_top,
-        "game-area-left=i"		=> \$game_area_left,
+        "flow-output-dir=s"	=> \$flow_output_dir,
+        "game-area-top=i"	=> \$game_area_top,
+        "game-area-left=i"	=> \$game_area_left,
         "hero-sprite-width=i"	=> \$hero_sprite_width,
         "hero-sprite-height=i"	=> \$hero_sprite_height,
-        "auto-hotzones"		=> \$auto_hotzones,
+        "auto-hotzones"		=> \$auto_hotzones,		# optional, default false
+        "hotzone-color:s"	=> \$hotzone_color,		# optional, default '00FF00'
+        "hotzone-bgcolor:s"	=> \$hotzone_bgcolor,		# optional, default '00FF00'
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -70,7 +73,9 @@ Required:
 
 Optional:
 
-    --auto-hotzones			Autodetects HOTZONEs between adjacent screens
+    --auto-hotzones			Enable HOTZONE autodetection between adjacent screens
+    --hotzone-bgcolor			When --auto-hotzones is enabled, selects background HOTZONE color
+    --hotzone-color			When --auto-hotzones is disabled, selects HOTZONE color
 
 EOF_HELP
 ;
@@ -183,12 +188,12 @@ foreach my $hash ( keys %btile_index ) {
 #   - Process the MAPDEF file if it exists and get the screen metadata
 
 # load the PNG and convert it to the ZX Spectrum color palette
-my $png = load_png_file( $map_png_file );
-map_png_colors_to_zx_colors( $png );
+my $main_map_png = load_png_file( $map_png_file );
+map_png_colors_to_zx_colors( $main_map_png );
 
 # Make sure the map PNG has valid dimensions
-my $map_height = scalar( @$png );
-my $map_width = scalar( @{ $png->[0] } );
+my $map_height = scalar( @$main_map_png );
+my $map_width = scalar( @{ $main_map_png->[0] } );
 if ( ( $map_width % 8 ) or ( $map_height % 8 ) ) {
     die "Dimensions of PNG map file $map_png_file (${map_width}x${map_height} pixels) are not a multiple of 8\n";
 }
@@ -209,8 +214,7 @@ my $map_screen_rows = $map_rows / $screen_rows;
 my $map_screen_cols = $map_cols / $screen_cols;
 
 # load cell data from PNG
-my $main_map_cell_data = png_get_all_cell_data( $png );
-
+my $main_map_cell_data = png_get_all_cell_data( $main_map_png );
 
 # this variable holds the screen metadata from the MAPDEF file. Initially undef for all screens.
 my $screen_metadata;
@@ -441,10 +445,10 @@ if ( scalar( @non_checked_cells ) ) {
 # Requirements:
 #
 # - A predefined color is selected as the HOTZONE marker with a command line
-#   argument (RRGGBB format)
+#   argument (RRGGBB format, default 00FF00)
 #
-# - HOTZONEs are marked on the map as solid rectangles of the predefined
-#   color
+# - HOTZONEs are marked on the main map as solid rectangles of the
+#   predefined color
 #
 # - They must have minimum dimensions (8x8 pixels)
 #
@@ -458,7 +462,148 @@ if ( scalar( @non_checked_cells ) ) {
 #   different HOTZONEs, one for each screen, and Flow rules are generated
 #   for automatic screen switching
 
-# When auto-hotzones is NOT selected:
+# Minimum and maximum dimensions for HOTZONEs
+my $hotzone_min_height = 4;
+my $hotzone_max_height = $screen_rows * 8;	# screen height, in pixels
+my $hotzone_min_width = 4;
+my $hotzone_max_width = $screen_cols * 8;	# screen width, in pixels
+
+# match_rectangle_in_map: tries to match a rectangle of a given color in a
+# PNG map, starting from a specific origin.
+# origin: 0 (top-left), 1 (top-right), 2 (bottom-left), 3 (bottom-right)
+sub match_rectangle_in_map {
+    my ( $map, $match_color, $match_origin, $pos_x, $pos_y, $min_x, $min_y, $max_x, $max_y ) = @_;
+    my ( $dx, $dy );
+    my ( $new_pos_x, $new_pos_y );
+
+    # setup proper increments for the generic algorithm according to the origin
+    if ( $match_origin == 0 ) {
+        ( $dx, $dy ) = ( 1, 1 );
+    } elsif ( $match_origin == 1 ) {
+        ( $dx, $dy ) = ( -1, 1 );
+    } elsif ( $match_origin == 2 ) {
+        ( $dx, $dy ) = ( 1, -1 );
+    } elsif ( $match_origin == 3 ) {
+        ( $dx, $dy ) = ( -1, -1 );
+    } else {
+        die "match_origin: invalid value\n";
+    }
+
+    # external loop for matching vertically stacked horiz lines
+    $new_pos_y = $pos_y;
+    my $matched_height = 0;
+    my $matched_width = 0;
+    while ( ( $new_pos_y >= $min_y ) and ( $new_pos_y <= $max_y ) and
+            ( $matched_height < $hotzone_max_height ) ) {
+
+        # start matching horizontally for this line
+        $new_pos_x = $pos_x;
+        my $matched_x = 0;
+        while ( ( $new_pos_x >= $min_x ) and ( $new_pos_x <= $max_x ) and 
+                ( $matched_x < $hotzone_max_width ) and
+                ( $map->[ $new_pos_y ][ $new_pos_x ] eq $match_color ) ) {
+            $new_pos_x += $dx;
+            $matched_x++;
+        }
+
+        # end matching lines if a non-matching one was found
+        if ( ( $matched_height > 0 ) and not $matched_x ) {
+            last;
+        }
+
+        # if a match was found but was not wide enough, return undef
+        return undef if ( $matched_x < $hotzone_min_width );
+
+        # matched width is not the same as previously matched width, return undef
+        return undef if ( $matched_width and ( $matched_x != $matched_width ) );
+
+        # save first matched width
+        if ( not $matched_width ) {
+            $matched_width = $matched_x;
+        }
+
+        $new_pos_y += $dy;
+        $matched_height++;
+    }
+    # finished matching lines
+
+    # get final coords
+    my $max_pos_x = $pos_x + $dx * ( $matched_width - 1 );
+    my $max_pos_y = $pos_y + $dy * ( $matched_height - 1 );
+
+    # match not high enough, return undef
+    return undef if ( $matched_height < $hotzone_min_height );
+
+    # at this point we have indentified a rectangle with the specified color
+    # sort min and max x and y values and return
+    return {
+        x_min	=> ( $max_pos_x > $pos_x ? $pos_x     : $max_pos_x ),
+        x_max	=> ( $max_pos_x > $pos_x ? $max_pos_x : $pos_x     ),
+        y_min	=> ( $max_pos_y > $pos_y ? $pos_y     : $max_pos_y ),
+        y_max	=> ( $max_pos_y > $pos_y ? $max_pos_y : $pos_y     ),
+        width	=> $matched_width,
+        height	=> $matched_height,
+    }
+}
+
+# This var will hold the checked and matched pixels.  We do not want to
+# re-check the pixels corresponding to an already matched hotzone.  At the
+# end of matching, this bidimensional array should have the same size as the
+# main map (in pixels), and all values should be defined and == 1
+my $checked_pixels;
+my $matched_pixels;
+
+# this will contain the list of matched hotzones
+my @matched_hotzones;
+
+# Steps when auto-hotzones IS selected:
+#
+# Requirements:
+#
+# - A background color can be specified with a command line argument
+#   (RRGGBB format, default 000000)
+#
+# - A width for the hotzones can be specified with a command line argument
+#   (integer, default 4 pixels)
+#
+# Procedure:
+#
+# - Identify horizontal bottom borders of all screens.  For each border of a
+#   given screen:
+#
+#   - Match rectangle of pixels with background color (hotzone candidate)
+#
+#   - Mark pixels as matched, save the hotzone
+#
+#   - Continue matching hotzones until end of border for this screen
+#
+# - Identify horizontal top borders of all screens.  For each border of a
+#   given screen:
+#
+#   - Match rectangle of pixels with background color (hotzone candidate)
+#
+#   - Mark pixels as matched, save the hotzone
+#
+#   - Continue matching hotzones until end of border for this screen
+#
+# - For each pair of vertically adjacent screens:
+#
+#   - If the number of hotzones is not the same on adjacent top and bottom borders, discard both lists
+#
+#   - If the number is the same, then for each pair of top and bottom screen hotzones:
+#
+#     - If the horizontal coordinates match, link both hotzones and save both into global hotzone list
+#
+# - Repeat the previous procedure for vertical borders and horizontal adjacencies
+
+if ( $auto_hotzones ) {
+
+    # AUTO-HOTZONES ENABLED
+
+    die "Automatic HOTZONEs not implemented yet\n";
+}
+
+# Steps when auto-hotzones IS NOT selected:
 #
 # - Walk the pixel data for all the map:
 #
@@ -483,6 +628,48 @@ if ( scalar( @non_checked_cells ) ) {
 #       are each contained in single screens, associate each hotzone with
 #       the other one, mark the pixels as matched and checked, and continue
 #       matching
+
+if ( not $auto_hotzones ) {
+
+    # AUTO-HOTZONES DISABLED
+
+    # first, sweep all the image identifying hotzones globally
+    foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
+        foreach my $pos_y ( 0 .. ( $map_height - 1 ) ) {
+
+            # skip pixel if already checked by a previously matched hotzone
+            next if $checked_pixels->[ $pos_x ][ $pos_y ];
+
+            # mark pixel as checked
+            $checked_pixels->[ $pos_x ][ $pos_y ]++;
+
+            # try to match a rectangle
+            my $match = match_rectangle_in_map( $main_map_png, $hotzone_color,
+                0,	# match origin: top-left
+                $pos_x, $pos_y,
+                0, 0, ( $map_width - 1 ), ( $map_height - 1 )
+                );
+
+            # quickly return if no match
+            next if not defined $match;
+
+            # a match was found, mark its pixels as checked
+            foreach my $x ( $match->{'x_min'} .. $match->{'x_max'} ) {
+                foreach my $y ( $match->{'y_min'} .. $match->{'y_max'} ) {
+                    $checked_pixels->[ $x ][ $y ]++;
+                }
+            }
+
+            # ...then save the matched hotzone
+            push @matched_hotzones, $match;
+        }
+    }
+
+    # split the hotzones that overlap two screens
+
+}
+
+print Dumper( \@matched_hotzones );
 
 # At this point we have a list of the HOTZONEs found in the main map, with
 # their associated data: screen A, screen B, screen A position and size, and
