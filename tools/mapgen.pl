@@ -23,16 +23,20 @@ require RAGE::BTileUtils;
 use Data::Dumper;
 use File::Basename;
 use Getopt::Long;
+use GD;
 
 # arguments: 2 or more PNG files, plus some required switches (screen
 # dimensions, output directory, etc.)
 
+# variables for CLI arguments
 my ( $screen_cols, $screen_rows, $screen_output_dir );
 my ( $flow_output_dir, $game_area_top, $game_area_left );
 my ( $hero_sprite_width, $hero_sprite_height );
 my $auto_hotzones;
 my $hotzone_color = '00FF00';
 my $hotzone_bgcolor = '000000';
+my $generate_check_map;
+
 (
     GetOptions(
         "screen-cols=i"		=> \$screen_cols,
@@ -41,11 +45,10 @@ my $hotzone_bgcolor = '000000';
         "flow-output-dir=s"	=> \$flow_output_dir,
         "game-area-top=i"	=> \$game_area_top,
         "game-area-left=i"	=> \$game_area_left,
-        "hero-sprite-width=i"	=> \$hero_sprite_width,
-        "hero-sprite-height=i"	=> \$hero_sprite_height,
         "auto-hotzones"		=> \$auto_hotzones,		# optional, default false
         "hotzone-color:s"	=> \$hotzone_color,		# optional, default '00FF00'
-        "hotzone-bgcolor:s"	=> \$hotzone_bgcolor,		# optional, default '00FF00'
+        "hotzone-bgcolor:s"	=> \$hotzone_bgcolor,		# optional, default '000000'
+        "generate-check-map"	=> \$generate_check_map,	# optional, default false
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -54,8 +57,6 @@ my $hotzone_bgcolor = '000000';
 #    and defined( $flow_output_dir )
 #    and defined( $game_area_top )
 #    and defined( $game_area_left )
-#    and defined( $hero_sprite_width )
-#    and defined( $hero_sprite_height )
 ) or die "usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
 
 Where <options> can be the following:
@@ -68,14 +69,13 @@ Required:
     --flow-output-dir <dir>		Output directory for Flow rules GDATA files
     --game-area-top <row>		Top row of the Game Area
     --game-area-left <col>		Left column of the Game Area
-    --hero-sprite-width <width>		Width of the Hero sprite, in pixels
-    --hero-sprite-height <height>	Height of the Hero sprite, in pixels
 
 Optional:
 
     --auto-hotzones			Enable HOTZONE autodetection between adjacent screens
-    --hotzone-bgcolor			When --auto-hotzones is enabled, selects background HOTZONE color
-    --hotzone-color			When --auto-hotzones is disabled, selects HOTZONE color
+    --hotzone-bgcolor			When --auto-hotzones is enabled, specifies background color
+    --hotzone-color			When --auto-hotzones is disabled, specifies HOTZONE color to match
+    --generate-check-map		Generates a check-map with outlines for the matched objects (PNG)
 
 EOF_HELP
 ;
@@ -591,7 +591,7 @@ sub match_rectangle_in_map {
         y_max	=> ( $max_pos_y > $pos_y ? $max_pos_y : $pos_y     ),
         width	=> $matched_width,
         height	=> $matched_height,
-    }
+    };
 }
 
 # This var will hold the checked pixels.  We do not want to re-check the
@@ -737,6 +737,7 @@ my @all_hotzones;
 foreach my $hotzone ( @matched_hotzones ) {
 
     # calculate all the screens that are covered by this hotzone
+    # we just see where the four corners lay on the map
     my %covered_screens = map {
             # map screen row: y / screen_height
             # map screen col: x / screen_width
@@ -759,16 +760,16 @@ foreach my $hotzone ( @matched_hotzones ) {
         my $index = scalar( @all_hotzones );
         push @all_hotzones, {
             index		=> $index,
-            screen_row	=> $screen->{'row'},
-            screen_col	=> $screen->{'col'},
+            screen_row		=> $screen->{'row'},
+            screen_col		=> $screen->{'col'},
             global_x_min	=> $hotzone->{'x_min'},
             global_x_max	=> $hotzone->{'x_max'},
             global_y_min	=> $hotzone->{'y_min'},
             global_y_max	=> $hotzone->{'y_max'},
-            local_x_min	=> $hotzone->{'x_min'} % $screen_width,
-            local_x_max	=> $hotzone->{'x_max'} % $screen_width,
-            local_y_min	=> $hotzone->{'y_min'} % $screen_height,
-            local_y_max	=> $hotzone->{'y_max'} % $screen_height,
+            local_x_min		=> $hotzone->{'x_min'} % $screen_width,
+            local_x_max		=> $hotzone->{'x_max'} % $screen_width,
+            local_y_min		=> $hotzone->{'y_min'} % $screen_height,
+            local_y_max		=> $hotzone->{'y_max'} % $screen_height,
         };
     } elsif ( scalar( keys %covered_screens ) == 2 ) {
         # if two screens are covered, split the hotzone in two and link them
@@ -787,8 +788,8 @@ foreach my $hotzone ( @matched_hotzones ) {
             # screens on the same map row => vertical split
             # global y_min and y_max coords are the same in both
             my $x_min_a = $hotzone->{'x_min'};
-            my $x_max_a = $screen_b->{'col'} * 8 - 1;
-            my $x_min_b = $screen_b->{'col'} * 8;
+            my $x_max_a = $screen_b->{'col'} * $screen_width - 1;	# screen A, right border
+            my $x_min_b = $screen_b->{'col'} * $screen_width;		# screen B, left border
             my $x_max_b = $hotzone->{'x_max'};
             $hotzone_a = {
                 index		=> $index_a,
@@ -822,8 +823,8 @@ foreach my $hotzone ( @matched_hotzones ) {
             # screens on the same map column => horizontal split
             # global x_min and x_max coords are the same in both
             my $y_min_a = $hotzone->{'y_min'};
-            my $y_max_a = $screen_b->{'row'} * 8 - 1;
-            my $y_min_b = $screen_b->{'row'} * 8;
+            my $y_max_a = $screen_b->{'row'} * $screen_height - 1;	# screen A, bottom border
+            my $y_min_b = $screen_b->{'row'} * $screen_height;		# screen B, top border
             my $y_max_b = $hotzone->{'y_max'};
             $hotzone_a = {
                 index		=> $index_a,
@@ -857,6 +858,7 @@ foreach my $hotzone ( @matched_hotzones ) {
 
         # save hotzones in order: screen A, then screen B
         push @all_hotzones, $hotzone_a, $hotzone_b;
+#        push @all_hotzones, $hotzone_a;
 
     } else {
         # if more than two screens are covered, error
@@ -866,7 +868,7 @@ foreach my $hotzone ( @matched_hotzones ) {
     }
 }
 
-print Dumper( \@all_hotzones );
+#print Dumper( \@all_hotzones );
 
 # At this point we have a list of the HOTZONEs found in the main map, with
 # all their own metadata (x_min,y_min), (x_max,y_max) in local and global
@@ -875,7 +877,74 @@ print Dumper( \@all_hotzones );
 ###########################################################################
 ###########################################################################
 ##
-## 7. Generate GDATA files for each map screen
+## 7. Generate check PNG image if needed
+##
+###########################################################################
+###########################################################################
+
+if ( $generate_check_map ) {
+    my $img = GD::Image->new( $map_width, $map_height );
+    my $black = $img->colorAllocate( 0, 0, 0 );
+    my $red = $img->colorAllocate( 255, 0, 0 );
+    my $green = $img->colorAllocate( 0, 255, 0 );
+    my $blue = $img->colorAllocate( 0, 0, 255 );
+    my $white = $img->colorAllocate( 255, 255, 255 );
+
+    # set black background
+    $img->fill( 0, 0, $black );
+
+    # draw screen borders
+    foreach my $i ( 0 .. ( $screen_rows - 1 ) ) {
+        foreach my $j ( 0 .. ( $screen_cols - 1 ) ) {
+            $img->rectangle(
+                $j * $screen_width, $i * $screen_height,				# xmin, ymin
+                ( $j + 1 ) * $screen_width - 1, ( $i + 1 ) * $screen_height - 1,	# xmax, ymax
+                $white
+            );
+        }
+    }
+
+    # draw tile and item outlines
+    foreach my $btile ( @matched_btiles ) {
+        my $btile_height = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'} } ) * 8;
+        my $btile_width = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'}[0] } ) * 8;
+
+        # set color according to type (btile or item)
+        my $color = ( lc( $all_btiles[ $btile->{'btile_index'} ]{'default_type'} ) eq 'item' ? $blue : $red );
+
+        $img->rectangle(
+            $btile->{'global_cell_col'} * 8,	# xmin
+            $btile->{'global_cell_row'} * 8,	# ymin
+            $btile->{'global_cell_col'} * 8 + $btile_width - 1,		# xmax
+            $btile->{'global_cell_row'} * 8 + $btile_height - 1,	# ymax
+            $color
+        );
+    }
+
+    # draw hotzone outlines
+    foreach my $hotzone ( @all_hotzones ) {
+        $img->rectangle( 
+            ( map { $hotzone->{ $_ } } qw( global_x_min global_y_min global_x_max global_y_max) ), 
+            $green
+        );
+    }
+
+    # all has been drawn, output the check-map PNG file on the working directory
+    my $check_png_file = './' .
+        basename( $map_png_file, '.png', '.PNG' ) . '-check-map.png';
+    open CHECK_PNG,">$check_png_file" or
+        die "Could not open $check_png_file for writing\n";
+    binmode CHECK_PNG;
+    print CHECK_PNG $img->png;
+    close CHECK_PNG;
+
+    print "Check-map file $check_png_file was created\n";
+}
+
+###########################################################################
+###########################################################################
+##
+## 8. Generate GDATA files for each map screen
 ##
 ###########################################################################
 ###########################################################################
@@ -958,7 +1027,7 @@ EOF_GDATA_END
 ###########################################################################
 ###########################################################################
 ##
-## 8. Generate GDATA files with FLOWGEN rules for screen switching
+## 9. Generate GDATA files with FLOWGEN rules for screen switching
 ##
 ###########################################################################
 ###########################################################################
