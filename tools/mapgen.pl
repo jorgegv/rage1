@@ -770,6 +770,8 @@ foreach my $hotzone ( @matched_hotzones ) {
             local_x_max		=> $hotzone->{'x_max'} % $screen_width,
             local_y_min		=> $hotzone->{'y_min'} % $screen_height,
             local_y_max		=> $hotzone->{'y_max'} % $screen_height,
+            pix_width		=> $hotzone->{'x_max'} - $hotzone->{'x_min'} + 1,
+            pix_height		=> $hotzone->{'y_max'} - $hotzone->{'y_min'} + 1,
         };
     } elsif ( scalar( keys %covered_screens ) == 2 ) {
         # if two screens are covered, split the hotzone in two and link them
@@ -804,6 +806,8 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $hotzone->{'y_min'} % $screen_height,
                 local_y_max	=> $hotzone->{'y_max'} % $screen_height,
                 linked_hotzone	=> $index_b,
+                pix_width	=> $x_max_a - $x_min_a + 1,
+                pix_height	=> $hotzone->{'y_max'} - $hotzone->{'y_min'} + 1,
             };
             $hotzone_b = {
                 index		=> $index_b,
@@ -818,6 +822,8 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $hotzone->{'y_min'} % $screen_height,
                 local_y_max	=> $hotzone->{'y_max'} % $screen_height,
                 linked_hotzone	=> $index_a,
+                pix_width	=> $x_max_b - $x_min_b + 1,
+                pix_height	=> $hotzone->{'y_max'} - $hotzone->{'y_min'} + 1,
             };
         } else {
             # screens on the same map column => horizontal split
@@ -839,6 +845,8 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $y_min_a % $screen_height,
                 local_y_max	=> $y_max_a % $screen_height,
                 linked_hotzone	=> $index_b,
+                pix_width	=> $hotzone->{'x_max'} - $hotzone->{'x_min'} + 1,
+                pix_height	=> $y_max_a - $y_min_a + 1,
             };
             $hotzone_b = {
                 index		=> $index_b,
@@ -853,6 +861,8 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $y_min_b % $screen_height,
                 local_y_max	=> $y_max_b % $screen_height,
                 linked_hotzone	=> $index_a,
+                pix_width	=> $hotzone->{'x_max'} - $hotzone->{'x_min'} + 1,
+                pix_height	=> $y_max_b - $y_min_b + 1,
             };
         }
 
@@ -944,16 +954,10 @@ if ( $generate_check_map ) {
 ###########################################################################
 ###########################################################################
 ##
-## 8. Generate GDATA files for each map screen
+## 9. Gather information for each screen and put it together
 ##
 ###########################################################################
 ###########################################################################
-
-# Walk the screen list and create the associated GDATA file for that screen
-# with all its associated data:
-#   - BTILE definitions
-#   - HOTZONE definitions
-#   - ITEM definitions
 
 # First we create a hash with the matches for each screen, so that only
 # screens with matched btiles generate output
@@ -966,7 +970,16 @@ foreach my $match ( @matched_btiles ) {
     $screen_data{ $screen_name }{'screen_col'} = $match->{'screen_col'};
 }
 
-# now we merge the remaining metadata for each screen
+# Then we add the hotzones to each screen
+foreach my $hotzone ( @all_hotzones ) {
+    my $screen_name = $screen_metadata->[ $hotzone->{'screen_row'} ][ $hotzone->{'screen_col'} ]{'name'} ||
+        sprintf( "AutoScreen_%03d_%03d", $hotzone->{'screen_row'}, $hotzone->{'screen_col'} );
+    push @{ $screen_data{ $screen_name }{'hotzones'} }, $hotzone;
+    $screen_data{ $screen_name }{'screen_row'} = $hotzone->{'screen_row'};
+    $screen_data{ $screen_name }{'screen_col'} = $hotzone->{'screen_col'};
+}
+
+# Now we merge the remaining metadata for each screen
 foreach my $screen_name ( keys %screen_data ) {
     my $screen_row = $screen_data{ $screen_name }{'screen_row'};
     my $screen_col = $screen_data{ $screen_name }{'screen_col'};
@@ -978,9 +991,19 @@ foreach my $screen_name ( keys %screen_data ) {
     }
 }
 
-# Now we can output GDATA files for each screen and all its contained
-# elements
-my $btile_counter = 0;
+###########################################################################
+###########################################################################
+##
+## 9. Generate GDATA files for each map screen
+##
+###########################################################################
+###########################################################################
+
+# Walk the screen list and create the associated GDATA file for that screen
+# with all its associated data:
+#   - BTILE definitions
+#   - HOTZONE definitions
+#   - ITEM definitions
 
 foreach my $screen_name ( sort keys %screen_data ) {
     my $screen_data = $screen_data{ $screen_name };
@@ -1002,6 +1025,7 @@ EOF_GDATA_HEADER
     }
 
     # items are output at the same time, they are just different types of BTILEs
+    my $btile_counter = 0;
     foreach my $btile ( @{ $screen_data->{'btiles'} } ) {
         my $btile_instance_name = sprintf( 'AutoBTile_%d', $btile_counter++ );
         my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
@@ -1015,7 +1039,15 @@ EOF_GDATA_HEADER
     }
 
     # hotzones are output separately
+    my $hotzone_counter = 0;
+    foreach my $hotzone ( @{ $screen_data->{'hotzones'} } ) {
+        my $hotzone_name = sprintf( 'AutoHotzone_%d', $hotzone_counter++ );
+        printf GDATA "\tHOTZONE\tNAME=%s\tX=%d Y=%d PIX_WIDTH=%d PIX_HEIGHT=%d ACTIVE=1\n",
+            $hotzone_name,
+            map { $hotzone->{ $_ } } qw( local_x_min local_y_min pix_width pix_height );
+    }
 
+    # print the closing command and close the GDATA file
     print GDATA <<EOF_GDATA_END
 END_SCREEN
 EOF_GDATA_END
@@ -1027,7 +1059,7 @@ EOF_GDATA_END
 ###########################################################################
 ###########################################################################
 ##
-## 9. Generate GDATA files with FLOWGEN rules for screen switching
+## 10. Generate GDATA files with FLOWGEN rules for screen switching
 ##
 ###########################################################################
 ###########################################################################
