@@ -110,6 +110,8 @@ my $screen_height = $screen_rows * 8;
 # be considered the main map.  There can be only one PNG without TILEDEF
 # file.  The map file can have an optional MAPDEF file with screen metadata.
 
+print "Checking input files...\n";
+
 my @btile_files;
 my @map_files;
 foreach my $f ( @png_files ) {
@@ -121,11 +123,14 @@ foreach my $f ( @png_files ) {
     }
 }
 if ( scalar( @map_files ) > 1 ) {
-    print STDERR "Error: all PNG files except the main map must have associated .tiledef files\n";
-    printf STDERR "Files with no associated .tiledef:\n   %s", join( "\n   ", @map_files );
+    print STDERR "** Error: all PNG files except the main map must have associated .tiledef files\n";
+    printf STDERR "** Files with no associated .tiledef:\n   %s", join( "\n   ", @map_files );
     die "\n";
 }
 my $map_png_file = $map_files[0];	# first and only element
+
+print  "-- Map PNG: $map_png_file\n";
+printf "-- BTile PNG: $_\n" for ( @btile_files );
 
 ###########################################################################
 ###########################################################################
@@ -134,6 +139,8 @@ my $map_png_file = $map_files[0];	# first and only element
 ##
 ###########################################################################
 ###########################################################################
+
+print "Loading BTILEs...\n";
 
 # Steps:
 #   - Process the TILEDEF file
@@ -150,6 +157,8 @@ my %btile_index;	# map of cell->hexdump => btile index
 
 # process all PNG Btile files
 foreach my $png_file ( @btile_files ) {
+
+    my $tile_count = 0;
 
     # get all the tiledefs for the file
     my $tiledefs = btile_read_png_tiledefs( $png_file );
@@ -182,7 +191,10 @@ foreach my $png_file ( @btile_files ) {
 
         # ...and update the index
         push @{ $btile_index{ $btile_data->[0][0]{'hexdump'} } }, $current_btile_index;
+
+        $tile_count++;
     }
+    printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
 }
 
 # Since there may be more than one BTILE with the same top-left cell, we now
@@ -217,6 +229,8 @@ foreach my $hash ( keys %btile_index ) {
 ###########################################################################
 ###########################################################################
 
+print "Processing Main Map...\n";
+
 # Steps:
 #   - Get the full list of cell data for it
 #   - Process the MAPDEF file if it exists and get the screen metadata
@@ -229,23 +243,29 @@ map_png_colors_to_zx_colors( $main_map_png );
 my $map_height = scalar( @$main_map_png );
 my $map_width = scalar( @{ $main_map_png->[0] } );
 if ( ( $map_width % 8 ) or ( $map_height % 8 ) ) {
-    die "Dimensions of PNG map file $map_png_file (${map_width}x${map_height} pixels) are not a multiple of 8\n";
+    die "** Error: dimensions of PNG map file $map_png_file (${map_width}x${map_height} pixels) are not a multiple of 8\n";
 }
 
 # Make sure that an integer number of screens can fit in the PNG map file
 my $map_rows = $map_height / 8;
 if ( ( $map_rows % $screen_rows ) ) {
-    die "Cell rows of PNG map file $map_png_file ($map_rows) must be a multiple of screen height ($screen_rows rows)\n";
+    die "** Error: cell rows of PNG map file $map_png_file ($map_rows) must be a multiple of screen height ($screen_rows rows)\n";
 }
 
 my $map_cols = $map_width / 8;
 if ( ( $map_cols % $screen_cols ) ) {
-    die "Cell columns of PNG map file $map_png_file ($map_cols) must be a multiple of screen width ($screen_cols columns)\n";
+    die "** Error: cell columns of PNG map file $map_png_file ($map_cols) must be a multiple of screen width ($screen_cols columns)\n";
 }
+
+printf "-- Loaded Main Map: %dx%d pixels, %d rows x %d columns (8x8 cells)\n",
+    $map_width, $map_height, $map_rows, $map_cols;
 
 # precalculate the size of the map, in vertical and horizontal screens
 my $map_screen_rows = $map_rows / $screen_rows;
 my $map_screen_cols = $map_cols / $screen_cols;
+
+printf "-- Main Map has %d rows of %d screens each\n",
+    $map_screen_rows, $map_screen_cols;
 
 # load cell data from PNG
 my $main_map_cell_data = png_get_all_cell_data( $main_map_png );
@@ -258,7 +278,7 @@ push @$screen_metadata, [ (undef) x $map_screen_cols ] for ( 0 .. ( $map_screen_
 my $mapdef_file = dirname( $map_png_file ) . '/' . basename( $map_png_file, '.png', '.PNG' ) . '.mapdef';
 if ( -e $mapdef_file ) {
     open MAPDEF, $mapdef_file or
-        die "Could not open MAPDEF file $mapdef_file for reading\n";
+        die "** Error: could not open MAPDEF file $mapdef_file for reading\n";
 
     while ( my $line = <MAPDEF> ) {
         chomp( $line );
@@ -272,11 +292,11 @@ if ( -e $mapdef_file ) {
 
         # bound checking
         if ( $map_screen_row >= $map_screen_rows ) {
-            die sprintf( "Screen(%d,%d): row %d is outside of the map (max allowed: %d)\n", 
+            die sprintf( "** Error: screen(%d,%d): row %d is outside of the map (max allowed: %d)\n", 
                 $map_screen_row, $map_screen_col, $map_screen_row, $map_screen_rows - 1 );
         }
         if ( $map_screen_col >= $map_screen_cols ) {
-            die sprintf( "Screen(%d,%d): column %d is outside of the map (max allowed: %d)\n", 
+            die sprintf( "** Error: screen(%d,%d): column %d is outside of the map (max allowed: %d)\n", 
                 $map_screen_row, $map_screen_col, $map_screen_col, $map_screen_cols - 1 );
         }
 
@@ -293,6 +313,8 @@ if ( -e $mapdef_file ) {
 
     close MAPDEF;
 }
+
+print "-- Screen metadata loaded from MAPDEF file\n";
 
 # At this point we also have the cell data and optional screen metadata for
 # the main map.  Now we only need to walk the main map cells trying to match
@@ -379,6 +401,8 @@ sub match_btile_in_map {
     return 1;
 }
 
+print "Identifying BTILEs in Main Map...\n";
+
 # walk the screen array
 foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
     foreach my $screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
@@ -388,6 +412,8 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
         my $global_screen_left = $screen_col * $screen_cols;
         my $global_screen_bottom = $global_screen_top + $screen_rows - 1;
         my $global_screen_right = $global_screen_left + $screen_cols - 1;
+
+        my $btile_count = 0;
 
         # walk the cell array on each screen
         foreach my $cell_row ( 0 .. ( $screen_rows - 1 ) ) {
@@ -442,6 +468,7 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                             } # end of mark-as-checked-and-matched
 
                             # whenever we find a match, skip the rest of btiles
+                            $btile_count++;
                             last;
                         }
 
@@ -451,7 +478,8 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
  
             }
         } # end of cell-walk inside a screen
-
+        printf "-- Screen (%d,%d): matched %d BTILEs\n",
+            $screen_row, $screen_col, $btile_count;
     }
 } # end of screen-walk
 
@@ -474,7 +502,7 @@ foreach my $r ( 0 .. ( $map_rows - 1 ) ) {
     }
 }
 if ( scalar( @non_checked_cells ) ) {
-    die "Error: The following main map cells were not checked for BTILEs:" .
+    die "** Error: The following main map cells were not checked for BTILEs:" .
         join( "\n", @non_checked_cells ) . "\n";
 }
 
@@ -539,7 +567,7 @@ sub match_rectangle_in_map {
     } elsif ( $match_origin == 3 ) {
         ( $dx, $dy ) = ( -1, -1 );
     } else {
-        die "match_origin: invalid value\n";
+        die "** Error: match_origin: invalid value\n";
     }
 
     # loop variables
@@ -653,7 +681,9 @@ if ( $auto_hotzones ) {
     #
     # - Repeat the previous procedure for vertical borders and horizontal adjacencies
 
-    die "Automatic HOTZONEs not implemented yet\n";
+    print "Adding automatic HOTZONEs...\n";
+
+    die "** Error: Automatic HOTZONEs not implemented yet\n";
 
 }
 
@@ -690,6 +720,8 @@ if ( $auto_hotzones ) {
 #       the other one, mark the pixels as matched and checked, and continue
 #       matching
 
+print "Scanning HOTZONEs...\n";
+
 # first, sweep all the image identifying hotzones globally
 foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
     foreach my $pos_y ( 0 .. ( $map_height - 1 ) ) {
@@ -722,6 +754,8 @@ foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
     }
 }
 
+printf "-- Identified %d global HOTZONEs\n", scalar( @matched_hotzones );
+
 ###########################################################################
 ###########################################################################
 ##
@@ -741,6 +775,7 @@ foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
 my @all_hotzones;
 
 # walk the previous list of raw hotzones
+my $split_hotzone_count = 0;
 foreach my $hotzone ( @matched_hotzones ) {
 
     # calculate all the screens that are covered by this hotzone
@@ -781,6 +816,9 @@ foreach my $hotzone ( @matched_hotzones ) {
             pix_height		=> $hotzone->{'y_max'} - $hotzone->{'y_min'} + 1,
         };
     } elsif ( scalar( keys %covered_screens ) == 2 ) {
+
+        $split_hotzone_count++;
+
         # if two screens are covered, split the hotzone in two and link them
         my ( $screen_a, $screen_b ) = map { $covered_screens{ $_ } } sort keys %covered_screens;
 
@@ -881,19 +919,22 @@ foreach my $hotzone ( @matched_hotzones ) {
 
         # save hotzones in order: screen A, then screen B
         push @all_hotzones, $hotzone_a, $hotzone_b;
-#        push @all_hotzones, $hotzone_a;
 
     } else {
         # if more than two screens are covered, error
-        die sprintf( "Error: Hotzone (%d,%d)-(%d,%d) covers more than 2 screens\n",
+        die sprintf( "** Error: Hotzone (%d,%d)-(%d,%d) covers more than 2 screens\n",
             map { $hotzone->{ $_ } } qw( x_min y_min x_max y_max )
         );
     }
 }
 
+printf "-- %d HOTZONEs were split between screens\n", $split_hotzone_count;
+
 # At this point we have a list of the HOTZONEs found in the main map, with
 # all their own metadata (x_min,y_min), (x_max,y_max) in local and global
 # coords, and the index of the linked one, when applicable
+
+printf "-- %d HOTZONEs were identified\n", scalar( @all_hotzones );
 
 ###########################################################################
 ###########################################################################
@@ -904,6 +945,8 @@ foreach my $hotzone ( @matched_hotzones ) {
 ###########################################################################
 
 if ( $generate_check_map ) {
+
+    print "Generating Check-Map file...\n";
 
     # create the output directory if it does not exist
     mkdir( $game_data_dir )
@@ -963,12 +1006,12 @@ if ( $generate_check_map ) {
     my $check_png_file = "$game_data_dir/check/" .
         basename( $map_png_file, '.png', '.PNG' ) . '-check-map.png';
     open CHECK_PNG,">$check_png_file" or
-        die "Could not open $check_png_file for writing\n";
+        die "** Error: could not open $check_png_file for writing\n";
     binmode CHECK_PNG;
     print CHECK_PNG $img->png;
     close CHECK_PNG;
 
-    print "Check-map file $check_png_file was created\n";
+    print "-- Check-Map file $check_png_file was created\n";
 }
 
 ###########################################################################
@@ -1024,6 +1067,8 @@ foreach my $screen_name ( keys %screen_data ) {
 ###########################################################################
 ###########################################################################
 
+print "Generating Screen GDATA files...\n";
+
 # create the output directory if it does not exist
 mkdir( $game_data_dir )
     if ( not -d $game_data_dir );
@@ -1042,7 +1087,7 @@ foreach my $screen_name ( sort keys %screen_data ) {
     my $screen_data = $screen_data{ $screen_name };
     my $output_file = sprintf( "%s/map/%s.gdata", $game_data_dir, $screen_name );
     open GDATA,">$output_file" or
-        die "Could not open file $output_file for writing\n";
+        die "** Error: could not open file $output_file for writing\n";
 
     print GDATA <<EOF_MAP_GDATA_HEADER
 BEGIN_SCREEN
@@ -1096,6 +1141,8 @@ EOF_MAP_GDATA_END
 ;
 
     close GDATA;
+
+    printf "-- File %s for screen '%s' was created\n", $output_file, $screen_name;
 }
 
 ###########################################################################
@@ -1105,6 +1152,8 @@ EOF_MAP_GDATA_END
 ##
 ###########################################################################
 ###########################################################################
+
+print "Generating Flow GDATA files...\n";
 
 # Walk the HOTZONE list and generate the GDATA files with FLOWGEN rules
 # associated to the HOTZONEs
@@ -1117,7 +1166,7 @@ foreach my $screen_name ( sort keys %screen_data ) {
     my $screen_data = $screen_data{ $screen_name };
     my $output_file = sprintf( "%s/flow/%s.gdata", $game_data_dir, $screen_name );
     open GDATA,">$output_file" or
-        die "Could not open file $output_file for writing\n";
+        die "** Error: could not open file $output_file for writing\n";
 
     # output hotzone rules
     foreach my $hotzone ( @{ $screen_data->{'hotzones'} } ) {
@@ -1165,7 +1214,7 @@ foreach my $screen_name ( sort keys %screen_data ) {
                 - 0
             );
         } else {
-            die sprintf "Screen '%s', Hotzone '%s': unexpected link type '%s'\n",
+            die sprintf "** Error: Screen '%s', Hotzone '%s': unexpected link type '%s'\n",
                 $screen_name,
                 $hotzone->{'name'},
                 $hotzone->{'link_type'};
@@ -1178,4 +1227,7 @@ foreach my $screen_name ( sort keys %screen_data ) {
     }
 
     close GDATA;
+    printf "-- File %s: for screen '%s' was created\n", $output_file, $screen_name;
 }
+
+print "MAPGEN Execution successful!\n";
