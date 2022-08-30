@@ -29,11 +29,11 @@ use GD;
 # dimensions, output directory, etc.)
 
 # variables for CLI arguments
-my ( $screen_cols, $screen_rows, $screen_output_dir );
-my ( $flow_output_dir, $game_area_top, $game_area_left );
+my ( $screen_cols, $screen_rows );
+my ( $game_data_dir, $game_area_top, $game_area_left );
 my ( $hero_sprite_width, $hero_sprite_height );
-my $auto_hotzones;
 my $hotzone_color = '00FF00';
+my $auto_hotzones;
 my $auto_hotzone_bgcolor = '000000';
 my $auto_hotzone_width = 4;
 my $generate_check_map;
@@ -42,8 +42,7 @@ my $generate_check_map;
     GetOptions(
         "screen-cols=i"			=> \$screen_cols,
         "screen-rows=i"			=> \$screen_rows,
-        "screen-output-dir=s"		=> \$screen_output_dir,
-        "flow-output-dir=s"		=> \$flow_output_dir,
+        "game-data-dir=s"		=> \$game_data_dir,
         "game-area-top=i"		=> \$game_area_top,
         "game-area-left=i"		=> \$game_area_left,
         "auto-hotzones"			=> \$auto_hotzones,		# optional, default false
@@ -55,8 +54,7 @@ my $generate_check_map;
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
     and defined( $screen_rows )
-    and defined( $screen_output_dir )
-#    and defined( $flow_output_dir )
+    and defined( $game_data_dir )
 #    and defined( $game_area_top )
 #    and defined( $game_area_left )
 ) or die "usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
@@ -67,8 +65,7 @@ Required:
 
     --screen-cols <cols>		Width of each screen, in 8x8 cells
     --screen-rows <rows>		Height of each screen, in 8x8 cells
-    --screen-output-dir <dir>		Output directory for Screen GDATA files
-    --flow-output-dir <dir>		Output directory for Flow rules GDATA files
+    --game-data-dir <dir>		game_data directory where Map and Flow GDATA files will be generated
     --game-area-top <row>		Top row of the Game Area
     --game-area-left <col>		Left column of the Game Area
 
@@ -882,8 +879,6 @@ foreach my $hotzone ( @matched_hotzones ) {
     }
 }
 
-#print Dumper( \@all_hotzones );
-
 # At this point we have a list of the HOTZONEs found in the main map, with
 # all their own metadata (x_min,y_min), (x_max,y_max) in local and global
 # coords, and the index of the linked one, when applicable
@@ -897,6 +892,15 @@ foreach my $hotzone ( @matched_hotzones ) {
 ###########################################################################
 
 if ( $generate_check_map ) {
+
+    # create the output directory if it does not exist
+    mkdir( $game_data_dir )
+        if ( not -d $game_data_dir );
+
+    # create the check directory if it does not exist
+    mkdir( "$game_data_dir/check" )
+        if ( not -d "$game_data_dir/map" );
+
     my $img = GD::Image->new( $map_width, $map_height );
     my $black = $img->colorAllocate( 0, 0, 0 );
     my $red = $img->colorAllocate( 255, 0, 0 );
@@ -944,7 +948,7 @@ if ( $generate_check_map ) {
     }
 
     # all has been drawn, output the check-map PNG file on the working directory
-    my $check_png_file = './' .
+    my $check_png_file = "$game_data_dir/check/" .
         basename( $map_png_file, '.png', '.PNG' ) . '-check-map.png';
     open CHECK_PNG,">$check_png_file" or
         die "Could not open $check_png_file for writing\n";
@@ -1003,15 +1007,23 @@ foreach my $screen_name ( keys %screen_data ) {
 ###########################################################################
 ###########################################################################
 
+# create the output directory if it does not exist
+mkdir( $game_data_dir )
+    if ( not -d $game_data_dir );
+
 # Walk the screen list and create the associated GDATA file for that screen
 # with all its associated data:
 #   - BTILE definitions
 #   - HOTZONE definitions
 #   - ITEM definitions
 
+# create the map directory if it does not exist
+mkdir( "$game_data_dir/map" )
+    if ( not -d "$game_data_dir/map" );
+
 foreach my $screen_name ( sort keys %screen_data ) {
     my $screen_data = $screen_data{ $screen_name };
-    my $output_file = sprintf( "%s/%s.gdata", $screen_output_dir, $screen_name );
+    my $output_file = sprintf( "%s/map/%s.gdata", $game_data_dir, $screen_name );
     open GDATA,">$output_file" or
         die "Could not open file $output_file for writing\n";
 
