@@ -50,13 +50,17 @@ my $generate_check_map;
         "auto-hotzone-bgcolor:s"	=> \$auto_hotzone_bgcolor,	# optional, default '000000'
         "auto-hotzone-width:i"		=> \$auto_hotzone_width,	# optional, default 4
         "generate-check-map"		=> \$generate_check_map,	# optional, default false
+        "hero-sprite-width:i"		=> \$hero_sprite_width,
+        "hero-sprite-height:i"		=> \$hero_sprite_height,
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
     and defined( $screen_rows )
     and defined( $game_data_dir )
-#    and defined( $game_area_top )
-#    and defined( $game_area_left )
+    and defined( $game_area_top )
+    and defined( $game_area_left )
+    and defined( $hero_sprite_width )
+    and defined( $hero_sprite_height )
 ) or die "usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
 
 Where <options> can be the following:
@@ -68,6 +72,8 @@ Required:
     --game-data-dir <dir>		game_data directory where Map and Flow GDATA files will be generated
     --game-area-top <row>		Top row of the Game Area
     --game-area-left <col>		Left column of the Game Area
+    --hero-sprite-width <n>		Width of the Hero sprite, in pixels
+    --hero-sprite-height <n>		Height of the Hero sprite, in pixels
 
 Optional:
 
@@ -790,6 +796,7 @@ foreach my $hotzone ( @matched_hotzones ) {
         if ( $screen_a->{'row'} eq $screen_b->{'row'} ) {
             # screens on the same map row => vertical split
             # global y_min and y_max coords are the same in both
+            # screen A: left - screen B: right
             my $x_min_a = $hotzone->{'x_min'};
             my $x_max_a = $screen_b->{'col'} * $screen_width - 1;	# screen A, right border
             my $x_min_b = $screen_b->{'col'} * $screen_width;		# screen B, left border
@@ -807,6 +814,7 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $hotzone->{'y_min'} % $screen_height,
                 local_y_max	=> $hotzone->{'y_max'} % $screen_height,
                 linked_hotzone	=> $index_b,
+                link_type	=> 'right',
                 pix_width	=> $x_max_a - $x_min_a + 1,
                 pix_height	=> $hotzone->{'y_max'} - $hotzone->{'y_min'} + 1,
             };
@@ -823,12 +831,14 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $hotzone->{'y_min'} % $screen_height,
                 local_y_max	=> $hotzone->{'y_max'} % $screen_height,
                 linked_hotzone	=> $index_a,
+                link_type	=> 'left',
                 pix_width	=> $x_max_b - $x_min_b + 1,
                 pix_height	=> $hotzone->{'y_max'} - $hotzone->{'y_min'} + 1,
             };
         } else {
             # screens on the same map column => horizontal split
             # global x_min and x_max coords are the same in both
+            # screen A: top - screen B: bottom
             my $y_min_a = $hotzone->{'y_min'};
             my $y_max_a = $screen_b->{'row'} * $screen_height - 1;	# screen A, bottom border
             my $y_min_b = $screen_b->{'row'} * $screen_height;		# screen B, top border
@@ -846,6 +856,7 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $y_min_a % $screen_height,
                 local_y_max	=> $y_max_a % $screen_height,
                 linked_hotzone	=> $index_b,
+                link_type	=> 'down',
                 pix_width	=> $hotzone->{'x_max'} - $hotzone->{'x_min'} + 1,
                 pix_height	=> $y_max_a - $y_min_a + 1,
             };
@@ -862,6 +873,7 @@ foreach my $hotzone ( @matched_hotzones ) {
                 local_y_min	=> $y_min_b % $screen_height,
                 local_y_max	=> $y_max_b % $screen_height,
                 linked_hotzone	=> $index_a,
+                link_type	=> 'up',
                 pix_width	=> $hotzone->{'x_max'} - $hotzone->{'x_min'} + 1,
                 pix_height	=> $y_max_b - $y_min_b + 1,
             };
@@ -982,12 +994,17 @@ foreach my $match ( @matched_btiles ) {
 foreach my $hotzone ( @all_hotzones ) {
     my $screen_name = $screen_metadata->[ $hotzone->{'screen_row'} ][ $hotzone->{'screen_col'} ]{'name'} ||
         sprintf( "AutoScreen_%03d_%03d", $hotzone->{'screen_row'}, $hotzone->{'screen_col'} );
+
+    # save the screen name, we'll need it later
+    $hotzone->{'screen_name'} = $screen_name;
+
     push @{ $screen_data{ $screen_name }{'hotzones'} }, $hotzone;
     $screen_data{ $screen_name }{'screen_row'} = $hotzone->{'screen_row'};
     $screen_data{ $screen_name }{'screen_col'} = $hotzone->{'screen_col'};
 }
 
-# Now we merge the remaining metadata for each screen
+# Hash %screen data has been populated by the previous steps.  Now we merge
+# the remaining metadata for each screen
 foreach my $screen_name ( keys %screen_data ) {
     my $screen_row = $screen_data{ $screen_name }{'screen_row'};
     my $screen_col = $screen_data{ $screen_name }{'screen_col'};
@@ -1027,9 +1044,9 @@ foreach my $screen_name ( sort keys %screen_data ) {
     open GDATA,">$output_file" or
         die "Could not open file $output_file for writing\n";
 
-    print GDATA <<EOF_GDATA_HEADER
+    print GDATA <<EOF_MAP_GDATA_HEADER
 BEGIN_SCREEN
-EOF_GDATA_HEADER
+EOF_MAP_GDATA_HEADER
 ;
 
     printf GDATA "\tNAME\t%s\n", $screen_name;
@@ -1043,7 +1060,7 @@ EOF_GDATA_HEADER
     # items are output at the same time, they are just different types of BTILEs
     my $btile_counter = 0;
     foreach my $btile ( @{ $screen_data->{'btiles'} } ) {
-        my $btile_instance_name = sprintf( 'AutoBTile_%d', $btile_counter++ );
+        my $btile_instance_name = sprintf( 'GeneratedBTile_%d', $btile_counter++ );
         my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
         printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
             $btile_data->{'default_type'},
@@ -1057,16 +1074,25 @@ EOF_GDATA_HEADER
     # hotzones are output separately
     my $hotzone_counter = 0;
     foreach my $hotzone ( @{ $screen_data->{'hotzones'} } ) {
-        my $hotzone_name = sprintf( 'AutoHotzone_%d', $hotzone_counter++ );
+        my $hotzone_name = sprintf( 'GeneratedHotzone_%d', $hotzone_counter++ );
+
+        # save the generated hotzone name, we'll need it later
+        $hotzone->{'name'} = $hotzone_name;
+
+        # hotzone coordinates must be offset by the game area top,left coords!
         printf GDATA "\tHOTZONE\tNAME=%s\tX=%d Y=%d PIX_WIDTH=%d PIX_HEIGHT=%d ACTIVE=1\n",
             $hotzone_name,
-            map { $hotzone->{ $_ } } qw( local_x_min local_y_min pix_width pix_height );
+            $hotzone->{ 'local_x_min' } + $game_area_left * 8,
+            $hotzone->{ 'local_y_min' } + $game_area_top * 8,
+            $hotzone->{ 'pix_width' },
+            $hotzone->{ 'pix_height'},
+        ;
     }
 
     # print the closing command and close the GDATA file
-    print GDATA <<EOF_GDATA_END
+    print GDATA <<EOF_MAP_GDATA_END
 END_SCREEN
-EOF_GDATA_END
+EOF_MAP_GDATA_END
 ;
 
     close GDATA;
@@ -1082,3 +1108,74 @@ EOF_GDATA_END
 
 # Walk the HOTZONE list and generate the GDATA files with FLOWGEN rules
 # associated to the HOTZONEs
+
+# create the flow directory if it does not exist
+mkdir( "$game_data_dir/flow" )
+    if ( not -d "$game_data_dir/flow" );
+
+foreach my $screen_name ( sort keys %screen_data ) {
+    my $screen_data = $screen_data{ $screen_name };
+    my $output_file = sprintf( "%s/flow/%s.gdata", $game_data_dir, $screen_name );
+    open GDATA,">$output_file" or
+        die "Could not open file $output_file for writing\n";
+
+    # output hotzone rules
+    foreach my $hotzone ( @{ $screen_data->{'hotzones'} } ) {
+
+        # no rules nust be generated for hotzones not linked to others
+        if ( not defined( $hotzone->{'linked_hotzone'} ) ) {
+            printf GDATA "// Hotzone '%s' has no links, its rules must be defined manually\n\n", $hotzone->{'name'};
+            next;
+        }
+
+        printf GDATA "// Hotzone '%s' screen-warp rule\n", $hotzone->{'name'};
+        print  GDATA "BEGIN_RULE\n";
+        printf GDATA "\tSCREEN\t%s\n", $screen_name;
+        print  GDATA "\tWHEN\tGAME_LOOP\n";
+        printf GDATA "\tCHECK\tHERO_OVER_HOTZONE %s\n", $hotzone->{'name'};
+
+        # calculate the hero destination config based on the link_type
+        my $hero_dest_cfg;
+        if ( $hotzone->{'link_type'} eq 'left' ) {
+            $hero_dest_cfg = sprintf( 'DEST_HERO_X=%d',
+                $game_area_left * 8
+                + $screen_width
+                - $all_hotzones[ $hotzone->{'linked_hotzone'} ]{'pix_width'}
+                - $hero_sprite_width
+            );
+        } elsif ($hotzone->{'link_type'} eq 'right' ) {
+            $hero_dest_cfg = sprintf( 'DEST_HERO_X=%d',
+                $game_area_left * 8
+                + 0
+                + $all_hotzones[ $hotzone->{'linked_hotzone'} ]{'pix_width'}
+                - 0
+            );
+        } elsif ($hotzone->{'link_type'} eq 'up' ) {
+            $hero_dest_cfg = sprintf( 'DEST_HERO_Y=%d',
+                $game_area_top * 8
+                + $screen_height
+                - $all_hotzones[ $hotzone->{'linked_hotzone'} ]{'pix_height'}
+                - $hero_sprite_height
+            );
+        } elsif ($hotzone->{'link_type'} eq 'down' ) {
+            $hero_dest_cfg = sprintf( 'DEST_HERO_Y=%d',
+                $game_area_top * 8
+                + 0
+                + $all_hotzones[ $hotzone->{'linked_hotzone'} ]{'pix_height'}
+                - 0
+            );
+        } else {
+            die sprintf "Screen '%s', Hotzone '%s': unexpected link type '%s'\n",
+                $screen_name,
+                $hotzone->{'name'},
+                $hotzone->{'link_type'};
+        }
+
+        printf GDATA "\tDO\tWARP_TO_SCREEN DEST_SCREEN=%s %s\n",
+            $all_hotzones[ $hotzone->{'linked_hotzone'} ]{'screen_name'},
+            $hero_dest_cfg;
+        print GDATA "END_RULE\n\n";
+    }
+
+    close GDATA;
+}
