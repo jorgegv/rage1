@@ -34,21 +34,23 @@ my ( $flow_output_dir, $game_area_top, $game_area_left );
 my ( $hero_sprite_width, $hero_sprite_height );
 my $auto_hotzones;
 my $hotzone_color = '00FF00';
-my $hotzone_bgcolor = '000000';
+my $auto_hotzone_bgcolor = '000000';
+my $auto_hotzone_width = 4;
 my $generate_check_map;
 
 (
     GetOptions(
-        "screen-cols=i"		=> \$screen_cols,
-        "screen-rows=i"		=> \$screen_rows,
-        "screen-output-dir=s"	=> \$screen_output_dir,
-        "flow-output-dir=s"	=> \$flow_output_dir,
-        "game-area-top=i"	=> \$game_area_top,
-        "game-area-left=i"	=> \$game_area_left,
-        "auto-hotzones"		=> \$auto_hotzones,		# optional, default false
-        "hotzone-color:s"	=> \$hotzone_color,		# optional, default '00FF00'
-        "hotzone-bgcolor:s"	=> \$hotzone_bgcolor,		# optional, default '000000'
-        "generate-check-map"	=> \$generate_check_map,	# optional, default false
+        "screen-cols=i"			=> \$screen_cols,
+        "screen-rows=i"			=> \$screen_rows,
+        "screen-output-dir=s"		=> \$screen_output_dir,
+        "flow-output-dir=s"		=> \$flow_output_dir,
+        "game-area-top=i"		=> \$game_area_top,
+        "game-area-left=i"		=> \$game_area_left,
+        "auto-hotzones"			=> \$auto_hotzones,		# optional, default false
+        "hotzone-color:s"		=> \$hotzone_color,		# optional, default '00FF00'
+        "auto-hotzone-bgcolor:s"	=> \$auto_hotzone_bgcolor,	# optional, default '000000'
+        "auto-hotzone-width:i"		=> \$auto_hotzone_width,	# optional, default 4
+        "generate-check-map"		=> \$generate_check_map,	# optional, default false
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -73,9 +75,12 @@ Required:
 Optional:
 
     --auto-hotzones			Enable HOTZONE autodetection between adjacent screens
-    --hotzone-bgcolor			When --auto-hotzones is enabled, specifies background color
-    --hotzone-color			When --auto-hotzones is disabled, specifies HOTZONE color to match
+    --auto-hotzone-bgcolor		When --auto-hotzones is enabled, specifies background color
+    --auto-hotzone-width		When --auto-hotzones is enabled, specifies HOTZONE width in pixels (default: 4)
+    --hotzone-color			When --auto-hotzones is disabled, specifies HOTZONE color to match (default: 000000)
     --generate-check-map		Generates a check-map with outlines for the matched objects (PNG)
+
+Colors are specified as RRGGBB (RGB components in hex notation)
 
 EOF_HELP
 ;
@@ -603,10 +608,10 @@ my $checked_pixels;
 # this will contain the list of matched hotzones
 my @matched_hotzones;
 
+# Try to automatically create HOTZONEs if requested
+# (The regular ones will be matched later)
 if ( $auto_hotzones ) {
 
-    # AUTO-HOTZONES ENABLED
-    #
     # Requirements:
     #
     # - A background color can be specified with a command line argument
@@ -647,71 +652,70 @@ if ( $auto_hotzones ) {
 
     die "Automatic HOTZONEs not implemented yet\n";
 
-} else {
+}
 
-    # AUTO-HOTZONES DISABLED
-    #
-    # Requirements:
-    #
-    # - A hotzone marker color can be specified with a command line argument
-    #   (RRGGBB format, default 00FF00 - green)
-    #
-    # Steps:
-    #
-    # - Walk the pixel data for all the map:
-    #
-    #   - Identify a pixel of the marker color
-    #
-    #   - Walk right until a pixel of different color is found, and mark each pixel as checked
-    #
-    #   - Ensure minimum width and note the found width
-    #
-    #   - Walk down matching full lines of pixels with the marker color and the
-    #     same width, until a line is found with different color
-    #
-    #   - Ensure minimum height
-    #
-    #   - If the above procedure has found a new HOTZONE, then:
-    #
-    #     - If the hotzone is fully contained in a single screen, then save the
-    #       HOTZONE, mark the pixels as matched and checked, and continue
-    #       matching
-    #
-    #     - If the hotzone overlaps two screens, split into two hotzones which
-    #       are each contained in single screens, associate each hotzone with
-    #       the other one, mark the pixels as matched and checked, and continue
-    #       matching
+# Now match the user-defined HOTZONEs
+#
+# Requirements:
+#
+# - A hotzone marker color can be specified with a command line argument
+#   (RRGGBB format, default 00FF00 - green)
+#
+# Steps:
+#
+# - Walk the pixel data for all the map:
+#
+#   - Identify a pixel of the marker color
+#
+#   - Walk right until a pixel of different color is found, and mark each pixel as checked
+#
+#   - Ensure minimum width and note the found width
+#
+#   - Walk down matching full lines of pixels with the marker color and the
+#     same width, until a line is found with different color
+#
+#   - Ensure minimum height
+#
+#   - If the above procedure has found a new HOTZONE, then:
+#
+#     - If the hotzone is fully contained in a single screen, then save the
+#       HOTZONE, mark the pixels as matched and checked, and continue
+#       matching
+#
+#     - If the hotzone overlaps two screens, split into two hotzones which
+#       are each contained in single screens, associate each hotzone with
+#       the other one, mark the pixels as matched and checked, and continue
+#       matching
 
-    # first, sweep all the image identifying hotzones globally
-    foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
-        foreach my $pos_y ( 0 .. ( $map_height - 1 ) ) {
+# first, sweep all the image identifying hotzones globally
+foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
+    foreach my $pos_y ( 0 .. ( $map_height - 1 ) ) {
 
-            # skip pixel if already checked by a previously matched hotzone
-            next if $checked_pixels->[ $pos_x ][ $pos_y ];
+        # skip pixel if already checked by a previously matched hotzone
+        next if $checked_pixels->[ $pos_x ][ $pos_y ];
 
-            # mark pixel as checked
-            $checked_pixels->[ $pos_x ][ $pos_y ]++;
+        # mark pixel as checked
+        $checked_pixels->[ $pos_x ][ $pos_y ]++;
 
-            # try to match a rectangle
-            my $match = match_rectangle_in_map( $main_map_png, $hotzone_color,
-                0,	# match origin: top-left
-                $pos_x, $pos_y,
-                0, 0, ( $map_width - 1 ), ( $map_height - 1 )
-                );
+        # try to match a rectangle
+        my $match = match_rectangle_in_map( $main_map_png, $hotzone_color,
+            0,	# match origin: top-left
+            $pos_x, $pos_y,
+            0, 0, ( $map_width - 1 ), ( $map_height - 1 )
+            );
 
-            # quickly return if no match
-            next if not defined $match;
+        # quickly return if no match
+        next if not defined $match;
 
-            # a match was found, mark its pixels as checked
-            foreach my $x ( $match->{'x_min'} .. $match->{'x_max'} ) {
-                foreach my $y ( $match->{'y_min'} .. $match->{'y_max'} ) {
-                    $checked_pixels->[ $x ][ $y ]++;
-                }
+        # a match was found, mark its pixels as checked
+        foreach my $x ( $match->{'x_min'} .. $match->{'x_max'} ) {
+            foreach my $y ( $match->{'y_min'} .. $match->{'y_max'} ) {
+                $checked_pixels->[ $x ][ $y ]++;
             }
-
-            # ...then save the matched hotzone
-            push @matched_hotzones, $match;
         }
+
+        # ...then save the matched hotzone
+        push @matched_hotzones, $match;
     }
 }
 
