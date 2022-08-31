@@ -295,7 +295,7 @@ The following section illustrates the workflow previously indicated.
 - Since the `--generate-check-map` option was supplied, MAPGEN generates a
   check-map file like the following:
 
-![](img/test-map-3x2-screens-24x16-check-map.png)
+  ![](img/test-map-3x2-screens-24x16-check-map.png)
 
   The check-map can be compared to the original Main Map PNG to verify that
   all BTILEs, ITEMs and HOTZONEs have been correctly identified.
@@ -305,17 +305,17 @@ The following section illustrates the workflow previously indicated.
   Here is the alternative version of the Main Map without screen-switching
   HOTZONEs:
 
-![](img/test-map-3x2-screens-24x16-no-switch-hotzones.png)
+  ![](img/test-map-3x2-screens-24x16-no-switch-hotzones.png)
 
 - MAPGEN should be invoked with the additional `--auto-hotzones` option, and
   then, the following check-map would be generated:
 
-![](img/test-map-3x2-screens-24x16-no-switch-hotzones-check-map.png)
+  ![](img/test-map-3x2-screens-24x16-no-switch-hotzones-check-map.png)
 
-After successful MAPGEN execution, the generated GDATA files can be added to
-your game project and compiled in the usual way. The screens and their
-switching automations should have been defined for you and the hero should
-be able to move freely inside the map, with screen switches happening
+After the successful execution of MAPGEN, the generated GDATA files can be
+added to your game project and compiled in the usual way.  The screens and
+their switching automations should have been defined for you and the hero
+should be able to move freely inside the map, with screen switches happening
 automatically as needed.
 
 Now you can continue adding features to your game!
