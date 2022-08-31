@@ -64,6 +64,27 @@ sub load_png_file {
     return \@pixels;
 }
 
+# get PNG dimensions in pixels and cells
+sub png_get_width_pixels {
+    my $png = shift;
+    return scalar( @{ $png->[0] } );
+}
+
+sub png_get_height_pixels {
+    my $png = shift;
+    return scalar( @{ $png } );
+}
+
+sub png_get_width_cells {
+    my $png = shift;
+    return png_get_width_pixels( $png ) / 8;
+}
+
+sub png_get_height_cells {
+    my $png = shift;
+    return png_get_height_pixels( $png ) / 8;
+}
+
 # extracts pixel data in GDATA format from a PNG structure
 # example: ##..####....##.. (for 10110010 - ##: pixel on; ..: pixel off)
 # returns: listref - [ line1_data, line2_data, ... ]
@@ -284,6 +305,44 @@ sub numeric_attr_value {
     my $value = 0;
     foreach my $v ( split( /\s*\|\s*/, $attr ) ) { $value += $attr_value{ $v } };
     return $value;
+}
+
+# gets pixel data and attribute from a PNG for a cell at ( $row, $col )
+# returns: listref - { bytes => [ 8 bytes ], attr => numeric_attribute }
+sub png_get_cell_data_at {
+    my ( $png, $row, $col ) = @_;
+    my $cell_data = png_to_pixels_and_attrs( $png, $col * 8, $row * 8, 8, 8 );
+    my @bytes = map { ( compile_pixel_line( $_ ) )[0] } @{ $cell_data->{'pixels'} };
+    my $attr = numeric_attr_value( $cell_data->{'attrs'}[0] );
+    return {
+        bytes => \@bytes,
+        attr => $attr,
+        hexdump => join( '', map { sprintf( "%02X", $_ ) } ( @bytes, $attr ) ),
+    };
+}
+
+# breaks a PNG (or part of a PNG) into 8x8 cells and returns the 2-D array
+# of cell data as returned by the previous function (a hashref: { bytes =>
+# [], attr => value } ).  The data returned in accessible as
+# $cells->[$row][$col].  Parameters $row, $col, $width, $height are
+# optional.  If not specified, the full PNG will be processed
+# returns: listref - [ [ cell_0_0_data, cell_0_1_data, ...], [ cell_1_0_data, cell_1_1_data, ...], ... ]
+sub png_get_all_cell_data {
+    my ( $png, $row, $col, $width, $height ) = @_;
+    if ( not defined( $row ) or not defined( $col ) or not defined( $width ) or not defined( $height ) ) {
+        $row = $col = 0;
+        $width = png_get_width_cells( $png );
+        $height = png_get_height_cells( $png );
+    }
+    my @rows;
+    foreach my $r ( $row .. ( $row + $height - 1 ) ) {
+        push @rows, [
+            map {
+                png_get_cell_data_at( $png, $r, $_ )
+            } ( $col .. ( $col + $width - 1 ) )
+        ];
+    }
+    return \@rows;
 }
 
 1;
