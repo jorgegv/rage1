@@ -15,7 +15,7 @@ The tool and workflow support the following functionalities:
 
 - Automatic generation of GDATA files for each of the map screens
 
-- Automatic HOTZONE creation (for screen switching)
+- Automatic HOTZONE identification and creation (for screen switching)
 
 - Automatic FLOW rule creation for screen-switching HOTZONEs
 
@@ -34,9 +34,9 @@ The tool and workflow support the following functionalities:
   required GDATA files with some configuration
 
 - The game BTILES that are used to draw the map screens must have been
-  already drawn individually and stored in one or more PNG files
-  (several/all tiles can be stored in the same PNG file if desired).  They
-  must be aligned to Spectrum character cells (i.e.  8x8 pixel cells).  This
+  already drawn individually and stored in one or more PNG files (several or
+  all all tiles can be stored in the same PNG file if desired).  They must
+  be aligned to Spectrum character cells (i.e.  8x8 pixel cells).  This
   makes selecting BTILES for copy/paste much easier when you activate the
   8x8 grid.
 
@@ -71,11 +71,12 @@ following points:
 - This procedure can be done quite fast and can be repeated until the whole
   game map has been drawn.
 
-- Once the map is drawn, the zones that allow switching from one screen to
-  adjacent ones can also be drawn on the same map: solid rectangles filled
-  in green (or any other special color) shall be used, and can be placed
-  anywhere on the map.  If the rectangle covers two different screens, the
-  corresponding HOTZONEs will be considered screen-switching HOTZONEs.
+- Once the map is drawn, the HOTZONEs that allow special events to happen
+  when the Hero walks over them can also be drawn on the same map: solid
+  rectangles filled in green (or any other special color) shall be used, and
+  can be placed anywhere on the map.  If the rectangle covers two different
+  screens, the corresponding HOTZONEs will be considered screen-switching
+  HOTZONEs.
 
 Finally, the main map will need to be exported to PNG format so that it can
 be read by the MAPGEN tool described in the next section.
@@ -104,7 +105,7 @@ Input data:
   BTILEs included in a given PNG file.
 
   TILEDEF files should be very easy to generate by hand when opening the PNG
-  file and activating the grid).  A tiledef file is composed of lines with
+  file and activating the grid.  A tiledef file is composed of lines with
   the following format, one line per BTILE (example):
 
   ```
@@ -130,19 +131,20 @@ Input data:
   the full Spectrum screen.
 
 - Width and Height of the Hero sprite (in pixels): these are needed for
-  correctly generating screen-switch HOTZONEs, since the hero sprite needs
+  correctly generating screen-switching HOTZONEs, since the hero sprite needs
   to be positioned outside of the destination screen HOTZONE to avoid
   screen-switching loops
 
 Output:
 
-- One GDATA file per screen, inside the `map` directory and under the
+- One GDATA file per screen, inside the `map` directory under the
   `game_data`directory.  Each screen GDATA file contains all BTILES that
   form the screen, HOTZONE definitions (which connect to adjacent screens)
   and positioning data for all items of any type
 
-- One GDATA file per screen, inside the `flow` with the needed HOTZONE flow
-  rules needed for screen-switching
+- One GDATA file per screen, inside the `flow` directory under the
+  `game_data` directory, with the needed HOTZONE flow rules needed for
+  screen-switching
 
 - If the option `--generate-check-map` option was supplied, the tool also
   generates a check-map file: a PNG file with the same dimensions of the
@@ -158,8 +160,8 @@ Output:
 - If the option `--auto-hotzones` option was supplied, MAPGEN tries to
   automatically identify the screen-switching HOTZONEs in the map, by
   matching rectangles of background color at the borders between screens
-  which overlap both (it tries to find "holes" between screens).  It then
-  automatically defines screen-switching HOTZONEs.
+  which overlap both screens (it tries to find "holes" between screens).  It
+  then automatically defines screen-switching HOTZONEs.
 
   The background color and the width of the generated HOTZONEs can be
   specified with additional options.  Their default values are black
@@ -177,7 +179,7 @@ The following section illustrates the workflow previously indicated.
 - First, the BTILE files and their associated TILEDEF files must be created.
   BTILEs are stored in one or more PNG files, similar to the following one:
 
-![](img/test-tiles.png)
+  ![](img/test-tiles.png)
 
   The associated TILEDEF file must be named the same as the PNG file but
   with a `.tiledef` extension instead of `.png`, and must be stored in the
@@ -216,7 +218,7 @@ The following section illustrates the workflow previously indicated.
   When finished, the example Main Map may look like this (HOTZONEs are in
   green color):
 
-![](img/test-map-3x2-screens-24x16.png)
+  ![](img/test-map-3x2-screens-24x16.png)
 
   The optional associated MAPDEF file must be named the same as the PNG file but
   with a `.mapdef` extension instead of `.png`, and must be stored in the
@@ -298,9 +300,10 @@ The following section illustrates the workflow previously indicated.
   The check-map can be compared to the original Main Map PNG to verify that
   all BTILEs, ITEMs and HOTZONEs have been correctly identified.
 
-- Alternatively, the Main Map may not have screen-switch HOTZONEs drawn,
-  and instead rely on MAPGEN's hability to identify automatically. Here is
-  the alternative version without screen-switch HOTZONEs:
+- Alternatively, the Main Map may not have screen-switching HOTZONEs drawn,
+  and instead rely on MAPGEN's hability to identify them automatically. 
+  Here is the alternative version of the Main Map without screen-switching
+  HOTZONEs:
 
 ![](img/test-map-3x2-screens-24x16-no-switch-hotzones.png)
 
@@ -311,7 +314,8 @@ The following section illustrates the workflow previously indicated.
 
 After successful MAPGEN execution, the generated GDATA files can be added to
 your game project and compiled in the usual way. The screens and their
-switching automations should have been defined for you and the hero can
-freely move inside the map.
+switching automations should have been defined for you and the hero should
+be able to move freely inside the map, with screen switches happening
+automatically as needed.
 
 Now you can continue adding features to your game!
