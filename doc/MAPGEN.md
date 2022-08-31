@@ -312,10 +312,17 @@ The following section illustrates the workflow previously indicated.
 
   ![](img/test-map-3x2-screens-24x16-no-switch-hotzones-check-map.png)
 
+  As it can be seen, the tool has successfully identified the needed
+  screen-switching HOTZONEs, which were previously specified manually.
+
 After the successful execution of MAPGEN, the generated GDATA files can be
 added to your game project and compiled in the usual way.  The screens and
 their switching automations should have been defined for you and the hero
 should be able to move freely inside the map, with screen switches happening
 automatically as needed.
+
+Hopefully, the process of editing a _big_ map has been quite simplified, and
+now you just need to take care of the special zones of your game, since the
+main map is automatically generated.
 
 Now you can continue adding features to your game!
