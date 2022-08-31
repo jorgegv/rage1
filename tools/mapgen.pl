@@ -35,7 +35,7 @@ my ( $hero_sprite_width, $hero_sprite_height );
 my $hotzone_color = '00FF00';
 my $auto_hotzones;
 my $auto_hotzone_bgcolor = '000000';
-my $auto_hotzone_width = 4;
+my $auto_hotzone_width = 8;
 my $generate_check_map;
 
 (
@@ -598,7 +598,7 @@ sub match_rectangle_in_map {
 
         # if the matched width is not the same as the previous lines that
         # have already been matched, stop matching lines
-        last if ( $matched_width and ( $matched_x != $matched_width ) );
+        last if ( $matched_width and ( $matched_x < $matched_width ) );
 
         # save first matched width
         if ( not $matched_width ) {
@@ -649,7 +649,7 @@ if ( $auto_hotzones ) {
     #   (RRGGBB format, default 000000 - black)
     #
     # - A width for the hotzones can be specified with a command line argument
-    #   (integer, default 4 pixels)
+    #   (integer, default 8 pixels)
     #
     # Steps:
     #
@@ -683,8 +683,104 @@ if ( $auto_hotzones ) {
 
     print "Adding automatic HOTZONEs...\n";
 
-    die "** Error: Automatic HOTZONEs not implemented yet\n";
+    # walk the list of screens - TESTS PENDING!
+    foreach my $map_screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
+        foreach my $map_screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
 
+            # if we are not on the last column of screens in the map, locate
+            # vertical hotzones on the right border
+
+            # we only need to run this border, since we try to find zones
+            # that overlap 2 screens
+            if ( $map_screen_col < ( $map_screen_cols - 1 ) ) {
+                my $x_min = $map_screen_col * $screen_cols * 8 + $screen_width - $auto_hotzone_width;
+                my $x_max = $x_min + 2 * $auto_hotzone_width - 1;
+                my $y_min = $map_screen_row * $screen_rows * 8 + $auto_hotzone_width;
+                my $y_max = $map_screen_row * $screen_rows * 8 + $screen_height - $auto_hotzone_width - 1;
+                foreach my $pos_y ( $y_min .. $y_max ) {
+
+                    # skip pixel if already checked by a previously matched hotzone
+                    next if $checked_pixels->[ $x_min ][ $pos_y ];
+
+                    # mark pixel as checked
+                    $checked_pixels->[ $x_min ][ $pos_y ]++;
+
+                    # try to match a rectangle
+                    my $match = match_rectangle_in_map( $main_map_png, $auto_hotzone_bgcolor,
+                        0,		# match-origin: top-left
+                        $x_min, $pos_y,
+                        $x_min, $y_min, $x_max, $y_max
+                    );
+
+                    # quickly return if no match
+                    next if not defined $match;
+
+                    # additionally, the minimum width or height for an auto
+                    # hotzone is 2 * auto_hotzone_width - it must overlap 2
+                    # screens, and we start matching at (border -
+                    # auto_hotzone_width)
+                    next if ( ( $match->{'x_max'} - $match->{'x_min'} + 1 < 2 * $auto_hotzone_width ) or
+                            ( $match->{'y_max'} - $match->{'y_min'} + 1 < 2 * $auto_hotzone_width ) );
+
+                    # a valid match was found, mark its pixels as checked
+                    foreach my $x ( $match->{'x_min'} .. $match->{'x_max'} ) {
+                        foreach my $y ( $match->{'y_min'} .. $match->{'y_max'} ) {
+                            $checked_pixels->[ $x ][ $y ]++;
+                        }
+                    }
+
+                    # ...then save the matched hotzone
+                    push @matched_hotzones, $match;
+                }
+            }
+
+            # if we are not on the last row of screens in the map, locate
+            # horizontal hotzones on the bottom border
+
+            # same reasoning as above applies
+            if ( $map_screen_row < ( $map_screen_rows - 1 ) ) {
+                my $x_min = $map_screen_col * $screen_cols * 8 + $auto_hotzone_width;
+                my $x_max = $map_screen_col * $screen_cols * 8 + $screen_width - $auto_hotzone_width - 1;
+                my $y_min = $map_screen_row * $screen_rows * 8 + $screen_height - $auto_hotzone_width;
+                my $y_max = $y_min + 2 * $auto_hotzone_width - 1;
+                foreach my $pos_x ( $x_min .. $x_max ) {
+
+                    # skip pixel if already checked by a previously matched hotzone
+                    next if $checked_pixels->[ $pos_x ][ $y_min ];
+
+                    # mark pixel as checked
+                    $checked_pixels->[ $pos_x ][ $y_min ]++;
+
+                    # try to match a rectangle
+                    my $match = match_rectangle_in_map( $main_map_png, $auto_hotzone_bgcolor,
+                        0,	# match origin: top-left
+                        $pos_x, $y_min,
+                        $x_min, $y_min, $x_max, $y_max
+                    );
+
+                    # quickly return if no match
+                    next if not defined $match;
+
+                    # additionally, the minimum width or height for an auto
+                    # hotzone is 2 * auto_hotzone_width - it must overlap 2
+                    # screens, and we start matching at (border -
+                    # auto_hotzone_width)
+                    next if ( ( $match->{'x_max'} - $match->{'x_min'} + 1 < 2 * $auto_hotzone_width ) or
+                            ( $match->{'y_max'} - $match->{'y_min'} + 1 < 2 * $auto_hotzone_width ) );
+
+                    # a valid match was found, mark its pixels as checked
+                    foreach my $x ( $match->{'x_min'} .. $match->{'x_max'} ) {
+                        foreach my $y ( $match->{'y_min'} .. $match->{'y_max'} ) {
+                            $checked_pixels->[ $x ][ $y ]++;
+                        }
+                    }
+
+                    # ...then save the matched hotzone
+                    push @matched_hotzones, $match;
+                }
+            }
+        }
+    }
 }
 
 # Now match the user-defined HOTZONEs
@@ -722,6 +818,10 @@ if ( $auto_hotzones ) {
 
 print "Scanning HOTZONEs...\n";
 
+# reset the $checked_pixels variable, it may have been used before by the
+# auto-hotzone code
+undef $checked_pixels;
+
 # first, sweep all the image identifying hotzones globally
 foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
     foreach my $pos_y ( 0 .. ( $map_height - 1 ) ) {
@@ -737,7 +837,7 @@ foreach my $pos_x ( 0 .. ( $map_width - 1 ) ) {
             0,	# match origin: top-left
             $pos_x, $pos_y,
             0, 0, ( $map_width - 1 ), ( $map_height - 1 )
-            );
+        );
 
         # quickly return if no match
         next if not defined $match;
