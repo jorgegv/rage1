@@ -326,3 +326,38 @@ now you just need to take care of the special zones of your game, since the
 main map is automatically generated.
 
 Now you can continue adding features to your game!
+
+## Fully working example
+
+If you just want to test a demo map with the default test game, you can just
+follow this simple steps:
+
+- Edit the `game/game_data/game_config/Game.gdata` file and change the
+  `INITIAL` setting on the `SCREEN` line to `StartScreen` (this is the
+  starting screen defined in the demo map `.mapdef` file)
+
+- Run the following commands in the base directory of the RAGE1
+distribution:
+
+```
+cd game
+
+# this creates definitions for the test btiles
+../tools/btilegen.pl ../misc/test-tiles.png > game_data/btiles/autobtiles.gdata
+
+# this analyzes the map and creates all the needed map data
+../tools/mapgen.pl --screen-cols 24 --screen-rows 16 \
+	--game-data-dir game_data --game-area-top 1 --game-area-left 1 \
+	--hero-sprite-width 16 --hero-sprite-height 16 --auto-hotzones \
+	--generate-check-map \
+	../misc/test-tiles.png \
+	../misc/demo-map-3x2-screens-24x16.png
+
+# go up one directory and build
+cd ..
+make  build
+```
+
+At this point the test game has been compiled with the demo map and the file
+`game.tap+ has been generated.  You can just run `make run` to execute the
+TAP file in FUSE to test it.
