@@ -218,7 +218,7 @@ The following section illustrates the workflow previously indicated.
   When finished, the example Main Map may look like this (HOTZONEs are in
   green color):
 
-  ![](img/test-map-3x2-screens-24x16.png)
+  ![](img/demo-map-3x2-screens-24x16-with-switch-zones.png)
 
   The optional associated MAPDEF file must be named the same as the PNG file but
   with a `.mapdef` extension instead of `.png`, and must be stored in the
@@ -295,7 +295,7 @@ The following section illustrates the workflow previously indicated.
 - Since the `--generate-check-map` option was supplied, MAPGEN generates a
   check-map file like the following:
 
-  ![](img/test-map-3x2-screens-24x16-check-map.png)
+  ![](img/demo-map-3x2-screens-24x16-with-switch-zones-check-map.png)
 
   The check-map can be compared to the original Main Map PNG to verify that
   all BTILEs, ITEMs and HOTZONEs have been correctly identified.
@@ -305,12 +305,12 @@ The following section illustrates the workflow previously indicated.
   Here is the alternative version of the Main Map without screen-switching
   HOTZONEs:
 
-  ![](img/test-map-3x2-screens-24x16-no-switch-hotzones.png)
+  ![](img/demo-map-3x2-screens-24x16.png)
 
 - MAPGEN should be invoked with the additional `--auto-hotzones` option, and
   then, the following check-map would be generated:
 
-  ![](img/test-map-3x2-screens-24x16-no-switch-hotzones-check-map.png)
+  ![](img/demo-map-3x2-screens-24x16-check-map.png)
 
   As it can be seen, the tool has successfully identified the needed
   screen-switching HOTZONEs, which were previously specified manually.
