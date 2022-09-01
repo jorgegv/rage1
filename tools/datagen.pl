@@ -1949,8 +1949,12 @@ sub check_screen_items_are_valid {
     my %is_valid_btile = map { $_->{'name'}, 1 } @all_btiles;
     foreach my $screen ( @all_screens ) {
         foreach my $item ( map { $all_items[ $_ ] } @{ $screen->{'items'} } ) {
-            if ( not $is_valid_btile{ $item->{'name'} } ) {
-                warn sprintf( "Screen '%s': undefined btile for item '%s'\n", $screen->{'name'}, $item->{'name'} );
+            if ( not $is_valid_btile{ $item->{'btile'} } ) {
+                warn sprintf( "Screen '%s': undefined btile '%s' for item '%s'\n",
+                    $screen->{'name'},
+                    $item->{'btile'},
+                    $item->{'name'},
+                );
                 $errors++;
             }
         }
