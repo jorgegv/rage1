@@ -1308,14 +1308,17 @@ EOF_MAP_GDATA_HEADER
         printf GDATA "\t%s\t%s\n", uc( $key ), $value;
     }
 
-    # items are output at the same time, they are just different types of BTILEs
+    # Output btiles and items.  Items are just different types of BTILEs.
+    # If the BTILE is of type ITEM, then we assume it can be found only once
+    # on the same screen, and then use the BTILE name as the name instead of
+    # the generated one
     my $btile_counter = 0;
     foreach my $btile ( @{ $screen_data->{'btiles'} } ) {
         my $btile_instance_name = sprintf( 'GeneratedBTile_%d', $btile_counter++ );
         my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
         printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
             $btile_data->{'default_type'},
-            $btile_instance_name,
+            ( $btile_data->{'default_type'} eq 'ITEM' ? $btile_data->{'name'} : $btile_instance_name ),
             $btile_data->{'name'},
             $btile->{'cell_row'} + $game_area_top,
             $btile->{'cell_col'} + $game_area_left,
