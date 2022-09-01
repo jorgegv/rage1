@@ -1140,7 +1140,7 @@ if ( $generate_check_map ) {
 
     # create the check directory if it does not exist
     mkdir( "$game_data_dir/check" )
-        if ( not -d "$game_data_dir/map" );
+        if ( not -d "$game_data_dir/check" );
 
     my $img = GD::Image->new( $map_width, $map_height );
     my $black = $img->colorAllocate( 0, 0, 0 );
