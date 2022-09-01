@@ -272,7 +272,8 @@ my $main_map_cell_data = png_get_all_cell_data( $main_map_png );
 
 # this variable holds the screen metadata from the MAPDEF file. Initially undef for all screens.
 my $screen_metadata;
-push @$screen_metadata, [ (undef) x $map_screen_cols ] for ( 0 .. ( $map_screen_rows - 1 ) );
+push @$screen_metadata, [ (undef) x $map_screen_cols ]
+    for ( 0 .. ( $map_screen_rows - 1 ) );
 
 # load screen metadata from MAPDEF file if it exists
 my $mapdef_file = dirname( $map_png_file ) . '/' . basename( $map_png_file, '.png', '.PNG' ) . '.mapdef';
@@ -301,14 +302,21 @@ if ( -e $mapdef_file ) {
         }
 
         # process and save screen metadata at the proper position
-        $screen_metadata->[ $map_screen_row ][ $map_screen_col ] = {
-            map {
-                my ($k,$v) = split( /=/, $_ );		# split into key=value
-                $k = lc($k);				# canonicalize key
-                $v =~ s/_/ /g if ( $k eq 'title' );	# replace _ with ' ' in titles
-                ( $k, $v ) 				# return the pair for the hash
-            } @rest
-        };
+        foreach my $meta ( @rest ) {
+            my ( $key, $value ) = split( /=/, $meta );	# split into key=value
+            $key = lc( $key );				# canonicalize key
+
+            $value =~ s/_/ /g
+                if ( $key eq 'title' );			# replace _ with ' ' in titles
+
+            # add the metadata
+            # account for hero.startup_xpos type keys
+            if ( $key =~ /^(.+)\.(.+)$/ ) {
+                $screen_metadata->[ $map_screen_row ][ $map_screen_col ]{ $1 }{ $2 } = $value;
+            } else {
+                $screen_metadata->[ $map_screen_row ][ $map_screen_col ]{ $key } = $value;
+            }
+        }
     }
 
     close MAPDEF;
@@ -1203,6 +1211,7 @@ if ( $generate_check_map ) {
 # First we create a hash with the matches for each screen, so that only
 # screens with matched btiles generate output
 my %screen_data;
+
 foreach my $match ( @matched_btiles ) {
     my $screen_name = $screen_metadata->[ $match->{'screen_row'} ][ $match->{'screen_col'} ]{'name'} ||
         sprintf( "AutoScreen_%03d_%03d", $match->{'screen_row'}, $match->{'screen_col'} );
@@ -1230,10 +1239,7 @@ foreach my $screen_name ( keys %screen_data ) {
     my $screen_row = $screen_data{ $screen_name }{'screen_row'};
     my $screen_col = $screen_data{ $screen_name }{'screen_col'};
     if ( defined( $screen_metadata->[ $screen_row ][ $screen_col ] ) ) {
-        $screen_data{ $screen_name } = { 
-            %{ $screen_data{ $screen_name } },				# old hash
-            %{ $screen_metadata->[ $screen_row ][ $screen_col ] }	# new hash
-        };
+        $screen_data{ $screen_name }{'metadata'} = $screen_metadata->[ $screen_row ][ $screen_col ];
     }
 }
 
@@ -1272,12 +1278,34 @@ BEGIN_SCREEN
 EOF_MAP_GDATA_HEADER
 ;
 
+    # we like the name as the first directive :-)
     printf GDATA "\tNAME\t%s\n", $screen_name;
 
-    printf GDATA "\tDATASET\t%d\n", $screen_data->{'dataset'} || 0;
+    # output screen metadata first
+    foreach my $key ( sort keys %{ $screen_data->{'metadata'} } ) {
 
-    if ( defined( $screen_data->{'title'} ) ) {
-        printf GDATA "\tTITLE\t\"%s\"\n", $screen_data->{'title'};
+        # skip if it's the name, we have already output it before :-)
+        next if ( $key eq 'name' );
+
+        # special metadata value processing
+        my $value = $screen_data->{'metadata'}{ $key };
+
+        # it it's the title, enclose in quotes
+        if ( $key eq 'title' ) {
+            $value = sprintf( '"%s"', $value);
+        }
+
+        # if it's a multivalue, generate proper new value
+        if ( ref( $value ) eq 'HASH' ) {
+            my $new_value = join( " ", map {
+                    sprintf( "%s=%s", uc( $_ ), $value->{ $_ } )
+                } sort keys %{ $value }
+            );
+            $value = $new_value;
+        }
+
+        # output
+        printf GDATA "\t%s\t%s\n", uc( $key ), $value;
     }
 
     # items are output at the same time, they are just different types of BTILEs
@@ -1311,6 +1339,8 @@ EOF_MAP_GDATA_HEADER
             $hotzone->{ 'pix_height'},
         ;
     }
+
+
 
     # print the closing command and close the GDATA file
     print GDATA <<EOF_MAP_GDATA_END
