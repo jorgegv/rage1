@@ -359,5 +359,5 @@ make  build
 ```
 
 At this point the test game has been compiled with the demo map and the file
-`game.tap+ has been generated.  You can just run `make run` to execute the
+`game.tap` has been generated.  You can just run `make run` to execute the
 TAP file in FUSE to test it.
