@@ -212,6 +212,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                map_png_colors_to_zx_colors( $png );
                 my $data = png_to_pixels_and_attrs(
                     $png,
                     $vars->{'xpos'}, $vars->{'ypos'},
@@ -273,6 +274,7 @@ sub read_input_data {
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                map_png_colors_to_zx_colors( $png );
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
@@ -291,6 +293,7 @@ sub read_input_data {
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                map_png_colors_to_zx_colors( $png );
                 push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
