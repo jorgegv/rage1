@@ -1317,8 +1317,8 @@ EOF_MAP_GDATA_HEADER
             $btile_data->{'default_type'},
             $btile_instance_name,
             $btile_data->{'name'},
-            $btile->{'cell_row'},
-            $btile->{'cell_col'},
+            $btile->{'cell_row'} + $game_area_top,
+            $btile->{'cell_col'} + $game_area_left,
         ;
     }
 
