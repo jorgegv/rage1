@@ -65,7 +65,7 @@ void game_state_reset_initial(void) {
    hero_reset_all();
    bullet_reset_all();
 
-#ifdef BUILD_FEATURE_INVENTORY
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
    inventory_reset_all();
 #endif
 

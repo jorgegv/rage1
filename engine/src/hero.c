@@ -146,7 +146,7 @@ void hero_shoot_bullet( void ) {
     game_state.bullet.reloading = game_state.bullet.reload_delay;
 }
 
-#ifdef BUILD_FEATURE_INVENTORY
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 void hero_check_tiles_below(void) {
     struct sp1_ss *s;
     uint8_t i,j,cols,r,c,item;
@@ -163,6 +163,7 @@ void hero_check_tiles_below(void) {
         j = cols;
         while ( j-- ) {
             c = s->col + j;
+#ifdef BUILD_FEATURE_INVENTORY
             if ( GET_TILE_TYPE_AT( r, c ) == TT_ITEM ) {
                 item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
@@ -178,10 +179,11 @@ void hero_check_tiles_below(void) {
                 // play pickup sound
                 sound_request_fx( SOUND_ITEM_GRABBED );
             }
+#endif // BUILD_FEATURE_INVENTORY
         }
     }
 }
-#endif // BUILD_FEATURE_INVENTORY
+#endif // BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 
 // printing context
 struct sp1_pss lives_display_ctx = {

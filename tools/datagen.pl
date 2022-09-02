@@ -1465,6 +1465,7 @@ sub generate_items {
     # do not generate anything related to inventory if no items defined
     return if ( not scalar( @all_items ) );
 
+    add_build_feature( 'HERO_CHECK_TILES_BELOW' );
     add_build_feature( 'INVENTORY' );
 
     my $max_items = scalar( @all_items );

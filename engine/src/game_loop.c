@@ -122,7 +122,7 @@ void do_hero_actions(void) {
 
     hero_animate_and_move();
 
-#ifdef BUILD_FEATURE_INVENTORY
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
     hero_check_tiles_below();
 #endif
 
@@ -157,7 +157,7 @@ void run_main_game_loop(void) {
    game_state_reset_initial();
    hero_update_lives_display();
 
-#ifdef BUILD_FEATURE_INVENTORY
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
    inventory_show();
 #endif
 

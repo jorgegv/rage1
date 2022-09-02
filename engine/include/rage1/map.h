@@ -48,7 +48,7 @@ struct map_screen_s {
     struct {
         uint8_t	startup_x,startup_y;
     } hero_data;
-#ifdef BUILD_FEATURE_INVENTORY
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
     struct {
         uint8_t num_items;
         struct item_location_s *items;
