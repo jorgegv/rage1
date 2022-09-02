@@ -147,7 +147,7 @@ void hero_shoot_bullet( void ) {
 }
 
 #ifdef BUILD_FEATURE_INVENTORY
-void hero_pickup_items(void) {
+void hero_check_tiles_below(void) {
     struct sp1_ss *s;
     uint8_t i,j,cols,r,c,item;
     struct item_location_s *item_loc;

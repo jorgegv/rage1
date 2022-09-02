@@ -85,7 +85,7 @@ void hero_reset_all(void);
 void hero_reset_position(void);
 void hero_animate_and_move( void );
 void hero_shoot_bullet( void );
-void hero_pickup_items(void);
+void hero_check_tiles_below(void);
 void hero_update_lives_display(void);
 void hero_draw(void);
 void hero_set_position_x( struct hero_info_s *h, uint8_t x);
