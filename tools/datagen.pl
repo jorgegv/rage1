@@ -760,7 +760,7 @@ sub read_input_data {
 
 # build features that always selected no matter what
 my @default_build_features = qw(
-    BTILE_PACKED_TYPE_MAP
+    BTILE_2BIT_TYPE_MAP
 );
 
 sub add_build_feature {
