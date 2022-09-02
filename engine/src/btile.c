@@ -78,19 +78,22 @@ void btile_clear_type_all_screen(void) {
 }
 
 #ifdef BUILD_FEATURE_BTILE_2BIT_TYPE_MAP
+    #define TYPE_MAP_BTILE_BITS 2
+    #define TYPE_MAP_BTILES_PER_BYTE 4
+    #define TYPE_MAP_BTILE_LOW_BITS_MASK 0x03
+#endif
 
+#ifdef BUILD_FEATURE_BTILE_2BIT_TYPE_MAP
 // Accelerated functions for getting/setting tile types
-
 uint8_t btile_get_tile_type( uint8_t row, uint8_t col ) {
-    uint8_t pos = ( row * 32 + col ) / 4;
-    uint8_t rot = 2 * ( col & 0x03 );
-    return ( ( screen_pos_tile_type_data[ pos ] >> rot ) & 0x03 );
+    uint8_t pos = ( row * 32 + col ) / TYPE_MAP_BTILES_PER_BYTE;
+    uint8_t rot = TYPE_MAP_BTILE_BITS * ( col & TYPE_MAP_BTILE_LOW_BITS_MASK );
+    return ( ( screen_pos_tile_type_data[ pos ] >> rot ) & TYPE_MAP_BTILE_LOW_BITS_MASK );
 }
 
 void btile_set_tile_type( uint8_t row, uint8_t col, uint8_t type ) {
-    uint8_t pos = ( row * 32 + col ) / 4;
-    uint8_t rot = 2 * ( col & 0x03 );
-    screen_pos_tile_type_data[ pos ] = ( screen_pos_tile_type_data[ pos ] & ( ~( 0x03 << rot ) ) ) | ( type << rot );
+    uint8_t pos = ( row * 32 + col ) / TYPE_MAP_BTILES_PER_BYTE;
+    uint8_t rot = TYPE_MAP_BTILE_BITS * ( col & TYPE_MAP_BTILE_LOW_BITS_MASK );
+    screen_pos_tile_type_data[ pos ] = ( screen_pos_tile_type_data[ pos ] & ( ~( TYPE_MAP_BTILE_LOW_BITS_MASK << rot ) ) ) | ( type << rot );
 }
-
 #endif
