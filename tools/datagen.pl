@@ -3049,6 +3049,20 @@ sub create_dataset_dependencies {
     }
 }
 
+# fixes dependencies between build features.  put here all exceptions and
+# mangling needed for build features that need/exclude others, etc.
+sub fix_feature_dependencies {
+
+    # currently, the CRUMBS feature needs to have byte-size tile types, so
+    # if CRUMBS are used, disable the default packed tile map
+    if ( defined( $conditional_build_features{ 'CRUMBS' } ) and
+        defined( 'BTILE_2BIT_TYPE_MAP' ) ) {
+        delete $conditional_build_features{ 'BTILE_2BIT_TYPE_MAP' };
+    }
+
+    # additional fixes here...
+}
+
 # creates a dump of internal data so that other tools (e.g.  FLOWGEN) can
 # load it and use the parsed data. Use "-c" option to dump the internal data
 sub dump_internal_data {
@@ -3103,8 +3117,11 @@ read_input_data;
 # run consistency checks
 run_consistency_checks;
 
-# generate output
+# process data dependencies
 create_dataset_dependencies;
+fix_feature_dependencies;
+
+# generate output
 generate_game_data;
 output_game_data;
 
