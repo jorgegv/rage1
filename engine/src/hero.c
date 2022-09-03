@@ -149,7 +149,7 @@ void hero_shoot_bullet( void ) {
 #ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 void hero_check_tiles_below(void) {
     struct sp1_ss *s;
-    uint8_t i,j,cols,r,c,item;
+    uint8_t i,j,cols,r,c,item,crumb_type,tile_type;
     struct item_location_s *item_loc;
 
     s = game_state.hero.sprite;
@@ -163,8 +163,10 @@ void hero_check_tiles_below(void) {
         j = cols;
         while ( j-- ) {
             c = s->col + j;
+            tile_type = GET_TILE_TYPE_AT( r, c );
+
 #ifdef BUILD_FEATURE_INVENTORY
-            if ( GET_TILE_TYPE_AT( r, c ) == TT_ITEM ) {
+            if ( tile_type == TT_ITEM ) {
                 item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
 
@@ -180,6 +182,19 @@ void hero_check_tiles_below(void) {
                 sound_request_fx( SOUND_ITEM_GRABBED );
             }
 #endif // BUILD_FEATURE_INVENTORY
+
+#ifdef BUILD_FEATURE_CRUMBS
+            if ( ( tile_type & TT_CRUMB ) == TT_CRUMB ) {
+                // get the crumb type (low nybble)
+                crumb_type = tile_type & 0x0F;
+                // do action for the grabbed crumb
+                crumb_was_grabbed( crumb_type );
+                // remove crumb from screen
+                btile_remove( r, c, &home_assets->all_btiles[ all_crumb_types[ crumb_type ] );
+                // play pickup sound
+                sound_request_fx( SOUND_ITEM_GRABBED );
+            }
+#endif // BUILD_FEATURE_CRUMBS
         }
     }
 }

@@ -65,8 +65,12 @@ void game_state_reset_initial(void) {
    hero_reset_all();
    bullet_reset_all();
 
-#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+#ifdef BUILD_FEATURE_INVENTORY
    inventory_reset_all();
+#endif
+
+#ifdef BUILD_FEATURE_CRUMBS
+   crumb_reset_all();
 #endif
 
    game_state_assets_reset_all();
