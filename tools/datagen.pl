@@ -760,7 +760,11 @@ sub read_input_data {
 
 # build features that always selected no matter what
 my @default_build_features = qw(
+<<<<<<< Updated upstream
     BTILE_PACKED_TYPE_MAP
+=======
+    BTILE_4BIT_TYPE_MAP
+>>>>>>> Stashed changes
 );
 
 sub add_build_feature {

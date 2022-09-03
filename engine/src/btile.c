@@ -21,11 +21,51 @@
 #define SCREEN_MAX_COL	31
 #define SCREEN_SIZE	( ( SCREEN_MAX_ROW + 1 ) * ( SCREEN_MAX_COL + 1 ) )
 
-// when using a packed tile type map, we pack 4 tiles per byte
+// when using a packed tile type map, we pack more tiles per byte
 // if not, we use 1 byte per tile
+<<<<<<< Updated upstream
 #ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
+=======
+#ifdef BUILD_FEATURE_BTILE_2BIT_TYPE_MAP
+    #define TILE_TYPE_TILE_BITS		2
+    #define TILE_TYPE_TILES_PER_BYTE	4
+    #define TILE_TYPE_TYPE_BITMASK	0x03
+    #define TILE_TYPE_POSITION_BITMASK	0x03
+#endif
+
+#ifdef BUILD_FEATURE_BTILE_4BIT_TYPE_MAP
+    #define TILE_TYPE_TILE_BITS		4
+    #define TILE_TYPE_TILES_PER_BYTE	2
+    #define TILE_TYPE_TYPE_BITMASK	0x0f
+    #define TILE_TYPE_POSITION_BITMASK	0x01
+#endif
+
+#if defined(BUILD_FEATURE_BTILE_2BIT_TYPE_MAP) || defined(BUILD_FEATURE_BTILE_4BIT_TYPE_MAP)
+// Accelerated functions for getting/setting tile types
+uint8_t btile_get_tile_type( uint8_t row, uint8_t col ) {
+    uint8_t pos = ( row * 32 + col ) / TILE_TYPE_TILES_PER_BYTE;
+    uint8_t rot = TILE_TYPE_TILE_BITS * ( col & TILE_TYPE_POSITION_BITMASK );
+    return ( ( screen_pos_tile_type_data[ pos ] >> rot ) & TILE_TYPE_TYPE_BITMASK );
+}
+
+void btile_set_tile_type( uint8_t row, uint8_t col, uint8_t type ) {
+    uint8_t pos = ( row * 32 + col ) / TILE_TYPE_TILES_PER_BYTE;
+    uint8_t rot = TILE_TYPE_TILE_BITS * ( col & TILE_TYPE_POSITION_BITMASK );
+    screen_pos_tile_type_data[ pos ] = ( screen_pos_tile_type_data[ pos ] & 
+        ( ~( TILE_TYPE_TYPE_BITMASK << rot ) ) ) | ( type << rot );
+}
+#endif
+
+#ifdef BUILD_FEATURE_BTILE_2BIT_TYPE_MAP
+>>>>>>> Stashed changes
     #define TILE_TYPE_DATA_SIZE		( SCREEN_SIZE / 4 )
-#else
+#endif
+
+#ifdef BUILD_FEATURE_BTILE_4BIT_TYPE_MAP
+    #define TILE_TYPE_DATA_SIZE		( SCREEN_SIZE / 2 )
+#endif
+
+#ifndef TILE_TYPE_DATA_SIZE
     #define TILE_TYPE_DATA_SIZE		( SCREEN_SIZE )
 #endif
 
@@ -77,6 +117,7 @@ void btile_clear_type_all_screen(void) {
     // When not, TT_DECORATION as well
 }
 
+<<<<<<< Updated upstream
 #ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
 
 // Accelerated functions for getting/setting tile types
@@ -94,3 +135,5 @@ void btile_set_tile_type( uint8_t row, uint8_t col, uint8_t type ) {
 }
 
 #endif
+=======
+>>>>>>> Stashed changes
