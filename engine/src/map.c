@@ -113,6 +113,24 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
 }
 #endif // BUILD_FEATURE_INVENTORY
 
+#ifdef BUILD_FEATURE_CRUMBS
+struct crumb_location_s *map_get_crumb_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col ) {
+    uint8_t i, rmax, cmax;
+    struct crumb_location_s *cr;
+
+    i = s->crumb_data.num_crumbs;
+    while ( i-- ) {
+        cr = &s->crumb_data.crumbs[i];
+        rmax = cr->row + home_assets->all_btiles[ all_crumbs[ cr->crumb_type ].btile_num ].num_rows - 1;
+        cmax = cr->col + home_assets->all_btiles[ all_crumbs[ cr->crumb_type ].btile_num ].num_cols - 1;
+        if ( ( row >= cr->row ) && ( row <= rmax ) &&
+             ( col >= cr->col ) && ( col <= cmax ) )
+            return cr;
+    }
+    return NULL;	// no object
+}
+#endif // BUILD_FEATURE_CRUMBS
+
 void map_enter_screen( uint8_t screen_num ) {
     // If we are in 128 mode, we need to switch to the dataset where the
     // screen resides.  If in 48 mode, this is not needed since everything

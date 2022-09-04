@@ -18,8 +18,13 @@
 struct crumb_info_s {
     uint8_t	btile_num;
     uint16_t	counter;
-    void	(*do_action)(void);
+    void	(*do_action)( struct crumb_info_s *c );
 };
+
+struct crumb_location_s {
+    uint8_t	crumb_type;
+    uint8_t	row,col;
+}
 
 extern struct crumb_info_s all_crumbs[];
 

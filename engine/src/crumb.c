@@ -19,7 +19,7 @@
 void crumb_was_grabbed ( uint8_t type ) {
     all_crumbs[ type ].counter++;
     if ( all_crumbs[ type ].do_action != NULL )
-        all_crumbs[ type ].do_action();
+        all_crumbs[ type ].do_action( &all_crumbs[ type ] );
 }
 
 void crumb_reset_all( void ) {

@@ -29,6 +29,7 @@
 #include "rage1/util.h"
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
+#include "rage1/crumb.h"
 
 #include "game_data.h"
 
@@ -151,6 +152,7 @@ void hero_check_tiles_below(void) {
     struct sp1_ss *s;
     uint8_t i,j,cols,r,c,item,crumb_type,tile_type;
     struct item_location_s *item_loc;
+    struct crumb_location_s *crumb_loc;
 
     s = game_state.hero.sprite;
 
@@ -185,12 +187,13 @@ void hero_check_tiles_below(void) {
 
 #ifdef BUILD_FEATURE_CRUMBS
             if ( ( tile_type & TT_CRUMB ) == TT_CRUMB ) {
+                item_loc = map_get_crumb_location_at_position( game_state.current_screen_ptr, r, c );
                 // get the crumb type (low nybble)
                 crumb_type = tile_type & 0x0F;
                 // do action for the grabbed crumb
                 crumb_was_grabbed( crumb_type );
                 // remove crumb from screen
-                btile_remove( r, c, &home_assets->all_btiles[ all_crumb_types[ crumb_type ] );
+                btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumbs[ crumb_type ].btile_num ] );
                 // play pickup sound
                 sound_request_fx( SOUND_ITEM_GRABBED );
             }
