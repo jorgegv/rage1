@@ -81,7 +81,27 @@ void map_draw_screen(struct map_screen_s *s) {
         it = &s->item_data.items[i];
         if ( ! IS_ITEM_ACTIVE( all_items[ it->item_num ] ) )
             continue;
-        btile_draw( it->row, it->col, &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
+        btile_draw( it->row, it->col,
+            &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ],
+            TT_ITEM,
+            &game_area
+        );
+    }
+#endif // BUILD_FEATURE_INVENTORY
+
+#ifdef BUILD_FEATURE_CRUMBS
+    // draw crumbs
+    i = s->crumb_data.num_crumbs;
+    while ( i-- ) {
+        struct crumb_location_s *cr;
+        cr = &s->crumb_data.crumbs[ i ];
+        if ( ! IS_CRUMB_ACTIVE( game_state.current_screen_asset_state_table_ptr[ cr->state_index ].asset_state ) )
+            continue;
+        btile_draw( cr->row, cr->col,
+            &home_assets->all_btiles[ all_crumbs[ cr->crumb_type ].btile_num ],
+            TT_CRUMB | cr->crumb_type,	// crumb type is in lower nibble
+            &game_area
+        );
     }
 #endif // BUILD_FEATURE_INVENTORY
 

@@ -169,17 +169,23 @@ void hero_check_tiles_below(void) {
 
 #ifdef BUILD_FEATURE_INVENTORY
             if ( tile_type == TT_ITEM ) {
+
+                // get item location and number
                 item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
 
                 // add item to inventory
                 inventory_add_item( &game_state.inventory, item );
+
                 // mark the item as inactive
                 RESET_ITEM_FLAG( all_items[ item ], F_ITEM_ACTIVE );
-                // remove item from screen
+
+                // remove item from screen - items always have their btiles in home dataset
                 btile_remove( item_loc->row, item_loc->col, &home_assets->all_btiles[ all_items[ item ].btile_num ] );
+
                 // update inventory on screen (show)
                 inventory_show();
+
                 // play pickup sound
                 sound_request_fx( SOUND_ITEM_GRABBED );
             }
@@ -187,13 +193,20 @@ void hero_check_tiles_below(void) {
 
 #ifdef BUILD_FEATURE_CRUMBS
             if ( ( tile_type & TT_CRUMB ) == TT_CRUMB ) {
-                item_loc = map_get_crumb_location_at_position( game_state.current_screen_ptr, r, c );
-                // get the crumb type (low nybble)
+
+                // get crumb location and type (low nibble)
+                crumb_loc = map_get_crumb_location_at_position( game_state.current_screen_ptr, r, c );
                 crumb_type = tile_type & 0x0F;
+
                 // do action for the grabbed crumb
                 crumb_was_grabbed( crumb_type );
-                // remove crumb from screen
+
+                // mark the crumb as inactive
+                RESET_CRUMB_FLAG( game_state.current_screen_asset_state_table_ptr[ crumb_loc->state_index ].asset_state, F_CRUMB_ACTIVE );
+
+                // remove crumb from screen - crumb types always have their btiles in home dataset
                 btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumbs[ crumb_type ].btile_num ] );
+
                 // play pickup sound
                 sound_request_fx( SOUND_ITEM_GRABBED );
             }
