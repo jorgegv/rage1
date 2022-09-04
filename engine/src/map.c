@@ -73,7 +73,7 @@ void map_draw_screen(struct map_screen_s *s) {
             btile_draw( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ), t->type, &game_area );
     }
 
-#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+#ifdef BUILD_FEATURE_INVENTORY
     // draw items
     i = s->item_data.num_items;
     while ( i-- ) {
@@ -83,7 +83,7 @@ void map_draw_screen(struct map_screen_s *s) {
             continue;
         btile_draw( it->row, it->col, &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
     }
-#endif // BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+#endif // BUILD_FEATURE_INVENTORY
 
 #ifdef BUILD_FEATURE_SCREEN_TITLES
     sp1_ClearRectInv( &title_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
@@ -95,7 +95,7 @@ void map_draw_screen(struct map_screen_s *s) {
 
 }
 
-#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+#ifdef BUILD_FEATURE_INVENTORY
 struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col ) {
     uint8_t i, rmax, cmax;
     struct item_location_s *it;
@@ -111,7 +111,7 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     }
     return NULL;	// no object
 }
-#endif // BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+#endif // BUILD_FEATURE_INVENTORY
 
 void map_enter_screen( uint8_t screen_num ) {
     // If we are in 128 mode, we need to switch to the dataset where the

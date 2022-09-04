@@ -157,7 +157,7 @@ void run_main_game_loop(void) {
    game_state_reset_initial();
    hero_update_lives_display();
 
-#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+#ifdef BUILD_FEATURE_INVENTORY
    inventory_show();
 #endif
 
