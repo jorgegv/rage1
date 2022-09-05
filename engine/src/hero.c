@@ -29,6 +29,7 @@
 #include "rage1/util.h"
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
+#include "rage1/crumb.h"
 
 #include "game_data.h"
 
@@ -146,11 +147,20 @@ void hero_shoot_bullet( void ) {
     game_state.bullet.reloading = game_state.bullet.reload_delay;
 }
 
-#ifdef BUILD_FEATURE_INVENTORY
-void hero_pickup_items(void) {
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+void hero_check_tiles_below(void) {
     struct sp1_ss *s;
-    uint8_t i,j,cols,r,c,item;
+    uint8_t i,j,cols,r,c,tile_type;
+
+#ifdef BUILD_FEATURE_INVENTORY
+    uint8_t item;
     struct item_location_s *item_loc;
+#endif
+
+#ifdef BUILD_FEATURE_CRUMBS
+    uint8_t crumb_type;
+    struct crumb_location_s *crumb_loc;
+#endif
 
     s = game_state.hero.sprite;
 
@@ -163,25 +173,56 @@ void hero_pickup_items(void) {
         j = cols;
         while ( j-- ) {
             c = s->col + j;
-            if ( GET_TILE_TYPE_AT( r, c ) == TT_ITEM ) {
+            tile_type = GET_TILE_TYPE_AT( r, c );
+
+#ifdef BUILD_FEATURE_INVENTORY
+            if ( tile_type == TT_ITEM ) {
+
+                // get item location and number
                 item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
 
                 // add item to inventory
                 inventory_add_item( &game_state.inventory, item );
+
                 // mark the item as inactive
                 RESET_ITEM_FLAG( all_items[ item ], F_ITEM_ACTIVE );
-                // remove item from screen
+
+                // remove item from screen - items always have their btiles in home dataset
                 btile_remove( item_loc->row, item_loc->col, &home_assets->all_btiles[ all_items[ item ].btile_num ] );
+
                 // update inventory on screen (show)
                 inventory_show();
+
                 // play pickup sound
                 sound_request_fx( SOUND_ITEM_GRABBED );
             }
+#endif // BUILD_FEATURE_INVENTORY
+
+#ifdef BUILD_FEATURE_CRUMBS
+            if ( ( tile_type & TT_CRUMB ) == TT_CRUMB ) {
+
+                // get crumb location and type (low nibble)
+                crumb_loc = map_get_crumb_location_at_position( game_state.current_screen_ptr, r, c );
+                crumb_type = tile_type & 0x0F;
+
+                // do action for the grabbed crumb
+                crumb_was_grabbed( crumb_type );
+
+                // mark the crumb as inactive
+                RESET_CRUMB_FLAG( game_state.current_screen_asset_state_table_ptr[ crumb_loc->state_index ].asset_state, F_CRUMB_ACTIVE );
+
+                // remove crumb from screen - crumb types always have their btiles in home dataset
+                btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumb_types[ crumb_type ].btile_num ] );
+
+                // play pickup sound
+                sound_request_fx( SOUND_ITEM_GRABBED );
+            }
+#endif // BUILD_FEATURE_CRUMBS
         }
     }
 }
-#endif // BUILD_FEATURE_INVENTORY
+#endif // BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 
 // printing context
 struct sp1_pss lives_display_ctx = {

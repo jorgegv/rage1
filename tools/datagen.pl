@@ -36,7 +36,7 @@ my @codeset_valid_banks = ( 6, );	# non-contended
 
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
-# also in $all_state variable in dump_internal_state function at the end of
+# also in $all_state variable in dump_internal_data function at the end of
 # the script
 my @all_btiles;
 my %btile_name_to_index;
@@ -52,6 +52,9 @@ my %item_name_to_index;
 
 my @all_rules;
 my $max_flow_var_id = undef;
+
+my @all_crumb_types;
+my %crumb_type_name_to_index;
 
 # lists of custom function checks and actions
 my @check_custom_functions;
@@ -109,7 +112,32 @@ my $syntax = {
     valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
 };
 
-my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop );
+my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop crumb_action );
+
+######################################
+## Build Feature functions
+######################################
+
+# build features that always selected no matter what
+my @default_build_features = qw(
+    BTILE_2BIT_TYPE_MAP
+);
+
+sub add_build_feature {
+    my $f = shift;
+    $conditional_build_features{ $f }++;
+}
+
+sub is_build_feature_enabled {
+    my $f = shift;
+    return defined( $conditional_build_features{ $f } );
+}
+
+sub add_default_build_features {
+    foreach my $f ( @default_build_features ) {
+        add_build_feature( $f );
+    }
+}
 
 ##########################################
 ## Input data parsing and state machine
@@ -335,6 +363,7 @@ sub read_input_data {
             }
             if ( $line =~ /^TITLE\s+"(.+)"$/ ) {
                 $cur_screen->{'title'} = $1;
+                add_build_feature( 'SCREEN_TITLES' );
                 next;
             }
             if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
@@ -417,6 +446,26 @@ sub read_input_data {
                 push @all_items, $item;
                 push @{ $cur_screen->{'items'} }, $item_index;
                 $item_name_to_index{ $item->{'name'} } = $item_index;
+                add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+                add_build_feature( 'INVENTORY' );
+                next;
+            }
+            if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # crumbs can change state (=grabbed), so assign a state slot
+                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                push @{ $cur_screen->{'asset_states'} }, { value => 'F_CRUMB_ACTIVE', comment => "Crumb '$item->{name}'" };
+
+                push @{ $cur_screen->{'crumbs'} }, $item;
+
+                add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+                add_build_feature( 'CRUMBS' );
                 next;
             }
             if ( $line =~ /^HOTZONE\s+(\w.*)$/ ) {
@@ -462,6 +511,21 @@ sub read_input_data {
             }
             if ( $line =~ /^SCREEN_DATA\s+"(.*)"$/ ) {
                 push @{ $cur_screen->{'screen_data'} }, $1;
+                next;
+            }
+            if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # enemies can always change state (=killed), so assign a state slot
+                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
+
+                push @{ $cur_screen->{'enemies'} }, $item;
                 next;
             }
             if ( $line =~ /^END_SCREEN$/ ) {
@@ -552,11 +616,16 @@ sub read_input_data {
                 next;
             }
             if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
-                $game_config->{'zx_target'} = $1;
+                if ( $forced_build_target ) {
+                    $game_config->{'zx_target'} = $forced_build_target;
+                } else {
+                    $game_config->{'zx_target'} = $1;
+                }
                 if ( ( $game_config->{'zx_target'} ne '48' ) and
                     ( $game_config->{'zx_target'} ne '128' ) ) {
                         die "ZX_TARGET must be either 48 or 128\n";
                     }
+                add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
                 next;
             }
             if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
@@ -618,6 +687,9 @@ sub read_input_data {
 
                 # add the function to the game config
                 $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
+                if ( $codeset ne 'home' ) {
+                    add_build_feature( 'CODESETS' );
+                }
                 next;
             }
             if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
@@ -651,6 +723,10 @@ sub read_input_data {
                 if ( scalar( grep { defined } map { $game_config->{'loading_screen'}{ $_ } } qw( png scr ) ) != 1 ) {
                     die "LOADING_SCREEN: exactly one of PNG or SCR options (but not both) must be specified\n";
                 }
+                add_build_feature( "LOADING_SCREEN" );
+                if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
+                    add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
+                }
                 next;
             }
             if ( $line =~ /^CUSTOM_CHARSET\s+(.*)$/ ) {
@@ -668,6 +744,7 @@ sub read_input_data {
                         die "CUSTOM_CHARSET: RANGE option must be integers MM-NN\n";
                     }
                 }
+                add_build_feature( "CUSTOM_CHARSET" );
                 next;
             }
             if ( $line =~ /^BINARY_DATA\s+(.*)$/ ) {
@@ -692,6 +769,59 @@ sub read_input_data {
                 # different pieces of data
                 push @{ $game_config->{'binary_data'} }, $blob_info;
                 next;
+            }
+            if ( $line =~ /^CRUMB_TYPE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # check mandatory fields
+                if ( not defined( $item->{'name'} ) ) {
+                    die "CRUMB_TYPE: NAME field is mandatory\n";
+                }
+
+                if ( not defined( $item->{'btile'} ) ) {
+                    die "CRUMB_TYPE: BTILE field is mandatory\n";
+                }
+
+                # if an action_function is defined, do some checks
+                if ( defined( $item->{'action_function' } ) ) {
+
+                    my $action_function = {
+                        name	=> $item->{'action_function' },
+                        codeset	=> ( $item->{'codeset'} || 'home' ),
+                        type	=> 'crumb_action',
+                    };
+
+                    # check that codeset is a valid value
+                    if ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
+                        die sprintf( "CRUMB_TYPE: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                    }
+
+                    # add the needed codeset-related fields.  if a function has
+                    # no codeset directive, it goes to the 'home' codeset
+                    my $codeset = $action_function->{'codeset'};
+                    if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
+                        $codeset_functions_by_codeset{ $codeset } = [];
+                    }
+                    $action_function->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+
+                    # add the function to the codeset lists
+                    push @all_codeset_functions, $action_function;
+                    push @{ $codeset_functions_by_codeset{ $codeset } }, $action_function;
+
+                    # check that the type is a valid function type
+                    if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
+                        die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                    }
+                }
+
+                # add the crumb type to the global list
+                push @all_crumb_types, $item;
+                next;	# $line
             }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
@@ -751,31 +881,6 @@ sub read_input_data {
         } else {
             die "Unknown state '$state'\n";
         }
-    }
-}
-
-######################################
-## Build Feature functions
-######################################
-
-# build features that always selected no matter what
-my @default_build_features = qw(
-    BTILE_PACKED_TYPE_MAP
-);
-
-sub add_build_feature {
-    my $f = shift;
-    $conditional_build_features{ $f }++;
-}
-
-sub is_build_feature_enabled {
-    my $f = shift;
-    return defined( $conditional_build_features{ $f } );
-}
-
-sub add_default_build_features {
-    foreach my $f ( @default_build_features ) {
-        add_build_feature( $f );
     }
 }
 
@@ -1079,10 +1184,6 @@ sub validate_and_compile_screen {
     ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
         die "Screen '$screen->{name}' has no Btiles\n";
 
-    # if any screen has a title, activate the corresponding build feature
-    if ( defined( $screen->{'title'} ) ) {
-        add_build_feature( 'SCREEN_TITLES' );
-    }
 }
 
 # SCREEN_DATA and DEFINE compilation
@@ -1279,7 +1380,24 @@ sub generate_screen {
             scalar( @{$screen->{'items'}} ) );
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
                 sprintf( "\t{ %d, %d, %d }", $_, $all_items[ $_ ]->{'row'}, $all_items[ $_ ]->{'col'} )
-            } @{$screen->{'items'}} );
+            } @{ $screen->{'items'} } );
+        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+    }
+
+    # screen crumbs
+    if ( defined( $screen->{'crumbs'} ) ) {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' crumb data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct crumb_location_s screen_%s_crumbs[ %d ] = {\n",
+            $screen->{'name'},
+            scalar( @{$screen->{'crumbs'}} ) );
+        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
+                sprintf( "\t{ CRUMB_TYPE_%s, %d, %d, %d }",
+                    uc( $_->{'type'} ),
+                    $_->{'row'},
+                    $_->{'col'},
+                    $_->{'asset_state_index'}
+                )
+            } @{ $screen->{'crumbs'} } );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
 
@@ -1465,8 +1583,6 @@ sub generate_items {
     # do not generate anything related to inventory if no items defined
     return if ( not scalar( @all_items ) );
 
-    add_build_feature( 'INVENTORY' );
-
     my $max_items = scalar( @all_items );
     my $all_items_mask = 0;
     my $mask = 1;
@@ -1526,6 +1642,65 @@ EOF_ITEMS2
 
 }
 
+########################
+## Crumb functions
+########################
+
+sub generate_crumb_types {
+
+    # do not generate anything related to inventory if no items defined
+    return if ( not scalar( @all_crumb_types ) );
+
+    my $crumb_num_types = scalar( @all_crumb_types );
+
+    push @h_game_data_lines, <<GAME_DATA_H_2
+
+// Global Crumb Types table
+#define CRUMB_NUM_TYPES $crumb_num_types
+
+// Crumb constants
+GAME_DATA_H_2
+;
+
+    # output constants for crumb types
+    foreach my $i ( 0 .. ( $crumb_num_types - 1 ) ) {
+        push @h_game_data_lines, sprintf( "#define\tCRUMB_TYPE_%s\t%d\n",
+            uc( $all_crumb_types[ $i ]{'name'} ), $i
+        );
+    }
+    push @h_game_data_lines, "\n";
+
+    push @c_game_data_lines, <<EOF_CRUMBS1
+
+/////////////////////////////////
+// Global Crumb Types table
+/////////////////////////////////
+
+struct crumb_info_s all_crumb_types[ CRUMB_NUM_TYPES ] = {
+EOF_CRUMBS1
+;
+    push @c_game_data_lines, join( ",\n",
+        map {
+            sprintf( "\t{ .btile_num = BTILE_ID_%s, .counter = 0, .do_action = %s }",
+                uc( $all_crumb_types[ $_ ]{'btile'} ),
+                $all_crumb_types[ $_ ]{'action_function'} || 'NULL',
+            )
+        } ( 0 .. ( $crumb_num_types - 1 ) )
+    );
+
+    push @c_game_data_lines, <<EOF_CRUMBS2
+
+};
+
+EOF_CRUMBS2
+;
+
+}
+
+########################
+## Game functions
+########################
+
 sub generate_game_functions {
     push @h_game_data_lines, "// game config\n";
 
@@ -1553,6 +1728,10 @@ sub generate_game_functions {
 
     push @h_game_data_lines, "\n\n";
 }
+
+###########################
+## Game Area functions
+###########################
 
 sub generate_single_game_area {
     my $area = shift;
@@ -1650,7 +1829,6 @@ sub validate_and_compile_rule {
 
         # flow_vars specifics
         if ( $check =~ /^FLOW_VAR/ ) {
-            add_build_feature( 'FLOW_VARS' );
             my $vars = {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $check_data )
@@ -1660,6 +1838,7 @@ sub validate_and_compile_rule {
             }
             $check_data = sprintf( "{ .var_id = %s, .value = %s }",
                 $vars->{'var_id'}, $vars->{'value'} );
+            add_build_feature( 'FLOW_VARS' );
         }
 
         # regenerate the check with filtered data
@@ -1726,7 +1905,6 @@ sub validate_and_compile_rule {
 
         # flow_vars specifics
         if ( $action =~ /^FLOW_VAR/ ) {
-            add_build_feature( 'FLOW_VARS' );
             my $vars = {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $action_data )
@@ -1736,6 +1914,7 @@ sub validate_and_compile_rule {
             }
             $action_data = sprintf( "{ .var_id = %s, .value = %s }",
                 $vars->{'var_id'}, $vars->{'value'} || 0 );
+            add_build_feature( 'FLOW_VARS' );
         }
 
         # regenerate the value with the filtered data
@@ -1979,10 +2158,6 @@ sub check_game_config_is_valid {
         $game_config->{'zx_target'} = '48';
         warn "Game Config: 'zx_target' not defined - building for 48K mode\n";
     }
-    if ( $forced_build_target ) {
-        $game_config->{'zx_target'} = $forced_build_target;
-    }
-
     if ( is_build_feature_enabled( 'INVENTORY') and not defined( $game_config->{'inventory_area'} ) ) {
         warn "Game Config: using INVENTORY feature, but no INVENTORY_AREA defined\n";
         $errors++;
@@ -2247,6 +2422,9 @@ EOF_MAP
             ( scalar( @all_items) ? sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
+            ( scalar( @all_crumb_types) ? sprintf( "\t\t.crumb_data = { %d, %s },\t// item_data\n",
+                scalar( @{$_->{'crumbs'}} ), ( scalar( @{$_->{'crumbs'}} ) ? sprintf( 'screen_%s_crumbs', $_->{'name'} ) : 'NULL' ) )
+                : '' ) .
             sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
             join( "\n", map {
@@ -2294,9 +2472,9 @@ GAME_DATA_H_1
 }
 
 sub generate_h_ending {
-    push @h_game_data_lines, <<GAME_DATA_H_3
+    push @h_game_data_lines, <<GAME_DATA_H_4
 #endif // _GAME_DATA_H
-GAME_DATA_H_3
+GAME_DATA_H_4
 ;
 }
 
@@ -2365,20 +2543,9 @@ sub generate_game_config {
 EOF_BLDCFG1
 ;
 
-    # add ZX_TARGET definition
-    add_build_feature( sprintf( "ZX_TARGET_%s\n", $game_config->{'zx_target'} ) );
-
-    # add LOADING_SCREEN definitions if present
-    if ( defined( $game_config->{'loading_screen'} ) ) {
-        add_build_feature( "LOADING_SCREEN" );
-        if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
-            add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
-        }
-    }
 
     # add CUSTOM_CHARSET definitions of present
     if ( defined( $game_config->{'custom_charset'} ) ) {
-        add_build_feature( "CUSTOM_CHARSET" );
         my ( $char_min, $char_max ) = ( 32, 127 );	# defaults: all ZX ASCII range
         if ( $game_config->{'custom_charset'}{'range'} ) {
             $game_config->{'custom_charset'}{'range'} =~ m/^(\d+)\-(\d+)$/;
@@ -2534,7 +2701,6 @@ EOF_CODESET_3
     my @non_home_codeset_functions = grep { $_->{'codeset'} ne 'home' } @all_codeset_functions;
 
     if ( scalar( @non_home_codeset_functions ) and ( $game_config->{'zx_target'} ne '48' ) ) {
-        add_build_feature( 'CODESETS' );
         push @c_game_data_lines, "// global codeset functions table\n";
         push @h_game_data_lines, "// global indexes of codeset functions\n";
 
@@ -2577,7 +2743,6 @@ EOF_CODESET_3
             );
         } else {
             # macros for 128K mode
-            add_build_feature( 'CODESETS' );
             push @h_game_data_lines, sprintf(
                 "#define CALL_CODESET_FUNCTION_%-30s  (codeset_call_function( CODESET_FUNCTION_%s ))\n",
                 uc( $function->{'name'} ) . '()',
@@ -2799,6 +2964,7 @@ sub generate_game_data {
     generate_hero;
     generate_bullets;
     generate_items;
+    generate_crumb_types;
     generate_global_screen_data;
     generate_game_areas;
     generate_game_config;
@@ -2820,8 +2986,7 @@ sub generate_game_data {
     generate_custom_function_tables;
 
     # generate conditional build features
-    add_default_build_features();
-    generate_conditional_build_features();
+    generate_conditional_build_features;
 
     # generate ending lines if needed
     generate_h_ending;
@@ -2996,6 +3161,13 @@ sub create_dataset_dependencies {
             $btile_name_to_index{ $item->{'btile'} };
     }
 
+    # crumb btiles are always added to the home dataset, since the crumb type table
+    # is global
+    foreach my $crumb_type ( @all_crumb_types ) {
+        push @{ $dataset_dependency{'home'}{'btiles'} },
+            $btile_name_to_index{ $crumb_type->{'btile'} };
+    }
+
     # the same for the Lives btile
     push @{ $dataset_dependency{'home'}{'btiles'} },
         $btile_name_to_index{ $hero->{'lives'}{'btile'} };
@@ -3048,6 +3220,26 @@ sub create_dataset_dependencies {
     }
 }
 
+# fixes dependencies between build features.  put here all exceptions and
+# mangling needed for build features that need/exclude others, etc.
+sub fix_feature_dependencies {
+
+    # currently, the CRUMBS feature needs to have byte-size tile types, so
+    # if CRUMBS are used, disable the default packed tile map
+    if ( defined( $conditional_build_features{ 'CRUMBS' } ) and
+        defined( $conditional_build_features{ 'BTILE_2BIT_TYPE_MAP' }) ) {
+        delete $conditional_build_features{ 'BTILE_2BIT_TYPE_MAP' };
+    }
+
+    # if ZX_TARGET is 48, CODESETs make no sense
+    if ( defined( $conditional_build_features{ 'ZX_TARGET_48' } ) and
+        defined( $conditional_build_features{ 'CODESETS' }) ) {
+        delete $conditional_build_features{ 'CODESETS' };
+    }
+
+    # additional fixes here...
+}
+
 # creates a dump of internal data so that other tools (e.g.  FLOWGEN) can
 # load it and use the parsed data. Use "-c" option to dump the internal data
 sub dump_internal_data {
@@ -3063,6 +3255,8 @@ sub dump_internal_data {
         sprite_name_to_index		=> \%sprite_name_to_index,
         all_items			=> \@all_items,
         item_name_to_index		=> \%item_name_to_index,
+        all_crumb_types			=> \@all_crumb_types,
+        crumb_type_name_to_index	=> \%crumb_type_name_to_index,
         all_rules			=> \@all_rules,
         hero				=> $hero,
         game_config			=> $game_config,
@@ -3072,6 +3266,7 @@ sub dump_internal_data {
         codeset_functions_by_codeset	=> \%codeset_functions_by_codeset,
         check_custom_functions		=> \@check_custom_functions,
         action_custom_functions		=> \@action_custom_functions,
+        conditional_build_features	=> \%conditional_build_features,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
@@ -3096,14 +3291,20 @@ $build_dir = $opt_b || 'build';
 $game_src_dir = $opt_s || 'build/game_src';
 $forced_build_target = $opt_t || 0;
 
+# add default build features - these will be updated/modified later
+add_default_build_features;
+
 # read, validate and compile input
 read_input_data;
 
 # run consistency checks
 run_consistency_checks;
 
-# generate output
+# process data dependencies
 create_dataset_dependencies;
+fix_feature_dependencies;
+
+# generate output
 generate_game_data;
 output_game_data;
 

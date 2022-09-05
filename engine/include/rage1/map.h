@@ -22,6 +22,7 @@
 #include "rage1/hotzone.h"
 #include "rage1/flow.h"
 #include "rage1/enemy.h"
+#include "rage1/crumb.h"
 
 // Screen functions and definitions
 // A screen has a set of btiles , a set of sprites and some hero data
@@ -53,6 +54,12 @@ struct map_screen_s {
         uint8_t num_items;
         struct item_location_s *items;
     } item_data;
+#endif
+#ifdef BUILD_FEATURE_CRUMBS
+    struct {
+        uint8_t num_crumbs;
+        struct crumb_location_s *crumbs;
+    } crumb_data;
 #endif
     struct {
         uint8_t num_hotzones;
@@ -88,11 +95,13 @@ extern struct screen_dataset_map_s screen_dataset_map[];
 // later modify the logic behind maps without touching the map display
 // code
 void map_draw_screen(struct map_screen_s *s);
-struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
 void map_enter_screen( uint8_t screen );
 void map_exit_screen( struct map_screen_s *s );
 void map_allocate_sprites( struct map_screen_s *m );
 void map_free_sprites( struct map_screen_s *s );
+
+struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
+struct crumb_location_s *map_get_crumb_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
 
 // utility macros and definitions
 // screen flags macros and definitions

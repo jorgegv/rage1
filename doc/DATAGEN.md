@@ -260,6 +260,9 @@ BEGIN_SCREEN
 
 	ITEM		NAME=Heart	ROW=3 COL=6 ITEM_ID=0
 
+	CRUMB		NAME=Crumb01	TYPE=RedPill ROW=5 COL=6
+	CRUMB		NAME=Crumb02	TYPE=RedPill ROW=10 COL=10
+
 	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=22 PROBABILITY=140
 
 	DEFINE		GRAPH=II	TYPE=OBSTACLE   BTILE=Ice01
@@ -312,6 +315,10 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the name of the item
   * `BTILE`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
+* `CRUMB`: positions a crumb on the screen. Arguments:
+  * `NAME`: the name of the crumb
+  * `TYPE`: the crumb type, must have been defined in `GAME_CONFIG` section
+  * `ROW`,`COL`: top left position of the crumb, in char cell coordinates
 * `ENEMY`: defines an enemy on the screen. Arguments:
   * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
     sprite name
@@ -459,6 +466,7 @@ BEGIN_GAME_CONFIG
         DEBUG_AREA      TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
 	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 	BINARY_DATA     FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
+	CRUMB_TYPE	NAME=RedPill BTILE=RedPill ACTION_FUNCTION=redpill_grabbed FILE=crumb_functions.c CODESET=1
 END_GAME_CONFIG
 ```
 
@@ -551,6 +559,22 @@ including different data pieces.  Arguments:
   * `COMPRESS`: optional, if set to 1 the data will be stored compressed in
     the generated variable, ready to decompress with one of the ZX0
     decompression functions.
+
+* `CRUMB_TYPE`: defines a new CRUMB type which may later be used in `SCREEN`
+  definitions.  Arguments:
+  * `NAME`: mandatory, specifies the name of the crumb type
+  * `BTILE`: mandatory, specifies the BTILE that will be used to draw crumbs
+    of this type
+  * `ACTION_FUNCTION`: (optional) specifies an additional function that will
+    be called every time a crumb of this type is grabbed by the hero.  The
+    function receives as a parameter a pointer to the `struct
+    crumb_location_s` data structure that the hero walked over.
+  * `FILE`: (optional) the file name where the function is.  If not
+    specified, the name of the file will be assumed the same as the function
+    name, plus a `.c` extension
+  * `CODESET`: (optional) the codeset where the function must reside.  If
+    not specified, or we are compiling for 48K model, it will go into lowmem
+    area
 
 # FLOWGEN
 

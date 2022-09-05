@@ -122,8 +122,8 @@ void do_hero_actions(void) {
 
     hero_animate_and_move();
 
-#ifdef BUILD_FEATURE_INVENTORY
-    hero_pickup_items();
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+    hero_check_tiles_below();
 #endif
 
     if ( game_state.controller.state & IN_STICK_FIRE )

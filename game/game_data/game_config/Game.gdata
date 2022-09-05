@@ -28,4 +28,7 @@ BEGIN_GAME_CONFIG
 
 	// arbitrary binary data
 	BINARY_DATA	FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
+
+	// crumb types
+	CRUMB_TYPE	NAME=RedPill BTILE=RedPill
 END_GAME_CONFIG

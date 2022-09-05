@@ -69,6 +69,10 @@ void game_state_reset_initial(void) {
    inventory_reset_all();
 #endif
 
+#ifdef BUILD_FEATURE_CRUMBS
+   crumb_reset_all();
+#endif
+
    game_state_assets_reset_all();
 
 #ifdef BUILD_FEATURE_FLOW_VARS
