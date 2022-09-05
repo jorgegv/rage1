@@ -260,6 +260,9 @@ BEGIN_SCREEN
 
 	ITEM		NAME=Heart	ROW=3 COL=6 ITEM_ID=0
 
+	CRUMB		NAME=Crumb01	TYPE=RedPill ROW=5 COL=6
+	CRUMB		NAME=Crumb02	TYPE=RedPill ROW=10 COL=10
+
 	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=22 PROBABILITY=140
 
 	DEFINE		GRAPH=II	TYPE=OBSTACLE   BTILE=Ice01
@@ -312,6 +315,10 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the name of the item
   * `BTILE`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
+* `CRUMB`: positions a crumb on the screen. Arguments:
+  * `NAME`: the name of the crumb
+  * `TYPE`: the crumb type, must have been defined in `GAME_CONFIG` section
+  * `ROW`,`COL`: top left position of the crumb, in char cell coordinates
 * `ENEMY`: defines an enemy on the screen. Arguments:
   * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
     sprite name
