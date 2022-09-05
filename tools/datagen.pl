@@ -2986,8 +2986,7 @@ sub generate_game_data {
     generate_custom_function_tables;
 
     # generate conditional build features
-    add_default_build_features();
-    generate_conditional_build_features();
+    generate_conditional_build_features;
 
     # generate ending lines if needed
     generate_h_ending;
@@ -3292,6 +3291,9 @@ $build_dir = $opt_b || 'build';
 $game_src_dir = $opt_s || 'build/game_src';
 $forced_build_target = $opt_t || 0;
 
+# add default build features - these will be updated/modified later
+add_default_build_features;
+
 # read, validate and compile input
 read_input_data;
 
@@ -3301,7 +3303,6 @@ run_consistency_checks;
 # process data dependencies
 create_dataset_dependencies;
 fix_feature_dependencies;
-print Dumper( \%conditional_build_features );
 
 # generate output
 generate_game_data;

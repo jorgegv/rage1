@@ -18,6 +18,11 @@
 
 #ifdef BUILD_FEATURE_CRUMBS
 
+// a guard, just in case...
+#ifndef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+  #error BUILD_FEATURE_HERO_CHECK_TILES_BELOW must be defined!
+#endif
+
 void crumb_was_grabbed ( uint8_t type ) {
     all_crumb_types[ type ].counter++;
     if ( all_crumb_types[ type ].do_action != NULL )
