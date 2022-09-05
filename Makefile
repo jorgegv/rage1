@@ -53,12 +53,6 @@ build:
 	@$(MAKE) -s ZX_TARGET=$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') data
 	@$(MAKE) -s -f Makefile-$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') build
 
-build-minimal:
-	@$(MAKE) -s clean
-	@$(MAKE) -s ZX_TARGET=48 config target_game=minimal_game
-	@$(MAKE) -s ZX_TARGET=48 data
-	@$(MAKE) -s -f Makefile-48 build
-
 build48:
 	@$(MAKE) -s clean
 	@$(MAKE) -s ZX_TARGET=48 config
@@ -70,4 +64,11 @@ build128:
 	@$(MAKE) -s ZX_TARGET=128 config
 	@$(MAKE) -s ZX_TARGET=128 data
 	@$(MAKE) -s -f Makefile-128 build
+
+# additional test games
+build-minimal:
+	@$(MAKE) -s clean
+	@$(MAKE) -s ZX_TARGET=48 config target_game=games/minimal
+	@$(MAKE) -s ZX_TARGET=48 data
+	@$(MAKE) -s -f Makefile-48 build
 

@@ -18,9 +18,10 @@ GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
 GAME_SRC_DIR		= $(BUILD_DIR)/game_src
 GAME_DATA_DIR		= $(BUILD_DIR)/game_data
 
-# by default, build the test game
+# by default, build the main test game
 # override this in the build command line (with e.g. "make build128 target_game=../famargon") to build your own game
-DEFAULT_TARGET_GAME	= game
+# you can also build other test games under the games/ directory
+DEFAULT_TARGET_GAME	= games/default
 TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
 
 # Main sources and objs
@@ -230,7 +231,7 @@ textbox: tests/textbox.c $(TEXTBOX_OBJS)
 
 # these are game data directories that will be copied from the template when creating
 # a new game
-LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
+LIB_GAME_DATA_DIRS	= games/minimal/game_data games/minimal/game_src
 
 # create a minimal game using the library
 new-game:
