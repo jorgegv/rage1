@@ -17,14 +17,14 @@
 #include "game_data.h"
 
 void crumb_was_grabbed ( uint8_t type ) {
-    all_crumbs[ type ].counter++;
-    if ( all_crumbs[ type ].do_action != NULL )
-        all_crumbs[ type ].do_action( &all_crumbs[ type ] );
+    all_crumb_types[ type ].counter++;
+    if ( all_crumb_types[ type ].do_action != NULL )
+        all_crumb_types[ type ].do_action( &all_crumb_types[ type ] );
 }
 
 void crumb_reset_all( void ) {
     uint8_t i = CRUMB_NUM_TYPES;
     while ( i-- ) {
-        all_crumbs[ i ].counter = 0;
+        all_crumb_types[ i ].counter = 0;
     }
 }

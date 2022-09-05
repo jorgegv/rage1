@@ -36,7 +36,7 @@ struct crumb_location_s {
 
 #define IS_CRUMB_ACTIVE(i)	( GET_CRUMB_FLAG( ( i ), F_CRUMB_ACTIVE ) )
 
-extern struct crumb_info_s all_crumbs[];
+extern struct crumb_info_s all_crumb_types[];
 
 void crumb_was_grabbed ( uint8_t type );
 void crumb_reset_all( void );
