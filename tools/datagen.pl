@@ -36,7 +36,7 @@ my @codeset_valid_banks = ( 6, );	# non-contended
 
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
-# also in $all_state variable in dump_internal_state function at the end of
+# also in $all_state variable in dump_internal_data function at the end of
 # the script
 my @all_btiles;
 my %btile_name_to_index;
@@ -52,6 +52,9 @@ my %item_name_to_index;
 
 my @all_rules;
 my $max_flow_var_id = undef;
+
+my @all_crumb_types;
+my %crumb_type_name_to_index;
 
 # lists of custom function checks and actions
 my @check_custom_functions;
@@ -692,6 +695,59 @@ sub read_input_data {
                 # different pieces of data
                 push @{ $game_config->{'binary_data'} }, $blob_info;
                 next;
+            }
+            if ( $line =~ /^CRUMB_TYPE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # check mandatory fields
+                if ( not defined( $item->{'name'} ) ) {
+                    die "CRUMB_TYPE: NAME field is mandatory\n";
+                }
+
+                if ( not defined( $item->{'btile'} ) ) {
+                    die "CRUMB_TYPE: BTILE field is mandatory\n";
+                }
+
+                # if an action_function is defined, do some checks
+                if ( defined( $item->{'action_function' } ) ) {
+
+                    my $action_function = {
+                        name	=> $item->{'action_function' },
+                        codeset	=> ( $item->{'codeset'} || 'home' ),
+                        type	=> 'crumb_action',
+                    };
+
+                    # check that codeset is a valid value
+                    if ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
+                        die sprintf( "CRUMB_TYPE: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                    }
+
+                    # add the needed codeset-related fields.  if a function has
+                    # no codeset directive, it goes to the 'home' codeset
+                    my $codeset = $action_function->{'codeset'};
+                    if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
+                        $codeset_functions_by_codeset{ $codeset } = [];
+                    }
+                    $action_function->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+
+                    # add the function to the codeset lists
+                    push @all_codeset_functions, $action_function;
+                    push @{ $codeset_functions_by_codeset{ $codeset } }, $action_function;
+
+                    # check that the type is a valid function type
+                    if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
+                        die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                    }
+                }
+
+                # add the crumb type to the global list
+                push @all_crumb_types, $item;
+                next;	# $line
             }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
@@ -1527,6 +1583,68 @@ EOF_ITEMS2
 
 }
 
+########################
+## Crumb functions
+########################
+
+sub generate_crumb_types {
+
+    # do not generate anything related to inventory if no items defined
+    return if ( not scalar( @all_crumb_types ) );
+
+    add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+    add_build_feature( 'CRUMBS' );
+
+    my $crumb_num_types = scalar( @all_crumb_types );
+
+    push @h_game_data_lines, <<GAME_DATA_H_2
+
+// Global Crumb Types table
+#define CRUMB_NUM_TYPES $crumb_num_types
+
+// Crumb constants
+GAME_DATA_H_2
+;
+
+    # output constants for crumb types
+    foreach my $i ( 0 .. ( $crumb_num_types - 1 ) ) {
+        push @h_game_data_lines, sprintf( "#define\tCRUMB_TYPE_%s\t%d\n",
+            uc( $all_crumb_types[ $i ]{'name'} ), $i
+        );
+    }
+    push @h_game_data_lines, "\n";
+
+    push @c_game_data_lines, <<EOF_CRUMBS1
+
+/////////////////////////////////
+// Global Crumb Types table
+/////////////////////////////////
+
+struct crumb_info_s all_crumb_types[ CRUMB_NUM_TYPES ] = {
+EOF_CRUMBS1
+;
+    push @c_game_data_lines, join( ",\n",
+        map {
+            sprintf( "\t{ .btile_num = BTILE_ID_%s, .counter = 0, .do_action = %s }",
+                uc( $all_crumb_types[ $_ ]{'btile'} ),
+                $all_crumb_types[ $_ ]{'action_function'} || 'NULL',
+            )
+        } ( 0 .. ( $crumb_num_types - 1 ) )
+    );
+
+    push @c_game_data_lines, <<EOF_CRUMBS2
+
+};
+
+EOF_CRUMBS2
+;
+
+}
+
+########################
+## Game functions
+########################
+
 sub generate_game_functions {
     push @h_game_data_lines, "// game config\n";
 
@@ -1554,6 +1672,10 @@ sub generate_game_functions {
 
     push @h_game_data_lines, "\n\n";
 }
+
+###########################
+## Game Area functions
+###########################
 
 sub generate_single_game_area {
     my $area = shift;
@@ -2295,9 +2417,9 @@ GAME_DATA_H_1
 }
 
 sub generate_h_ending {
-    push @h_game_data_lines, <<GAME_DATA_H_3
+    push @h_game_data_lines, <<GAME_DATA_H_4
 #endif // _GAME_DATA_H
-GAME_DATA_H_3
+GAME_DATA_H_4
 ;
 }
 
@@ -2800,6 +2922,7 @@ sub generate_game_data {
     generate_hero;
     generate_bullets;
     generate_items;
+    generate_crumb_types;
     generate_global_screen_data;
     generate_game_areas;
     generate_game_config;
@@ -2997,6 +3120,13 @@ sub create_dataset_dependencies {
             $btile_name_to_index{ $item->{'btile'} };
     }
 
+    # crumb btiles are always added to the home dataset, since the crumb type table
+    # is global
+    foreach my $crumb_type ( @all_crumb_types ) {
+        push @{ $dataset_dependency{'home'}{'btiles'} },
+            $btile_name_to_index{ $crumb_type->{'btile'} };
+    }
+
     # the same for the Lives btile
     push @{ $dataset_dependency{'home'}{'btiles'} },
         $btile_name_to_index{ $hero->{'lives'}{'btile'} };
@@ -3078,6 +3208,8 @@ sub dump_internal_data {
         sprite_name_to_index		=> \%sprite_name_to_index,
         all_items			=> \@all_items,
         item_name_to_index		=> \%item_name_to_index,
+        all_crumb_types			=> \@all_crumb_types,
+        crumb_type_name_to_index	=> \%crumb_type_name_to_index,
         all_rules			=> \@all_rules,
         hero				=> $hero,
         game_config			=> $game_config,

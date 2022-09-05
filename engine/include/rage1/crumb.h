@@ -25,7 +25,7 @@ struct crumb_location_s {
     uint8_t	crumb_type;
     uint8_t	row,col;
     uint8_t	state_index;	// index into the screen asset state table
-}
+};
 
 // crumb flags macros and definitions
 #define GET_CRUMB_FLAG(s,f)	( (s) & (f) )

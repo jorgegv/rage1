@@ -16,6 +16,8 @@
 
 #include "game_data.h"
 
+#ifdef BUILD_FEATURE_CRUMBS
+
 void crumb_was_grabbed ( uint8_t type ) {
     all_crumb_types[ type ].counter++;
     if ( all_crumb_types[ type ].do_action != NULL )
@@ -28,3 +30,5 @@ void crumb_reset_all( void ) {
         all_crumb_types[ i ].counter = 0;
     }
 }
+
+#endif // BUILD_FEATURE_CRUMBS

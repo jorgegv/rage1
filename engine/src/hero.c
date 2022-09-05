@@ -150,9 +150,17 @@ void hero_shoot_bullet( void ) {
 #ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 void hero_check_tiles_below(void) {
     struct sp1_ss *s;
-    uint8_t i,j,cols,r,c,item,crumb_type,tile_type;
+    uint8_t i,j,cols,r,c,tile_type;
+
+#ifdef BUILD_FEATURE_INVENTORY
+    uint8_t item;
     struct item_location_s *item_loc;
+#endif
+
+#ifdef BUILD_FEATURE_CRUMBS
+    uint8_t crumb_type;
     struct crumb_location_s *crumb_loc;
+#endif
 
     s = game_state.hero.sprite;
 
@@ -205,7 +213,7 @@ void hero_check_tiles_below(void) {
                 RESET_CRUMB_FLAG( game_state.current_screen_asset_state_table_ptr[ crumb_loc->state_index ].asset_state, F_CRUMB_ACTIVE );
 
                 // remove crumb from screen - crumb types always have their btiles in home dataset
-                btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumbs[ crumb_type ].btile_num ] );
+                btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumb_types[ crumb_type ].btile_num ] );
 
                 // play pickup sound
                 sound_request_fx( SOUND_ITEM_GRABBED );

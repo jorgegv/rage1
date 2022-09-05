@@ -98,7 +98,7 @@ void map_draw_screen(struct map_screen_s *s) {
         if ( ! IS_CRUMB_ACTIVE( game_state.current_screen_asset_state_table_ptr[ cr->state_index ].asset_state ) )
             continue;
         btile_draw( cr->row, cr->col,
-            &home_assets->all_btiles[ all_crumbs[ cr->crumb_type ].btile_num ],
+            &home_assets->all_btiles[ all_crumb_types[ cr->crumb_type ].btile_num ],
             TT_CRUMB | cr->crumb_type,	// crumb type is in lower nibble
             &game_area
         );
@@ -141,8 +141,8 @@ struct crumb_location_s *map_get_crumb_location_at_position( struct map_screen_s
     i = s->crumb_data.num_crumbs;
     while ( i-- ) {
         cr = &s->crumb_data.crumbs[i];
-        rmax = cr->row + home_assets->all_btiles[ all_crumbs[ cr->crumb_type ].btile_num ].num_rows - 1;
-        cmax = cr->col + home_assets->all_btiles[ all_crumbs[ cr->crumb_type ].btile_num ].num_cols - 1;
+        rmax = cr->row + home_assets->all_btiles[ all_crumb_types[ cr->crumb_type ].btile_num ].num_rows - 1;
+        cmax = cr->col + home_assets->all_btiles[ all_crumb_types[ cr->crumb_type ].btile_num ].num_cols - 1;
         if ( ( row >= cr->row ) && ( row <= rmax ) &&
              ( col >= cr->col ) && ( col <= cmax ) )
             return cr;
