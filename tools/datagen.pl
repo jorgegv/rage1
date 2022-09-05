@@ -458,6 +458,10 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
 
+                if ( not defined( $crumb_type_name_to_index{ $item->{'type'} } ) ) {
+                    die "CRUMB: undefined crumb TYPE '$item->{type}'\n";
+                }
+
                 # crumbs can change state (=grabbed), so assign a state slot
                 $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
                 push @{ $cur_screen->{'asset_states'} }, { value => 'F_CRUMB_ACTIVE', comment => "Crumb '$item->{name}'" };
@@ -820,7 +824,9 @@ sub read_input_data {
                 }
 
                 # add the crumb type to the global list
+                my $index = scalar( @all_crumb_types );
                 push @all_crumb_types, $item;
+                $crumb_type_name_to_index{ $item->{'name'} } = $index;
                 next;	# $line
             }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
