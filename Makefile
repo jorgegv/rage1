@@ -72,3 +72,15 @@ build-minimal:
 	@$(MAKE) -s ZX_TARGET=48 data
 	@$(MAKE) -s -f Makefile-48 build
 
+build-blobs:
+	@$(MAKE) -s clean
+	@$(MAKE) -s ZX_TARGET=48 config target_game=games/blobs
+	@$(MAKE) -s ZX_TARGET=48 data
+	@$(MAKE) -s -f Makefile-48 build
+
+build-crumbs:
+	@$(MAKE) -s clean
+	@$(MAKE) -s ZX_TARGET=48 config target_game=games/crumbs
+	@$(MAKE) -s ZX_TARGET=48 data
+	@$(MAKE) -s -f Makefile-48 build
+
