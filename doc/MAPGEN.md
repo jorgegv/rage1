@@ -101,8 +101,8 @@ Input data:
 
 - PNG file(s) with BTILE graphic data.  Each PNG BTILE file has an
   associated TILEDEF (.tiledef) file which indicates the name, position,
-  size and default tile type (OBSTACLE, ITEM, DECORATION) for each of the
-  BTILEs included in a given PNG file.
+  size and default tile type (OBSTACLE, ITEM, DECORATION, CRUMB) for each of
+  the BTILEs included in a given PNG file.
 
   TILEDEF files should be very easy to generate by hand when opening the PNG
   file and activating the grid.  A tiledef file is composed of lines with
@@ -329,7 +329,7 @@ Now you can continue adding features to your game!
 
 ## Fully working example
 
-If you just want to test a demo map with the default test game, you can just
+If you just want to test a demo map with a simple test game, you can just
 follow this simple steps:
 
 - Edit the `games/mapgen/game_data/game_config/Game.gdata` file and change
@@ -355,7 +355,7 @@ cd games/mapgen
 
 # go home and build
 cd ../..
-make  build
+make  build target_game=games/mapgen
 ```
 
 At this point the test game has been compiled with the demo map and the file
