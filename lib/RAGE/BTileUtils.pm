@@ -44,14 +44,14 @@ sub btile_read_png_tiledefs {
         my ( $name, $row, $col, $width, $height, $type, @metadata ) = split( /\s+/, $line );
 
         # setup the type of tile
-        my $default_type = uc( $type || 'OBSTACLE' );
-        grep { $default_type } qw( OBSTACLE ITEM DECORATION CRUMB ) or
+        my $default_type = lc( $type || 'obstacle' );
+        grep { $default_type } qw( obstacle item decoration crumb ) or
             die "$tiledef_file:$linecount: '$type' is not a valid BTILE type\n";
 
         # process the metadata
         my $metadata;
         foreach my $meta ( @metadata ) {
-            if ( not ( $meta =~ /([\w\.])+=(.*)/ ) ) {
+            if ( not ( $meta =~ /([\w\.]+)=(.*)/ ) ) {
                 die "$tiledef_file:$linecount: metadata syntax error, both key and value are needed\n"
             }
             my ( $key, $value ) = ( $1, $2 );

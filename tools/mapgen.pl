@@ -1169,7 +1169,7 @@ if ( $generate_check_map ) {
         my $btile_width = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'}[0] } ) * 8;
 
         # set color according to type (btile or item)
-        my $color = ( lc( $all_btiles[ $btile->{'btile_index'} ]{'default_type'} ) eq 'item' ? $blue : $red );
+        my $color = ( $all_btiles[ $btile->{'btile_index'} ]{'default_type'} eq 'item' ? $blue : $red );
 
         $img->rectangle(
             $btile->{'global_cell_col'} * 8,	# xmin
@@ -1317,8 +1317,8 @@ EOF_MAP_GDATA_HEADER
         my $btile_instance_name = sprintf( 'GeneratedBTile_%d', $btile_counter++ );
         my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
         printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
-            $btile_data->{'default_type'},
-            ( $btile_data->{'default_type'} eq 'ITEM' ? $btile_data->{'name'} : $btile_instance_name ),
+            uc( $btile_data->{'default_type'} ),
+            ( $btile_data->{'default_type'} eq 'item' ? $btile_data->{'name'} : $btile_instance_name ),
             $btile_data->{'name'},
             $btile->{'cell_row'} + $game_area_top,
             $btile->{'cell_col'} + $game_area_left,
