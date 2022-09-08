@@ -19,3 +19,4 @@ wall_2x1        4 5 2 1 obstacle
 wall_1x2        4 5 1 2 obstacle
 wall_2x2        4 5 2 2 obstacle
 wall_4x2        4 5 4 2 obstacle
+redpill		4 9 1 1 crumb type=RedPill

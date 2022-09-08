@@ -32,15 +32,40 @@ sub btile_read_png_tiledefs {
 
     open TILEDEF, $tiledef_file or
         die "Could not open $tiledef_file for reading\n";
+    my $linecount = 0;
     while ( my $line = <TILEDEF> ) {
+        $linecount++;
         chomp $line;
         $line =~ s/#.*$//g;		# remove comments
         next if $line =~ m/^$/;		# skip line if empty
         $line =~ s/\s+/ /g;		# replace multiple spaces with one
-        my ( $name, $row, $col, $width, $height, $type ) = split( /\s+/, $line );
-        my $default_type = uc( $type || 'OBSTACLE' );
-        grep { $default_type } qw( OBSTACLE ITEM DECORATION ) or
-            die "$tiledef_file: '$type' is not a valid BTILE type\n";
+
+        # get fields - type and metadata may be empty
+        my ( $name, $row, $col, $width, $height, $type, @metadata ) = split( /\s+/, $line );
+
+        # setup the type of tile
+        my $default_type = lc( $type || 'obstacle' );
+        grep { $default_type } qw( obstacle item decoration crumb ) or
+            die "$tiledef_file:$linecount: '$type' is not a valid BTILE type\n";
+
+        # process the metadata
+        my $metadata;
+        foreach my $meta ( @metadata ) {
+            if ( not ( $meta =~ /([\w\.]+)=(.*)/ ) ) {
+                die "$tiledef_file:$linecount: metadata syntax error, both key and value are needed\n"
+            }
+            my ( $key, $value ) = ( $1, $2 );
+            if ( $key =~ /^(\w+)\.(\w+)$/ ) {
+                # key has "section.param" format, so save with an indirection level
+                my ( $section, $param ) = ( $1, $2 );
+                $metadata->{ $section }{ $param } = $value;
+            } else {
+                # key has plain format "param", so save the value directly
+                $metadata->{ $key } = $value;
+            }
+        }
+
+        # save the tiledef
         push @tiledefs, {
             name		=> $name,
             default_type	=> $default_type,
@@ -54,6 +79,7 @@ sub btile_read_png_tiledefs {
             pixel_height	=> $height * 8,
             tiledef_line	=> $line,
             png_file		=> $png_file,
+            metadata		=> $metadata,
         };
     }
     close TILEDEF;

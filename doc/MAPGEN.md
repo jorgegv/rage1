@@ -101,8 +101,8 @@ Input data:
 
 - PNG file(s) with BTILE graphic data.  Each PNG BTILE file has an
   associated TILEDEF (.tiledef) file which indicates the name, position,
-  size and default tile type (OBSTACLE, ITEM, DECORATION) for each of the
-  BTILEs included in a given PNG file.
+  size and default tile type (OBSTACLE, ITEM, DECORATION, CRUMB) for each of
+  the BTILEs included in a given PNG file.
 
   TILEDEF files should be very easy to generate by hand when opening the PNG
   file and activating the grid.  A tiledef file is composed of lines with
@@ -329,33 +329,33 @@ Now you can continue adding features to your game!
 
 ## Fully working example
 
-If you just want to test a demo map with the default test game, you can just
+If you just want to test a demo map with a simple test game, you can just
 follow this simple steps:
 
-- Edit the `game/game_data/game_config/Game.gdata` file and change the
-  `INITIAL` setting on the `SCREEN` line to `StartScreen` (this is the
+- Edit the `games/mapgen/game_data/game_config/Game.gdata` file and change
+  the `INITIAL` setting on the `SCREEN` line to `StartScreen` (this is the
   starting screen defined in the demo map `.mapdef` file)
 
 - Run the following commands in the base directory of the RAGE1
 distribution:
 
 ```
-cd game
+cd games/mapgen
 
 # this creates definitions for the test btiles
-../tools/btilegen.pl ../misc/test-tiles.png > game_data/btiles/autobtiles.gdata
+../../tools/btilegen.pl game_data/png/test-tiles.png > game_data/btiles/autobtiles.gdata
 
 # this analyzes the map and creates all the needed map data
-../tools/mapgen.pl --screen-cols 24 --screen-rows 16 \
+../../tools/mapgen.pl --screen-cols 24 --screen-rows 16 \
 	--game-data-dir game_data --game-area-top 1 --game-area-left 1 \
 	--hero-sprite-width 16 --hero-sprite-height 16 --auto-hotzones \
 	--generate-check-map \
-	../misc/test-tiles.png \
-	../misc/demo-map-3x2-screens-24x16.png
+	game_data/png/test-tiles.png \
+	game_data/png/demo-map-3x2-screens-24x16.png
 
-# go up one directory and build
-cd ..
-make  build
+# go home and build
+cd ../..
+make  build target_game=games/mapgen
 ```
 
 At this point the test game has been compiled with the demo map and the file

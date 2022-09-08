@@ -1,0 +1,8 @@
+// Hotzone 'GeneratedHotzone_0' screen-warp rule
+BEGIN_RULE
+	SCREEN	StartScreen
+	WHEN	GAME_LOOP
+	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_0
+	DO	WARP_TO_SCREEN DEST_SCREEN=Corridor DEST_HERO_X=16
+END_RULE
+

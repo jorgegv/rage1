@@ -38,6 +38,10 @@ my $auto_hotzone_bgcolor = '000000';
 my $auto_hotzone_width = 8;
 my $generate_check_map;
 
+# global variables
+my %map_crumb_types;
+
+# parse CLI options
 (
     GetOptions(
         "screen-cols=i"			=> \$screen_cols,
@@ -187,6 +191,7 @@ foreach my $png_file ( @btile_files ) {
             cell_data		=> $btile_data,
             name		=> $tiledef->{'name'},
             default_type	=> $tiledef->{'default_type'},
+            metadata		=> $tiledef->{'metadata'},
         };
 
         # ...and update the index
@@ -474,6 +479,13 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                                     $matched_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
                                 }
                             } # end of mark-as-checked-and-matched
+
+                            # take note if the detected btile is a crumb
+                            if ( $all_btiles[ $btile_index ]{'default_type'} eq 'crumb' ) {
+                                $map_crumb_types{ $all_btiles[ $btile_index ]{'metadata'}{'type'} } = {
+                                    btile_name	=> $all_btiles[ $btile_index ]{'name'},
+                                };
+                            }
 
                             # whenever we find a match, skip the rest of btiles
                             $btile_count++;
@@ -1148,6 +1160,7 @@ if ( $generate_check_map ) {
     my $green = $img->colorAllocate( 0, 255, 0 );
     my $blue = $img->colorAllocate( 0, 0, 255 );
     my $white = $img->colorAllocate( 255, 255, 255 );
+    my $yellow = $img->colorAllocate( 255, 255, 0 );
 
     # set black background
     $img->fill( 0, 0, $black );
@@ -1168,8 +1181,16 @@ if ( $generate_check_map ) {
         my $btile_height = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'} } ) * 8;
         my $btile_width = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'}[0] } ) * 8;
 
-        # set color according to type (btile or item)
-        my $color = ( lc( $all_btiles[ $btile->{'btile_index'} ]{'default_type'} ) eq 'item' ? $blue : $red );
+        # set color according to type (btile, item, crumb...)
+        my $type = $all_btiles[ $btile->{'btile_index'} ]{'default_type'};
+        my $color;
+        if ( $type eq 'item' ) {
+            $color = $blue;
+        } elsif ( $type eq 'crumb' ){
+            $color = $yellow;
+        } else {
+            $color = $red;
+        }
 
         $img->rectangle(
             $btile->{'global_cell_col'} * 8,	# xmin
@@ -1308,21 +1329,32 @@ EOF_MAP_GDATA_HEADER
         printf GDATA "\t%s\t%s\n", uc( $key ), $value;
     }
 
-    # Output btiles and items.  Items are just different types of BTILEs.
-    # If the BTILE is of type ITEM, then we assume it can be found only once
-    # on the same screen, and then use the BTILE name as the name instead of
-    # the generated one
+    # Output btiles, items and crumbs.  Items and Crumbs are just different
+    # types of BTILEs.  If the BTILE is of type ITEM, then we assume it can
+    # be found only once on the same screen, and then use the BTILE name as
+    # the name instead of the generated one
+
     my $btile_counter = 0;
     foreach my $btile ( @{ $screen_data->{'btiles'} } ) {
         my $btile_instance_name = sprintf( 'GeneratedBTile_%d', $btile_counter++ );
         my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
-        printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
-            $btile_data->{'default_type'},
-            ( $btile_data->{'default_type'} eq 'ITEM' ? $btile_data->{'name'} : $btile_instance_name ),
-            $btile_data->{'name'},
-            $btile->{'cell_row'} + $game_area_top,
-            $btile->{'cell_col'} + $game_area_left,
-        ;
+        if ( $btile_data->{'default_type'} eq 'crumb' ) {
+            # crumbs are a special case
+            printf GDATA "\tCRUMB\tNAME=%s\tTYPE=%s ROW=%d COL=%d\n",
+                $btile_instance_name,
+                $btile_data->{'metadata'}{'type'},
+                $btile->{'cell_row'} + $game_area_top,
+                $btile->{'cell_col'} + $game_area_left,
+            ;
+        } else {
+            printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
+                uc( $btile_data->{'default_type'} ),
+                ( $btile_data->{'default_type'} eq 'item' ? $btile_data->{'name'} : $btile_instance_name ),
+                $btile_data->{'name'},
+                $btile->{'cell_row'} + $game_area_top,
+                $btile->{'cell_col'} + $game_area_left,
+            ;
+        }
     }
 
     # hotzones are output separately
@@ -1439,6 +1471,82 @@ foreach my $screen_name ( sort keys %screen_data ) {
 
     close GDATA;
     printf "-- File %s: for screen '%s' was created\n", $output_file, $screen_name;
+}
+
+####################################################################################
+####################################################################################
+###
+### 11. Check that GAME_CONFIG section has the needed definitions and warn if not
+###
+####################################################################################
+####################################################################################
+
+my @config_lines_needed;
+if ( scalar( keys %map_crumb_types ) ) {
+
+    # if we detected CRUMBs in the map, do some additional checks
+    print "CRUMBs were detected on the map, checking GAME_CONFIG definitions...\n";
+
+    # load the GAME_CONFIG section from the game_data directory and load the
+    # CRUMB_TYPE directives if they exist
+    my $game_config_file = "$game_data_dir/game_config/Game.gdata";
+    my %config_crumb_types;
+    if ( open GAME_CONFIG, $game_config_file ) {
+        while ( my $line = <GAME_CONFIG> ) {
+            chomp $line;
+            $line =~ s#//.*$##g;	# remove comments to EOL
+            $line =~ s/^\s*//g;	# remove leading whitespace
+            next if $line =~ /^$/;	# skip empty lines
+            if ( $line =~ /^CRUMB_TYPE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'name'} ) ) {
+                    warn "** Syntax error in $game_config_file, will not check CRUMB_TYPE definitions!\n";
+                    warn "** Error line -> $line\n";
+                    last;
+                }
+                $item->{'source_line'} = $line;
+                $config_crumb_types{ $item->{'name'} } = $item;
+            }
+        }
+        close GAME_CONFIG;
+    } else {
+        warn "** Could not open $game_config_file, will not check CRUMB_TYPE definitions!\n";
+    }
+
+    # try to match the crumbs found on the map with definitions in the
+    # config file
+    foreach my $map_crumb ( keys %map_crumb_types ) {
+        if ( not defined( $config_crumb_types{ $map_crumb } ) or
+            not defined( $config_crumb_types{ $map_crumb }{'btile'} ) or
+            ( $config_crumb_types{ $map_crumb }{'btile'} ne $map_crumb_types{ $map_crumb }{'btile_name'} ) ) {
+            push @config_lines_needed, sprintf "\tCRUMB_TYPE\tNAME=%s BTILE=%s\n",
+                $map_crumb,
+                $map_crumb_types{ $map_crumb }{'btile_name'},
+                ;
+        }
+    }
+
+    # if some warnings are needed, issue them
+    if ( scalar( @config_lines_needed ) ) {
+        print <<EOF_CRUMBS_DETECTED
+
+-- ATTENTION!  Some CRUMB_TYPE configuration is missing.  Make sure
+-- appropriate CRUMB_TYPE lines appear inside the GAME_CONFIG section
+-- (normally in game_data/game_config/Game.config file).  The needed
+-- configuration lines follow:
+
+EOF_CRUMBS_DETECTED
+;
+        print join( "\n\t", @config_lines_needed ), "\n\n";
+    } else {
+        print "-- All needed CRUMB_TYPE definitions are present in GAME_CONFIG\n";
+    }
+
 }
 
 print "MAPGEN Execution successful!\n";
