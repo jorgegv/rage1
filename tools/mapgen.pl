@@ -187,6 +187,7 @@ foreach my $png_file ( @btile_files ) {
             cell_data		=> $btile_data,
             name		=> $tiledef->{'name'},
             default_type	=> $tiledef->{'default_type'},
+            metadata		=> $tiledef->{'metadata'},
         };
 
         # ...and update the index
@@ -1148,6 +1149,7 @@ if ( $generate_check_map ) {
     my $green = $img->colorAllocate( 0, 255, 0 );
     my $blue = $img->colorAllocate( 0, 0, 255 );
     my $white = $img->colorAllocate( 255, 255, 255 );
+    my $yellow = $img->colorAllocate( 255, 255, 0 );
 
     # set black background
     $img->fill( 0, 0, $black );
@@ -1168,8 +1170,16 @@ if ( $generate_check_map ) {
         my $btile_height = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'} } ) * 8;
         my $btile_width = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'}[0] } ) * 8;
 
-        # set color according to type (btile or item)
-        my $color = ( $all_btiles[ $btile->{'btile_index'} ]{'default_type'} eq 'item' ? $blue : $red );
+        # set color according to type (btile, item, crumb...)
+        my $type = $all_btiles[ $btile->{'btile_index'} ]{'default_type'};
+        my $color;
+        if ( $type eq 'item' ) {
+            $color = $blue;
+        } elsif ( $type eq 'crumb' ){
+            $color = $yellow;
+        } else {
+            $color = $red;
+        }
 
         $img->rectangle(
             $btile->{'global_cell_col'} * 8,	# xmin
@@ -1308,21 +1318,33 @@ EOF_MAP_GDATA_HEADER
         printf GDATA "\t%s\t%s\n", uc( $key ), $value;
     }
 
-    # Output btiles and items.  Items are just different types of BTILEs.
-    # If the BTILE is of type ITEM, then we assume it can be found only once
-    # on the same screen, and then use the BTILE name as the name instead of
-    # the generated one
+    # Output btiles, items and crumbs.  Items and Crumbs are just different
+    # types of BTILEs.  If the BTILE is of type ITEM, then we assume it can
+    # be found only once on the same screen, and then use the BTILE name as
+    # the name instead of the generated one
+
     my $btile_counter = 0;
     foreach my $btile ( @{ $screen_data->{'btiles'} } ) {
         my $btile_instance_name = sprintf( 'GeneratedBTile_%d', $btile_counter++ );
         my $btile_data = $all_btiles[ $btile->{'btile_index'} ];
-        printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
-            uc( $btile_data->{'default_type'} ),
-            ( $btile_data->{'default_type'} eq 'item' ? $btile_data->{'name'} : $btile_instance_name ),
-            $btile_data->{'name'},
-            $btile->{'cell_row'} + $game_area_top,
-            $btile->{'cell_col'} + $game_area_left,
-        ;
+        if ( $btile_data->{'default_type'} eq 'crumb' ) {
+            # crumbs are a special case
+            printf GDATA "\tCRUMB\tNAME=%s\tBTILE=%s\tROW=%d COL=%d TYPE=%s\n",
+                $btile_instance_name,
+                $btile_data->{'name'},
+                $btile->{'cell_row'} + $game_area_top,
+                $btile->{'cell_col'} + $game_area_left,
+                $btile->{'metadata'}{'type'},
+            ;
+        } else {
+            printf GDATA "\t%s\tNAME=%s\tBTILE=%s\tROW=%d COL=%d ACTIVE=1 CAN_CHANGE_STATE=0\n",
+                uc( $btile_data->{'default_type'} ),
+                ( $btile_data->{'default_type'} eq 'item' ? $btile_data->{'name'} : $btile_instance_name ),
+                $btile_data->{'name'},
+                $btile->{'cell_row'} + $game_area_top,
+                $btile->{'cell_col'} + $game_area_left,
+            ;
+        }
     }
 
     # hotzones are output separately

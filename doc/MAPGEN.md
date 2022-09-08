@@ -332,29 +332,29 @@ Now you can continue adding features to your game!
 If you just want to test a demo map with the default test game, you can just
 follow this simple steps:
 
-- Edit the `game/game_data/game_config/Game.gdata` file and change the
-  `INITIAL` setting on the `SCREEN` line to `StartScreen` (this is the
+- Edit the `games/mapgen/game_data/game_config/Game.gdata` file and change
+  the `INITIAL` setting on the `SCREEN` line to `StartScreen` (this is the
   starting screen defined in the demo map `.mapdef` file)
 
 - Run the following commands in the base directory of the RAGE1
 distribution:
 
 ```
-cd game
+cd games/mapgen
 
 # this creates definitions for the test btiles
-../tools/btilegen.pl ../misc/test-tiles.png > game_data/btiles/autobtiles.gdata
+../../tools/btilegen.pl game_data/png/test-tiles.png > game_data/btiles/autobtiles.gdata
 
 # this analyzes the map and creates all the needed map data
-../tools/mapgen.pl --screen-cols 24 --screen-rows 16 \
+../../tools/mapgen.pl --screen-cols 24 --screen-rows 16 \
 	--game-data-dir game_data --game-area-top 1 --game-area-left 1 \
 	--hero-sprite-width 16 --hero-sprite-height 16 --auto-hotzones \
 	--generate-check-map \
-	../misc/test-tiles.png \
-	../misc/demo-map-3x2-screens-24x16.png
+	game_data/png/test-tiles.png \
+	game_data/png/demo-map-3x2-screens-24x16.png
 
-# go up one directory and build
-cd ..
+# go home and build
+cd ../..
 make  build
 ```
 
