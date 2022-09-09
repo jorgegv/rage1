@@ -408,6 +408,7 @@ BEGIN_HERO
         HSTEP           1
         VSTEP           1
         LIVES           NUM_LIVES=3 BTILE=Live
+	DAMAGE_MODE	ENEMY_DAMAGE=1 HEALTH_MAX=2 IMMUNITY_PERIOD=100 HEALTH_DISPLAY_FUNCTION=my_hero_display_health
         BULLET          SPRITE=Bullet01 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
 END_HERO
 ```
@@ -426,6 +427,18 @@ END_HERO
   frames)
 * `HSTEP`, `VSTEP`: movement increments for the hero
 * `LIVES`: number of lives
+* `DAMAGE_MODE`: defines advanced configuration for the hero lives system.
+  This setting is optional; if it is not specified, the simple schema of N
+  lives and "enemy touch kills one life" is implemented.  Arguments:
+  * `HEALTH_MAX`: (optional) health counter for each life, defaults to 1
+  * `ENEMY_DAMAGE`: (optional) damage inflicted to hero health by 1 enemy
+  impact, defaults to 1
+  * `IMMUNITY_PERIOD`: (optional) period after an enemy impact during which
+  the hero is immune to enemies (in frames - 1/50 s).  Defaults to 0.
+  * `HEALTH_DISPLAY_FUNCTION`: (optional) the function to call when the
+  health display neeeds to be updated (e.g. when a hit has been received).
+  You must provide this function in some file in the `game_src` directory.
+  The function must match the prototype `void my_function( void )`.
 * `BULLET`: configures firing. Arguments;
   * `SPRITE`: sprite to use for the bullet. Must match a graphic sprite
     definition

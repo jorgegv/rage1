@@ -556,6 +556,19 @@ sub read_input_data {
                 };
                 next;
             }
+            if ( $line =~ /^DAMAGE_MODE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                $hero->{'damage_mode'} = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE' );
+                if ( defined( $hero->{'damage_mode'}{'health_display_function'} ) ) {
+                    add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION' );
+                }
+                next;
+            }
             if ( $line =~ /^HSTEP\s+(\d+)$/ ) {
                 $hero->{'hstep'} = $1;
                 next;
@@ -1472,6 +1485,23 @@ sub validate_and_compile_hero {
         die "Hero has no HSTEP\n";
     defined( $hero->{'vstep'} ) or
         die "Hero has no VSTEP\n";
+
+    # ensure DAMAGE_MODE is always defined
+    # remember LIVES are handled separately for compatibility
+    my $default_damage_mode = {
+        health_max	=> 1,
+        enemy_damage	=> 1,
+        immunity_period	=> 0,
+    };
+    my $damage_mode;
+    if ( defined( $hero->{'damage_mode'} ) ) {
+        # merge the provided parameters with the defaults
+        $damage_mode = { %{ $default_damage_mode }, %{ $hero->{'damage_mode'} } };
+    } else {
+        $damage_mode = $default_damage_mode;
+    }
+    $hero->{'damage_mode'} = $damage_mode;
+
 }
 
 sub generate_hero {
@@ -1493,6 +1523,10 @@ sub generate_hero {
     my $hstep			= $hero->{'hstep'};
     my $vstep			= $hero->{'vstep'};
     my $local_num_sprite	= $dataset_dependency{'home'}{'sprite_global_to_dataset_index'}{ $num_sprite };
+    my $health_max		= $hero->{'damage_mode'}{'health_max'};
+    my $enemy_damage		= $hero->{'damage_mode'}{'enemy_damage'};
+    my $immunity_period		= $hero->{'damage_mode'}{'immunity_period'};
+    my $health_display_function	= $hero->{'damage_mode'}{'health_display_function'} || '';
 
     push @h_game_data_lines, <<EOF_HERO1
 
@@ -1516,9 +1550,18 @@ sub generate_hero {
 #define	HERO_MOVE_VSTEP			$vstep
 #define	HERO_NUM_LIVES			$num_lives
 #define	HERO_LIVES_BTILE_NUM		$lives_btile_num
+#define HERO_HEALTH_MAX			$health_max
+#define HERO_ENEMY_DAMAGE		$enemy_damage
+#define HERO_IMMUNITY_PERIOD		$immunity_period
+#define HERO_HEALTH_DISPLAY_FUNCTION	$health_display_function
 
 EOF_HERO1
 ;
+
+    if ( $health_display_function ne '' ) {
+        push @h_game_data_lines, "// external declaration for custom health display function\n";
+        push @h_game_data_lines, "void $health_display_function( void );\n\n";
+    }
 
     # hero sprite must be always available - output sprite into home bank
 }

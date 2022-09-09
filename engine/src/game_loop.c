@@ -60,21 +60,9 @@ void check_game_flags( void ) {
        RESET_GAME_FLAG( F_GAME_START );
     }
 
-    // check if player has died
+    // check if player has been hit by an enemy
     if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
-       sound_request_fx( SOUND_HERO_DIED );
-       if ( ! --game_state.hero.num_lives )
-          SET_GAME_FLAG( F_GAME_OVER );
-       else {
-          enemy_reset_position_all(
-             game_state.current_screen_ptr->enemy_data.num_enemies, 
-             game_state.current_screen_ptr->enemy_data.enemies
-          );
-          hero_reset_position();
-          bullet_reset_all();
-          hero_update_lives_display();
-          SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
-       }
+     hero_handle_hit();
     }
 
     // check if hero needs to be redrawn
@@ -128,6 +116,11 @@ void do_hero_actions(void) {
 
     if ( game_state.controller.state & IN_STICK_FIRE )
         hero_shoot_bullet();
+
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+    if ( game_state.hero.health.immunity_timer )
+        hero_do_immunity_expiration();
+#endif
 }
 
 void check_collisions(void) {
@@ -156,6 +149,9 @@ void run_main_game_loop(void) {
    // reset game vars and setup initial state
    game_state_reset_initial();
    hero_update_lives_display();
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+   HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
 
 #ifdef BUILD_FEATURE_INVENTORY
    inventory_show();
