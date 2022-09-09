@@ -33,6 +33,3 @@ void my_user_game_loop(void) {
 //   debug_out(" H"); debug_out(i8toa(game_state.hero.num_lives));
 }
 
-void my_hero_display_health( void ) {
-    debug_out( "\nH:" ); debug_out( i8toa( game_state.hero.health.health_amount ) );
-}
