@@ -63,8 +63,9 @@ struct hero_damage_mode_s {
 
 // hero health data
 struct hero_health_data_s {
-    uint8_t num_lives;				// lives
-    uint8_t health_amount;			// health counter for each life
+    uint8_t num_lives;			// lives
+    uint8_t health_amount;		// health counter for each life
+    uint8_t immunity_timer;		// immunity counter
 };
 
 struct hero_info_s {
@@ -90,9 +91,11 @@ extern struct sp1_ss *hero_sprite;
 
 #define F_HERO_ALIVE	0x01
 #define F_HERO_STEADY	0x02
+#define F_HERO_IMMUNE	0x04
 
 #define IS_HERO_ALIVE(s)	(GET_HERO_FLAG((s),F_HERO_ALIVE))
 #define IS_HERO_STEADY(s)	(GET_HERO_FLAG((s),F_HERO_STEADY))
+#define IS_HERO_IMMUNE(s)	(GET_HERO_FLAG((s),F_HERO_IMMUNE))
 
 void init_hero(void);
 void hero_reset_all(void);
@@ -107,5 +110,6 @@ void hero_set_position_y( struct hero_info_s *h, uint8_t y);
 void hero_move_offscreen(void);
 void hero_init_sprites(void);
 void hero_handle_hit( void );
+void hero_do_immunity_expiration( void );
 
 #endif // _HERO_H

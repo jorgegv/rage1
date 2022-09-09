@@ -68,6 +68,7 @@ struct hero_info_s hero_startup_data = {
     {	// health
         HERO_NUM_LIVES,
         HERO_HEALTH_MAX,
+        0, // immunity timer
     },
     0,				// flags
 };
@@ -275,17 +276,59 @@ void hero_init_sprites(void) {
 }
 
 void hero_handle_hit ( void ) {
-   sound_request_fx( SOUND_HERO_DIED );
-   if ( ! --game_state.hero.health.num_lives )
-      SET_GAME_FLAG( F_GAME_OVER );
-   else {
-      enemy_reset_position_all(
-         game_state.current_screen_ptr->enemy_data.num_enemies,
-         game_state.current_screen_ptr->enemy_data.enemies
-      );
-      hero_reset_position();
-      bullet_reset_all();
-      hero_update_lives_display();
-      SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
-   }
+#ifdef BUILD_FEATURE_ADVANCED_DAMAGE_MODE
+    // do the damage calculation in signed 16 bits, so that we can check if
+    // health < 0
+    int16_t health_amount = game_state.hero.health.health_amount;
+
+    health_amount -= game_state.hero.damage_mode.enemy_damage;
+    if ( health_amount <= 0 ) {
+        sound_request_fx( SOUND_HERO_DIED );
+        if ( ! --game_state.hero.health.num_lives )
+            SET_GAME_FLAG( F_GAME_OVER );
+        else {
+            # reset hero health counter
+            game_state.hero.health.health_amount = game_state.hero.damage_mode.health_max;
+            enemy_reset_position_all(
+                game_state.current_screen_ptr->enemy_data.num_enemies,
+                game_state.current_screen_ptr->enemy_data.enemies
+            );
+            hero_reset_position();
+            bullet_reset_all();
+            hero_update_lives_display();
+            SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+        }
+    } else {
+        sound_request_fx( SOUND_HERO_HIT );
+        game_state.hero.health.health_amount -= game_state.hero.damage_mode.enemy_damage;
+        if ( game_state.hero.damage_mode.immunity_period ) {
+            SET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+            game_state.hero.health.immunity_timer = game_state.hero.damage_mode.immunity_period;
+        }
+    }
+#else
+    sound_request_fx( SOUND_HERO_DIED );
+    if ( ! --game_state.hero.health.num_lives )
+        SET_GAME_FLAG( F_GAME_OVER );
+    else {
+        enemy_reset_position_all(
+            game_state.current_screen_ptr->enemy_data.num_enemies,
+            game_state.current_screen_ptr->enemy_data.enemies
+        );
+        hero_reset_position();
+        bullet_reset_all();
+        hero_update_lives_display();
+        SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+    }
+#endif	// BUILD_FEATURE_ADVANCED_DAMAGE_MODE
 }
+
+#ifdef BUILD_FEATURE_ADVANCED_DAMAGE_MODE
+
+void hero_do_immunity_expiration( void ) {
+    # if immunity timer has expired, reset IMMUNE flag
+    if ( ! --game_state.hero.health.immunity_timer )
+        RESET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+}
+
+#endif  // BUILD_FEATURE_ADVANCED_DAMAGE_MODE

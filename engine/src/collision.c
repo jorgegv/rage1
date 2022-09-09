@@ -17,6 +17,7 @@
 #include "rage1/sound.h"
 #include "rage1/enemy.h"
 #include "rage1/dataset.h"
+#include "rage1/hero.h"
 
 #include "game_data.h"
 
@@ -34,6 +35,10 @@ void collision_check_hero_with_sprites(void) {
     struct position_data_s *hero_pos,*enemy_pos;
     struct enemy_info_s *s;
     uint8_t i;
+
+    # return immediately if the hero is currently immune
+    if ( IS_HERO_IMMUNE( game_state.hero ) )
+        return;
 
     hero_pos = &game_state.hero.position;
 
