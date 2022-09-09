@@ -564,6 +564,9 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE' );
+                if ( defined( $hero->{'damage_mode'}{'health_display_function'} ) ) {
+                    add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION' );
+                }
                 next;
             }
             if ( $line =~ /^HSTEP\s+(\d+)$/ ) {
@@ -1498,6 +1501,7 @@ sub validate_and_compile_hero {
         $damage_mode = $default_damage_mode;
     }
     $hero->{'damage_mode'} = $damage_mode;
+
 }
 
 sub generate_hero {
@@ -1522,6 +1526,7 @@ sub generate_hero {
     my $health_max		= $hero->{'damage_mode'}{'health_max'};
     my $enemy_damage		= $hero->{'damage_mode'}{'enemy_damage'};
     my $immunity_period		= $hero->{'damage_mode'}{'immunity_period'};
+    my $health_display_function	= $hero->{'damage_mode'}{'health_display_function'} || '';
 
     push @h_game_data_lines, <<EOF_HERO1
 
@@ -1548,9 +1553,15 @@ sub generate_hero {
 #define HERO_HEALTH_MAX			$health_max
 #define HERO_ENEMY_DAMAGE		$enemy_damage
 #define HERO_IMMUNITY_PERIOD		$immunity_period
+#define HERO_HEALTH_DISPLAY_FUNCTION	$health_display_function
 
 EOF_HERO1
 ;
+
+    if ( $health_display_function ne '' ) {
+        push @h_game_data_lines, "// external declaration for custom health display function\n";
+        push @h_game_data_lines, "void $health_display_function( void );\n\n";
+    }
 
     # hero sprite must be always available - output sprite into home bank
 }

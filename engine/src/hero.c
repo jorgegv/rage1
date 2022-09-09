@@ -298,6 +298,9 @@ void hero_handle_hit ( void ) {
             hero_reset_position();
             bullet_reset_all();
             hero_update_lives_display();
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+            HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
             SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
         }
     } else {
@@ -307,6 +310,9 @@ void hero_handle_hit ( void ) {
             SET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
             game_state.hero.health.immunity_timer = game_state.hero.damage_mode.immunity_period;
         }
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+        HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
     }
 }
 
@@ -318,6 +324,7 @@ void hero_do_immunity_expiration( void ) {
 
 #else
 
+// simple hit handling with default damage mode
 void hero_handle_hit ( void ) {
     sound_request_fx( SOUND_HERO_DIED );
     if ( ! --game_state.hero.health.num_lives )
