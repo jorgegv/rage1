@@ -63,7 +63,7 @@ void check_game_flags( void ) {
     // check if player has died
     if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
        sound_request_fx( SOUND_HERO_DIED );
-       if ( ! --game_state.hero.num_lives )
+       if ( ! --game_state.hero.health.num_lives )
           SET_GAME_FLAG( F_GAME_OVER );
        else {
           enemy_reset_position_all(

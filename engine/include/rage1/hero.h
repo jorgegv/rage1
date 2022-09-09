@@ -53,15 +53,29 @@ struct hero_movement_data_s {
     uint8_t dx,dy;
 };
 
+// describes the damage mode for the hero
+struct hero_damage_mode_s {
+    uint8_t	lives_max;		// num of lives per game
+    uint8_t	health_max;		// health counter per life
+    uint8_t	enemy_damage;		// damage inflicted by 1 enemy impact
+    uint8_t	immunity_period;	// period of immunity after enemy impact (1/50s)
+};
+
+// hero health data
+struct hero_health_data_s {
+    uint8_t num_lives;				// lives
+    uint8_t health_amount;			// health counter for each life
+};
+
 struct hero_info_s {
     struct sp1_ss *sprite;                      // ptr to SP1 sprite struct
     uint8_t num_graphic;			// index in global sprite table
+    struct hero_damage_mode_s damage_mode;	// damage mode data
     struct hero_animation_data_s animation;	// animation data	
-    struct position_data_s position;	// position data
+    struct position_data_s position;		// position data
     struct hero_movement_data_s movement;	// movement data
+    struct hero_health_data_s health;		// health data
     uint8_t flags;				// flags
-    uint8_t num_lives;				// lives
-    uint8_t lives_btile_num;			// btile used to draw remaining lives
 };
 
 // a pre-filled hero_info_s struct for game reset
