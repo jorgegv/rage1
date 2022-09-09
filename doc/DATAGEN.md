@@ -438,6 +438,7 @@ END_HERO
   * `HEALTH_DISPLAY_FUNCTION`: (optional) the function to call when the
   health display neeeds to be updated (e.g. when a hit has been received).
   You must provide this function in some file in the `game_src` directory.
+  The function must match the prototype `void my_function( void )`.
 * `BULLET`: configures firing. Arguments;
   * `SPRITE`: sprite to use for the bullet. Must match a graphic sprite
     definition
