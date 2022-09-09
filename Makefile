@@ -91,11 +91,11 @@ build-mapgen:
 	@$(MAKE) -s clean
 	@cd games/mapgen && ../../tools/btilegen.pl game_data/png/test-tiles.png > game_data/btiles/autobtiles.gdata
 	@cd games/mapgen && ../../tools/mapgen.pl --screen-cols 24 --screen-rows 16 \
-	        --game-data-dir game_data --game-area-top 1 --game-area-left 1 \
-        	--hero-sprite-width 16 --hero-sprite-height 16 --auto-hotzones \
-        	--generate-check-map \
-        	game_data/png/test-tiles.png \
-        	game_data/png/demo-map-3x2-screens-24x16.png
+		--game-data-dir game_data --game-area-top 1 --game-area-left 1 \
+		--hero-sprite-width 16 --hero-sprite-height 16 --auto-hotzones \
+		--generate-check-map \
+		game_data/png/test-tiles.png \
+		game_data/png/demo-map-3x2-screens-24x16.png
 	@$(MAKE) -s ZX_TARGET=48 config target_game=games/mapgen
 	@$(MAKE) -s ZX_TARGET=48 data
 	@$(MAKE) -s -f Makefile-48 build
