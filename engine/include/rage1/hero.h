@@ -106,5 +106,6 @@ void hero_set_position_x( struct hero_info_s *h, uint8_t x);
 void hero_set_position_y( struct hero_info_s *h, uint8_t y);
 void hero_move_offscreen(void);
 void hero_init_sprites(void);
+void hero_handle_hit( void );
 
 #endif // _HERO_H

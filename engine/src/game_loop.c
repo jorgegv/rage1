@@ -60,21 +60,9 @@ void check_game_flags( void ) {
        RESET_GAME_FLAG( F_GAME_START );
     }
 
-    // check if player has died
+    // check if player has been hit by an enemy
     if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
-       sound_request_fx( SOUND_HERO_DIED );
-       if ( ! --game_state.hero.health.num_lives )
-          SET_GAME_FLAG( F_GAME_OVER );
-       else {
-          enemy_reset_position_all(
-             game_state.current_screen_ptr->enemy_data.num_enemies, 
-             game_state.current_screen_ptr->enemy_data.enemies
-          );
-          hero_reset_position();
-          bullet_reset_all();
-          hero_update_lives_display();
-          SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
-       }
+     hero_handle_hit();
     }
 
     // check if hero needs to be redrawn

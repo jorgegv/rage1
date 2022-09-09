@@ -30,6 +30,7 @@
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
 #include "rage1/crumb.h"
+#include "rage1/enemy.h"
 
 #include "game_data.h"
 
@@ -271,4 +272,20 @@ void hero_init_sprites(void) {
         HERO_SPRITE_HEIGHT >> 3,
         HERO_SPRITE_WIDTH >> 3
     );
+}
+
+void hero_handle_hit ( void ) {
+   sound_request_fx( SOUND_HERO_DIED );
+   if ( ! --game_state.hero.health.num_lives )
+      SET_GAME_FLAG( F_GAME_OVER );
+   else {
+      enemy_reset_position_all(
+         game_state.current_screen_ptr->enemy_data.num_enemies,
+         game_state.current_screen_ptr->enemy_data.enemies
+      );
+      hero_reset_position();
+      bullet_reset_all();
+      hero_update_lives_display();
+      SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+   }
 }
