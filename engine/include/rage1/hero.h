@@ -71,7 +71,9 @@ struct hero_health_data_s {
 struct hero_info_s {
     struct sp1_ss *sprite;                      // ptr to SP1 sprite struct
     uint8_t num_graphic;			// index in global sprite table
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
     struct hero_damage_mode_s damage_mode;	// damage mode data
+#endif
     struct hero_animation_data_s animation;	// animation data	
     struct position_data_s position;		// position data
     struct hero_movement_data_s movement;	// movement data

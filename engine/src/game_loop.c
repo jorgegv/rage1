@@ -117,7 +117,7 @@ void do_hero_actions(void) {
     if ( game_state.controller.state & IN_STICK_FIRE )
         hero_shoot_bullet();
 
-#ifdef BUILD_FEATURE_ADVANCED_DAMAGE_MODE
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
     if ( game_state.hero.health.immunity_timer )
         hero_do_immunity_expiration();
 #endif

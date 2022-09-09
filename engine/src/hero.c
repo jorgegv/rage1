@@ -41,12 +41,14 @@
 struct hero_info_s hero_startup_data = {
     NULL,	// sprite ptr - will be initialized at program startup
     HERO_SPRITE_ID,
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
     {	// damage mode
         HERO_NUM_LIVES,
         HERO_HEALTH_MAX,
         HERO_ENEMY_DAMAGE,
         HERO_IMMUNITY_PERIOD,
     },
+#endif
     {	// animation
         HERO_SPRITE_SEQUENCE_UP,
         HERO_SPRITE_SEQUENCE_DOWN,
@@ -275,8 +277,8 @@ void hero_init_sprites(void) {
     );
 }
 
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
 void hero_handle_hit ( void ) {
-#ifdef BUILD_FEATURE_ADVANCED_DAMAGE_MODE
     // do the damage calculation in signed 16 bits, so that we can check if
     // health < 0
     int16_t health_amount = game_state.hero.health.health_amount;
@@ -287,7 +289,7 @@ void hero_handle_hit ( void ) {
         if ( ! --game_state.hero.health.num_lives )
             SET_GAME_FLAG( F_GAME_OVER );
         else {
-            # reset hero health counter
+            // reset hero health counter
             game_state.hero.health.health_amount = game_state.hero.damage_mode.health_max;
             enemy_reset_position_all(
                 game_state.current_screen_ptr->enemy_data.num_enemies,
@@ -306,7 +308,17 @@ void hero_handle_hit ( void ) {
             game_state.hero.health.immunity_timer = game_state.hero.damage_mode.immunity_period;
         }
     }
+}
+
+void hero_do_immunity_expiration( void ) {
+    // if immunity timer has expired, reset IMMUNE flag
+    if ( ! --game_state.hero.health.immunity_timer )
+        RESET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+}
+
 #else
+
+void hero_handle_hit ( void ) {
     sound_request_fx( SOUND_HERO_DIED );
     if ( ! --game_state.hero.health.num_lives )
         SET_GAME_FLAG( F_GAME_OVER );
@@ -320,15 +332,6 @@ void hero_handle_hit ( void ) {
         hero_update_lives_display();
         SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
     }
-#endif	// BUILD_FEATURE_ADVANCED_DAMAGE_MODE
 }
 
-#ifdef BUILD_FEATURE_ADVANCED_DAMAGE_MODE
-
-void hero_do_immunity_expiration( void ) {
-    # if immunity timer has expired, reset IMMUNE flag
-    if ( ! --game_state.hero.health.immunity_timer )
-        RESET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
-}
-
-#endif  // BUILD_FEATURE_ADVANCED_DAMAGE_MODE
+#endif	// BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE

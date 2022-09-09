@@ -563,7 +563,7 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                add_build_feature( 'ADVANCED_DAMAGE_MODE' );
+                add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE' );
                 next;
             }
             if ( $line =~ /^HSTEP\s+(\d+)$/ ) {

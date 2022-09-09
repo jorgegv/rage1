@@ -36,9 +36,11 @@ void collision_check_hero_with_sprites(void) {
     struct enemy_info_s *s;
     uint8_t i;
 
-    # return immediately if the hero is currently immune
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+    // return immediately if the hero is currently immune
     if ( IS_HERO_IMMUNE( game_state.hero ) )
         return;
+#endif
 
     hero_pos = &game_state.hero.position;
 
