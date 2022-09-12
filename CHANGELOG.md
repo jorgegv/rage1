@@ -8,7 +8,7 @@ Caligari", so stay tuned!
 
 Plus, this RAGE1 version has _loads_ of new features for your adventure games!
 
-### New tools
+### New Tools
 
 - MAPGEN: a new tool that can directly use your complete game map in PNG
   format (all screens together!), and together with your BTILE files (also
@@ -26,9 +26,7 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
 - BTILEGEN: an auxiliary tool that creates your BTILE definitions from your
   PNG tile files and a small trivial metadata file (TILEDEF)
 
-### New features
-
-- The hero can now move diagonally!
+### New Features
 
 - The game can now have a Loading Screen, just provide the image in .SCR or
   .PNG format and you are all done
@@ -45,13 +43,15 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
   multiple times (think the dots in PacMan, or the coins in SUper Mario
   Bros)
 
-- WIP: New configurable Damage Mode for the hero: you can select the "enemy
+- New configurable Damage Mode for the hero: you can select the "enemy
   touches you once and you die" model (Manic Miner), or the "enemy touches
   you once and you are invulnerable for a while, but the second time you're
   dead" model (Ghosts'n Globlins), or the "enemy touches you and your energy
   goes down until you die" model (Phantomas)...  your choice!
 
-### Fixes and optimizations
+### Enhancements, Fixes and Optimizations
+
+- The hero can now move diagonally!
 
 - When using 128K mode, one of the non-contended memory banks has been
   reserved for engine code, so that we have additional 16K for features. 
@@ -63,7 +63,9 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
   features: we have reached the point where if all features are configured
   in a single test game, the game does not fit in memory :-)
 
-- WIP: Allow for different sprites in different directions when shooting
+- Bullets can now have different graphics depending on the direction they
+  are shot.  If you shoot balls, this does not matter very much, but it
+  makes a difference if you shoot knives!
 
 ### Documentation
 
