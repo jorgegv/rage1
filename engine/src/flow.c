@@ -140,19 +140,19 @@ uint8_t do_rule_check_user_flag_is_reset( struct flow_rule_check_s *check ) __z8
 
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_EQUAL
 uint8_t do_rule_check_lives_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( game_state.hero.num_lives == check->data.lives.count ? 1 : 0 );
+    return ( game_state.hero.health.num_lives == check->data.lives.count ? 1 : 0 );
 }
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_MORE_THAN
 uint8_t do_rule_check_lives_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( game_state.hero.num_lives > check->data.lives.count ? 1 : 0 );
+    return ( game_state.hero.health.num_lives > check->data.lives.count ? 1 : 0 );
 }
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_LIVES_LESS_THAN
 uint8_t do_rule_check_lives_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
-    return ( game_state.hero.num_lives < check->data.lives.count ? 1 : 0 );
+    return ( game_state.hero.health.num_lives < check->data.lives.count ? 1 : 0 );
 }
 #endif
 
@@ -277,7 +277,7 @@ void do_rule_action_play_sound( struct flow_rule_action_s *action ) __z88dk_fast
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_INC_LIVES
 void do_rule_action_inc_lives( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    game_state.hero.num_lives += action->data.lives.count;
+    game_state.hero.health.num_lives += action->data.lives.count;
     hero_update_lives_display();
 }
 #endif

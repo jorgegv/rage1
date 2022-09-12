@@ -408,7 +408,8 @@ BEGIN_HERO
         HSTEP           1
         VSTEP           1
         LIVES           NUM_LIVES=3 BTILE=Live
-        BULLET          SPRITE=Bullet01 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
+	DAMAGE_MODE	ENEMY_DAMAGE=1 HEALTH_MAX=2 IMMUNITY_PERIOD=100 HEALTH_DISPLAY_FUNCTION=my_hero_display_health
+        BULLET          SPRITE=Bullet01 SPRITE_FRAME_UP=0 SPRITE_FRAME_DOWN=1 SPRITE_FRAME_LEFT=2 SPRITE_FRAME_RIGHT=3 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
 END_HERO
 ```
 
@@ -426,9 +427,21 @@ END_HERO
   frames)
 * `HSTEP`, `VSTEP`: movement increments for the hero
 * `LIVES`: number of lives
+* `DAMAGE_MODE`: defines advanced configuration for the hero lives system.
+  This setting is optional; if it is not specified, the simple schema of N
+  lives and "enemy touch kills one life" is implemented.  Arguments:
+  * `HEALTH_MAX`: (optional) health counter for each life, defaults to 1
+  * `ENEMY_DAMAGE`: (optional) damage inflicted to hero health by 1 enemy
+  impact, defaults to 1
+  * `IMMUNITY_PERIOD`: (optional) period after an enemy impact during which
+  the hero is immune to enemies (in frames - 1/50 s).  Defaults to 0.
+  * `HEALTH_DISPLAY_FUNCTION`: (optional) the function to call when the
+  health display neeeds to be updated (e.g. when a hit has been received).
+  You must provide this function in some file in the `game_src` directory.
+  The function must match the prototype `void my_function( void )`.
 * `BULLET`: configures firing. Arguments;
   * `SPRITE`: sprite to use for the bullet. Must match a graphic sprite
-    definition
+    definition. Currently it _has_ to be a 1x1 cell sprite.
   * `DX`,`DY`: horizontal and vertical increments for moving bullets, in
     pixels
   * `DELAY`: delay between bullet positions (defines the speed of the
@@ -436,6 +449,12 @@ END_HERO
   * `MAX_BULLETS`: maximum number of bullets than can be active at the same
     time
   * `RELOAD_DELAY`: minimum deay between shots, in 1/50s
+  * `SPRITE_FRAME_UP`, `SPRITE_FRAME_DOWN`, `SPRITE_FRAME_LEFT`,
+  `SPRITE_FRAME_RIGHT`: (optional) sprite frames to use when shooting in
+  each direction.  If any of them is not specified, default is 0.  This
+  means that if you don't need to have different bullet graphics for
+  different directions, just don't specify these and the bullets will all
+  use frame 0 of the given sprite
 
 ### GAME_CONFIG data
 

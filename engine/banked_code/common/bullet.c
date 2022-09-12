@@ -99,32 +99,36 @@ void bullet_add( void ) {
         bs = &game_state.bullet.bullets[ i ];
         if ( ! GET_BULLET_FLAG( *bs, F_BULLET_ACTIVE ) ) {
             SET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
-            h_dy = ( HERO_SPRITE_HEIGHT - bi->height ) >> 1;	// divide by 2
-            v_dx = ( HERO_SPRITE_WIDTH - bi->width ) >> 1;	// divide by 2
+            h_dy = ( HERO_SPRITE_HEIGHT - bi->height ) / 2;
+            v_dx = ( HERO_SPRITE_WIDTH - bi->width ) / 2;
 
             if ( hero->movement.last_direction & MOVE_UP ) {
                     bs->position.x = hero->position.x + v_dx;
                     bs->position.y = hero->position.y - bi->height;
                     bs->dx = 0;
                     bs->dy = -bi->movement.dy;
+                    bs->frame = bi->frames[ BULLET_SPRITE_FRAME_UP ];
             }
             if ( hero->movement.last_direction & MOVE_DOWN ) {
                     bs->position.x = hero->position.x + v_dx;
                     bs->position.y = hero->position.ymax + 1;
                     bs->dx = 0;
                     bs->dy = bi->movement.dy;
+                    bs->frame = bi->frames[ BULLET_SPRITE_FRAME_DOWN ];
             }
             if ( hero->movement.last_direction & MOVE_LEFT ) {
                     bs->position.x = hero->position.x - bi->width;
                     bs->position.y = hero->position.y + h_dy;
                     bs->dx = -bi->movement.dx;
                     bs->dy = 0;
+                    bs->frame = bi->frames[ BULLET_SPRITE_FRAME_LEFT ];
             }
             if ( hero->movement.last_direction & MOVE_RIGHT ) {
                     bs->position.x = hero->position.xmax + 1;
                     bs->position.y = hero->position.y + h_dy;
                     bs->dx = bi->movement.dx;
                     bs->dy = 0;
+                    bs->frame = bi->frames[ BULLET_SPRITE_FRAME_RIGHT ];
             }
             bs->position.xmax = bs->position.x + bi->width - 1;
             bs->position.ymax = bs->position.y + bi->height - 1;

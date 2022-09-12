@@ -30,6 +30,7 @@
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
 #include "rage1/crumb.h"
+#include "rage1/enemy.h"
 
 #include "game_data.h"
 
@@ -38,9 +39,17 @@
 /////////////////////////////
 
 struct hero_info_s hero_startup_data = {
-    NULL,		// sprite ptr - will be initialized at program startup
+    NULL,	// sprite ptr - will be initialized at program startup
     HERO_SPRITE_ID,
-    {
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+    {	// damage mode
+        HERO_NUM_LIVES,
+        HERO_HEALTH_MAX,
+        HERO_ENEMY_DAMAGE,
+        HERO_IMMUNITY_PERIOD,
+    },
+#endif
+    {	// animation
         HERO_SPRITE_SEQUENCE_UP,
         HERO_SPRITE_SEQUENCE_DOWN,
         HERO_SPRITE_SEQUENCE_LEFT,
@@ -51,12 +60,19 @@ struct hero_info_s hero_startup_data = {
         HERO_SPRITE_STEADY_FRAME_DOWN,
         HERO_SPRITE_STEADY_FRAME_LEFT,
         HERO_SPRITE_STEADY_FRAME_RIGHT,
-    },	// animation
+    },
     { 0,0,0,0 },	// position - will be reset when entering a screen, including the first one
-    { MOVE_NONE, HERO_MOVE_HSTEP, HERO_MOVE_VSTEP },	// movement
+    {	// movement
+        MOVE_NONE,
+        HERO_MOVE_HSTEP,
+        HERO_MOVE_VSTEP,
+    },
+    {	// health
+        HERO_NUM_LIVES,
+        HERO_HEALTH_MAX,
+        0, // immunity timer
+    },
     0,				// flags
-    HERO_NUM_LIVES,		// lives
-    HERO_LIVES_BTILE_NUM	// btile
 };
 
 void init_hero(void) {
@@ -242,7 +258,7 @@ void hero_update_lives_display(void) {
 
     // draw one tile per live
     col = LIVES_AREA_LEFT;
-    n = game_state.hero.num_lives;
+    n = game_state.hero.health.num_lives;
     while ( n-- ) {
         btile_draw( LIVES_AREA_TOP, col, &home_assets->all_btiles[ HERO_LIVES_BTILE_NUM ], TT_DECORATION, &lives_area );
         col += home_assets->all_btiles[ HERO_LIVES_BTILE_NUM ].num_cols;
@@ -260,3 +276,69 @@ void hero_init_sprites(void) {
         HERO_SPRITE_WIDTH >> 3
     );
 }
+
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+void hero_handle_hit ( void ) {
+    // do the damage calculation in signed 16 bits, so that we can check if
+    // health < 0
+    int16_t health_amount = game_state.hero.health.health_amount;
+
+    health_amount -= game_state.hero.damage_mode.enemy_damage;
+    if ( health_amount <= 0 ) {
+        sound_request_fx( SOUND_HERO_DIED );
+        if ( ! --game_state.hero.health.num_lives )
+            SET_GAME_FLAG( F_GAME_OVER );
+        else {
+            // reset hero health counter
+            game_state.hero.health.health_amount = game_state.hero.damage_mode.health_max;
+            enemy_reset_position_all(
+                game_state.current_screen_ptr->enemy_data.num_enemies,
+                game_state.current_screen_ptr->enemy_data.enemies
+            );
+            hero_reset_position();
+            bullet_reset_all();
+            hero_update_lives_display();
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+            HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
+            SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+        }
+    } else {
+        sound_request_fx( SOUND_HERO_HIT );
+        game_state.hero.health.health_amount -= game_state.hero.damage_mode.enemy_damage;
+        if ( game_state.hero.damage_mode.immunity_period ) {
+            SET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+            game_state.hero.health.immunity_timer = game_state.hero.damage_mode.immunity_period;
+        }
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+        HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
+    }
+}
+
+void hero_do_immunity_expiration( void ) {
+    // if immunity timer has expired, reset IMMUNE flag
+    if ( ! --game_state.hero.health.immunity_timer )
+        RESET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+}
+
+#else
+
+// simple hit handling with default damage mode
+void hero_handle_hit ( void ) {
+    sound_request_fx( SOUND_HERO_DIED );
+    if ( ! --game_state.hero.health.num_lives )
+        SET_GAME_FLAG( F_GAME_OVER );
+    else {
+        enemy_reset_position_all(
+            game_state.current_screen_ptr->enemy_data.num_enemies,
+            game_state.current_screen_ptr->enemy_data.enemies
+        );
+        hero_reset_position();
+        bullet_reset_all();
+        hero_update_lives_display();
+        SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+    }
+}
+
+#endif	// BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
