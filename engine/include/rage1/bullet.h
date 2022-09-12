@@ -35,7 +35,7 @@ extern struct bullet_state_data_s bullet_state_data[];
 
 struct bullet_info_s {
     uint8_t width, height;
-    uint8_t **frames;    
+    uint8_t **frames;
     struct bullet_movement_data_s movement;
     uint8_t num_bullets;
     struct bullet_state_data_s *bullets;

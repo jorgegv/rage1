@@ -17,6 +17,7 @@
 #include "rage1/util.h"
 #include "rage1/debug.h"
 #include "rage1/sound.h"
+#include "rage1/sprite.h"
 
 #include "game_data.h"
 
@@ -71,9 +72,23 @@ void bullet_move_offscreen_all(void) {
         sprite_move_offscreen( game_state.bullet.bullets[i].sprite );
 }
 
+struct bullet_info_s bullet_startup_data = {
+    .width		= BULLET_SPRITE_WIDTH,
+    .height		= BULLET_SPRITE_HEIGHT,
+    .frames		= NULL,	// will be initialized at runtime, comes from home_bank assets ptr
+    .movement		= {
+        .dx = BULLET_MOVEMENT_DX,
+        .dy = BULLET_MOVEMENT_DY,
+        .delay = BULLET_MOVEMENT_DELAY,
+        },
+    .num_bullets	= BULLET_MAX_BULLETS,
+    .bullets		= &bullet_state_data[0],
+    .reload_delay	= BULLET_RELOAD_DELAY,
+    .reloading		= 0,
+};
+
 // Bullet Sprites initialization function
 void bullet_init_sprites(void) {
-    struct bullet_info_s *bi;
     struct sp1_ss *bs;
     uint8_t i;
 
@@ -86,15 +101,6 @@ void bullet_init_sprites(void) {
     }
 
     // initialize remaining game_state.bullet struct fields
-    bi = &game_state.bullet;
-    bi->width = BULLET_SPRITE_WIDTH;
-    bi->height = BULLET_SPRITE_HEIGHT;
-    bi->frames = BULLET_SPRITE_FRAMES;
-    bi->movement.dx = BULLET_MOVEMENT_DX;
-    bi->movement.dy = BULLET_MOVEMENT_DY;
-    bi->movement.delay = BULLET_MOVEMENT_DELAY;
-    bi->num_bullets = BULLET_MAX_BULLETS;
-    bi->bullets = &bullet_state_data[0];
-    bi->reload_delay = BULLET_RELOAD_DELAY;
-    bi->reloading = 0;
+    memcpy( &game_state.bullet, &bullet_startup_data, sizeof( struct bullet_info_s ) );
+    game_state.bullet.frames = BULLET_SPRITE_FRAMES;
 }
