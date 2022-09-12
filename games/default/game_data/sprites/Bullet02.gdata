@@ -6,15 +6,6 @@ BEGIN_SPRITE
 
 	FRAMES	4
 
-	// knife right
-	PNG_DATA        FILE=game_data/png/knife.png XPOS=0 YPOS=0 WIDTH=8 HEIGHT=8 FGCOLOR=FFFFFF
-	PNG_MASK        FILE=game_data/png/knife.png XPOS=0 YPOS=0 WIDTH=8 HEIGHT=8 MASKCOLOR=FF0000
-
-	// knife left
-	PNG_DATA        FILE=game_data/png/knife.png XPOS=8 YPOS=0 WIDTH=8 HEIGHT=8 FGCOLOR=FFFFFF
-	PNG_MASK        FILE=game_data/png/knife.png XPOS=8 YPOS=0 WIDTH=8 HEIGHT=8 MASKCOLOR=FF0000
-
-
 	// knife up
 	PNG_DATA        FILE=game_data/png/knife.png XPOS=16 YPOS=0 WIDTH=8 HEIGHT=8 FGCOLOR=FFFFFF
 	PNG_MASK        FILE=game_data/png/knife.png XPOS=16 YPOS=0 WIDTH=8 HEIGHT=8 MASKCOLOR=FF0000
@@ -22,4 +13,13 @@ BEGIN_SPRITE
 	// knife down
 	PNG_DATA        FILE=game_data/png/knife.png XPOS=24 YPOS=0 WIDTH=8 HEIGHT=8 FGCOLOR=FFFFFF
 	PNG_MASK        FILE=game_data/png/knife.png XPOS=24 YPOS=0 WIDTH=8 HEIGHT=8 MASKCOLOR=FF0000
+
+	// knife left
+	PNG_DATA        FILE=game_data/png/knife.png XPOS=8 YPOS=0 WIDTH=8 HEIGHT=8 FGCOLOR=FFFFFF
+	PNG_MASK        FILE=game_data/png/knife.png XPOS=8 YPOS=0 WIDTH=8 HEIGHT=8 MASKCOLOR=FF0000
+
+	// knife right
+	PNG_DATA        FILE=game_data/png/knife.png XPOS=0 YPOS=0 WIDTH=8 HEIGHT=8 FGCOLOR=FFFFFF
+	PNG_MASK        FILE=game_data/png/knife.png XPOS=0 YPOS=0 WIDTH=8 HEIGHT=8 MASKCOLOR=FF0000
+
 END_SPRITE

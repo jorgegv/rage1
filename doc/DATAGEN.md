@@ -409,7 +409,7 @@ BEGIN_HERO
         VSTEP           1
         LIVES           NUM_LIVES=3 BTILE=Live
 	DAMAGE_MODE	ENEMY_DAMAGE=1 HEALTH_MAX=2 IMMUNITY_PERIOD=100 HEALTH_DISPLAY_FUNCTION=my_hero_display_health
-        BULLET          SPRITE=Bullet01 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
+        BULLET          SPRITE=Bullet01 SPRITE_FRAME_UP=0 SPRITE_FRAME_DOWN=1 SPRITE_FRAME_LEFT=2 SPRITE_FRAME_RIGHT=3 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
 END_HERO
 ```
 
@@ -441,7 +441,7 @@ END_HERO
   The function must match the prototype `void my_function( void )`.
 * `BULLET`: configures firing. Arguments;
   * `SPRITE`: sprite to use for the bullet. Must match a graphic sprite
-    definition
+    definition. Currently it _has_ to be a 1x1 cell sprite.
   * `DX`,`DY`: horizontal and vertical increments for moving bullets, in
     pixels
   * `DELAY`: delay between bullet positions (defines the speed of the
@@ -449,6 +449,12 @@ END_HERO
   * `MAX_BULLETS`: maximum number of bullets than can be active at the same
     time
   * `RELOAD_DELAY`: minimum deay between shots, in 1/50s
+  * `SPRITE_FRAME_UP`, `SPRITE_FRAME_DOWN`, `SPRITE_FRAME_LEFT`,
+  `SPRITE_FRAME_RIGHT`: (optional) sprite frames to use when shooting in
+  each direction.  If any of them is not specified, default is 0.  This
+  means that if you don't need to have different bullet graphics for
+  different directions, just don't specify these and the bullets will all
+  use frame 0 of the given sprite
 
 ### GAME_CONFIG data
 

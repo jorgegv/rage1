@@ -44,7 +44,7 @@ void bullet_redraw_all( void ) {
                 RESET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
             }
             if ( BULLET_NEEDS_REDRAW( *bs ) ) {
-                sp1_MoveSprPix( bs->sprite, &game_area, bi->frames[0], bs->position.x, bs->position.y );
+                sp1_MoveSprPix( bs->sprite, &game_area, bs->frame, bs->position.x, bs->position.y );
                 RESET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
             }
         }
@@ -102,5 +102,5 @@ void bullet_init_sprites(void) {
 
     // initialize remaining game_state.bullet struct fields
     memcpy( &game_state.bullet, &bullet_startup_data, sizeof( struct bullet_info_s ) );
-    game_state.bullet.frames = BULLET_SPRITE_FRAMES;
+    game_state.bullet.frames = home_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames;
 }

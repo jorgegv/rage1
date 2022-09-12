@@ -29,6 +29,7 @@ struct bullet_state_data_s {
     struct position_data_s position;
     int8_t dx, dy;		// current x and y increments
     uint8_t delay_counter;	// current delay counter
+    uint8_t *frame;		// frame data for this bullet
     uint8_t flags;
 };
 extern struct bullet_state_data_s bullet_state_data[];
