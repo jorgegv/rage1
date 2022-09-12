@@ -1584,6 +1584,10 @@ sub generate_bullets {
     my $ythresh = ( defined( $sprite->{'real_pixel_height'} ) ?
         ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8 :
         1 );
+    # sprite frames for the different shot directions. If not defined, use frame 0
+    my ( $sprite_frame_up, $sprite_frame_down, $sprite_frame_left, $sprite_frame_right ) = map {
+        $hero->{'bullet'}{ $_ } || 0,
+    } qw ( sprite_frame_up sprite_frame_down sprite_frame_left sprite_frame_right );
 
     push @h_game_data_lines, <<EOF_BULLET4
 
@@ -1591,17 +1595,20 @@ sub generate_bullets {
 // Bullets definition
 //////////////////////////////
 
-#define	BULLET_MAX_BULLETS	$max_bullets
-#define	BULLET_SPRITE_WIDTH	$width
-#define	BULLET_SPRITE_HEIGHT	$height
-#define BULLET_SPRITE_ID	$local_sprite_index
-#define	BULLET_SPRITE_FRAMES	( home_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
-#define	BULLET_SPRITE_XTHRESH	$xthresh
-#define	BULLET_SPRITE_YTHRESH	$ythresh
-#define	BULLET_MOVEMENT_DX	$dx
-#define	BULLET_MOVEMENT_DY	$dy
-#define	BULLET_MOVEMENT_DELAY	$delay
-#define	BULLET_RELOAD_DELAY	$reload_delay
+#define	BULLET_MAX_BULLETS		$max_bullets
+#define	BULLET_SPRITE_WIDTH		$width
+#define	BULLET_SPRITE_HEIGHT		$height
+#define BULLET_SPRITE_ID		$local_sprite_index
+#define	BULLET_SPRITE_XTHRESH		$xthresh
+#define	BULLET_SPRITE_YTHRESH		$ythresh
+#define	BULLET_MOVEMENT_DX		$dx
+#define	BULLET_MOVEMENT_DY		$dy
+#define	BULLET_MOVEMENT_DELAY		$delay
+#define	BULLET_RELOAD_DELAY		$reload_delay
+#define BULLET_SPRITE_FRAME_UP		$sprite_frame_up
+#define BULLET_SPRITE_FRAME_DOWN	$sprite_frame_down
+#define BULLET_SPRITE_FRAME_LEFT	$sprite_frame_left
+#define BULLET_SPRITE_FRAME_RIGHT	$sprite_frame_right
 
 EOF_BULLET4
 ;
@@ -1616,7 +1623,7 @@ struct bullet_state_data_s bullet_state_data[ BULLET_MAX_BULLETS ] = {
 EOF_BULLET5
 ;
     foreach ( 1 .. $max_bullets ) {
-        push @c_game_data_lines, "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 },\n";
+        push @c_game_data_lines, "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, NULL, 0 },\n";
     }
     push @c_game_data_lines, "};\n\n";
 
