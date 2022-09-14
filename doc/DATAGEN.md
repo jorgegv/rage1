@@ -690,6 +690,9 @@ check is successful. Options:
   - [x] FLOW_VAR_EQUAL VAR_ID=<id> VALUE=<value>
   - [x] FLOW_VAR_MORE_THAN VAR_ID=<id> VALUE=<value>
   - [x] FLOW_VAR_LESS_THAN VAR_ID=<id> VALUE=<value>
+  - [x] GAME_TIME_EQUAL <value> - value: seconds since game start
+  - [x] GAME_TIME_MORE_THAN <value> - value: seconds since game start
+  - [x] GAME_TIME_LESS_THAN <value> - value: seconds since game start
 
 * ACTION_TO_EXECUTE:
   - [x] SET_USER_FLAG <flag>
