@@ -49,6 +49,11 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
   dead" model (Ghosts'n Globlins), or the "enemy touches you and your energy
   goes down until you die" model (Phantomas)...  your choice!
 
+- New in-game timer and associated GAME_TIME checks for FLOW rules.  This
+  allows for executing FLOW actions and make certain events happen depending
+  on the elapsed time since the game was started (e.g.  Knight-Lore night
+  and day).
+
 ### Enhancements, Fixes and Optimizations
 
 - The hero can now move diagonally!
