@@ -22,6 +22,7 @@
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
 #include "rage1/charset.h"
+#include "rage1/timer.h"
 
 #include "game_data.h"
 
@@ -39,6 +40,9 @@ void init_program(void) {
 #ifdef	BUILD_FEATURE_CUSTOM_CHARSET
    init_custom_charset();
 #endif	// BUILD_FEATURE_CUSTOM_CHARSET
+#ifdef BUILD_FEATURE_GAME_TIME
+   init_timer();
+#endif
 }
 
 void main(void)

@@ -1897,6 +1897,11 @@ sub validate_and_compile_rule {
             add_build_feature( 'FLOW_VARS' );
         }
 
+        # game_time specifics
+        if ( $check =~ /^GAME_TIME_/ ) {
+            add_build_feature( 'GAME_TIME' );
+        }
+
         # regenerate the check with filtered data
         $chk = sprintf( "%s\t%s", $check, $check_data );
     }
@@ -2018,6 +2023,9 @@ my $check_data_output_format = {
     FLOW_VAR_EQUAL		=> ".data.flow_var = %s",
     FLOW_VAR_MORE_THAN		=> ".data.flow_var = %s",
     FLOW_VAR_LESS_THAN		=> ".data.flow_var = %s",
+    GAME_TIME_EQUAL		=> ".data.game_time.seconds = %s",
+    GAME_TIME_MORE_THAN		=> ".data.game_time.seconds = %s",
+    GAME_TIME_LESS_THAN		=> ".data.game_time.seconds = %s",
 };
 
 my $action_data_output_format = {

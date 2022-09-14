@@ -33,6 +33,7 @@
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
 #include "rage1/memory.h"
+#include "rage1/timer.h"
 
 #include "game_data.h"
 
@@ -162,6 +163,11 @@ void run_main_game_loop(void) {
 
    // run main game loop
    while ( ! ( GET_GAME_FLAG( F_GAME_OVER ) || GET_GAME_FLAG( F_GAME_END ) ) ) {
+
+#ifdef BUILD_FEATURE_GAME_TIME
+      // update timers
+      timer_update_all_timers();
+#endif
 
       // check if game has been paused (press 'y')
       check_game_pause();

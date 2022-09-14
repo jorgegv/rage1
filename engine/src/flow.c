@@ -251,6 +251,24 @@ uint8_t do_rule_check_flow_var_less_than( struct flow_rule_check_s *check ) __z8
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_TIME_EQUAL
+uint8_t do_rule_check_game_time_equal( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( game_state.game_time == check->data.game_time.seconds );
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_TIME_MORE_THAN
+uint8_t do_rule_check_game_time_more_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( game_state.game_time > check->data.game_time.seconds );
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_TIME_LESS_THAN
+uint8_t do_rule_check_game_time_less_than( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( game_state.game_time < check->data.game_time.seconds );
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -519,6 +537,21 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_FLOW_VAR_LESS_THAN
     do_rule_check_flow_var_less_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_TIME_EQUAL
+    do_rule_check_game_time_equal,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_TIME_MORE_THAN
+    do_rule_check_game_time_more_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_TIME_LESS_THAN
+    do_rule_check_game_time_less_than,
 #else
     NULL,
 #endif

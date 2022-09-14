@@ -97,6 +97,11 @@ struct game_state_s {
 
    // pointer to sound effect to play when required
    void *sound_fx;
+
+#ifdef BUILD_FEATURE_GAME_TIME
+   // game_time: seconds elapsed since start of game
+   uint16_t game_time;
+#endif
 };
 
 extern struct game_state_s game_state;

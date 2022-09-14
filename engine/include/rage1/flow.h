@@ -46,8 +46,11 @@
 #define RULE_CHECK_FLOW_VAR_EQUAL		20
 #define RULE_CHECK_FLOW_VAR_MORE_THAN		21
 #define RULE_CHECK_FLOW_VAR_LESS_THAN		22
+#define RULE_CHECK_GAME_TIME_EQUAL		23
+#define RULE_CHECK_GAME_TIME_MORE_THAN		24
+#define RULE_CHECK_GAME_TIME_LESS_THAN		25
 
-#define RULE_CHECK_MAX				22
+#define RULE_CHECK_MAX				25
 
 struct flow_rule_check_s {
     uint8_t type;
@@ -60,6 +63,7 @@ struct flow_rule_check_s {
         struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
         struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
         struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
+        struct { uint16_t	seconds; }		game_time;	// GAME_TIME_*
     } data;
 };
 
