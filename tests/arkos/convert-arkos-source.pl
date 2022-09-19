@@ -6,7 +6,7 @@ use utf8;
 
 use File::Copy;
 
-my @c_symbols = qw(
+my @publics = qw(
 	PLY_AKG_INIT
 	PLY_AKG_STOP
 	PLY_AKG_PLAY
@@ -31,7 +31,7 @@ while ( my $line = <SRC> ) {
 	$line =~ s/\r//g;
 	$line =~ s/db /defb /g;
 	$line =~ s/dw /defw /g;
-	$line =~ s/\$\+/+/g;
+	$line =~ s/\$\+//g;
 	if ( $line =~ /^(\w+)$/ ) {
 		push @output, "\n$1:\n";
 		push @all_symbols, $1;
@@ -49,15 +49,15 @@ while ( my $line = <SRC> ) {
 	}
 	push @output, "$line\n";
 }
+close SRC;
 
 #print join( "\n", map { "public $_" } sort @all_symbols ), "\n";
 
-# print C symbols
 push @output, "\n;;\n;; exported C symbols\n;;\n\n";
 push @output, join( "\n", map { 
-	sprintf( "defc _%s = %s\npublic _%s\n", lc( $_ ), $_, lc( $_ ) )
-	} sort @c_symbols ), "\n";
-close SRC;
+	"public $_\n"
+	} sort @publics ), "\n";
+
 
 # output to temporary file
 my $output = "/tmp/perltmp.$$";
