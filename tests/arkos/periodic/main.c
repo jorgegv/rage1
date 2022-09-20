@@ -1,8 +1,4 @@
-//#include <arch/zx.h>
 #include <intrinsic.h>
-//#include <string.h>
-//#include <z80.h>
-#include <input.h>
 #include <stdint.h>
 
 // Arkos C prototypes
