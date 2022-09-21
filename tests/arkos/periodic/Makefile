@@ -9,9 +9,14 @@ Z88DK_ASM = z88dk_arkos2.asm
 ARKOS_ASM = asm_arkos2.asm
 ARKOS_OBJ = $(ARKOS_ASM:.asm=.o)
 
+# song files
+SONG_ASM = song.asm
+CONVSONG_ASM = converted_song.asm
+CONVSONG_OBJ =$(CONVSONG_ASM:.asm=.o)
+
 # main target objs
-#MAIN_OBJS = main.o arkos2_c_stubs.o hocuspocus.o $(ARKOS_OBJ)
-MAIN_OBJS = main.o arkos2_c_stubs_simple.o hocuspocus.o $(ARKOS_OBJ)
+#MAIN_OBJS = main.o arkos2_c_stubs.o $(CONVSONG_OBJ) $(ARKOS_OBJ)
+MAIN_OBJS = main.o arkos2_c_stubs_simple.o $(CONVSONG_OBJ) $(ARKOS_OBJ)
 
 # targets
 .PHONY: build clean
@@ -30,6 +35,12 @@ $(ARKOS_ASM): PlayerAkg.asm PlayerAkg_SoundEffects.asm
 	cat $(Z88DK_ASM) >> $(ARKOS_ASM)
 	perl -e 'print join("\n", map { "public PLY_AKG_$$_" } qw( INIT STOP PLAY INITSOUNDEFFECTS PLAYSOUNDEFFECT ) );' >>$(ARKOS_ASM)
 
+$(CONVSONG_ASM): $(SONG_ASM)
+	echo "section code_compiler"		> $(CONVSONG_ASM)
+	echo -e "PUBLIC _song\n\n_song:\n\n"	>> $(CONVSONG_ASM)
+	cat $(SONG_ASM) 			>> $(CONVSONG_ASM)
+	dos2unix $(CONVSONG_ASM)
+
 %.o: %.c
 	zcc +zx -vn -c -s --list -compiler=sdcc -clib=sdcc_iy $*.c
 
@@ -37,4 +48,4 @@ $(ARKOS_ASM): PlayerAkg.asm PlayerAkg_SoundEffects.asm
 	zcc +zx -vn -c -s --list -compiler=sdcc -clib=sdcc_iy $*.asm
 
 clean:
-	@-rm *.lis *.bin *.tap *.o *.sym $(ARKOS_ASM) $(PASMO_ASM) $(Z88DK_ASM) *.map *.save arkos 2>/dev/null
+	@-rm *.lis *.bin *.tap *.o *.sym $(ARKOS_ASM) $(PASMO_ASM) $(Z88DK_ASM) $(CONVSONG_ASM) *.map *.save arkos 2>/dev/null
