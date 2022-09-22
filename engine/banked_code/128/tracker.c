@@ -9,6 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
+#include <intrinsic.h>
 
 #include "features.h"
 
@@ -60,7 +61,10 @@ void tracker_do_periodic_tasks( void ) {
     if ( muted ) return;
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
+    // must be called with ints disabled!
+    intrinsic_di();
     ply_akg_play();
+    intrinsic_ei();
 #endif
 }
 
