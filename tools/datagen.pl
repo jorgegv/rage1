@@ -842,6 +842,41 @@ sub read_input_data {
                 $crumb_type_name_to_index{ $item->{'name'} } = $index;
                 next;	# $line
             }
+            if ( $line =~ /^TRACKER\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                if ( not defined( $game_config->{'tracker'} ) ) {
+                    $game_config->{'tracker'} = $item;
+                } else {
+                    $game_config->{'tracker'} = { %{ $game_config->{'tracker'} }, %$item };
+                }
+                add_build_feature( 'TRACKER' );
+                add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
+                next;
+            }
+            if ( $line =~ /^TRACKER_SONG\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'name'} ) ) {
+                    die "TRACKER_SONG: missing NAME argument\n";
+                }
+                if ( not defined( $item->{'file'} ) ) {
+                    die "TRACKER_SONG: missing FILE argument\n";
+                }
+                my $index = scalar( $game_config->{'tracker'}{'songs'} );
+                $item->{'song_index'} = $index;
+                push @{ $game_config->{'tracker'}{'songs'} }, $item;
+                next;
+            }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
                 next;
@@ -2230,6 +2265,31 @@ sub check_game_config_is_valid {
     if ( is_build_feature_enabled( 'SCREEN_TITLES') and not defined( $game_config->{'title_area'} ) ) {
         warn "Game Config: using SCREEN_TITLES feature, but no TITLE_AREA defined\n";
         $errors++;
+    }
+
+    # tracker configuration
+    if ( defined( $game_config->{'tracker'} ) ) {
+        if ( not defined( $game_config->{'tracker'}{'type'} ) ) {
+            $game_config->{'tracker'}{'type'} = 'arkos2';
+        }
+        if ( $game_config->{'tracker'}{'type'} ne 'arkos2' ) {
+            warn "TRACKER: only 'arkos2' TYPE is supported\n";
+            $errors++;
+        }
+        if ( not scalar( @{ $game_config->{'tracker'}{'songs'} } ) ) {
+            warn "TRACKER: no music songs defined (TRACKER_SONG directive)\n";
+            $errors++;
+        }
+        if ( defined( $game_config->{'tracker'}{'in_game_song'} ) and 
+                not grep { $_->{'name'} eq $game_config->{'tracker'}{'in_game_song'} } 
+                @{ $game_config->{'tracker'}{'songs'} } ) {
+            warn "TRACKER: unknown song name in IN_GAME_SONG parameter\n";
+            $errors++;
+        }
+        if ( $game_config->{'zx_target'} ne '128' ) {
+            warn "TRACKER: must be used together with ZX_TARGET = 128\n";
+            $errors++;
+        }
     }
 
     return $errors;

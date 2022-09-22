@@ -28,4 +28,10 @@ BEGIN_GAME_CONFIG
 
 	// crumb types
 	CRUMB_TYPE	NAME=RedPill BTILE=RedPill
+
+	// music tracker options
+	TRACKER		TYPE=arkos2 IN_GAME_SONG=in_game_song
+	TRACKER_SONG	NAME=menu_song FILE=game_data/music/music1.aks
+	TRACKER_SONG	NAME=in_game_song FILE=game_data/music/music2.aks
+
 END_GAME_CONFIG

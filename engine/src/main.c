@@ -10,6 +10,8 @@
 
 #include <input.h>
 
+#include "features.h"
+
 #include "rage1/memory.h"
 #include "rage1/sp1engine.h"
 #include "rage1/interrupts.h"
@@ -42,6 +44,12 @@ void init_program(void) {
 #endif	// BUILD_FEATURE_CUSTOM_CHARSET
 #ifdef BUILD_FEATURE_GAME_TIME
    init_timer();
+#endif
+#ifdef BUILD_FEATURE_TRACKER
+   init_tracker();
+#endif
+#ifdef BUILD_FEATURE_TRACKER_SOUND_EFFECTS
+   init_tracker_sound_effects();
 #endif
 }
 

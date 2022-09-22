@@ -486,6 +486,9 @@ BEGIN_GAME_CONFIG
 	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 	BINARY_DATA     FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
 	CRUMB_TYPE	NAME=RedPill BTILE=RedPill ACTION_FUNCTION=redpill_grabbed FILE=crumb_functions.c CODESET=1
+        TRACKER         TYPE=arkos2 IN_GAME_SONG=in_game_song
+        TRACKER_SONG    NAME=menu_song FILE=game_data/music/music1.aks
+        TRACKER_SONG    NAME=in_game_song FILE=game_data/music/music2.aks
 END_GAME_CONFIG
 ```
 
@@ -594,6 +597,23 @@ including different data pieces.  Arguments:
   * `CODESET`: (optional) the codeset where the function must reside.  If
     not specified, or we are compiling for 48K model, it will go into lowmem
     area
+
+* `TRACKER`: enables a music tracker in your game. Currently Arkos Tracker 2
+  is the supported player, but other trackers can be easily integrated (open
+  an issue if you need another one!). Arguments:
+  * `TYPE`: (optional) currently only `arkos2` value is supported, and
+    specified by default
+  * `IN_GAME_SONG`: (optional) the song that will be played during the game.
+    The supplied name must be that of a song defined with a `TRACKER_SONG`
+    directive (see below).
+
+* `TRACKER_SONG`: specifies a tracker song to be used for the game.  More
+  than one song may be included.  Arkos files (`.aks`) can be used directly,
+  provided that you configure your Arkos Tracker 2 directory so that RAGE1
+  can use the proper conversion tools.  Arguments:
+  * `NAME`: the name of the song. It must be a valid C identifier (in short:
+  letters, numbers and `_`)
+  * `FILE`: the path of the song file
 
 # FLOWGEN
 

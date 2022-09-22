@@ -19,23 +19,17 @@
 // Tracker music functions
 /////////////////////////////
 
-void tracker_init( void );
+void init_tracker( void );
 void tracker_select_song( uint8_t song_id );
 void tracker_start( void );
 void tracker_stop( void );
 void tracker_do_periodic_tasks( void );
 
-// songs table
-extern void *all_songs[];
-
 /////////////////////////////////////
 // Tracker sound effects functions
 /////////////////////////////////////
 
-void tracker_init_sound_effects( void );
+void init_tracker_sound_effects( void );
 void tracker_play_fx( uint8_t effect_id );
-
-// effects table
-extern void *all_sound_effects[];
 
 #endif // _TRACKER_H
