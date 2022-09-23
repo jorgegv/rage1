@@ -22,6 +22,7 @@
 
 #include "rage1/interrupts.h"
 #include "rage1/debug.h"
+#include "rage1/memory.h"
 
 #include "game_data.h"
 
@@ -29,9 +30,8 @@
 // struct time_s current_time = { 0, 0, 0, 0 };
 // moved to lowmem/asmdata.asm to ensure it is placed in memory below 0xC000
 
-// timer tick routine
-IM2_DEFINE_ISR(do_timer_tick)
-{
+// timer tick routine, invoked from ISR
+void do_timer_tick( void ) {
    if ( ++current_time.frame == 50 ) {		// 50 frames per second
       current_time.frame = 0;
       if ( ++current_time.sec == 60 ) {
@@ -42,6 +42,32 @@ IM2_DEFINE_ISR(do_timer_tick)
          }
       }
    }
+}
+
+// extern uint8_t periodic_tasks_enabled;
+
+// periodic tasks function, invoked from ISR
+// do not add code here unless it is strictly needed!
+void do_periodic_isr_tasks( void ) {
+#ifdef BUILD_FEATURE_TRACKER
+   tracker_do_periodic_tasks();
+#endif
+}
+
+void interrupt_enable_periodic_isr_tasks( void ) {
+   periodic_tasks_enabled++;
+}
+ 
+///////////////////////
+// ISR CONFIGURATION
+///////////////////////
+
+// ISR definition
+IM2_DEFINE_ISR(service_interrupt)
+{
+    do_timer_tick();
+    if ( periodic_tasks_enabled )
+        do_periodic_isr_tasks();
 }
 
 // Initialize interrupts in IM2 mode
@@ -68,10 +94,14 @@ IM2_DEFINE_ISR(do_timer_tick)
 #define Z80_OPCODE_JP	( 0xc3 )
 
 void init_interrupts(void) {
+   // ensure periodic tasks do not run yet
+   periodic_tasks_enabled = 0;
+
+   // configure ISR
    intrinsic_di();
    memset( IV_ADDR, IV_BYTE, 257);
    z80_bpoke( ISR_ADDR, Z80_OPCODE_JP );
-   z80_wpoke( ISR_ADDR + 1, (uint16_t) do_timer_tick );
+   z80_wpoke( ISR_ADDR + 1, (uint16_t) service_interrupt );
    im2_init( IV_ADDR );
    intrinsic_ei();
 }

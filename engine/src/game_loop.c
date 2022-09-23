@@ -165,6 +165,7 @@ void run_main_game_loop(void) {
 
 #ifdef BUILD_FEATURE_TRACKER
    // start music
+   // music is playing via interrupts
    tracker_start();
 #endif
 
@@ -177,11 +178,6 @@ void run_main_game_loop(void) {
 #ifdef BUILD_FEATURE_GAME_TIME
       // update timers
       timer_update_all_timers();
-#endif
-
-#ifdef BUILD_FEATURE_TRACKER
-      // run periodic tracker task
-      run_tracker_tasks();
 #endif
 
       // check if game has been paused (press 'y')

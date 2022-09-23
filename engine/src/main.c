@@ -51,6 +51,9 @@ void init_program(void) {
 #ifdef BUILD_FEATURE_TRACKER_SOUND_EFFECTS
    init_tracker_sound_effects();
 #endif
+
+   // this must be called the last
+   interrupt_enable_periodic_isr_tasks();
 }
 
 void main(void)
