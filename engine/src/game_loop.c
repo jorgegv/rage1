@@ -164,7 +164,7 @@ void run_main_game_loop(void) {
 #endif
 
 #ifdef BUILD_FEATURE_TRACKER
-   // run periodic tracker task
+   // start music
    tracker_start();
 #endif
 
@@ -241,6 +241,11 @@ void run_main_game_loop(void) {
    // we reach here if game over or game finished successfully
 
    // cleanup
+
+#ifdef BUILD_FEATURE_TRACKER
+   // stop music
+   tracker_stop();
+#endif
 
    // free sprites in the current screen
    map_exit_screen( game_state.current_screen_ptr );
