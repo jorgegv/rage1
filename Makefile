@@ -39,8 +39,15 @@ clean:
 		$(BANKED_CODE_DIR_128)/*.{map,lis,o,c.asm,,sym,bin} \
 		2>/dev/null
 config:
-	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* 2>/dev/null
-	@-mkdir -p $(GAME_SRC_DIR)/ $(GAME_DATA_DIR)/ $(GENERATED_DIR)/ $(GENERATED_DIR_DATASETS)/ $(GENERATED_DIR_CODESETS)/ $(GENERATED_DIR_LOWMEM)/
+	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* $(GENERATED_DIR)/* 2>/dev/null
+	@-mkdir -p $(GAME_SRC_DIR)/		\
+		$(GAME_DATA_DIR)/		\
+		$(GENERATED_DIR)/		\
+		$(GENERATED_DIR_DATASETS)/	\
+		$(GENERATED_DIR_CODESETS)/	\
+		$(GENERATED_DIR_LOWMEM)/	\
+		$(GENERATED_DIR_BANKED_128)/	\
+		$(GENERATED_DIR_BANKED_COMMON)/
 	@cp -r $(TARGET_GAME)/game_data/* $(GAME_DATA_DIR)/
 	@cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
 	@$(MAKE) -s show	# shows game name and build configuration

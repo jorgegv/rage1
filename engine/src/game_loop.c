@@ -139,6 +139,11 @@ void show_heartbeat(void) {
     }
 }
 
+void run_tracker_tasks( void ) {
+    RUN_ONLY_ONCE_PER_FRAME;
+    tracker_do_periodic_tasks();
+}
+
 void run_main_game_loop(void) {
 
    // seed PRNG. It is important that this is done here, after the menu has been run
@@ -167,6 +172,11 @@ void run_main_game_loop(void) {
 #ifdef BUILD_FEATURE_GAME_TIME
       // update timers
       timer_update_all_timers();
+#endif
+
+#ifdef BUILD_FEATURE_TRACKER
+      // run periodic tracker task
+      run_tracker_tasks();
 #endif
 
       // check if game has been paused (press 'y')

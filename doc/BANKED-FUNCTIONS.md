@@ -30,7 +30,8 @@ game code, which varies from game to game).
   function ID (known at compile time) in the banked functions array (always
   at address 0xC000)
 
-- All BANKED functions must use the prototype `void f(void)`
+- BANKED functions can use prototypes `void f(void)` or `void f( uint16_t
+  arg )`
 
 - All accesses from the BANKED functions to lowmem data must be done via the
   macro definitions in `banked.h`
@@ -80,7 +81,8 @@ should be taken into account:
 
 ## Steps for migration of an engine function to banked code
 
-- The function to migrate should match the `void f( void )` prototype
+- The function to migrate should match the `void f( void )` or `void f(
+  uint16_t arg )` prototypes
 
 - Copy the source file which contains the function to be migrated to the
   `banked_code` directory
