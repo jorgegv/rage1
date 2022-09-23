@@ -163,6 +163,11 @@ void run_main_game_loop(void) {
    inventory_show();
 #endif
 
+#ifdef BUILD_FEATURE_TRACKER
+   // run periodic tracker task
+   tracker_start();
+#endif
+
    // run user game initialization, if any
    run_game_function_user_game_init();
 

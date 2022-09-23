@@ -17,8 +17,10 @@ use utf8;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
+require RAGE::Config;
 require RAGE::PNGFileUtils;
 require RAGE::FileUtils;
+require RAGE::Arkos2;
 
 use Data::Dumper;
 use List::MoreUtils qw( zip );
@@ -26,6 +28,7 @@ use Getopt::Std;
 use Data::Compare;
 use File::Path qw( make_path );
 use File::Copy;
+use File::Basename;
 
 # final destination address for compilation of datasets and codesets
 my $dataset_base_address = 0x5B00;
@@ -3090,15 +3093,39 @@ sub generate_tracker_data {
         push @c_banked_data_128_lines, "//////////////////////////////////\n\n";
 
         # output the songs data
+
+        # FIX: the song data must be in ASM format: exported songs are full
+        # of pointer references, so they must be compiled, they can't be in
+        # binary form.  This part needs to be redone
+
+        # It's fine that the songs can be specified in AKS format, but they
+        # need to be converted to ASM.  For that we need Arkos installed.
+
+        # This would greatly benefit from having a centralized tool
+        # configuration file, e.g.  ./etc/rage1-tools.conf
+
+        # Alternatively, we can add a new 'ASM_FILE' parameter which allows
+        # us to directly refer to the song's ASM file and convert it
+        # elsewhere
+
         foreach my $song ( @{ $game_config->{'tracker'}{'songs'} } ) {
             my $symbol_name = "tracker_song_" . $song->{'name'};
-            push @c_banked_data_128_lines, file_to_c_data( "$build_dir/$song->{'file'}", $symbol_name );
-            push @c_banked_data_128_lines, "\n";
+
+            # generate extern declaration for later use in C file
+            push @c_banked_data_128_lines, sprintf( "extern uint8_t %s[];\n", $symbol_name );
+
+            # generate song ID in header file
             push @h_game_data_lines, sprintf( "#define TRACKER_SONG_%s\t%d\n",
                 uc( $song->{'name'} ), $song->{'song_index'} );
+
+            # generate song ASM file and put it in place for compilation
+            my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+            move( $asm_file, $dest_asm_file ) or
+                die "Could not rename $asm_file to $dest_asm_file\n";
         }
 
-        # output the songs table
+        # now output the songs table
         push @c_banked_data_128_lines, "\n// songs table\n";
         push @c_banked_data_128_lines, sprintf( "uint8_t *all_songs[ %d ] = {\n",
             scalar( @{ $game_config->{'tracker'}{'songs'} } ) );
@@ -3466,6 +3493,9 @@ sub dump_internal_data {
 #########################
 ## Main loop
 #########################
+
+# get tool configuration
+my $cfg = rage1_get_config();
 
 our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
 getopts("b:d:ct:s:");
