@@ -129,3 +129,43 @@ should be taken into account:
   `banked_code/128` directory can be moved to `banked_code/common`, so that
   they are always compiled as banked code in 128K mode and as low memory in
   48K mode.
+
+## Calling Banked Functions from an ISR
+
+Banked functions can be called from Interrupt Service Routines without
+problems.  They just need to be called using the regular `memory.h` macros
+for them so that correct bank switching is done.
+
+Since the bank port is write only, we cannot read the current bank state, so
+we need to keep it in a dedicated variable, and update that variable each
+time a bank switch is done.
+
+It is critical that both the bank switch and the update of the variable is
+done atomically: if an interrupt is received just between switching bank and
+updating the bank variable, and then a bank switch is done again in the ISR
+routine (e.g.  because the ISR calls banked code), the state between the
+variable and the banking register will not match and a crash will occur
+shortly afterwards.
+
+This happens in RAGE1 when using interrupt-driven music playback with the
+tracker, since the tracker code is compiled to banked memory and thus needs
+a bank switch when the periodic task is called for playing music.
+
+The way to make the changes atomic is by enclosing the bank switch between
+an DI/EI instruction pair.  When this is done, the following cases may
+occur:
+
+a) INT happens in the middle of regular code (bank 0).  The banked code in
+the ISR is called normally: the ISR will do the bank switch, run the banked
+code and restore the previous bank.  The bank-switching function will
+restore interrupts (EI) early during the ISR and not at the end, but this is
+not harmful because the Refresh INT is the only interrupt source, and a new
+int will not happen if we ensure absolutely that the whole ISR runs in less
+than 1/50 s.  This will happen anyway, because if it is longer, we are
+already screwed.
+
+b) INT happens in the middle of banked code (bank not 0).  Again, same
+reasoning as above, plus bank switch/restore inside the ISR is done
+correctly because the banked call routines are fully reentrant: they store
+the previous bank state in the stack, so everything is restored correctly
+when returning from the ISR.
