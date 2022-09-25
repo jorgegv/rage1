@@ -253,5 +253,13 @@ mem:
 	@./tools/memmap.pl main.map
 
 linecount: clean
-	find . -type f |grep -v -E '^./.git'|xargs -l file|grep -E '(ASCII|Perl)'|cut -f1 -d:|xargs -l cat|wc -l
-
+	@echo -n "Lines of Code (C):         "
+	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'C source'|cut -f1 -d:|xargs -l cat|wc -l
+	@echo -n "Lines of Code (Perl):      "
+	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'Perl'|cut -f1 -d:|xargs -l cat|wc -l
+	@echo -n "Lines of Code (Assembler): "
+	@find . -type f -iname "*.asm"|grep -v -E '^./.git'|grep -v tests/|xargs -l cat|wc -l
+	@echo -n "Lines of Docs:             "
+	@find doc/ -type f|xargs cat|wc -l
+	@echo -n "Lines of Test Games:       "
+	@find games/ -type f|xargs -l cat|wc -l
