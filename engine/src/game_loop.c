@@ -139,10 +139,11 @@ void show_heartbeat(void) {
     }
 }
 
-void run_tracker_tasks( void ) {
-    RUN_ONLY_ONCE_PER_FRAME;
-    tracker_do_periodic_tasks();
-}
+// this one is not needed, this task is run from the ISR
+// void run_tracker_tasks( void ) {
+//    RUN_ONLY_ONCE_PER_FRAME;
+//    tracker_do_periodic_tasks();
+//}
 
 void run_main_game_loop(void) {
 
@@ -166,6 +167,7 @@ void run_main_game_loop(void) {
 #ifdef BUILD_FEATURE_TRACKER
    // start music
    // music is playing via interrupts
+   tracker_select_song( TRACKER_IN_GAME_SONG );
    tracker_start();
 #endif
 

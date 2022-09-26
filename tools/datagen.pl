@@ -3117,6 +3117,10 @@ sub generate_tracker_data {
             # generate song ID in header file
             push @h_game_data_lines, sprintf( "#define TRACKER_SONG_%s\t%d\n",
                 uc( $song->{'name'} ), $song->{'song_index'} );
+            if ( defined( $game_config->{'tracker'}{'in_game_song'} ) ) {
+                push @h_game_data_lines, sprintf( "#define TRACKER_IN_GAME_SONG\tTRACKER_SONG_%s\n",
+                    uc( $game_config->{'tracker'}{'in_game_song'} ) );
+            }
 
             # generate song ASM file and put it in place for compilation
             my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
