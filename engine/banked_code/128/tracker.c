@@ -24,7 +24,7 @@
 
 // muted flag - if 1, sound does not play
 uint8_t muted;
-uint8_t current_song;
+uint8_t current_song = 255;	// invalid song
 
 void init_tracker( void ) {
     // tracker-independent initialization: sound muted, first song active
@@ -35,6 +35,10 @@ void init_tracker( void ) {
 }
 
 void tracker_select_song( uint8_t song_id ) {
+    // do nothing if the required song is already the current one
+    if ( current_song == song_id )
+        return;
+
     current_song = song_id;
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2

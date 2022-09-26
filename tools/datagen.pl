@@ -2092,6 +2092,9 @@ my $action_data_output_format = {
     FLOW_VAR_ADD		=> ".data.flow_var = %s",
     FLOW_VAR_DEC		=> ".data.flow_var = %s",
     FLOW_VAR_SUB		=> ".data.flow_var = %s",
+    TRACKER_SELECT_SONG		=> ".data.tracker_song.num_song = %s",
+    TRACKER_MUSIC_STOP		=> ".data.unused = %d",
+    TRACKER_MUSIC_START		=> ".data.unused = %d",
 };
 
 sub generate_rule_checks {
