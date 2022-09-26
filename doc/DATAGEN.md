@@ -736,6 +736,12 @@ check is successful. Options:
   - [x] FLOW_VAR_DEC VAR_ID=<id>
   - [x] FLOW_VAR_SUB VAR_ID=<id> VALUE=<value>
 
+A rule may have no CHECK directives, in which case its DO actions will
+always be run at proper moment specified in the WHEN directive. This can be
+used for e.g. running a custom function on each game loop iteration, or
+doing something specific on entering/exiting a screen (e.g. setting an
+ULAplus palette, or selcting a specific music track)
+
 ## FLOWGEN Gdata file syntax
 
 The data files for FLOWGEN rules are also in GDATA format.
