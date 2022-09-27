@@ -111,8 +111,9 @@ void init_tracker_sound_effects( void ) {
 }
 
 void tracker_play_fx( uint8_t effect_id ) {
-    // ignore if invalid effect id
-    if ( effect_id > TRACKER_SOUNDFX_MAX_FX_ID )
+    // ignore if invalid effect id - effect numbers are 1 .. TRACKER_SOUNDFX_NUM_EFFECTS
+    // NOT zero-based!
+    if ( ( ! effect_id ) || ( effect_id > TRACKER_SOUNDFX_NUM_EFFECTS ) )
         return;
 
     // tracker dependent code below

@@ -2124,6 +2124,7 @@ my $action_data_output_format = {
     TRACKER_SELECT_SONG		=> ".data.tracker_song.num_song = %s",
     TRACKER_MUSIC_STOP		=> ".data.unused = %d",
     TRACKER_MUSIC_START		=> ".data.unused = %d",
+    TRACKER_PLAY_FX		=> ".data.tracker_fx.num_effect = %d",
 };
 
 sub generate_rule_checks {
@@ -3180,7 +3181,6 @@ sub generate_tracker_data {
 
             my $effects_count = arkos2_count_sound_effects( $asm_file );
             push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_NUM_EFFECTS %d\n", $effects_count );
-            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_MAX_FX_ID %d\n", $effects_count - 1 );
 
             move( $asm_file, $dest_asm_file ) or
                 die "Could not rename $asm_file to $dest_asm_file\n";

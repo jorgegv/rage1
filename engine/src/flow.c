@@ -441,6 +441,12 @@ void do_rule_action_tracker_music_start( struct flow_rule_action_s *action ) __z
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
+void do_rule_action_tracker_play_fx( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    tracker_play_fx( action->data.tracker_fx.num_effect );
+}
+#endif
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -693,6 +699,11 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_START
     do_rule_action_tracker_music_start,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
+    do_rule_action_tracker_play_fx,
 #else
     NULL,
 #endif
