@@ -426,7 +426,6 @@ void do_rule_action_flow_var_sub( struct flow_rule_action_s *action ) __z88dk_fa
 void do_rule_action_tracker_select_song( struct flow_rule_action_s *action ) __z88dk_fastcall {
     tracker_stop();
     tracker_select_song( action->data.tracker_song.num_song );
-    tracker_start();
 }
 #endif
 

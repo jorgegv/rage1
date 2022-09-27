@@ -30,6 +30,7 @@ void init_tracker( void ) {
     // tracker-independent initialization: sound muted, first song active
     muted = 1;
     tracker_select_song( 0 );
+
     // tracker dependent code below
     // no special code for Arkos2
 }
@@ -40,6 +41,7 @@ void tracker_select_song( uint8_t song_id ) {
         return;
 
     current_song = song_id;
+
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
     ply_akg_init( all_songs[ song_id ], DEFAULT_SUBSONG );
@@ -48,6 +50,7 @@ void tracker_select_song( uint8_t song_id ) {
 
 void tracker_start( void ) {
     muted = 0;
+
     // tracker dependent code below
     // no special code for Arkos2
 }
@@ -63,6 +66,7 @@ void tracker_stop( void ) {
 void tracker_do_periodic_tasks( void ) {
     // return immediately if we are muted
     if ( muted ) return;
+
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
     // must be called with ints disabled!
@@ -81,6 +85,7 @@ void tracker_do_periodic_tasks( void ) {
 /////////////////////////////////////
 
 void init_tracker_sound_effects( void ) {
+
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
     ply_akg_initsoundeffects( all_sound_effects );
@@ -88,6 +93,7 @@ void init_tracker_sound_effects( void ) {
 }
 
 void tracker_play_fx( uint8_t effect_id ) {
+
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
     ply_akg_playsoundeffect( effect_id );

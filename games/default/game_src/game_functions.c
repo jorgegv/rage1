@@ -21,6 +21,7 @@
 #include "rage1/btile.h"
 #include "rage1/flow.h"
 #include "rage1/debug.h"
+#include "rage1/memory.h"
 
 #include "game_data.h"
 
@@ -80,6 +81,9 @@ void my_menu_screen(void) {
 
    controller_reset_all();
 
+   tracker_select_song( TRACKER_SONG_GAME_SONG );
+   tracker_start();
+
    // wait for selection
    sp1_PrintString( &print_ctx, "\x16\x12\x06 Selection: " );
    while ( ! game_state.controller.type ) {
@@ -104,6 +108,10 @@ void my_menu_screen(void) {
    in_pause(100);
    bit_beepfx( SOUND_CONTROLLER_SELECTED );
    in_pause(500);
+
+   // stop playing and reset the song
+   tracker_stop();
+   tracker_select_song( TRACKER_SONG_GAME_SONG );
 
    // clear screen and exit to main game loop
    sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
