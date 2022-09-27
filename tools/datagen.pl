@@ -3175,8 +3175,13 @@ sub generate_tracker_data {
         if ( defined( $game_config->{'tracker'}{'fxtable'} ) ) {
             # generate song ASM file and put it in place for compilation
             # the extern declaration for this is already in tracker.h
-            my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            my $asm_file = arkos2_convert_effects_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
             my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+
+            my $effects_count = arkos2_count_sound_effects( $asm_file );
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_NUM_EFFECTS %d\n", $effects_count );
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_MAX_FX_ID %d\n", $effects_count - 1 );
+
             move( $asm_file, $dest_asm_file ) or
                 die "Could not rename $asm_file to $dest_asm_file\n";
         }

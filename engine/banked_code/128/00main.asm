@@ -26,6 +26,7 @@ extern	_tracker_stop
 extern	_tracker_do_periodic_tasks
 extern	_init_tracker_sound_effects
 extern	_tracker_play_fx
+extern	_tracker_rewind
 
 ;;
 ;; 0xC000: banked functions table
@@ -43,3 +44,4 @@ _all_banked_functions:
 	dw	_tracker_do_periodic_tasks	;; index 9
 	dw	_init_tracker_sound_effects	;; index 10
 	dw	_tracker_play_fx		;; index 11
+	dw	_tracker_rewind			;; index 12

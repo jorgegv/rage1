@@ -168,6 +168,7 @@ void run_main_game_loop(void) {
    // start music
    // music is playing via interrupts
    tracker_select_song( TRACKER_IN_GAME_SONG );
+   tracker_rewind();
    tracker_start();
 #endif
 

@@ -65,6 +65,20 @@ void tracker_stop( void ) {
 #endif
 }
 
+void tracker_rewind( void ) {
+    uint8_t was_muted = muted;
+    tracker_stop();
+
+    // tracker dependent code below
+#ifdef BUILD_FEATURE_TRACKER_ARKOS2
+    ply_akg_init( all_songs[ current_song ], DEFAULT_SUBSONG );
+#endif
+
+    // tracker independent code again
+    if ( ! was_muted )
+        tracker_start();
+}
+
 void tracker_do_periodic_tasks( void ) {
     // return immediately if we are muted
     if ( muted ) return;
@@ -97,6 +111,9 @@ void init_tracker_sound_effects( void ) {
 }
 
 void tracker_play_fx( uint8_t effect_id ) {
+    // ignore if invalid effect id
+    if ( effect_id > TRACKER_SOUNDFX_MAX_FX_ID )
+        return;
 
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2

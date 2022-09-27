@@ -82,6 +82,7 @@ void my_menu_screen(void) {
    controller_reset_all();
 
    tracker_select_song( TRACKER_SONG_GAME_SONG );
+   tracker_rewind();
    tracker_start();
 
    // wait for selection
@@ -112,6 +113,7 @@ void my_menu_screen(void) {
    // stop playing and reset the song
    tracker_stop();
    tracker_select_song( TRACKER_SONG_GAME_SONG );
+   tracker_rewind();
 
    // clear screen and exit to main game loop
    sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );

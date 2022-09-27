@@ -24,6 +24,7 @@ void tracker_select_song( uint8_t song_id );
 void tracker_start( void );
 void tracker_stop( void );
 void tracker_do_periodic_tasks( void );
+void tracker_rewind( void );
 
 /////////////////////////////////////
 // Tracker sound effects functions
