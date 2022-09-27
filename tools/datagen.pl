@@ -862,8 +862,24 @@ sub read_input_data {
                 } else {
                     $game_config->{'tracker'} = { %{ $game_config->{'tracker'} }, %$item };
                 }
+
                 add_build_feature( 'TRACKER' );
                 add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
+
+                if ( defined( $item->{'fx_channel'} ) ) {
+                    if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
+                        die "TRACKER: FX_CHANNEL can only be 0, 1 or 2\n";
+                    }
+                    add_build_feature( 'TRACKER_SOUNDFX' );
+                    if ( defined( $item->{'fx_volume'} ) ) {
+                        if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 15 ) ) {
+                            die "TRACKER: FX_VOLUME must be in range 0-15\n";
+                        }
+                    } else {
+                        # fx_volume is always defined
+                        $item->{'fx_volume'} = 10;	# default value
+                    }
+                }
                 next;
             }
             if ( $line =~ /^TRACKER_SONG\s+(\w.*)$/ ) {
@@ -883,6 +899,19 @@ sub read_input_data {
                     scalar( @{ $game_config->{'tracker'}{'songs'} } ) : 0;
                 $item->{'song_index'} = $index;
                 push @{ $game_config->{'tracker'}{'songs'} }, $item;
+                next;
+            }
+            if ( $line =~ /^TRACKER_FXTABLE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'file'} ) ) {
+                    die "TRACKER_FXTABLE: missing FILE argument\n";
+                }
+                $game_config->{'tracker'}{'fxtable'} = $item;
                 next;
             }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
