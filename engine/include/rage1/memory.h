@@ -54,10 +54,15 @@ void init_memory(void);
     #define BANKED_FUNCTION_TRACKER_START		7
     #define BANKED_FUNCTION_TRACKER_STOP		8
     #define BANKED_FUNCTION_TRACKER_DO_PERIODIC_TASKS	9
+    #define BANKED_FUNCTION_INIT_TRACKER_SOUND_EFFECTS	10
+    #define BANKED_FUNCTION_TRACKER_PLAY_FX		11
+
+    // WARNING! Don't forget to update the banked function call table
+    // in engine/banked_code/128/00main.asm !!!!
 
     // maximum assigned banked function ID. Keep in sync with the previous IDs
     // 128K versions
-    #define BANKED_FUNCTION_MAX_ID		9
+    #define BANKED_FUNCTION_MAX_ID		11
 
     // Banked function call macros (128K versions) - In 128K mode we
     // redefine the regular calls to banked functions as calls to
@@ -72,6 +77,8 @@ void init_memory(void);
     #define tracker_start()			( memory_call_banked_function( BANKED_FUNCTION_TRACKER_START ) )
     #define tracker_stop()			( memory_call_banked_function( BANKED_FUNCTION_TRACKER_STOP ) )
     #define tracker_do_periodic_tasks()		( memory_call_banked_function( BANKED_FUNCTION_TRACKER_DO_PERIODIC_TASKS ) )
+    #define init_tracker_sound_effects()	( memory_call_banked_function( BANKED_FUNCTION_INIT_TRACKER_SOUND_EFFECTS ) )
+    #define tracker_play_fx(a)			( memory_call_banked_function_arg16( BANKED_FUNCTION_TRACKER_PLAY_FX, (a) ) )
 
 #endif
 

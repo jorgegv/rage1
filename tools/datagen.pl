@@ -872,8 +872,8 @@ sub read_input_data {
                     }
                     add_build_feature( 'TRACKER_SOUNDFX' );
                     if ( defined( $item->{'fx_volume'} ) ) {
-                        if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 15 ) ) {
-                            die "TRACKER: FX_VOLUME must be in range 0-15\n";
+                        if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 16 ) ) {
+                            die "TRACKER: FX_VOLUME must be in range 0-16\n";
                         }
                     } else {
                         # fx_volume is always defined
@@ -3171,11 +3171,24 @@ sub generate_tracker_data {
         }
         push @c_banked_data_128_lines, "};\n";
 
-        # output sound effects table
-        # TBD
-        push @c_banked_data_128_lines, "\n// sound effects table\n";
-        push @c_banked_data_128_lines, "uint8_t *all_sound_effects[] = { NULL };\n\n";
-        
+        # output sound effects table and constants
+        if ( defined( $game_config->{'tracker'}{'fxtable'} ) ) {
+            # generate song ASM file and put it in place for compilation
+            # the extern declaration for this is already in tracker.h
+            my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+            move( $asm_file, $dest_asm_file ) or
+                die "Could not rename $asm_file to $dest_asm_file\n";
+        }
+        if ( defined( $game_config->{'tracker'}{'fx_channel'} ) ) {
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_CHANNEL %d\n",
+                $game_config->{'tracker'}{'fx_channel'} );
+        }
+        if ( defined( $game_config->{'tracker'}{'fx_volume'} ) ) {
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_VOLUME %d\n",
+                $game_config->{'tracker'}{'fx_volume'} );
+        }
+
     }
 }
 

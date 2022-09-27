@@ -48,7 +48,7 @@ void init_program(void) {
 #ifdef BUILD_FEATURE_TRACKER
    init_tracker();
 #endif
-#ifdef BUILD_FEATURE_TRACKER_SOUND_EFFECTS
+#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
    init_tracker_sound_effects();
 #endif
 

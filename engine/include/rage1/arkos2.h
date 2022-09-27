@@ -16,7 +16,7 @@ void ply_akg_init( void *song, unsigned int subsong ) __z88dk_callee;
 void ply_akg_play( void );
 void ply_akg_stop( void );
 void ply_akg_initsoundeffects( void *effects_table[] ) __z88dk_fastcall;
-void ply_akg_playsoundeffect( unsigned int effect ) __z88dk_fastcall;
+void ply_akg_playsoundeffect( uint8_t effect, uint8_t channel, uint8_t inv_volume ) __z88dk_callee;
 
 // songs table
 extern void *all_songs[];

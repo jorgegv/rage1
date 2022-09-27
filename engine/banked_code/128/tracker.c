@@ -16,6 +16,8 @@
 #include "rage1/tracker.h"
 #include "rage1/banked.h"
 
+#include "game_data.h"
+
 #ifdef BUILD_FEATURE_TRACKER
 
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
@@ -80,6 +82,8 @@ void tracker_do_periodic_tasks( void ) {
 // Arkos2: songs table
 // Arkos2: extern void *all_songs[] - generated externally
 
+#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+
 /////////////////////////////////////
 // Tracker sound effects functions
 /////////////////////////////////////
@@ -96,7 +100,8 @@ void tracker_play_fx( uint8_t effect_id ) {
 
     // tracker dependent code below
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
-    ply_akg_playsoundeffect( effect_id );
+    // volume in arkos fx player is inverted: 0 -> max, 16 -> min
+    ply_akg_playsoundeffect( effect_id, TRACKER_SOUNDFX_CHANNEL, 16 - TRACKER_SOUNDFX_VOLUME );
 #endif
 }
 
@@ -104,3 +109,5 @@ void tracker_play_fx( uint8_t effect_id ) {
 // Arkos2: extern void *all_sound_effects[] - generated externally
 
 #endif // BUILD_FEATURE_TRACKER
+
+#endif // BUILD_FEATURE_TRACKER_SOUNDFX
