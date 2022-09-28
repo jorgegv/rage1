@@ -52,7 +52,7 @@ defc _ply_akg_initsoundeffects = PLY_AKG_INITSOUNDEFFECTS
 ;; void ply_akg_playsoundeffect( uint8_t effect, uint8_t channel, uint8_t inv_volume ) __z88dk_callee;
 ;;   (params pushed on the stack right to left, all 16-bit)
 ;;
-_ply_akg_playsoundeffect = PLY_AKG_PLAYSOUNDEFFECT
+_ply_akg_playsoundeffect:
 	pop hl		; HL = retaddr
 
 	pop af		; A = sound effect number
