@@ -54,10 +54,11 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
   on the elapsed time since the game was started (e.g.  Knight-Lore night
   and day).
 
-- WIP: The almighty Arkos Tracker 2 has been integrated into RAGE1! This
-  allows your game to have an in-game soundtrack playing while the game is
-  running, and also sound effects are supported! Of course, your game needs
-  to be compiled in 128 mode, but you already know that, right?
+- 128K music and sound effects are ready!  The almighty Arkos Tracker 2 has
+  been integrated into RAGE1 - this allows your game to have an in-game
+  soundtrack playing while the game is running, and also sound effects are
+  supported!  Of course, your game needs to be compiled in 128 mode, but you
+  already know that, right?
 
 ### Enhancements, Fixes and Optimizations
 
