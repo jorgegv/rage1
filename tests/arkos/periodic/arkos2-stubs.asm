@@ -28,58 +28,39 @@ _ply_akg_init:
 	pop hl		; HL = song address
 	pop af		; A = subsong number
 	push bc		; restore retaddr
-	push ix
-	push iy
-	call PLY_AKG_INIT
-	pop iy
-	pop ix
-	ret
+	jp PLY_AKG_INIT
 
 ;;
 ;; void ply_akg_play( void );
-;;
-_ply_akg_play:
-	push ix
-	push iy
-	call PLY_AKG_PLAY
-	pop iy
-	pop ix
-	ret
+;;    this one must be called with interrupts disabled!
+defc _ply_akg_play = PLY_AKG_PLAY
 
 ;;
 ;; void ply_akg_stop( void );
 ;;
-_ply_akg_stop:
-	push ix
-	push iy
-	call PLY_AKG_STOP
-	pop iy
-	pop ix
-	ret
+defc _ply_akg_stop = PLY_AKG_STOP
 
 
 ;;
 ;; void ply_akg_initsoundeffects( void *effects_table ) __z88dk_fastcall;
 ;;   (param in HL)
 ;;
-_ply_akg_initsoundeffects:
-	push ix
-	push iy
-	call PLY_AKG_INITSOUNDEFFECTS
-	pop iy
-	pop ix
-	ret
+defc _ply_akg_initsoundeffects = PLY_AKG_INITSOUNDEFFECTS
 
 
 ;;
-;; void _ply_akg_playsoundeffect( uint8_t effect ) __z88dk_fastcall;
-;;   (param in HL)
+;; void ply_akg_playsoundeffect( uint16_t effect, uint16_t channel, uint16_t inv_volume ) __z88dk_callee;
+;;   (params pushed on the stack right to left, all 16-bit)
 ;;
 _ply_akg_playsoundeffect:
-	ld a,l
-	push ix
-	push iy
-	call PLY_AKG_PLAYSOUNDEFFECT
-	pop iy
-	pop ix
-	ret
+	pop hl		; HL = retaddr
+
+	pop de
+	ld a,e		; A = sound effect number
+	pop de
+	ld c,e		; C = num channel
+	pop bc
+	ld b,c		; B = inv volume
+
+	push hl		; restore retaddr
+	jp PLY_AKG_PLAYSOUNDEFFECT

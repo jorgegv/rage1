@@ -16,7 +16,7 @@ CONVSONG_OBJ =$(CONVSONG_ASM:.asm=.o)
 
 # main target objs
 #MAIN_OBJS = main.o arkos2_c_stubs.o $(CONVSONG_OBJ) $(ARKOS_OBJ)
-MAIN_OBJS = main.o arkos2_c_stubs_simple.o $(CONVSONG_OBJ) $(ARKOS_OBJ)
+MAIN_OBJS = main.o arkos2-stubs.o fx.o $(CONVSONG_OBJ) $(ARKOS_OBJ)
 
 # targets
 .PHONY: build clean
