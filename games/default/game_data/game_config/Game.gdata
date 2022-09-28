@@ -30,7 +30,7 @@ BEGIN_GAME_CONFIG
 	CRUMB_TYPE	NAME=RedPill BTILE=RedPill
 
 	// music tracker options
-	TRACKER		TYPE=arkos2 IN_GAME_SONG=game_song FX_CHANNEL=0 FX_VOLUME=12
+	TRACKER		TYPE=arkos2 IN_GAME_SONG=game_song FX_CHANNEL=1 FX_VOLUME=16
 	TRACKER_SONG	NAME=game_song FILE=game_data/music/music1.aks
 //	TRACKER_SONG	NAME=menu_song FILE=game_data/music/music1.aks
 	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
