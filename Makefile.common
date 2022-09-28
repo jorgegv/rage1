@@ -9,14 +9,16 @@
 ################################################################################
 
 # directory configurations
-ENGINE_DIR		= engine
-BUILD_DIR		= build
-GENERATED_DIR		= $(BUILD_DIR)/generated
-GENERATED_DIR_DATASETS	= $(GENERATED_DIR)/datasets
-GENERATED_DIR_CODESETS	= $(GENERATED_DIR)/codesets
-GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
-GAME_SRC_DIR		= $(BUILD_DIR)/game_src
-GAME_DATA_DIR		= $(BUILD_DIR)/game_data
+ENGINE_DIR			= engine
+BUILD_DIR			= build
+GENERATED_DIR			= $(BUILD_DIR)/generated
+GENERATED_DIR_DATASETS		= $(GENERATED_DIR)/datasets
+GENERATED_DIR_CODESETS		= $(GENERATED_DIR)/codesets
+GENERATED_DIR_LOWMEM		= $(GENERATED_DIR)/lowmem
+GENERATED_DIR_BANKED_128	= $(GENERATED_DIR)/banked/128
+GENERATED_DIR_BANKED_COMMON	= $(GENERATED_DIR)/banked/common
+GAME_SRC_DIR			= $(BUILD_DIR)/game_src
+GAME_DATA_DIR			= $(BUILD_DIR)/game_data
 
 # by default, build the main test game
 # override this in the build command line (with e.g. "make build128 target_game=../famargon") to build your own game
@@ -49,12 +51,12 @@ CODESET_MAXSIZE		= 16384
 BANKED_CODE_DIR			= $(ENGINE_DIR)/banked_code
 BANKED_CODE_DIR_COMMON		= $(BANKED_CODE_DIR)/common
 BANKED_CODE_DIR_128		= $(BANKED_CODE_DIR)/128
-BANKED_CODE_ASMSRC_128		= $(wildcard $(BANKED_CODE_DIR_128)/*.asm )
-BANKED_CODE_CSRC_128		= $(wildcard $(BANKED_CODE_DIR_128)/*.c )
+BANKED_CODE_ASMSRC_128		= $(wildcard $(BANKED_CODE_DIR_128)/*.asm ) $(wildcard $(GENERATED_DIR_BANKED_128)/*.asm )
+BANKED_CODE_CSRC_128		= $(wildcard $(BANKED_CODE_DIR_128)/*.c ) $(wildcard $(GENERATED_DIR_BANKED_128)/*.c )
 BANKED_CODE_SRC_128		= $(BANKED_CODE_ASMSRC_128) $(BANKED_CODE_CSRC_128)
 BANKED_CODE_OBJS_128		= $(BANKED_CODE_ASMSRC_128:.asm=.o) $(BANKED_CODE_CSRC_128:.c=.o)
-BANKED_CODE_ASMSRC_COMMON	= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm )
-BANKED_CODE_CSRC_COMMON		= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c )
+BANKED_CODE_ASMSRC_COMMON	= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm ) $(wildcard $(GENERATED_DIR_BANKED_COMMON)/*.asm )
+BANKED_CODE_CSRC_COMMON		= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c ) $(wildcard $(GENERATED_DIR_BANKED_COMMON)/*.c )
 BANKED_CODE_SRC_COMMON		= $(BANKED_CODE_ASMSRC_COMMON) $(BANKED_CODE_CSRC_COMMON)
 BANKED_CODE_OBJS_COMMON		= $(BANKED_CODE_ASMSRC_COMMON:.asm=.o) $(BANKED_CODE_CSRC_COMMON:.c=.o)
 BIN_BANKED_CODE			= $(BANKED_CODE_DIR)/banked_code.bin
@@ -251,5 +253,13 @@ mem:
 	@./tools/memmap.pl main.map
 
 linecount: clean
-	find . -type f |grep -v -E '^./.git'|xargs -l file|grep -E '(ASCII|Perl)'|cut -f1 -d:|xargs -l cat|wc -l
-
+	@echo -n "Lines of Code (C):         "
+	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'C source'|cut -f1 -d:|xargs -l cat|wc -l
+	@echo -n "Lines of Code (Perl):      "
+	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'Perl'|cut -f1 -d:|xargs -l cat|wc -l
+	@echo -n "Lines of Code (Assembler): "
+	@find . -type f -iname "*.asm"|grep -v -E '^./.git'|grep -v tests/|xargs -l cat|wc -l
+	@echo -n "Lines of Docs:             "
+	@find doc/ -type f|xargs cat|wc -l
+	@echo -n "Lines of Test Games:       "
+	@find games/ -type f|xargs -l cat|wc -l

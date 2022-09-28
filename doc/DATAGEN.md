@@ -486,6 +486,10 @@ BEGIN_GAME_CONFIG
 	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 	BINARY_DATA     FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
 	CRUMB_TYPE	NAME=RedPill BTILE=RedPill ACTION_FUNCTION=redpill_grabbed FILE=crumb_functions.c CODESET=1
+        TRACKER         TYPE=arkos2 IN_GAME_SONG=in_game_song FX_CHANNEL=0 FX_VOLUME=10
+        TRACKER_SONG    NAME=menu_song FILE=game_data/music/music1.aks
+        TRACKER_SONG    NAME=in_game_song FILE=game_data/music/music2.aks
+	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
 END_GAME_CONFIG
 ```
 
@@ -594,6 +598,32 @@ including different data pieces.  Arguments:
   * `CODESET`: (optional) the codeset where the function must reside.  If
     not specified, or we are compiling for 48K model, it will go into lowmem
     area
+
+* `TRACKER`: enables a music tracker in your game. Currently Arkos Tracker 2
+  is the supported player, but other trackers can be easily integrated (open
+  an issue if you need another one!). Arguments:
+  * `TYPE`: (optional) currently only `arkos2` value is supported, and
+    specified by default
+  * `IN_GAME_SONG`: (optional) the song that will be played during the game.
+    The supplied name must be that of a song defined with a `TRACKER_SONG`
+    directive (see below).
+  * `FX_CHANNEL`: (optional) channel to be used for sound effects. Only 0,1
+    or 2 can be specified
+  * `FX_VOLUME`: (optional) volume to use for sound effects. Range is 0-15
+    (low to high), and default value is 10
+
+* `TRACKER_SONG`: specifies a tracker song to be used for the game.  More
+  than one song may be included.  Arkos files (`.aks`) can be used directly,
+  provided that you configure your Arkos Tracker 2 directory so that RAGE1
+  can use the proper conversion tools.  Arguments:
+  * `NAME`: the name of the song. It must be a valid C identifier (in short:
+  letters, numbers and `_`)
+  * `FILE`: the path of the song file
+
+* `TRACKER_FXTABLE`: specifies a tracker sound effects table to be used for
+  the game, in Arkos 2 format (`.aks`). Again, make sure you configure
+  correctly your Arkos Tracker 2 directory. Arguments:
+  * `FILE`: the path of the sound FX file
 
 # FLOWGEN
 
@@ -715,6 +745,12 @@ check is successful. Options:
   - [x] FLOW_VAR_ADD VAR_ID=<id> VALUE=<value>
   - [x] FLOW_VAR_DEC VAR_ID=<id>
   - [x] FLOW_VAR_SUB VAR_ID=<id> VALUE=<value>
+
+A rule may have no CHECK directives, in which case its DO actions will
+always be run at proper moment specified in the WHEN directive. This can be
+used for e.g. running a custom function on each game loop iteration, or
+doing something specific on entering/exiting a screen (e.g. setting an
+ULAplus palette, or selcting a specific music track)
 
 ## FLOWGEN Gdata file syntax
 

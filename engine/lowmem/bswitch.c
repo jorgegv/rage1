@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <arch/zx.h>
+#include <intrinsic.h>
 
 #include "features.h"
 
@@ -48,11 +49,17 @@ uint8_t memory_current_memory_bank;
 
 void memory_switch_bank( uint8_t bank ) {
 
-    // mask the 3 lowest bits of bank, then add it to the default value for
-    // IO_7FDD
-    IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
+    // Mask the 3 lowest bits of bank, then add it to the default value for
+    // IO_7FDD.  Then save the bank that is currently mapped.
 
-    // save the bank that is currently mapped
+    // atomically update the bank port and the bank state variable.  See
+    // doc/BANKED-FUNCTIONS.md, section "Interrupts" for a detailed
+    // explanation
+
+    intrinsic_di();	// enter critical section
+    IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
     memory_current_memory_bank = bank;
+    intrinsic_ei();	// exit critical section
+
 }
 #endif

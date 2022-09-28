@@ -139,6 +139,12 @@ void show_heartbeat(void) {
     }
 }
 
+// this one is not needed, this task is run from the ISR
+// void run_tracker_tasks( void ) {
+//    RUN_ONLY_ONCE_PER_FRAME;
+//    tracker_do_periodic_tasks();
+//}
+
 void run_main_game_loop(void) {
 
    // seed PRNG. It is important that this is done here, after the menu has been run
@@ -156,6 +162,14 @@ void run_main_game_loop(void) {
 
 #ifdef BUILD_FEATURE_INVENTORY
    inventory_show();
+#endif
+
+#ifdef BUILD_FEATURE_TRACKER
+   // start music
+   // music is playing via interrupts
+   tracker_select_song( TRACKER_IN_GAME_SONG );
+   tracker_rewind();
+   tracker_start();
 #endif
 
    // run user game initialization, if any
@@ -226,6 +240,11 @@ void run_main_game_loop(void) {
    // we reach here if game over or game finished successfully
 
    // cleanup
+
+#ifdef BUILD_FEATURE_TRACKER
+   // stop music
+   tracker_stop();
+#endif
 
    // free sprites in the current screen
    map_exit_screen( game_state.current_screen_ptr );

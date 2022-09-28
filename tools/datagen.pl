@@ -17,8 +17,10 @@ use utf8;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
+require RAGE::Config;
 require RAGE::PNGFileUtils;
 require RAGE::FileUtils;
+require RAGE::Arkos2;
 
 use Data::Dumper;
 use List::MoreUtils qw( zip );
@@ -26,6 +28,7 @@ use Getopt::Std;
 use Data::Compare;
 use File::Path qw( make_path );
 use File::Copy;
+use File::Basename;
 
 # final destination address for compilation of datasets and codesets
 my $dataset_base_address = 0x5B00;
@@ -75,6 +78,7 @@ my $c_file_game_data		= 'game_data.c';
 my $asm_file_game_data		= 'asm_game_data.asm';
 my $h_file_game_data		= 'game_data.h';
 my $h_file_build_features	= 'features.h';
+my $c_file_banked_data_128	= 'banked/128/game_data_128.c';
 
 # global directories
 my $output_dest_dir;
@@ -101,6 +105,9 @@ my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
 my @h_build_features_lines;
+my @c_banked_data_128_lines;
+
+# misc vars
 my $forced_build_target;
 my %conditional_build_features;
 
@@ -841,6 +848,71 @@ sub read_input_data {
                 push @all_crumb_types, $item;
                 $crumb_type_name_to_index{ $item->{'name'} } = $index;
                 next;	# $line
+            }
+            if ( $line =~ /^TRACKER\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                if ( not defined( $game_config->{'tracker'} ) ) {
+                    $game_config->{'tracker'} = $item;
+                } else {
+                    $game_config->{'tracker'} = { %{ $game_config->{'tracker'} }, %$item };
+                }
+
+                add_build_feature( 'TRACKER' );
+                add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
+
+                if ( defined( $item->{'fx_channel'} ) ) {
+                    if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
+                        die "TRACKER: FX_CHANNEL can only be 0, 1 or 2\n";
+                    }
+                    add_build_feature( 'TRACKER_SOUNDFX' );
+                    if ( defined( $item->{'fx_volume'} ) ) {
+                        if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 16 ) ) {
+                            die "TRACKER: FX_VOLUME must be in range 0-16\n";
+                        }
+                    } else {
+                        # fx_volume is always defined
+                        $item->{'fx_volume'} = 10;	# default value
+                    }
+                }
+                next;
+            }
+            if ( $line =~ /^TRACKER_SONG\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'name'} ) ) {
+                    die "TRACKER_SONG: missing NAME argument\n";
+                }
+                if ( not defined( $item->{'file'} ) ) {
+                    die "TRACKER_SONG: missing FILE argument\n";
+                }
+                my $index = defined( $game_config->{'tracker'}{'songs'} ) ?
+                    scalar( @{ $game_config->{'tracker'}{'songs'} } ) : 0;
+                $item->{'song_index'} = $index;
+                push @{ $game_config->{'tracker'}{'songs'} }, $item;
+                next;
+            }
+            if ( $line =~ /^TRACKER_FXTABLE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'file'} ) ) {
+                    die "TRACKER_FXTABLE: missing FILE argument\n";
+                }
+                $game_config->{'tracker'}{'fxtable'} = $item;
+                next;
             }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
@@ -2049,6 +2121,10 @@ my $action_data_output_format = {
     FLOW_VAR_ADD		=> ".data.flow_var = %s",
     FLOW_VAR_DEC		=> ".data.flow_var = %s",
     FLOW_VAR_SUB		=> ".data.flow_var = %s",
+    TRACKER_SELECT_SONG		=> ".data.tracker_song.num_song = %s",
+    TRACKER_MUSIC_STOP		=> ".data.unused = %d",
+    TRACKER_MUSIC_START		=> ".data.unused = %d",
+    TRACKER_PLAY_FX		=> ".data.tracker_fx.num_effect = %d",
 };
 
 sub generate_rule_checks {
@@ -2230,6 +2306,31 @@ sub check_game_config_is_valid {
     if ( is_build_feature_enabled( 'SCREEN_TITLES') and not defined( $game_config->{'title_area'} ) ) {
         warn "Game Config: using SCREEN_TITLES feature, but no TITLE_AREA defined\n";
         $errors++;
+    }
+
+    # tracker configuration
+    if ( defined( $game_config->{'tracker'} ) ) {
+        if ( not defined( $game_config->{'tracker'}{'type'} ) ) {
+            $game_config->{'tracker'}{'type'} = 'arkos2';
+        }
+        if ( $game_config->{'tracker'}{'type'} ne 'arkos2' ) {
+            warn "TRACKER: only 'arkos2' TYPE is supported\n";
+            $errors++;
+        }
+        if ( not scalar( @{ $game_config->{'tracker'}{'songs'} } ) ) {
+            warn "TRACKER: no music songs defined (TRACKER_SONG directive)\n";
+            $errors++;
+        }
+        if ( defined( $game_config->{'tracker'}{'in_game_song'} ) and 
+                not grep { $_->{'name'} eq $game_config->{'tracker'}{'in_game_song'} } 
+                @{ $game_config->{'tracker'}{'songs'} } ) {
+            warn "TRACKER: unknown song name in IN_GAME_SONG parameter\n";
+            $errors++;
+        }
+        if ( $game_config->{'zx_target'} ne '128' ) {
+            warn "TRACKER: must be used together with ZX_TARGET = 128\n";
+            $errors++;
+        }
     }
 
     return $errors;
@@ -3003,11 +3104,105 @@ sub generate_binary_data_items {
 
 }
 
+sub generate_c_banked_data_128_header {
+    push @c_banked_data_128_lines,<<EOF_BANKED_128_HEADING
+#include <stdint.h>
+#include <stdlib.h>
+
+EOF_BANKED_128_HEADING
+;
+}
+
+sub generate_tracker_data {
+    # tracker songs
+    if ( defined( $game_config->{'tracker'} ) ) {
+
+        push @h_game_data_lines, "/////////////////////\n";
+        push @h_game_data_lines, "// Tracker songs\n";
+        push @h_game_data_lines, "/////////////////////\n\n";
+
+        push @c_banked_data_128_lines, "//////////////////////////////////\n";
+        push @c_banked_data_128_lines, "// Tracker songs data and table\n";
+        push @c_banked_data_128_lines, "//////////////////////////////////\n\n";
+
+        # output the songs data
+
+        # FIX: the song data must be in ASM format: exported songs are full
+        # of pointer references, so they must be compiled, they can't be in
+        # binary form.  This part needs to be redone
+
+        # It's fine that the songs can be specified in AKS format, but they
+        # need to be converted to ASM.  For that we need Arkos installed.
+
+        # This would greatly benefit from having a centralized tool
+        # configuration file, e.g.  ./etc/rage1-tools.conf
+
+        # Alternatively, we can add a new 'ASM_FILE' parameter which allows
+        # us to directly refer to the song's ASM file and convert it
+        # elsewhere
+
+        foreach my $song ( @{ $game_config->{'tracker'}{'songs'} } ) {
+            my $symbol_name = "tracker_song_" . $song->{'name'};
+
+            # generate extern declaration for later use in C file
+            push @c_banked_data_128_lines, sprintf( "extern uint8_t %s[];\n", $symbol_name );
+
+            # generate song ID in header file
+            push @h_game_data_lines, sprintf( "#define TRACKER_SONG_%s\t%d\n",
+                uc( $song->{'name'} ), $song->{'song_index'} );
+            if ( defined( $game_config->{'tracker'}{'in_game_song'} ) ) {
+                push @h_game_data_lines, sprintf( "#define TRACKER_IN_GAME_SONG\tTRACKER_SONG_%s\n",
+                    uc( $game_config->{'tracker'}{'in_game_song'} ) );
+            }
+
+            # generate song ASM file and put it in place for compilation
+            my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+            move( $asm_file, $dest_asm_file ) or
+                die "Could not rename $asm_file to $dest_asm_file\n";
+        }
+
+        # now output the songs table
+        push @c_banked_data_128_lines, "\n// songs table\n";
+        push @c_banked_data_128_lines, sprintf( "uint8_t *all_songs[ %d ] = {\n",
+            scalar( @{ $game_config->{'tracker'}{'songs'} } ) );
+        foreach my $song ( @{ $game_config->{'tracker'}{'songs'} } ) {
+            my $symbol_name = "tracker_song_" . $song->{'name'};
+            push @c_banked_data_128_lines, sprintf( "\t&%s[0],\n", $symbol_name );
+        }
+        push @c_banked_data_128_lines, "};\n";
+
+        # output sound effects table and constants
+        if ( defined( $game_config->{'tracker'}{'fxtable'} ) ) {
+            # generate song ASM file and put it in place for compilation
+            # the extern declaration for this is already in tracker.h
+            my $asm_file = arkos2_convert_effects_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+
+            my $effects_count = arkos2_count_sound_effects( $asm_file );
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_NUM_EFFECTS %d\n", $effects_count );
+
+            move( $asm_file, $dest_asm_file ) or
+                die "Could not rename $asm_file to $dest_asm_file\n";
+        }
+        if ( defined( $game_config->{'tracker'}{'fx_channel'} ) ) {
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_CHANNEL %d\n",
+                $game_config->{'tracker'}{'fx_channel'} );
+        }
+        if ( defined( $game_config->{'tracker'}{'fx_volume'} ) ) {
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_VOLUME %d\n",
+                $game_config->{'tracker'}{'fx_volume'} );
+        }
+
+    }
+}
+
 # this function is called from main
 sub generate_game_data {
 
     # generate header lines for all output files
     generate_c_home_header;
+    generate_c_banked_data_128_header;
     generate_h_header;
 
     # generate data - each function is free to add lines to the .c or .h
@@ -3033,6 +3228,9 @@ sub generate_game_data {
     generate_game_areas;
     generate_game_config;
     generate_misc_data;
+
+    # tracker items
+    generate_tracker_data;
 
     # codeset items
     generate_codesets;
@@ -3142,6 +3340,15 @@ sub output_game_data {
                 die "** Could not move $src_file to $dst_file\n";
         }
     }
+
+    # output generated banked data for 128 mode
+    if ( $game_config->{'zx_target'} eq '128' ) {
+        open( $output_fh, ">", $c_file_banked_data_128 ) or
+            die "Could not open $c_file_banked_data_128 for writing\n";
+        print $output_fh join( "", @c_banked_data_128_lines );
+        close $output_fh;
+    }
+    
 
     # output game_data.h file
     open( $output_fh, ">", $h_file_game_data ) or
@@ -3341,13 +3548,17 @@ sub dump_internal_data {
 ## Main loop
 #########################
 
+# get tool configuration
+my $cfg = rage1_get_config();
+
 our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
 getopts("b:d:ct:s:");
 if ( defined( $opt_d ) ) {
-    $c_file_game_data = "$opt_d/$c_file_game_data";
-    $asm_file_game_data = "$opt_d/$asm_file_game_data";
-    $h_file_game_data = "$opt_d/$h_file_game_data";
-    $h_file_build_features = "$opt_d/$h_file_build_features";
+    $c_file_game_data		= "$opt_d/$c_file_game_data";
+    $asm_file_game_data		= "$opt_d/$asm_file_game_data";
+    $h_file_game_data		= "$opt_d/$h_file_game_data";
+    $h_file_build_features	= "$opt_d/$h_file_build_features";
+    $c_file_banked_data_128	=  "$opt_d/$c_file_banked_data_128";
     $dump_file = "$opt_d/$dump_file";
     $output_dest_dir = $opt_d;
 }

@@ -95,8 +95,12 @@ struct flow_rule_check_s {
 #define RULE_ACTION_FLOW_VAR_ADD		17
 #define RULE_ACTION_FLOW_VAR_DEC		18
 #define RULE_ACTION_FLOW_VAR_SUB		19
+#define RULE_ACTION_TRACKER_SELECT_SONG		20
+#define RULE_ACTION_TRACKER_MUSIC_STOP		21
+#define RULE_ACTION_TRACKER_MUSIC_START		22
+#define RULE_ACTION_TRACKER_PLAY_FX		23
 
-#define RULE_ACTION_MAX				19
+#define RULE_ACTION_MAX				23
 
 struct flow_rule_action_s {
     uint8_t type;
@@ -118,6 +122,8 @@ struct flow_rule_action_s {
         struct { uint16_t	item_id; }		item;		// ADD_TO/REMOVE_FROM_INVENTORY
         struct { uint8_t	num_screen, flag; }	screen_flag;	// SET/RESET_SCREEN_FLAG
         struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
+        struct { uint8_t	num_song; }		tracker_song;	// TRACKER_SELECT_SONG
+        struct { uint8_t	num_effect; }		tracker_fx;	// TRACKER_PLAY_FX
     } data;
 };
 

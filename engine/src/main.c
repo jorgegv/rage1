@@ -10,6 +10,8 @@
 
 #include <input.h>
 
+#include "features.h"
+
 #include "rage1/memory.h"
 #include "rage1/sp1engine.h"
 #include "rage1/interrupts.h"
@@ -43,6 +45,15 @@ void init_program(void) {
 #ifdef BUILD_FEATURE_GAME_TIME
    init_timer();
 #endif
+#ifdef BUILD_FEATURE_TRACKER
+   init_tracker();
+#endif
+#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+   init_tracker_sound_effects();
+#endif
+
+   // this must be called the last
+   interrupt_enable_periodic_isr_tasks();
 }
 
 void main(void)

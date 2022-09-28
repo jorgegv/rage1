@@ -21,6 +21,8 @@
 #include "rage1/inventory.h"
 #include "rage1/dataset.h"
 
+#include "rage1/memory.h"
+
 #include "game_data.h"
 
 // disable "unreferenced function argument" warning, there are some
@@ -420,6 +422,31 @@ void do_rule_action_flow_var_sub( struct flow_rule_action_s *action ) __z88dk_fa
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_SELECT_SONG
+void do_rule_action_tracker_select_song( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    tracker_stop();
+    tracker_select_song( action->data.tracker_song.num_song );
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_STOP
+void do_rule_action_tracker_music_stop( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    tracker_stop();
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_START
+void do_rule_action_tracker_music_start( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    tracker_start();
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
+void do_rule_action_tracker_play_fx( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    tracker_play_fx( action->data.tracker_fx.num_effect );
+}
+#endif
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -657,6 +684,26 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_FLOW_VAR_SUB
     do_rule_action_flow_var_sub,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_SELECT_SONG
+    do_rule_action_tracker_select_song,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_STOP
+    do_rule_action_tracker_music_stop,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_START
+    do_rule_action_tracker_music_start,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
+    do_rule_action_tracker_play_fx,
 #else
     NULL,
 #endif
