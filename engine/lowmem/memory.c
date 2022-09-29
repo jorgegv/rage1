@@ -39,9 +39,9 @@ void memory_call_banked_function( uint8_t function_id ) {
     memory_switch_bank( previous_memory_bank );
 }
 
-void memory_call_banked_function_arg16( uint8_t function_id, uint16_t arg ) {
+void memory_call_banked_function_a16( uint8_t function_id, uint16_t arg ) {
     // pointer to table of functions in bank
-    banked_function_arg16_t *run_function = (banked_function_arg16_t *) 0xC000;
+    banked_function_a16_t *run_function = (banked_function_a16_t *) 0xC000;
 
     uint8_t previous_memory_bank;
 
