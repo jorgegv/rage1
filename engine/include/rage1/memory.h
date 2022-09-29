@@ -37,11 +37,11 @@ void init_memory(void);
     // all banked functions must be declared as
     //   void function( void );
     typedef void (*banked_function_t)( void );
-    typedef void (*banked_function_arg16_t)( uint16_t arg );
+    typedef void (*banked_function_a16_t)( uint16_t arg );
 
     // trampoline functions to call banked functions
     void memory_call_banked_function( uint8_t function_id );
-    void memory_call_banked_function_arg16( uint8_t function_id, uint16_t arg );
+    void memory_call_banked_function_a16( uint8_t function_id, uint16_t arg );
 
     // banked function IDs
     #define BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID	0
@@ -74,12 +74,12 @@ void init_memory(void);
     #define bullet_animate_and_move_all()	( memory_call_banked_function( BANKED_FUNCTION_BULLET_ANIMATE_AND_MOVE_ALL ) )
     #define bullet_add()			( memory_call_banked_function( BANKED_FUNCTION_BULLET_ADD ) )
     #define init_tracker()			( memory_call_banked_function( BANKED_FUNCTION_INIT_TRACKER ) )
-    #define tracker_select_song(a)		( memory_call_banked_function_arg16( BANKED_FUNCTION_TRACKER_SELECT_SONG, (a) ) )
+    #define tracker_select_song(a)		( memory_call_banked_function_a16( BANKED_FUNCTION_TRACKER_SELECT_SONG, (a) ) )
     #define tracker_start()			( memory_call_banked_function( BANKED_FUNCTION_TRACKER_START ) )
     #define tracker_stop()			( memory_call_banked_function( BANKED_FUNCTION_TRACKER_STOP ) )
     #define tracker_do_periodic_tasks()		( memory_call_banked_function( BANKED_FUNCTION_TRACKER_DO_PERIODIC_TASKS ) )
     #define init_tracker_sound_effects()	( memory_call_banked_function( BANKED_FUNCTION_INIT_TRACKER_SOUND_EFFECTS ) )
-    #define tracker_play_fx(a)			( memory_call_banked_function_arg16( BANKED_FUNCTION_TRACKER_PLAY_FX, (a) ) )
+    #define tracker_play_fx(a)			( memory_call_banked_function_a16( BANKED_FUNCTION_TRACKER_PLAY_FX, (a) ) )
     #define tracker_rewind()			( memory_call_banked_function( BANKED_FUNCTION_TRACKER_REWIND ) )
 
 #endif
