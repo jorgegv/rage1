@@ -19,6 +19,7 @@ TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(M
 .PHONY: datasets codesets taps
 
 build:
+	@$(MYMAKE) banked_definitions
 	@$(MYMAKE) datasets
 	@$(MYMAKE) codesets
 	@$(MYMAKE) banks
@@ -88,7 +89,11 @@ codeset_%.bin:
 
 ##
 ## Banked code compilation to standalone binary at 0xC000
+## and associated checks
 ##
+
+banked_definitions:
+	@./tools/check_banked_code_definitions.pl
 
 banked_code: $(BIN_BANKED_CODE)
 
