@@ -877,7 +877,7 @@ sub read_input_data {
                         }
                     } else {
                         # fx_volume is always defined
-                        $item->{'fx_volume'} = 10;	# default value
+                        $item->{'fx_volume'} = 16;	# default value
                     }
                 }
                 next;
@@ -899,6 +899,7 @@ sub read_input_data {
                     scalar( @{ $game_config->{'tracker'}{'songs'} } ) : 0;
                 $item->{'song_index'} = $index;
                 push @{ $game_config->{'tracker'}{'songs'} }, $item;
+                $game_config->{'tracker'}{'song_index'}{ $item->{'name'} } = $index;
                 next;
             }
             if ( $line =~ /^TRACKER_FXTABLE\s+(\w.*)$/ ) {
@@ -2048,6 +2049,13 @@ sub validate_and_compile_rule {
             $action_data = sprintf( "{ .var_id = %s, .value = %s }",
                 $vars->{'var_id'}, $vars->{'value'} || 0 );
             add_build_feature( 'FLOW_VARS' );
+        }
+
+        # tracker_select_song specific
+        if ( $action =~ /^TRACKER_SELECT_SONG/ ) {
+            # $action_data contains the song name - convert into the song
+            # index into the songs table
+            $action_data = $game_config->{'tracker'}{'song_index'}{ $action_data };
         }
 
         # regenerate the value with the filtered data

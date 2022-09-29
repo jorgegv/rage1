@@ -32,6 +32,6 @@ BEGIN_GAME_CONFIG
 	// music tracker options
 	TRACKER		TYPE=arkos2 IN_GAME_SONG=game_song FX_CHANNEL=1 FX_VOLUME=16
 	TRACKER_SONG	NAME=game_song FILE=game_data/music/music1.aks
-//	TRACKER_SONG	NAME=menu_song FILE=game_data/music/music1.aks
+	TRACKER_SONG	NAME=menu_song FILE=game_data/music/music2.aks
 	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
 END_GAME_CONFIG

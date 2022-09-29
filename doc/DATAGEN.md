@@ -609,8 +609,8 @@ including different data pieces.  Arguments:
     directive (see below).
   * `FX_CHANNEL`: (optional) channel to be used for sound effects. Only 0,1
     or 2 can be specified
-  * `FX_VOLUME`: (optional) volume to use for sound effects. Range is 0-15
-    (low to high), and default value is 10
+  * `FX_VOLUME`: (optional) volume to use for sound effects. Range is 0-16
+    (low to high), and default value is 16
 
 * `TRACKER_SONG`: specifies a tracker song to be used for the game.  More
   than one song may be included.  Arkos files (`.aks`) can be used directly,
@@ -745,12 +745,16 @@ check is successful. Options:
   - [x] FLOW_VAR_ADD VAR_ID=<id> VALUE=<value>
   - [x] FLOW_VAR_DEC VAR_ID=<id>
   - [x] FLOW_VAR_SUB VAR_ID=<id> VALUE=<value>
+  - [x] TRACKER_SELECT_SONG <song_name>
+  - [x] TRACKER_MUSIC_STOP
+  - [x] TRACKER_MUSIC_START
+  - [x] TRACKER_PLAY_FX  <fxid> - The number of the effect in your FX sound track (starts at 1!)
 
 A rule may have no CHECK directives, in which case its DO actions will
 always be run at proper moment specified in the WHEN directive. This can be
 used for e.g. running a custom function on each game loop iteration, or
 doing something specific on entering/exiting a screen (e.g. setting an
-ULAplus palette, or selcting a specific music track)
+ULAplus palette, or selecting a specific music track)
 
 ## FLOWGEN Gdata file syntax
 
