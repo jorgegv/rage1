@@ -246,11 +246,19 @@ new-game:
 	@echo "Done!"
 
 # tools
-mem:
+mem_obj:
 	@echo ""; echo "MEMORY USAGE REPORT BY OBJECT FILE:"
 	@./tools/r1size.sh
-	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION:"
-	@./tools/memmap.pl main.map
+
+mem_main:
+	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (MAIN MEMORY):"
+	@./tools/memmap.pl -m -p main main.map
+
+mem_bank:
+	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (BANKED MEMORY):"
+	@./tools/memmap.pl -m -p bank $(BANKED_CODE_DIR)/banked_code.map
+
+mem: mem_main mem_bank
 
 linecount: clean
 	@echo -n "Lines of Code (C):         "
