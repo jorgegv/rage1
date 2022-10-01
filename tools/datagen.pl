@@ -2053,9 +2053,11 @@ sub validate_and_compile_rule {
 
         # tracker_select_song specific
         if ( $action =~ /^TRACKER_SELECT_SONG/ ) {
-            # $action_data contains the song name - convert into the song
+            # $action_data may contain the song name - convert into the song
             # index into the songs table
-            $action_data = $game_config->{'tracker'}{'song_index'}{ $action_data };
+            if ( defined( $game_config->{'tracker'}{'song_index'}{ $action_data } ) ) {
+                $action_data = $game_config->{'tracker'}{'song_index'}{ $action_data };
+            }
         }
 
         # regenerate the value with the filtered data
