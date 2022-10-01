@@ -79,10 +79,15 @@ struct game_state_s {
    //     game loop functions and reacted upon in a central place.  They are
    //     all reset at the end of the game loop
    //
+   //  * game_events: similar to loop flags but for actions that happen due
+   //    to direct player interaction.  It is also reset at the end of the
+   //    game loop
+   //
    //   * user flags: they are checked and manipulated from FLOWGEN rules
    //
    uint8_t flags;
    uint8_t loop_flags;
+   uint8_t game_events;
    uint8_t user_flags;
 
    // controller data
@@ -156,6 +161,25 @@ void game_state_switch_to_next_screen( void );
 #define F_LOOP_ITEM_GRABBED		0x0020
 // play pending sound effect
 #define F_LOOP_PLAY_SOUNDFX		0x0040
+
+///////////////////////////////////////////////
+// game events macros and definitions
+///////////////////////////////////////////////
+
+#define GET_GAME_EVENT(f)	(game_state.game_events & (f))
+#define SET_GAME_EVENT(f)	(game_state.game_events |= (f))
+#define RESET_GAME_EVENT(f)	(game_state.game_events &= ~(f))
+#define RESET_ALL_GAME_EVENTS()	(game_state.game_events = 0)
+
+// player has received a hit
+#define F_EVENT_HERO_WAS_HIT		0x0001
+// enemy was hit
+#define F_EVENT_ENEMY_WAS_HIT		0x0002
+// an item was picked up
+#define F_EVENT_ITEM_WAS_GRABBED	0x0004
+// a crumb was picked up
+#define F_EVENT_CRUMB_WAS_GRABBED	0x0008
+
 
 ///////////////////////////////////////////////
 // user flags macros and definitions
