@@ -777,12 +777,16 @@ Syntax:
 
 * `BEGIN_RULE` and `END_RULE`: start and end of a rule definition
 
-* `SCREEN`: mandatory. Specifies what screen this rule must be run on
+* `SCREEN`: mandatory. Specifies what screen this rule must be run on. If
+  the rule is assigned to the special screen `__EVENTS__` then it is
+  assigned to the global game events rule table
 
-* `WHEN`: mandatory.  Specifies when this rule must be run.  See previous
-  section for valid values.  For `GAME_LOOP`: the rule will be checked on
-  every iteration of the game loop.  Be careful with rules in this table,
-  they may heavily affect performance of the game
+* `WHEN`: mandatory, except if screen is `__EVENTS__`.  Specifies when this
+  rule must be run.  See previous section for valid values.  For
+  `GAME_LOOP`: the rule will be checked on every iteration of the game loop,
+  so be careful with rules in this table, they may heavily affect game
+  performance.  When the rule is assigned to the `__EVENTS__` special name,
+  the `WHEN` clause is ignored if present
 
 * `CHECK`: specifies a condition to be checked.  See previous section for
   valid values.  There must be at least one `CHECK` and there may be more

@@ -40,9 +40,7 @@ extern rule_check_fn_t rule_check_fn[];
 extern rule_action_fn_t rule_action_fn[];
 
 // global rule table for event actions
-//extern struct flow_rule_table_s game_events_rule_table;
-// FIX: remove the line below and uncomment the previous one when datagen outputs the correct data
-struct flow_rule_table_s game_events_rule_table = { 0, NULL };
+extern struct flow_rule_table_s game_events_rule_table;
 
 // executes a complete rule table
 void run_flow_rule_table( struct flow_rule_table_s *t ) {
