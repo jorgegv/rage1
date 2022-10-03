@@ -59,15 +59,20 @@ END_RULE
 BEGIN_RULE
 	SCREEN	Screen01
 	WHEN	ENTER_SCREEN
+	// warning: TRACKER_SELECT_SONG stops music and must be restarted afterwards
+	// since it stops music, it also stops any sound fx that may be playing
+	// so if you want the FX, do it like in this file: first select song, then
+	// play sound fx. If you change the order, the fx will not play
+	DO	TRACKER_SELECT_SONG menu_song
+	DO	TRACKER_MUSIC_START
+END_RULE
+
+BEGIN_RULE
+	SCREEN	Screen01
+	WHEN	ENTER_SCREEN
 	CHECK	SCREEN_FLAG_IS_SET 0x01
 	DO	ENABLE_BTILE HiddenTree
 	DO	FLOW_VAR_ADD VAR_ID=0 VALUE=3
 	DO	TRACKER_PLAY_FX 5
 END_RULE
 
-BEGIN_RULE
-	SCREEN	Screen01
-	WHEN	ENTER_SCREEN
-	DO	TRACKER_SELECT_SONG menu_song
-	DO	TRACKER_MUSIC_START
-END_RULE
