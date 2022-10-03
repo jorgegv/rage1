@@ -45,7 +45,7 @@ void check_game_pause(void) {
    }
 }
 
-void check_game_flags( void ) {
+void check_loop_flags( void ) {
 
     // update screen data if the player has entered new screen
     // also done whe game has just started
@@ -186,8 +186,9 @@ void run_main_game_loop(void) {
       // check if game has been paused (press 'y')
       check_game_pause();
 
-      // reset all loop flags for a clear iteration
+      // reset all loop flags and game events for a clear iteration
       RESET_ALL_LOOP_FLAGS();
+      RESET_ALL_GAME_EVENTS();
 
       // check flow rules before the regular ones. We trust the user :-)
 
@@ -216,21 +217,31 @@ void run_main_game_loop(void) {
       // changes game_state
       check_collisions();
 
-      // check game flags and react to conditions
-      // changes game_state
-      check_game_flags();
+      // run game events rule table
+      check_game_event_rules();
 
       // run user game loop function, if any
       run_game_function_user_game_loop();
+
+
+      // Loop flags are used as a way to defer code execution until the end
+      // of the game loop.  Loop flags may be changed by enemy code, sprite
+      // code, etc.  but crucially, by flow rule code (both in flow rules
+      // and in event rules).  So this function should be called at the very
+      // end of the game loop.
+
+      // check loop flags and react to conditions.
+      // changes game state
+      check_loop_flags();
 
       // update screen
       sp1_UpdateNow();
 
       // do not add an intrinsic_halt() here - It will waste cycles.
-      // if some of these previous functions do not need to be executed continuously
-      // but e.g. just once every frame, please check the frame counter at
-      // current_time.frame and ignore the call if needed. See how it has been
-      // done in move_sprites()
+      // if some of these previous functions do not need to be executed
+      // continuously but e.g.  just once every frame, please use the
+      // RUN_ONLY_ONCE_PER_FRAME macro at the very beginning of the
+      // function.  See how it has been done e.g.  in move_sprites()
 
       // test light just to be sure we did not hang
 //      show_heartbeat();

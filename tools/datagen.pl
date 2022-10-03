@@ -1932,8 +1932,10 @@ sub validate_and_compile_rule {
     defined( $rule->{'screen'} ) or
         die "Rule has no SCREEN\n";
     my $screen = $rule->{'screen'};
-    exists( $screen_name_to_index{ $screen } ) or
-        die "Screen '$screen' is not defined\n";
+    if ( $screen ne '__EVENTS__' ) {
+        exists( $screen_name_to_index{ $screen } ) or
+            die "Screen '$screen' is not defined\n";
+    }
 
     # WHEN clause is optional when the rule is assigned to __EVENTS__
     if ( $rule->{'screen'} ne '__EVENTS__' ) {
@@ -2125,6 +2127,7 @@ my $check_data_output_format = {
     GAME_TIME_EQUAL		=> ".data.game_time.seconds = %s",
     GAME_TIME_MORE_THAN		=> ".data.game_time.seconds = %s",
     GAME_TIME_LESS_THAN		=> ".data.game_time.seconds = %s",
+    GAME_EVENT_HAPPENED		=> ".data.game_event.event = %s",
 };
 
 my $action_data_output_format = {

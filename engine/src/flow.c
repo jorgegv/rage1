@@ -69,7 +69,7 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
 
 // check_flow_rules: execute rules in flowgen data tables for the current
 // screen.  See documentation for implementation details
-void check_flow_rules(void) {
+void check_flow_rules( void ) {
 
     ////////////////////////////////////////////////////////
     // WHEN_GAME_LOOP rules
@@ -103,6 +103,10 @@ void check_flow_rules(void) {
             run_flow_rule_table( &game_state.current_screen_ptr->flow_data.rule_tables.enter_screen );
     }
 
+}
+
+// check_event_rules: run the rules in game_events_rule_table
+void check_game_event_rules( void ) {
     // special case for the events rules table: only runs if game_events is != 0
     if ( game_state.game_events )
         run_flow_rule_table( &game_events_rule_table );

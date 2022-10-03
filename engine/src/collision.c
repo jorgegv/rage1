@@ -83,7 +83,7 @@ void collision_check_bullets_with_sprites( void ) {
                             SET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED );
                         ++game_state.enemies_killed;
                         SET_LOOP_FLAG( F_LOOP_ENEMY_HIT );
-                        sound_request_fx( SOUND_ENEMY_KILLED );
+                        SET_GAME_EVENT( E_ENEMY_WAS_HIT );
                     }
                 }
             }

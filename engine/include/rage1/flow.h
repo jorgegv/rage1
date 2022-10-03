@@ -153,6 +153,7 @@ typedef int (*check_custom_function_t)( void );
 typedef void (*action_custom_function_t)( void );
 
 // executes user flow rules
-void check_flow_rules(void);
+void check_flow_rules( void );
+void check_game_event_rules( void );
 
 #endif //_FLOW_H
