@@ -82,7 +82,6 @@ void collision_check_bullets_with_sprites( void ) {
                         if ( ! --game_state.enemies_alive )
                             SET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED );
                         ++game_state.enemies_killed;
-                        SET_LOOP_FLAG( F_LOOP_ENEMY_HIT );
                         SET_GAME_EVENT( E_ENEMY_WAS_HIT );
                     }
                 }

@@ -155,8 +155,6 @@ void game_state_switch_to_next_screen( void );
 #define F_LOOP_HERO_HANDLE_HIT		0x0004
 // inside EXIT hotzone
 #define F_LOOP_WARP_TO_SCREEN		0x0008
-// enemy was hit
-#define F_LOOP_ENEMY_HIT		0x0010
 // an item was picked up
 #define F_LOOP_ITEM_GRABBED		0x0020
 // play pending sound effect
