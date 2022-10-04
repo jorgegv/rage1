@@ -304,7 +304,7 @@ void hero_handle_hit ( void ) {
             SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
         }
     } else {
-        sound_request_fx( SOUND_HERO_HIT );
+        SET_GAME_EVENT( E_HERO_WAS_HIT );
         game_state.hero.health.health_amount -= game_state.hero.damage_mode.enemy_damage;
         if ( game_state.hero.damage_mode.immunity_period ) {
             SET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
