@@ -181,6 +181,8 @@ void game_state_switch_to_next_screen( void );
 #define E_CRUMB_WAS_GRABBED		0x0008
 // the hero died
 #define E_HERO_DIED			0x0010
+// a bullet was shot
+#define E_BULLET_WAS_SHOT		0x0020
 
 ///////////////////////////////////////////////
 // user flags macros and definitions

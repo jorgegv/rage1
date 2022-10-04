@@ -134,8 +134,8 @@ void bullet_add( void ) {
             bs->position.ymax = bs->position.y + bi->height - 1;
             bs->delay_counter = bi->movement.delay;
 
-            // slot found, request sound fx and return
-            beeper_request_fx( SOUND_BULLET_SHOT );
+            // slot found, set game event and return
+            SET_GAME_EVENT( E_BULLET_WAS_SHOT );
             return;
         }
     }
