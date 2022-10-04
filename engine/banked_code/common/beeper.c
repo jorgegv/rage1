@@ -9,16 +9,28 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
+#include <sound/bit.h>
 
 #include "features.h"
 
-#include "rage1/sound.h"
-#include "rage1/beeper.h"
 #include "rage1/game_state.h"
 
 #include "rage1/banked.h"
 
-void sound_request_fx( void *sfx ) {
-    game_state.sound_fx = sfx;
-    SET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX );
+extern uint8_t _sound_bit_state;
+void init_beeper( void ) {
+    _sound_bit_state = 0;
+}
+
+void beeper_request_fx( void *sfx ) {
+    game_state.beeper_fx = sfx;
+    SET_LOOP_FLAG( F_LOOP_PLAY_BEEPER_FX );
+}
+
+void beeper_play_pending_fx( void ) {
+    bit_beepfx( game_state.beeper_fx );
+}
+
+void beeper_play_fx( void *sfx ) {
+    bit_beepfx( sfx );
 }

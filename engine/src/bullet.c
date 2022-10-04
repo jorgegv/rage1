@@ -16,7 +16,6 @@
 #include "rage1/screen.h"
 #include "rage1/util.h"
 #include "rage1/debug.h"
-#include "rage1/sound.h"
 #include "rage1/sprite.h"
 
 #include "game_data.h"

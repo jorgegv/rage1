@@ -100,8 +100,8 @@ struct game_state_s {
    uint16_t enemies_alive;
    uint16_t enemies_killed;
 
-   // pointer to sound effect to play when required
-   void *sound_fx;
+   // pointer to beeper sound fx to play when required
+   void *beeper_fx;
    // id of tracker sound fx to play when required
    uint16_t tracker_fx;
 
@@ -157,8 +157,8 @@ void game_state_switch_to_next_screen( void );
 #define F_LOOP_WARP_TO_SCREEN		0x0004
 // an item was picked up
 #define F_LOOP_ITEM_GRABBED		0x0008
-// play pending sound effect
-#define F_LOOP_PLAY_SOUNDFX		0x0010
+// play pending beeper effect
+#define F_LOOP_PLAY_BEEPER_FX		0x0010
 // play pending tracker effect
 #define F_LOOP_PLAY_TRACKER_FX		0x0020
 

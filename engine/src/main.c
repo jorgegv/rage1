@@ -39,6 +39,7 @@ void init_program(void) {
    init_controllers();
    init_hero();
    init_bullets();
+   init_beeper();
 #ifdef	BUILD_FEATURE_CUSTOM_CHARSET
    init_custom_charset();
 #endif	// BUILD_FEATURE_CUSTOM_CHARSET

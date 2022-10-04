@@ -32,5 +32,7 @@ void tracker_rewind( void );
 
 void init_tracker_sound_effects( void );
 void tracker_play_fx( uint8_t effect_id );
+void tracker_request_fx( uint16_t fxid );
+void tracker_play_pending_fx( void );
 
 #endif // _TRACKER_H

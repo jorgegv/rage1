@@ -18,7 +18,7 @@
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"
 #include "rage1/screen.h"
-#include "rage1/sound.h"
+#include "rage1/beeper.h"
 #include "rage1/controller.h"
 #include "rage1/sp1engine.h"
 #include "rage1/sprite.h"
@@ -68,16 +68,18 @@ void check_loop_flags( void ) {
     }
 
     // check if sound fx needs to be played
-    if ( GET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX ) ) {
-        sound_play_pending_fx();
+    if ( GET_LOOP_FLAG( F_LOOP_PLAY_BEEPER_FX ) ) {
+        beeper_play_pending_fx();
         // all loop flags are reset at the beginning of the game loop
     }
 
+#ifdef BUILD_FEATURE_TRACKER
     // check if tracker sound fx needs to be played
     if ( GET_LOOP_FLAG( F_LOOP_PLAY_TRACKER_FX ) ) {
         tracker_play_pending_fx();
         // all loop flags are reset at the beginning of the game loop
     }
+#endif
 }
 
 void move_enemies(void) {
