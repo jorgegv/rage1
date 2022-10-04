@@ -22,7 +22,6 @@
 #include "rage1/debug.h"
 #include "rage1/interrupts.h"
 #include "rage1/bullet.h"
-#include "rage1/sound.h"
 #include "rage1/hotzone.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"

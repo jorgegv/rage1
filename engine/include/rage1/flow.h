@@ -125,7 +125,7 @@ struct flow_rule_action_s {
         struct { uint8_t	num_screen, flag; }	screen_flag;	// SET/RESET_SCREEN_FLAG
         struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
         struct { uint8_t	num_song; }		tracker_song;	// TRACKER_SELECT_SONG
-        struct { uint8_t	num_effect; }		tracker_fx;	// TRACKER_PLAY_FX
+        struct { uint16_t	num_effect; }		tracker_fx;	// TRACKER_PLAY_FX
     } data;
 };
 

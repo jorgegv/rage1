@@ -39,6 +39,11 @@ void init_program(void) {
    init_controllers();
    init_hero();
    init_bullets();
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+   // this one is only needed when compiling for 128
+   // for 48 mode the beepr gets initialized by regular BSS init code
+   init_beeper();
+#endif
 #ifdef	BUILD_FEATURE_CUSTOM_CHARSET
    init_custom_charset();
 #endif	// BUILD_FEATURE_CUSTOM_CHARSET

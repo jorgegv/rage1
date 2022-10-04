@@ -13,8 +13,8 @@
 
 #include "rage1/flow.h"
 #include "rage1/game_state.h"
-#include "rage1/sound.h"
 #include "rage1/hero.h"
+#include "rage1/beeper.h"
 #include "rage1/hotzone.h"
 #include "rage1/map.h"
 #include "rage1/btile.h"
@@ -311,7 +311,7 @@ void do_rule_action_reset_user_flag( struct flow_rule_action_s *action ) __z88dk
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_PLAY_SOUND
 void do_rule_action_play_sound( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    sound_request_fx( action->data.play_sound.sound_id );
+    beeper_request_fx( action->data.play_sound.sound_id );
 }
 #endif
 

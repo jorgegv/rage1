@@ -14,7 +14,7 @@
 
 public	_all_banked_functions
 
-extern	_sound_play_pending_fx
+extern	_beeper_play_pending_fx
 extern	_hero_animate_and_move
 extern	_enemy_animate_and_move_all
 extern	_bullet_animate_and_move_all
@@ -29,12 +29,14 @@ extern	_tracker_play_fx
 extern	_tracker_rewind
 extern	_tracker_play_pending_fx
 extern	_tracker_request_fx
-
+extern	_beeper_request_fx
+extern	_init_beeper
+extern	_beeper_play_fx
 ;;
 ;; 0xC000: banked functions table
 ;;
 _all_banked_functions:
-	dw	_sound_play_pending_fx		;; index 0
+	dw	_beeper_play_pending_fx		;; index 0
 	dw	_hero_animate_and_move		;; index 1
 	dw	_enemy_animate_and_move_all	;; index 2
 	dw	_bullet_animate_and_move_all	;; index 3
@@ -49,3 +51,6 @@ _all_banked_functions:
 	dw	_tracker_rewind			;; index 12
 	dw	_tracker_play_pending_fx	;; index 13
 	dw	_tracker_request_fx		;; index 14
+	dw	_beeper_request_fx		;; index 15
+	dw	_init_beeper			;; index 16
+	dw	_beeper_play_fx			;; index 17

@@ -16,7 +16,7 @@
 #include "rage1/screen.h"
 #include "rage1/util.h"
 #include "rage1/debug.h"
-#include "rage1/sound.h"
+#include "rage1/beeper.h"
 
 #include "game_data.h"
 
@@ -134,8 +134,8 @@ void bullet_add( void ) {
             bs->position.ymax = bs->position.y + bi->height - 1;
             bs->delay_counter = bi->movement.delay;
 
-            // slot found, request sound fx and return
-            sound_request_fx( SOUND_BULLET_SHOT );
+            // slot found, set game event and return
+            SET_GAME_EVENT( E_BULLET_WAS_SHOT );
             return;
         }
     }

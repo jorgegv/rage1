@@ -14,7 +14,6 @@
 #include "rage1/debug.h"
 #include "rage1/bullet.h"
 #include "rage1/screen.h"
-#include "rage1/sound.h"
 #include "rage1/enemy.h"
 #include "rage1/dataset.h"
 #include "rage1/hero.h"

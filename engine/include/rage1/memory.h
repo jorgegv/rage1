@@ -44,7 +44,7 @@ void init_memory(void);
     void memory_call_banked_function_a16( uint8_t function_id, uint16_t arg );
 
     // banked function IDs
-    #define BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID	0
+    #define BANKED_FUNCTION_BEEPER_PLAY_PENDING_FX	0
     #define BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE	1
     #define BANKED_FUNCTION_ENEMY_ANIMATE_AND_MOVE_ALL	2
     #define BANKED_FUNCTION_BULLET_ANIMATE_AND_MOVE_ALL	3
@@ -59,18 +59,21 @@ void init_memory(void);
     #define BANKED_FUNCTION_TRACKER_REWIND		12
     #define BANKED_FUNCTION_TRACKER_PLAY_PENDING_FX	13
     #define BANKED_FUNCTION_TRACKER_REQUEST_FX		14
+    #define BANKED_FUNCTION_BEEPER_REQUEST_FX		15
+    #define BANKED_FUNCTION_INIT_BEEPER			16
+    #define BANKED_FUNCTION_BEEPER_PLAY_FX		17
 
     // WARNING! Don't forget to update the banked function call table
     // in engine/banked_code/128/00main.asm !!!!
 
     // maximum assigned banked function ID. Keep in sync with the previous IDs
     // 128K versions
-    #define BANKED_FUNCTION_MAX_ID		14
+    #define BANKED_FUNCTION_MAX_ID			17
 
     // Banked function call macros (128K versions) - In 128K mode we
     // redefine the regular calls to banked functions as calls to
     // the trampoline memory_call_banked_function()
-    #define sound_play_pending_fx()		( memory_call_banked_function( BANKED_FUNCTION_SOUND_PLAY_PENDING_FX_ID ) )
+    #define beeper_play_pending_fx()		( memory_call_banked_function( BANKED_FUNCTION_BEEPER_PLAY_PENDING_FX ) )
     #define hero_animate_and_move()		( memory_call_banked_function( BANKED_FUNCTION_HERO_ANIMATE_AND_MOVE ) )
     #define enemy_animate_and_move_all()	( memory_call_banked_function( BANKED_FUNCTION_ENEMY_ANIMATE_AND_MOVE_ALL ) )
     #define bullet_animate_and_move_all()	( memory_call_banked_function( BANKED_FUNCTION_BULLET_ANIMATE_AND_MOVE_ALL ) )
@@ -85,6 +88,9 @@ void init_memory(void);
     #define tracker_rewind()			( memory_call_banked_function( BANKED_FUNCTION_TRACKER_REWIND ) )
     #define tracker_play_pending_fx()		( memory_call_banked_function( BANKED_FUNCTION_TRACKER_PLAY_PENDING_FX ) )
     #define tracker_request_fx(a)		( memory_call_banked_function_a16( BANKED_FUNCTION_TRACKER_REQUEST_FX, (a) ) )
+    #define beeper_request_fx(a)		( memory_call_banked_function_a16( BANKED_FUNCTION_BEEPER_REQUEST_FX, (uint16_t)(a) ) )
+    #define init_beeper()			( memory_call_banked_function( BANKED_FUNCTION_INIT_BEEPER ) )
+    #define beeper_play_fx(a)			( memory_call_banked_function_a16( BANKED_FUNCTION_BEEPER_PLAY_FX, (uint16_t)(a) ) )
 #endif
 
 #endif // _MEMORY_H
