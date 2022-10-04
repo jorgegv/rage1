@@ -285,7 +285,7 @@ void hero_handle_hit ( void ) {
 
     health_amount -= game_state.hero.damage_mode.enemy_damage;
     if ( health_amount <= 0 ) {
-        sound_request_fx( SOUND_HERO_DIED );
+        SET_GAME_EVENT( E_HERO_DIED );
         if ( ! --game_state.hero.health.num_lives )
             SET_GAME_FLAG( F_GAME_OVER );
         else {
@@ -326,7 +326,7 @@ void hero_do_immunity_expiration( void ) {
 
 // simple hit handling with default damage mode
 void hero_handle_hit ( void ) {
-    sound_request_fx( SOUND_HERO_DIED );
+    SET_GAME_EVENT( E_HERO_DIED );
     if ( ! --game_state.hero.health.num_lives )
         SET_GAME_FLAG( F_GAME_OVER );
     else {

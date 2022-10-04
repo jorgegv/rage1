@@ -151,14 +151,12 @@ void game_state_switch_to_next_screen( void );
 #define F_LOOP_ENTER_SCREEN		0x0001
 // the hero nust be redrawn
 #define F_LOOP_REDRAW_HERO		0x0002
-// player has collided with an enemy
-#define F_LOOP_HERO_HANDLE_HIT		0x0004
 // inside EXIT hotzone
-#define F_LOOP_WARP_TO_SCREEN		0x0008
+#define F_LOOP_WARP_TO_SCREEN		0x0004
 // an item was picked up
-#define F_LOOP_ITEM_GRABBED		0x0020
+#define F_LOOP_ITEM_GRABBED		0x0008
 // play pending sound effect
-#define F_LOOP_PLAY_SOUNDFX		0x0040
+#define F_LOOP_PLAY_SOUNDFX		0x0010
 
 ///////////////////////////////////////////////
 // game events macros and definitions
@@ -177,7 +175,8 @@ void game_state_switch_to_next_screen( void );
 #define E_ITEM_WAS_GRABBED		0x0004
 // a crumb was picked up
 #define E_CRUMB_WAS_GRABBED		0x0008
-
+// the hero died
+#define E_HERO_DIED			0x0010
 
 ///////////////////////////////////////////////
 // user flags macros and definitions

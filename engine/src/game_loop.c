@@ -61,11 +61,6 @@ void check_loop_flags( void ) {
        RESET_GAME_FLAG( F_GAME_START );
     }
 
-    // check if player has been hit by an enemy
-    if ( GET_LOOP_FLAG( F_LOOP_HERO_HANDLE_HIT ) ) {
-     hero_handle_hit();
-    }
-
     // check if hero needs to be redrawn
     if ( GET_LOOP_FLAG( F_LOOP_REDRAW_HERO ) ) {
         hero_draw();
