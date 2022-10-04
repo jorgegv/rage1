@@ -62,7 +62,7 @@ void check_loop_flags( void ) {
     }
 
     // check if player has been hit by an enemy
-    if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
+    if ( GET_LOOP_FLAG( F_LOOP_HERO_HANDLE_HIT ) ) {
      hero_handle_hit();
     }
 

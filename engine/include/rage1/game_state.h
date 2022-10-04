@@ -151,8 +151,8 @@ void game_state_switch_to_next_screen( void );
 #define F_LOOP_ENTER_SCREEN		0x0001
 // the hero nust be redrawn
 #define F_LOOP_REDRAW_HERO		0x0002
-// player has collided with a sprite
-#define F_LOOP_HERO_HIT			0x0004
+// player has collided with an enemy
+#define F_LOOP_HERO_HANDLE_HIT		0x0004
 // inside EXIT hotzone
 #define F_LOOP_WARP_TO_SCREEN		0x0008
 // enemy was hit

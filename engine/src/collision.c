@@ -51,7 +51,7 @@ void collision_check_hero_with_sprites(void) {
         if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state ) ) {
             enemy_pos = &s->position;
             if ( collision_check( hero_pos, enemy_pos ) ) {
-                SET_LOOP_FLAG( F_LOOP_HERO_HIT );
+                SET_LOOP_FLAG( F_LOOP_HERO_HANDLE_HIT );
                 return;
             }
         }
