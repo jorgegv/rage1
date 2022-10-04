@@ -56,6 +56,8 @@ my %item_name_to_index;
 my @all_rules;
 my $max_flow_var_id = undef;
 
+my @game_events_rule_table;
+
 my @all_crumb_types;
 my %crumb_type_name_to_index;
 
@@ -923,10 +925,12 @@ sub read_input_data {
 
         } elsif ( $state eq 'RULE' ) {
             if ( $line =~ /^SCREEN\s+(\w+)$/ ) {
+                # if screen is __EVENTS__ then this rule goes into the game events rule table
                 $cur_rule->{'screen'} = $1;
                 next;
             }
             if ( $line =~ /^WHEN\s+(\w+)$/ ) {
+                # the WHEN clause is ignored if screen is __EVENTS__
                 $cur_rule->{'when'} = lc( $1 );
                 next;
             }
@@ -944,7 +948,7 @@ sub read_input_data {
 
                 # we must delete WHEN and SCREEN for deduplicating rules,
                 # but we must keep them for properly storing the rule
-                my $when = $cur_rule->{'when'};
+                my $when = $cur_rule->{'when'} || '<undefined>';
                 delete $cur_rule->{'when'};
                 my $screen = $cur_rule->{'screen'};
                 delete $cur_rule->{'screen'};
@@ -960,8 +964,12 @@ sub read_input_data {
                     push @all_rules, $cur_rule;
                 }
 
-                # add the rule index to the proper screen rule table
-                push @{ $all_screens[ $screen_name_to_index{ $screen } ]{'rules'}{ $when } }, $index;
+                # add the rule index to the proper screen rule table, or the events rule table
+                if ( $screen eq '__EVENTS__' ) {
+                    push @game_events_rule_table, $index;
+                } else {
+                    push @{ $all_screens[ $screen_name_to_index{ $screen } ]{'rules'}{ $when } }, $index;
+                }
 
                 # clean up for next rule
                 $cur_rule = undef;
@@ -1244,6 +1252,11 @@ sub validate_and_compile_screen {
         die "Screen has no NAME\n";
     defined( $screen->{'hero'} ) or
         die "Screen '$screen->{name}' has no Hero\n";
+
+    # check for reserved names
+    if ( uc( $screen->{'name'} ) eq '__EVENTS__' ) {
+        die "SCREEN: The screen name __EVENTS__ is reserved for internal purposes and cannot be used\n";
+    }
 
     # if no dataset is specified, store the screen in home dataset
     if ( not defined( $screen->{'dataset'} ) ) {
@@ -1919,15 +1932,21 @@ sub validate_and_compile_rule {
     defined( $rule->{'screen'} ) or
         die "Rule has no SCREEN\n";
     my $screen = $rule->{'screen'};
-    exists( $screen_name_to_index{ $screen } ) or
-        die "Screen '$screen' is not defined\n";
+    if ( $screen ne '__EVENTS__' ) {
+        exists( $screen_name_to_index{ $screen } ) or
+            die "Screen '$screen' is not defined\n";
+    }
 
-    defined( $rule->{'when'} ) or
-        die "Rule has no WHEN clause\n";
-    my $when = $rule->{'when'};
-    grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
-        die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
+    # WHEN clause is optional when the rule is assigned to __EVENTS__
+    if ( $rule->{'screen'} ne '__EVENTS__' ) {
+        defined( $rule->{'when'} ) or
+            die "Rule has no WHEN clause\n";
+        my $when = $rule->{'when'};
+        grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
+            die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
+    }
 
+    # we explictly allow rules with no checks, which are run always
 #    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
 #        die "At least one CHECK clause must be specified\n";
 
@@ -2108,6 +2127,7 @@ my $check_data_output_format = {
     GAME_TIME_EQUAL		=> ".data.game_time.seconds = %s",
     GAME_TIME_MORE_THAN		=> ".data.game_time.seconds = %s",
     GAME_TIME_LESS_THAN		=> ".data.game_time.seconds = %s",
+    GAME_EVENT_HAPPENED		=> ".data.game_event.event = %s",
 };
 
 my $action_data_output_format = {
@@ -3207,6 +3227,39 @@ sub generate_tracker_data {
     }
 }
 
+# generates the game_events_rule_table
+sub generate_game_events_rule_table {
+    # rule checks and actions have been already generated in the home dataset
+    # together with the other datasets. We just output the rule pointers here,
+    # as it is already done when generating the rules for each screen
+
+    my $rule_global_to_dataset_index = $dataset_dependency{ 'home' }{'rule_global_to_dataset_index'};
+
+    # flow rules
+    push @{ $c_dataset_lines->{ 'home' } }, sprintf( "// Game Events rule table\n" );
+    my $num_rules = scalar( @game_events_rule_table );
+    if ( $num_rules ) {
+        push @{ $c_dataset_lines->{ 'home' } }, sprintf( "struct flow_rule_s *game_events_rule_table_rules[ %d ] = {\n\t",
+            $num_rules );
+        push @{ $c_dataset_lines->{ 'home' } }, join( ",\n\t",
+            map {
+                sprintf( "&all_flow_rules[ %d ]", $rule_global_to_dataset_index->{ $_ } )
+            } @game_events_rule_table
+        );
+        push @{ $c_dataset_lines->{ 'home' } }, "\n};\n";
+        push @{ $c_dataset_lines->{ 'home' } },
+            "struct flow_rule_table_s game_events_rule_table = {\n",
+            "\t.num_rules = $num_rules,\n",
+            "\t.rules = &game_events_rule_table_rules[0]\n",
+            "};\n\n";
+
+    } else {
+        push @{ $c_dataset_lines->{ 'home' } }, sprintf( "// Game Events rule table has no rules defined\n" );
+        push @{ $c_dataset_lines->{ 'home' } },
+            "struct flow_rule_table_s game_events_rule_table = { 0, NULL };\n\n";
+    }
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -3238,6 +3291,7 @@ sub generate_game_data {
     generate_game_areas;
     generate_game_config;
     generate_misc_data;
+    generate_game_events_rule_table;
 
     # tracker items
     generate_tracker_data;
@@ -3453,6 +3507,10 @@ sub create_dataset_dependencies {
     push @{ $dataset_dependency{'home'}{'btiles'} },
         $btile_name_to_index{ $hero->{'lives'}{'btile'} };
 
+    # add rules in the game events rule table to the home dataset
+    push @{ $dataset_dependency{ 'home' }{'rules'} },
+        @game_events_rule_table;
+
     # we must then remove duplicates from the lists
     # we take the oportunity to precalculate some tables
     foreach my $dataset ( keys %dataset_dependency ) {
@@ -3548,6 +3606,7 @@ sub dump_internal_data {
         check_custom_functions		=> \@check_custom_functions,
         action_custom_functions		=> \@action_custom_functions,
         conditional_build_features	=> \%conditional_build_features,
+        game_events_rule_table		=> \@game_events_rule_table,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );

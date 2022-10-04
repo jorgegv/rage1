@@ -51,7 +51,7 @@ void collision_check_hero_with_sprites(void) {
         if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state ) ) {
             enemy_pos = &s->position;
             if ( collision_check( hero_pos, enemy_pos ) ) {
-                SET_LOOP_FLAG( F_LOOP_HERO_HIT );
+                hero_handle_hit();
                 return;
             }
         }
@@ -82,8 +82,7 @@ void collision_check_bullets_with_sprites( void ) {
                         if ( ! --game_state.enemies_alive )
                             SET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED );
                         ++game_state.enemies_killed;
-                        SET_LOOP_FLAG( F_LOOP_ENEMY_HIT );
-                        sound_request_fx( SOUND_ENEMY_KILLED );
+                        SET_GAME_EVENT( E_ENEMY_WAS_HIT );
                     }
                 }
             }

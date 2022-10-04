@@ -210,8 +210,8 @@ void hero_check_tiles_below(void) {
                 // update inventory on screen (show)
                 inventory_show();
 
-                // play pickup sound
-                sound_request_fx( SOUND_ITEM_GRABBED );
+                // set event
+                SET_GAME_EVENT( E_ITEM_WAS_GRABBED );
             }
 #endif // BUILD_FEATURE_INVENTORY
 
@@ -231,8 +231,8 @@ void hero_check_tiles_below(void) {
                 // remove crumb from screen - crumb types always have their btiles in home dataset
                 btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumb_types[ crumb_type ].btile_num ] );
 
-                // play pickup sound
-                sound_request_fx( SOUND_ITEM_GRABBED );
+                // set event
+                SET_GAME_EVENT( E_CRUMB_WAS_GRABBED );
             }
 #endif // BUILD_FEATURE_CRUMBS
         }
@@ -285,7 +285,7 @@ void hero_handle_hit ( void ) {
 
     health_amount -= game_state.hero.damage_mode.enemy_damage;
     if ( health_amount <= 0 ) {
-        sound_request_fx( SOUND_HERO_DIED );
+        SET_GAME_EVENT( E_HERO_DIED );
         if ( ! --game_state.hero.health.num_lives )
             SET_GAME_FLAG( F_GAME_OVER );
         else {
@@ -304,7 +304,7 @@ void hero_handle_hit ( void ) {
             SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
         }
     } else {
-        sound_request_fx( SOUND_HERO_HIT );
+        SET_GAME_EVENT( E_HERO_WAS_HIT );
         game_state.hero.health.health_amount -= game_state.hero.damage_mode.enemy_damage;
         if ( game_state.hero.damage_mode.immunity_period ) {
             SET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
@@ -326,7 +326,7 @@ void hero_do_immunity_expiration( void ) {
 
 // simple hit handling with default damage mode
 void hero_handle_hit ( void ) {
-    sound_request_fx( SOUND_HERO_DIED );
+    SET_GAME_EVENT( E_HERO_DIED );
     if ( ! --game_state.hero.health.num_lives )
         SET_GAME_FLAG( F_GAME_OVER );
     else {

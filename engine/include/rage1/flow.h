@@ -49,8 +49,9 @@
 #define RULE_CHECK_GAME_TIME_EQUAL		23
 #define RULE_CHECK_GAME_TIME_MORE_THAN		24
 #define RULE_CHECK_GAME_TIME_LESS_THAN		25
+#define RULE_CHECK_GAME_EVENT_HAPPENED		26
 
-#define RULE_CHECK_MAX				25
+#define RULE_CHECK_MAX				26
 
 struct flow_rule_check_s {
     uint8_t type;
@@ -64,6 +65,7 @@ struct flow_rule_check_s {
         struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
         struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
         struct { uint16_t	seconds; }		game_time;	// GAME_TIME_*
+        struct { uint8_t	event; }		game_event;	// GAME_EVENT_HAPPENED
     } data;
 };
 
@@ -151,6 +153,7 @@ typedef int (*check_custom_function_t)( void );
 typedef void (*action_custom_function_t)( void );
 
 // executes user flow rules
-void check_flow_rules(void);
+void check_flow_rules( void );
+void check_game_event_rules( void );
 
 #endif //_FLOW_H

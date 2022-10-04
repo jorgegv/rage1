@@ -8,6 +8,9 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <stdlib.h>
+#include <stdint.h>
+
 #include "rage1/flow.h"
 #include "rage1/game_state.h"
 #include "rage1/sound.h"
@@ -36,6 +39,9 @@ typedef void (*rule_action_fn_t)( struct flow_rule_action_s * ) __z88dk_fastcall
 extern rule_check_fn_t rule_check_fn[];
 extern rule_action_fn_t rule_action_fn[];
 
+// global rule table for event actions
+extern struct flow_rule_table_s game_events_rule_table;
+
 // executes a complete rule table
 void run_flow_rule_table( struct flow_rule_table_s *t ) {
     // beware Z80 optimizations!  The rule table is an ordered list, so it
@@ -63,7 +69,7 @@ void run_flow_rule_table( struct flow_rule_table_s *t ) {
 
 // check_flow_rules: execute rules in flowgen data tables for the current
 // screen.  See documentation for implementation details
-void check_flow_rules(void) {
+void check_flow_rules( void ) {
 
     ////////////////////////////////////////////////////////
     // WHEN_GAME_LOOP rules
@@ -96,6 +102,14 @@ void check_flow_rules(void) {
         if ( game_state.current_screen_ptr->flow_data.rule_tables.enter_screen.num_rules )
             run_flow_rule_table( &game_state.current_screen_ptr->flow_data.rule_tables.enter_screen );
     }
+
+}
+
+// check_event_rules: run the rules in game_events_rule_table
+void check_game_event_rules( void ) {
+    // special case for the events rules table: only runs if game_events is != 0
+    if ( game_state.game_events )
+        run_flow_rule_table( &game_events_rule_table );
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -271,6 +285,12 @@ uint8_t do_rule_check_game_time_less_than( struct flow_rule_check_s *check ) __z
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_EVENT_HAPPENED
+uint8_t do_rule_check_game_event_happened( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( GET_GAME_EVENT( check->data.game_event.event ) ? 1 : 0 );
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -443,7 +463,7 @@ void do_rule_action_tracker_music_start( struct flow_rule_action_s *action ) __z
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
 void do_rule_action_tracker_play_fx( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    tracker_play_fx( action->data.tracker_fx.num_effect );
+    tracker_request_fx( action->data.tracker_fx.num_effect );
 }
 #endif
 
@@ -579,6 +599,11 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_TIME_LESS_THAN
     do_rule_check_game_time_less_than,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_EVENT_HAPPENED
+    do_rule_check_game_event_happened,
 #else
     NULL,
 #endif
