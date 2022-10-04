@@ -72,6 +72,12 @@ void check_loop_flags( void ) {
         sound_play_pending_fx();
         // all loop flags are reset at the beginning of the game loop
     }
+
+    // check if tracker sound fx needs to be played
+    if ( GET_LOOP_FLAG( F_LOOP_PLAY_TRACKER_FX ) ) {
+        tracker_play_pending_fx();
+        // all loop flags are reset at the beginning of the game loop
+    }
 }
 
 void move_enemies(void) {

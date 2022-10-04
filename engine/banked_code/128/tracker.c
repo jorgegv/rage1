@@ -123,6 +123,15 @@ void tracker_play_fx( uint8_t effect_id ) {
 #endif
 }
 
+void tracker_play_pending_fx( void ) {
+    tracker_play_fx( game_state.tracker_fx );
+}
+
+void tracker_request_fx( uint16_t fxid ) {
+    game_state.tracker_fx = fxid;
+    SET_LOOP_FLAG( F_LOOP_PLAY_TRACKER_FX );
+}
+
 // Arkos2: sound effects table
 // Arkos2: extern void *all_sound_effects[] - generated externally
 

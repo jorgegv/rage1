@@ -463,7 +463,7 @@ void do_rule_action_tracker_music_start( struct flow_rule_action_s *action ) __z
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
 void do_rule_action_tracker_play_fx( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    tracker_play_fx( action->data.tracker_fx.num_effect );
+    tracker_request_fx( action->data.tracker_fx.num_effect );
 }
 #endif
 

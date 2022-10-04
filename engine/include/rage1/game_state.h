@@ -102,6 +102,8 @@ struct game_state_s {
 
    // pointer to sound effect to play when required
    void *sound_fx;
+   // id of tracker sound fx to play when required
+   uint16_t tracker_fx;
 
 #ifdef BUILD_FEATURE_GAME_TIME
    // game_time: seconds elapsed since start of game
@@ -157,6 +159,8 @@ void game_state_switch_to_next_screen( void );
 #define F_LOOP_ITEM_GRABBED		0x0008
 // play pending sound effect
 #define F_LOOP_PLAY_SOUNDFX		0x0010
+// play pending tracker effect
+#define F_LOOP_PLAY_TRACKER_FX		0x0020
 
 ///////////////////////////////////////////////
 // game events macros and definitions

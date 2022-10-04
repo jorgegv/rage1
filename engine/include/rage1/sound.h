@@ -21,4 +21,7 @@ void sound_request_fx( void *sfx );
 // play the pending FX request
 void sound_play_pending_fx( void );
 
+void tracker_request_fx( uint16_t fxid );
+void tracker_play_pending_fx( void );
+
 #endif //_SOUND_H

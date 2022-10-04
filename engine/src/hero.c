@@ -210,8 +210,8 @@ void hero_check_tiles_below(void) {
                 // update inventory on screen (show)
                 inventory_show();
 
-                // play pickup sound
-                sound_request_fx( SOUND_ITEM_GRABBED );
+                // set event
+                SET_GAME_EVENT( E_ITEM_WAS_GRABBED );
             }
 #endif // BUILD_FEATURE_INVENTORY
 
@@ -231,8 +231,8 @@ void hero_check_tiles_below(void) {
                 // remove crumb from screen - crumb types always have their btiles in home dataset
                 btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumb_types[ crumb_type ].btile_num ] );
 
-                // play pickup sound
-                sound_request_fx( SOUND_ITEM_GRABBED );
+                // set event
+                SET_GAME_EVENT( E_CRUMB_WAS_GRABBED );
             }
 #endif // BUILD_FEATURE_CRUMBS
         }
