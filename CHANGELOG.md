@@ -40,7 +40,7 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
   regular C byte array as needed
 
 - Support for CRUMBS: a new type of item that can be grabbed by the hero
-  multiple times (think the dots in PacMan, or the coins in SUper Mario
+  multiple times (think the dots in PacMan, or the coins in Super Mario
   Bros)
 
 - New configurable Damage Mode for the hero: you can select the "enemy
@@ -59,6 +59,14 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
   soundtrack playing while the game is running, and also sound effects are
   supported!  Of course, your game needs to be compiled in 128 mode, but you
   already know that, right?
+
+- New in-game event system: some events are generated internally by the game
+  (e.g. the hero was hit, a buller was shot, an enemy was killed...) and now
+  you can configure a special FLOW rule table to react to them in an
+  efficient way. Since it is configured with normal FLOW rules, you get all
+  the FLOW actions available to react to the events (play sounds, switch
+  soundtracks, set screen flags, enable tiles, etc.). More info on the
+  available events can be found in `doc/GAME-EVENTS.md`
 
 ### Enhancements, Fixes and Optimizations
 
