@@ -1,3 +1,60 @@
+##
+## build configuration
+##
+build:
+  generated_dir: 'build/generated'
+  banked_functions:
+    asm_table_filename: 'build/generated/banked/128/00banked_function_table.asm'
+    c_macros_filename: 'build/generated/banked_function_defs.h'
+  
+##
+## tools configuration
+##
 tools:
   arkos:
     dir: '/home/jorgegv/src/spectrum/arkos/Arkos Tracker 2'
+
+##
+## banked functions database
+## Fields:
+##   name (mandatory)
+##   signature (optional): a16, a16_r8, etc.
+##   build_dependency (optional): BUILD_FEATURE_xx
+##
+## Definitions for the given functions will only be output if
+## BUILD_FEATURE_xx is enabled in features.h, or build_dependency is not
+## present
+banked_functions:
+  - name: beeper_play_pending_fx
+  - name: hero_animate_and_move
+  - name: enemy_animate_and_move_all
+  - name: bullet_animate_and_move_all
+  - name: bullet_add
+  - name: init_tracker
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_select_song
+    signature: a16
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_start
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_stop
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_do_periodic_tasks
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: init_tracker_sound_effects
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_play_fx
+    signature: a16
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_rewind
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_play_pending_fx
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_request_fx
+    signature: a16
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: beeper_request_fx
+    signature: a16
+  - name: init_beeper
+  - name: beeper_play_fx
+    signature: a16
