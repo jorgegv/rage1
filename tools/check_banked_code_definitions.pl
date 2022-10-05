@@ -14,11 +14,17 @@ use strict;
 use warnings;
 use utf8;
 
-use FindBin;
+use FindBin qw( $Bin );
+use lib "$Bin/../lib";
+
+require RAGE::Config;
+
 use Data::Dumper;
 
-my $memory_h	= "$FindBin::Bin/../engine/include/rage1/memory.h";
-my $main_asm	= "$FindBin::Bin/../engine/banked_code/128/00main.asm";
+my $cfg = rage1_get_config();
+
+my $memory_h	= $cfg->{'build'}{'banked_functions'}{'c_macros_filename'};
+my $main_asm	= $cfg->{'build'}{'banked_functions'}{'asm_table_filename'};
 
 sub get_file_lines {
     my $f = shift;
@@ -29,7 +35,7 @@ sub get_file_lines {
     return @lines;
 }
 
-print "Checking bancked code definitions...\n";
+print "Checking banked code definitions...\n";
 
 ##
 ## first, load files in memory
@@ -73,7 +79,7 @@ my %asm_extern = map {
 # build table of asm function declaration and indexes
 my $counter = 0;
 my %asm_function_table = map {
-    if ( /^\s+dw\s(\w+)\s*;+\s*index\s+(\d+).*$/ ) {
+    if ( /^\s+dw\s+(\w+)\s*;+\s*index\s+(\d+).*$/ ) {
         my ( $function, $comment_index ) = ( $1, $2 );
         ( $1, { 'index' => $counter++, 'comment_index' => $comment_index } );
     } else {
@@ -127,7 +133,7 @@ foreach my $fun ( @functions ) {
 
     # ensure that all function IDs have a matching function call macro
     if ( not defined( $function_info{ $fun } ) ) {
-        warn "** memory.h: function $fun with ID=$function_id{$fun} has no matching function call macro\n";
+        warn "** C Macro: function $fun with ID=$function_id{$fun} has no matching function call macro\n";
         $errors++;
         next;
     }
@@ -136,27 +142,27 @@ foreach my $fun ( @functions ) {
 
     # ensure that all functions are declared as extern in asm file
     if ( not defined( $asm_extern{ $f->{'asm_function'} } ) ) {
-        warn "** 00main.asm: function $fun with ID=$function_id{$fun} is not declared as extern\n";
+        warn "** ASM Table: function $fun with ID=$function_id{$fun} is not declared as extern\n";
         $errors++;
     }
 
     # ensure that all functions exist in the function table in asm file
     if ( not defined( $asm_function_table{ $f->{'asm_function'} } ) ) {
-        warn "** 00main.asm: function $fun with ID=$function_id{$fun} is not included in function table\n";
+        warn "** ASM Table: function $fun with ID=$function_id{$fun} is not included in function table\n";
         $errors++;
         next;
     }
 
     # ensure that function order in asm file function table matches C ID definition
     if ( $function_id{ $fun } != $asm_function_table{ $f->{'asm_function'} }{'index'} ) {
-        warn sprintf( "** 00main.asm: function $fun with ID=$function_id{$fun} is incorrectly located at position %d\n",
+        warn sprintf( "** ASM Table: function $fun with ID=$function_id{$fun} is incorrectly located at position %d\n",
             $asm_function_table{ $f->{'asm_function'} }{'index'} );
         $errors++;
     }
 
     # ensure that function order in asm file function table and the ID in the comment match
     if ( $function_id{ $fun } != $asm_function_table{ $f->{'asm_function'} }{'comment_index'} ) {
-        warn sprintf( "** 00main.asm: function $fun with ID=$function_id{$fun} has incorrect index %d in comment\n",
+        warn sprintf( "** ASM Table: function $fun with ID=$function_id{$fun} has incorrect index %d in comment\n",
             $asm_function_table{ $f->{'asm_function'} }{'comment_index'} );
         $errors++;
     }
