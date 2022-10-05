@@ -81,8 +81,25 @@ should be taken into account:
 
 ## Steps for migration of an engine function to banked code
 
-- The function to migrate should match the `void f( void )` or `void f(
-  uint16_t arg )` prototypes
+- Function signatures are constructed as follows:
+
+  - a16 (for argument, 16-bit), r8 (for return, 8-bit), etc.
+  - Return qualifier always comes last, arguments come first
+  - If no arguments are used, no aNN signature should be used
+  - If no return value no rNN should be used
+  - A function matching the protype `void f( void )` has no signature
+  - Example: `a16_a16_r8` is a signature for a function with the following
+    prototype: `uint8_t f( uint16_t arg1, uint16_t arg2 )`
+
+- The signature of the function to migrate (args plus return value) must
+  have an associated `memory_banked_function_call...()` function (see
+  `memory.h` for instructions on how to define them)
+
+- A valid function `typedef` must also exist in `memory.h` for the given
+  function signature.
+
+- The function to migrate should match any of the prototypes defined by the
+  signature `typedef`s.
 
 - Copy the source file which contains the function to be migrated to the
   `banked_code` directory
@@ -92,15 +109,21 @@ should be taken into account:
   been included.  The `banked.h` file should be the last one of the RAGE1
   `#includes`
 
-- Add function ID and function call macro (for 128K mode) to `memory.h`
+- Add the function definition to the config file `etc/rage1-config.yml`,
+  under the `banked_functions` key (see existing functions):
 
-- Add the function ID to the banked function table at `00main.asm` in
-  `banked_code`
-
-- Add the needed macro definitions to `banked.h` for the low memory symbols
-  and data structures that the migrated function will access
+  - The `name` parameter is mandatory, it is the name of the C function
+    being migrated
+  - The `signature` parameter is only needed if the function does not match
+    the `void f( void )` prototype. Signature definition must be according
+    to the rules indicated above.
+  - The `build_dependency` parameter specifies a BUILD_FEATURE_xx macro that
+    must be found in `features.h` if the function definitions are to be
+    generated. If no dependency is declared, function definitions are always
+    generated
 
 - Directories under `engine/banked_code`:
+
   - `common`: code in this folder will be compiled as banked code in 128K
     mode, and will be included also when compiling in 48K mode
   - `128`: code in this folder will only be compiled as banked code in 128K
@@ -122,13 +145,13 @@ should be taken into account:
   - When building in 48K mode, only the copy from `engine/src` will be
     compiled and used, so only 1 copy of the function will exist.
 
-- This situation happens when migrating some functions from a given module
-  (e.g.  `enemy.c`) but not others: not all functions from a module need to
-  be migrated initially.  When/if later on, _all_ of the module functions
-  are migrated to `banked_code`, the support functions under
-  `banked_code/128` directory can be moved to `banked_code/common`, so that
-  they are always compiled as banked code in 128K mode and as low memory in
-  48K mode.
+- This situation normally happens only temporarily when migrating some
+  functions from a given module (e.g.  `enemy.c`) but not others: not all
+  functions from a module need to be migrated initially.  When/if later on,
+  _all_ of the module functions are migrated to `banked_code`, the support
+  functions under `banked_code/128` directory can be moved to
+  `banked_code/common`, so that they are always compiled as banked code in
+  128K mode and as low memory in 48K mode.
 
 ## Calling Banked Functions from an ISR
 
