@@ -23,7 +23,8 @@ GAME_DATA_DIR			= $(BUILD_DIR)/game_data
 # by default, build the main test game
 # override this in the build command line (with e.g. "make build128 target_game=../famargon") to build your own game
 # you can also build other test games under the games/ directory
-DEFAULT_TARGET_GAME	= games/default
+TEST_GAMES_DIR		= games
+DEFAULT_TARGET_GAME	= $(TEST_GAMES_DIR)/default
 TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
 
 # Main sources and objs
@@ -36,8 +37,6 @@ OBJS			= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.a
 
 # Dataset sources and binaries
 DATASET_DIRS		= $(wildcard $(GENERATED_DIR_DATASETS)/dataset_*.src)
-#CSRC_DATASETS		= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
-#SRC_DATASETS		= $(CSRC_DATASETS)
 BIN_DATASETS		= $(DATASET_DIRS:.src=.bin)
 ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
@@ -234,7 +233,7 @@ textbox: tests/textbox.c $(TEXTBOX_OBJS)
 
 # these are game data directories that will be copied from the template when creating
 # a new game
-LIB_GAME_DATA_DIRS	= games/minimal/game_data games/minimal/game_src
+LIB_GAME_DATA_DIRS	= $(TEST_GAMES_DIR)/minimal/game_data $(TEST_GAMES_DIR)/minimal/game_src
 
 # create a minimal game using the library
 new-game:
@@ -271,4 +270,4 @@ linecount: clean
 	@echo -n "Lines of Docs:             "
 	@find doc/ -type f|xargs cat|wc -l
 	@echo -n "Lines of Test Games:       "
-	@find games/ -type f|xargs -l cat|wc -l
+	@find $(TEST_GAMES_DIR)/ -type f|xargs -l cat|wc -l
