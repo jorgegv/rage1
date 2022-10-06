@@ -16,20 +16,34 @@ tools:
 
 ##
 ## banked functions database
+##
 ## Fields:
 ##   name (mandatory)
 ##   signature (optional): a16, a16_r8, etc.
 ##   build_dependency (optional): BUILD_FEATURE_xx
 ##
 ## Definitions for the given functions will only be output if
-## BUILD_FEATURE_xx is enabled in features.h, or build_dependency is not
+## BUILD_FEATURE_xx is enabled in features.h, or no build_dependency is
 ## present
+##
+## See doc/BANKED-FUNCTIONS.md for details
+##
 banked_functions:
+  # beeper
   - name: beeper_play_pending_fx
+  - name: beeper_request_fx
+    signature: a16
+  - name: init_beeper
+  - name: beeper_play_fx
+    signature: a16
+  # hero
   - name: hero_animate_and_move
+  # enemy
   - name: enemy_animate_and_move_all
+  # bullet
   - name: bullet_animate_and_move_all
   - name: bullet_add
+  # tracker
   - name: init_tracker
     build_dependency: BUILD_FEATURE_TRACKER
   - name: tracker_select_song
@@ -53,8 +67,3 @@ banked_functions:
   - name: tracker_request_fx
     signature: a16
     build_dependency: BUILD_FEATURE_TRACKER
-  - name: beeper_request_fx
-    signature: a16
-  - name: init_beeper
-  - name: beeper_play_fx
-    signature: a16
