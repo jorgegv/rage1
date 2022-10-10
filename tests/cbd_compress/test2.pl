@@ -10,12 +10,10 @@
 ## 
 ################################################################################
 
-# Test 3: identify 8-byte sequences, and try to output less than 8 bytes by
+# Test 2: identify 8-byte sequences, and try to output less than 8 bytes by
 # matching at the end of the arena.  Perhaps the full 8-byte sequence is not
 # present, but e.g.  the first 6 bytes are present and at the end of the
-# arena, and so only 2 bytes need to be emitted.  When selecting the next
-# tile to output, search through all remaining tiles for the one with the
-# longest overlap with the last 8 btes of the arena.
+# arena, and so only 2 bytes need to be emitted
 
 use strict;
 use warnings;
