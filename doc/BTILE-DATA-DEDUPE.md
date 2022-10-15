@@ -161,6 +161,10 @@ test programs and data in directory `tests/cbd_compress`:
   results. But this is indeed a problem of checking all permutations of N
   original cells, and this problem quickly gets intractable ( O(N!) )
 
+- In the future, some additional research may be done in order to accelerate
+  the exploration of possible better solutions to this problem so that we
+  can get better deduplication ratios
+
 So for now, the following actions will be done in RAGE1 for allowing the
 developer-friendly BTILE definitions indicated above, and still getting good
 storage efficiency:
