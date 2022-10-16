@@ -2595,7 +2595,7 @@ EOF_TILES
 
 }
 
-sub generate_btiles {
+sub generate_btiles_flat_data {
     my $dataset = shift;
 
     # generate the list of dataset btiles, return immediately if empty
@@ -2637,6 +2637,16 @@ EOF_TILES
     push @{ $c_dataset_lines->{ $dataset } }, "};\n";
     push @{ $c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
 
+}
+
+sub generate_btiles {
+    my $dataset = shift;
+    my $cfg = rage1_get_config();
+    if ( $cfg->{'tools'}{'datagen'}{'features'}{'btile_deduplicated_data'} ) {
+        generate_btiles_dedupe( $dataset );
+    } else {
+        generate_btiles_flat_data( $dataset );
+    }
 }
 
 sub generate_sprites {
@@ -3390,7 +3400,7 @@ sub generate_game_data {
     # 'home' dataset will be treated specially at output
     for my $dataset ( keys %dataset_dependency ) {
         generate_c_banked_header( $dataset );
-        generate_btiles_dedupe( $dataset );
+        generate_btiles( $dataset );
         generate_sprites( $dataset );
         generate_flow_rules( $dataset );
         generate_screens( $dataset );
