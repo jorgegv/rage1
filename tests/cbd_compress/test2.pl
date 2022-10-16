@@ -22,26 +22,6 @@ use utf8;
 use File::Slurp;
 use Data::Dumper;
 
-my $all_state;
-eval( read_file( 'internal_state.dmp' ) );
-
-my @all_btiles = @{ $all_state->{'btiles'} };
-
-my @orig_cells;
-my @orig_byte_arena;
-
-my @comp_cells;
-my @comp_byte_arena;
-# create the uncompressed (orig) data areas (btiles and arena)
-foreach my $btile ( @all_btiles ) {
-    foreach my $cell_bytes ( @{ $btile->{'pixel_bytes'} } ) {
-        # each cell is an 8-byte array
-        my $cur_index = scalar( @orig_byte_arena );
-        push @orig_cells, $cur_index;		# pointer to cell bytes
-        push @orig_byte_arena, @$cell_bytes;	# cell bytes
-    }
-}
-
 # create the compressed data areas (btiles and arena)
 # applying the compression algorithm
 
@@ -82,27 +62,43 @@ sub max_length_match {
     return 0;
 }
 
-# hash: byte_sequence => index_in_arena
-my %byte_sequence_pos;
+# main compression function
+#
+# compresses an uncompressed arena into a deduplicated one
+# args:
+#   offsets: listref of offsets into the uncompressed arena (normally multiples of 8)
+#   arena: listref of cell byte data
+# returns: a 2 element list (offsets, arena)
+#   comp_offsets: listref of offsets into the compressed arena in the same order as the original ones
+#   comp_arena: listref of deduplicated cell byte data
 
-foreach my $btile ( @all_btiles ) {
-    foreach my $cell_bytes ( @{ $btile->{'pixel_bytes'} } ) {
+sub deduplicate_arena {
+    my ( $offsets, $arena ) = @_;
+
+    my @new_arena;
+    my @new_offsets;
+
+    # hash: byte_sequence => index_in_arena
+    my %byte_sequence_pos;
+
+    foreach my $offset ( @$offsets ) {
+        my $cell_bytes = [ @$arena[ $offset .. ( $offset + 7 ) ] ];
         my $cell_hash = cell_hash( $cell_bytes );
         if ( not defined( $byte_sequence_pos{ $cell_hash } ) ) {
-            my $cur_index = scalar( @comp_byte_arena );	# save current pointer
+            my $cur_index = scalar( @new_arena );	# save current pointer
 
             # if we still have not emitted any bytes, just emit the full
             # cell and go to the next one
             if ( $cur_index == 0 ) {
-                push @comp_byte_arena, @$cell_bytes;
-                push @comp_cells, 0;
+                push @new_arena, @$cell_bytes;
+                push @new_offsets, 0;
                 $byte_sequence_pos{ $cell_hash } = 0;
                 next;
             }
 
             # see if some bytes match the end of the arena
             my $max_length_match = max_length_match(
-                [ @comp_byte_arena[ ( $cur_index - 8 ) .. ( $cur_index - 1 ) ] ],
+                [ @new_arena[ ( $cur_index - 8 ) .. ( $cur_index - 1 ) ] ],
                 [ @$cell_bytes ]
             );
 
@@ -113,11 +109,11 @@ foreach my $btile ( @all_btiles ) {
             $byte_sequence_pos{ $cell_hash } = $pre_index;
 
             # save cell data pointer
-            push @comp_cells, $pre_index;
+            push @new_offsets, $pre_index;
 
             # emit bytes to the arena
             if ( $max_length_match < 8 ) {
-                push @comp_byte_arena, @$cell_bytes[ $max_length_match .. 7 ];
+                push @new_arena, @$cell_bytes[ $max_length_match .. 7 ];
             } else {
                 die "should never be greater than 8!\n";
             }
@@ -126,16 +122,44 @@ foreach my $btile ( @all_btiles ) {
             # non-matched bytes to the arena
             if ( $cur_index >= 8 ) {
                 foreach my $i ( ( $cur_index - 8 ) .. ( $cur_index - $max_length_match ) ) {
-                    my $hash = cell_hash( [ @comp_byte_arena[ $i .. ( $i + 7 ) ] ] );
+                    my $hash = cell_hash( [ @new_arena[ $i .. ( $i + 7 ) ] ] );
                     $byte_sequence_pos{ $hash } = $i;
                     }
             }
         } else {
             # if the cell has been seen, just use its pointer
-            push @comp_cells, $byte_sequence_pos{ $cell_hash };
+            push @new_offsets, $byte_sequence_pos{ $cell_hash };
         }
     }
+
+    return ( \@new_offsets, \@new_arena );
 }
+
+##
+## Main program
+##
+
+my $all_state;
+eval( read_file( 'internal_state.dmp' ) );
+
+my @all_btiles = @{ $all_state->{'btiles'} };
+
+my @orig_cells;
+my @orig_byte_arena;
+
+# create the uncompressed (orig) data areas (btiles and arena)
+foreach my $btile ( @all_btiles ) {
+    foreach my $cell_bytes ( @{ $btile->{'pixel_bytes'} } ) {
+        # each cell is an 8-byte array
+        my $cur_index = scalar( @orig_byte_arena );
+        push @orig_cells, $cur_index;		# pointer to cell bytes
+        push @orig_byte_arena, @$cell_bytes;	# cell bytes
+    }
+}
+
+my ( $new_offsets, $new_arena ) = deduplicate_arena( \@orig_cells, \@orig_byte_arena );
+my @comp_cells = @$new_offsets;
+my @comp_byte_arena = @$new_arena;
 
 # verification
 my @veri_byte_arena;
