@@ -21,6 +21,7 @@ require RAGE::Config;
 require RAGE::PNGFileUtils;
 require RAGE::FileUtils;
 require RAGE::Arkos2;
+require RAGE::BTileUtils;
 
 use Data::Dumper;
 use List::MoreUtils qw( zip );
@@ -2480,6 +2481,120 @@ EOF_HEADER2
 ;
 }
 
+sub generate_btiles_dedupe {
+    my $dataset = shift;
+
+    # generate the list of dataset btiles, return immediately if empty
+    my @dataset_btiles = map { $all_btiles[ $_ ] } @{ $dataset_dependency{ $dataset }{'btiles'} };
+    return if not scalar( @dataset_btiles );
+
+    push @h_game_data_lines, <<EOF_TILES_H
+
+////////////////////////////
+// Big Tile definitions
+////////////////////////////
+
+EOF_TILES_H
+;
+
+    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_TILES
+
+////////////////////////////
+// Big Tile definitions
+////////////////////////////
+
+EOF_TILES
+;
+
+
+    # generate the tiles
+
+    # generate the offsets and byte arena for all btiles in the dataset
+    my @orig_cell_offsets;
+    my @orig_byte_arena;
+    foreach my $tile ( @dataset_btiles ) {
+        my $initial_offset = scalar( @orig_byte_arena );
+        push @orig_byte_arena, map { @$_ } @{ $tile->{'pixel_bytes'} };
+        my $offset = 0;
+        while ( $offset < 8 * scalar( @{ $tile->{'pixel_bytes'} } ) ) {
+            push @orig_cell_offsets, $initial_offset + $offset;
+            $offset += 8;
+        }
+    }
+
+    # deduplication code goes here!
+    my ( $new_cell_offsets, $new_arena ) = btile_deduplicate_arena_best( \@orig_cell_offsets, \@orig_byte_arena );
+    my @cell_offsets = @$new_cell_offsets;
+    my @byte_arena = @$new_arena;
+
+    # generate the code for the arena (offsets will be used later)
+    push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTILE byte arena\n";
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t all_dataset_btile_data[ %d ] = {\n", scalar( @byte_arena ) );
+    my @bytes = @byte_arena;	# splice (below) is destructive!
+    while ( @bytes ) {		# output the arena in 16-byte chunks
+        push @{ $c_dataset_lines->{ $dataset } }, "\t" . join('', map { sprintf( '0x%02x,', $_ ) } splice( @bytes, 0, 16 ) ) . "\n";
+    }
+    push @{ $c_dataset_lines->{ $dataset } }, "};\n";
+    
+    # generate btile data structs
+    my $cell_index = 0;
+    foreach my $tile ( @dataset_btiles ) {
+        my $num_cells = scalar( @{ $tile->{'pixel_bytes'} } );
+        my @btile_cell_offsets = @cell_offsets[ $cell_index .. ( $cell_index + $num_cells - 1 ) ];
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_tiles[ %d ] = { %s\n};\n",
+            $tile->{'name'},
+            $num_cells,
+            join( ",\n\t",
+                map { sprintf( "&all_dataset_btile_data[ %d ]", $_ ) }
+                @btile_cell_offsets
+            ) );
+        $cell_index += $num_cells;
+
+        # manually specified attrs have preference over PNG ones
+        my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
+            $tile->{'name'},
+            scalar( @{ $attrs } ),
+            join( ', ', @{ $attrs } ) );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
+
+        # output auxiliary definitions
+        if ( $dataset eq 'home' ) {
+            push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+            push @h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+        } else {
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_ID_%s\t%d\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+        }
+    }
+
+    # generate the global btile table for this dataset
+    push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTile table\n";
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @dataset_btiles ) );
+    foreach my $tile ( @dataset_btiles ) {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
+            $tile->{'rows'},
+            $tile->{'cols'},
+            $tile->{'name'},
+            $tile->{'name'} );
+    }
+    push @{ $c_dataset_lines->{ $dataset } }, "};\n";
+    push @{ $c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
+
+}
+
 sub generate_btiles {
     my $dataset = shift;
 
@@ -3275,7 +3390,7 @@ sub generate_game_data {
     # 'home' dataset will be treated specially at output
     for my $dataset ( keys %dataset_dependency ) {
         generate_c_banked_header( $dataset );
-        generate_btiles( $dataset );
+        generate_btiles_dedupe( $dataset );
         generate_sprites( $dataset );
         generate_flow_rules( $dataset );
         generate_screens( $dataset );

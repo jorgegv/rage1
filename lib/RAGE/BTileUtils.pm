@@ -97,7 +97,44 @@ sub btile_read_png_tiledefs {
 ##
 ############################################################
 
- 
+# Utility functions
+
+sub cell_hash {
+    my $cell_bytes = shift;
+    return join( '', map { sprintf( "%02x", $_ ) } @$cell_bytes );
+}
+
+sub lists_match {
+    my ( $l1, $l2 ) = @_;
+    my $l1_size = scalar( @$l1 );
+    my $l2_size = scalar( @$l2 );
+
+    return undef
+        if ( $l1_size != $l2_size );
+
+    foreach my $i ( 0 .. $l1_size - 1 ) {
+        return undef
+            if ( $l1->[ $i ] !=  $l2->[ $i ] );
+    }
+
+    return 1;
+}
+
+# returns the number of overlap bytes between the end of @$left and the
+# beginning of @$right - @$left and @$right must both have 8 elements
+sub max_length_match {
+    my ( $left, $right ) = @_;
+    if ( ( scalar( @$left ) != 8 ) or ( scalar( @$right ) != 8 ) ) {
+        die "should have length 8!\n";
+    }
+    foreach my $i ( 0 .. 7 ) {
+        if ( lists_match( [ @$left[ $i .. 7 ] ], [ @$right[ 0 .. ( 7 - $i ) ] ] ) ) {
+            return ( 8 - $i );
+        }
+    }
+    return 0;
+}
+
 # args:
 #   offsets: listref of offsets into the uncompressed arena (normally multiples of 8)
 #   arena: listref of cell byte data
