@@ -26,7 +26,7 @@ that we are all used to in Spectrum games).
 The individual BTILE cells may also be useful by themselves alone, or in
 groupings that are contained in the original bigger BTILE: lets say a BTILE
 is composed of the 8x8 tiles ABCDEFGH, in a 4x2 layout (each double letter
-represents a single 8x8 cell):
+represents a single 8x8 tile):
 
 ```
   AABBCCDD
@@ -37,20 +37,20 @@ The main (outer) BTILE may be defined as a 4x2 cell one, but perhaps some other
 layouts are also useful for our game screens:
 
 ```
-  AABB
+  AABB        <-- Left half of the big tile
   EEFF
 
-  CCDD
+  CCDD        <-- Right half of the big tile
   GGHH
 
-  EEFFGGHH
+  EEFFGGHH    <-- Top row of the big tile
 
-  AA
+  AA          <-- Top left cell of the big tile
 ```
 
 When we are defining these BTILEs in RAGE1 GDATA files, most of the time we
 will draw the big BTILE in a PNG file and then tell RAGE1 to get the graphic
-data from there, giving the source coordinates and dimensions.
+data from there, giving source coordinates and dimensions.
 
 It is very easy then to reuse the same graphic PNG data to define the big
 BTILE, and then several others which are subsets of the big one and that may
@@ -60,23 +60,25 @@ This has one problem: the RAGE1 data compiler assumes that each BTILE is
 completely independent of all other BTILEs, and just gets whatever data it
 needs from the PNG, then spits out the Spectrum data.  If you tell it to get
 the same data several times but in different configurations (BTILEs), then
-some data will be duplicated for some of the cells, since they are different
+this data will be duplicated for some of the cells, since they are different
 BTILEs.
 
-What is very convenient for the programmer (draw once, define several
-BTILEs) is not convenient for the program because memory is very
-constrained, but we are generating duplicate data.
+This is very convenient for the programmer (draw your graphics once, define
+several BTILEs), but it is not convenient for the program: memory is a
+scarce resource and we are generating duplicate data.
 
 If you add to the mix the Animated BTILE functionality (BTILEs that have
 frames, that is, they are defined multiple times), the situation only
 worsens.
 
 So we want to have a system that makes it easy for game developers to define
-their graphics easily and quickly, and store the data efficiently, but we
-should try to leave the optimization part to the computer instead of having
-to optimize manually.
+their graphics quickly, and store the data efficiently, but we should also
+try to leave the optimization part to the computer instead of having to
+optimize manually.
 
-We needed to deduplicate the BTILE graphic data.
+We need to deduplicate the BTILE graphic data: allow us to use data multiple
+times for our definitions, and let the compiler ensure that duplicate data
+is kept to a minimum.
 
 The generic problem that we want to solve is:
 
@@ -92,30 +94,34 @@ it can be properly analyzed and processed.
 So far, data for each BTILE (cell-data and pointers that point to that
 cell-data) is generated together, and then each BTILE separate from each
 other.  This layout is convenient from a developer point of view (all data
-related to a given BTILE is together).  But now that the BTILE generation
-code in RAGE1 is very mature, it makes sense to rearrange the data
-generation so that cell-data for all BTILEs is separated from the pointers
-and output all together in a single byte-arena.  The pointers would also be
-rearranged also to point into zones of this arena.
+related to a given BTILE is together), since it allows you to easily inspect
+the generated source code.
+
+But now that the BTILE generation code in RAGE1 is very mature, it makes
+sense to rearrange the data generation so that cell-data for all BTILEs is
+separated from the pointers and output all together in a single byte-arena. 
+The pointers would also be rearranged also to point into zones of this
+arena.
 
 This arena can then be analyzed for duplicate sequences that may be
-removed/compressed/deduplicated/whatever.
+removed/compressed/deduplicated.
 
 Since this rearrangement is trivial, we will assume our cell-data is already
 arranged in that way.
 
-Some solutions to the deduplication issue have then been explored; there are
-test programs and data in directory `tests/cbd_compress`:
+Some solutions to the deduplication issue have then been explored and are
+descrobed below (there are test programs and data in directory
+`tests/cbd_compress`):
 
-- First iteration (`test1.pl`): searches for duplicated 8-byte sequences in
-  the arena (pretty trivial - just reuse whole tiles if duplicated at the
-  8-byte boundary)
+- Iteration 1 (`test1.pl`): keeps track of all 8-byte sequences in the
+  arena, and just reuses whole tiles if duplicated at the 8-byte boundary
+  (pretty trivial)
 
-- Second iteration (`test2.pl`): does the same as Iteration 1 and then tries
+- Iteration 2 (`test2.pl`): does the same as Iteration 1 and then tries
   to overlap each new 8-byte sequence with the last 8 bytes of the pool, so
   that less than 8 bytes are emitted to the pool it they overlap.
 
-- Third iteration (`test3.pl`): for each new tile we want to emit to the
+- Iteration 3 (`test3.pl`): for each new tile we want to emit to the
   pool, try to find (between the remaining tiles) the one that has the most
   overlapping bytes with the last 8 bytes of the pool, and use that as the
   next tile to emit.  This makes sure that at each iteration a locally
@@ -129,7 +135,7 @@ test programs and data in directory `tests/cbd_compress`:
   but this does not guarantee that a global minimum is reached (which is
   what we are searching for)
 
-- Fourth iteration (`test4.pl`): do the third oteration using each of the
+- Iteration 4 (`test4.pl`): do the third oteration using each of the
   original tiles as the first one, compare compression results for all and
   pick the one with best results.
 
@@ -149,24 +155,24 @@ test programs and data in directory `tests/cbd_compress`:
 
 ## Conclusions and Way Forward
 
-- The possibility that for a given data set, savings have been demonstrated
-  to have great variation depending on the Iteration, shows that indeed the
-  order in which the original cells are deduplicated and emitted to the
-  arena is very important and that some orders are much better than others
-  to get good deduplication ratios. Iteration 1 and Iteration 2 are special
-  cases of Iteration 3.
+- For a given data set, savings have been demonstrated to have great
+  variation depending on the Iteration; this shows that indeed the order in
+  which the original cells are deduplicated and emitted to the arena is very
+  important and that some orders are much better than others to get good
+  deduplication ratios.  Iteration 1 and Iteration 2 are special cases of
+  Iteration 3.
 
 - This points to doing an exhaustive analysis of all the orders in which the
   cells should be analyzed and emitted, and get the one with the best
-  results. But this is indeed a problem of checking all permutations of N
-  original cells, and this problem quickly gets intractable ( O(N!) )
+  results.  But this is indeed a problem of checking all permutations of N
+  original cells, and this problem very quickly gets intractable ( O(N!) )
 
 - In the future, some additional research may be done in order to accelerate
   the exploration of possible better solutions to this problem so that we
   can get better deduplication ratios
 
 So for now, the following actions will be done in RAGE1 for allowing the
-developer-friendly BTILE definitions indicated above, and still getting good
+developer-friendly BTILE definitions indicated above, and still get good
 storage efficiency:
 
 - Change cell-data layout to use a single byte-arena per DATASET and make
