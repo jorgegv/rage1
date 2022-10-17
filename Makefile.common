@@ -9,18 +9,22 @@
 ################################################################################
 
 # directory configurations
-ENGINE_DIR		= engine
-BUILD_DIR		= build
-GENERATED_DIR		= $(BUILD_DIR)/generated
-GENERATED_DIR_DATASETS	= $(GENERATED_DIR)/datasets
-GENERATED_DIR_CODESETS	= $(GENERATED_DIR)/codesets
-GENERATED_DIR_LOWMEM	= $(GENERATED_DIR)/lowmem
-GAME_SRC_DIR		= $(BUILD_DIR)/game_src
-GAME_DATA_DIR		= $(BUILD_DIR)/game_data
+ENGINE_DIR			= engine
+BUILD_DIR			= build
+GENERATED_DIR			= $(BUILD_DIR)/generated
+GENERATED_DIR_DATASETS		= $(GENERATED_DIR)/datasets
+GENERATED_DIR_CODESETS		= $(GENERATED_DIR)/codesets
+GENERATED_DIR_LOWMEM		= $(GENERATED_DIR)/lowmem
+GENERATED_DIR_BANKED_128	= $(GENERATED_DIR)/banked/128
+GENERATED_DIR_BANKED_COMMON	= $(GENERATED_DIR)/banked/common
+GAME_SRC_DIR			= $(BUILD_DIR)/game_src
+GAME_DATA_DIR			= $(BUILD_DIR)/game_data
 
-# by default, build the test game
+# by default, build the main test game
 # override this in the build command line (with e.g. "make build128 target_game=../famargon") to build your own game
-DEFAULT_TARGET_GAME	= game
+# you can also build other test games under the games/ directory
+TEST_GAMES_DIR		= games
+DEFAULT_TARGET_GAME	= $(TEST_GAMES_DIR)/default
 TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
 
 # Main sources and objs
@@ -33,8 +37,6 @@ OBJS			= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.a
 
 # Dataset sources and binaries
 DATASET_DIRS		= $(wildcard $(GENERATED_DIR_DATASETS)/dataset_*.src)
-#CSRC_DATASETS		= $(wildcard $(GENERATED_DIR_DATASETS)/*.c)
-#SRC_DATASETS		= $(CSRC_DATASETS)
 BIN_DATASETS		= $(DATASET_DIRS:.src=.bin)
 ZX0_DATASETS		= $(BIN_DATASETS:.bin=.zx0)
 DATASET_MAXSIZE		= $(shell grep BUILD_MAX_DATASET_SIZE $(GENERATED_DIR)/game_data.h | awk '{print $$3}' )
@@ -48,12 +50,12 @@ CODESET_MAXSIZE		= 16384
 BANKED_CODE_DIR			= $(ENGINE_DIR)/banked_code
 BANKED_CODE_DIR_COMMON		= $(BANKED_CODE_DIR)/common
 BANKED_CODE_DIR_128		= $(BANKED_CODE_DIR)/128
-BANKED_CODE_ASMSRC_128		= $(wildcard $(BANKED_CODE_DIR_128)/*.asm )
-BANKED_CODE_CSRC_128		= $(wildcard $(BANKED_CODE_DIR_128)/*.c )
+BANKED_CODE_ASMSRC_128		= $(wildcard $(GENERATED_DIR_BANKED_128)/*.asm ) $(wildcard $(BANKED_CODE_DIR_128)/*.asm )
+BANKED_CODE_CSRC_128		= $(wildcard $(GENERATED_DIR_BANKED_128)/*.c )   $(wildcard $(BANKED_CODE_DIR_128)/*.c )
 BANKED_CODE_SRC_128		= $(BANKED_CODE_ASMSRC_128) $(BANKED_CODE_CSRC_128)
 BANKED_CODE_OBJS_128		= $(BANKED_CODE_ASMSRC_128:.asm=.o) $(BANKED_CODE_CSRC_128:.c=.o)
-BANKED_CODE_ASMSRC_COMMON	= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm )
-BANKED_CODE_CSRC_COMMON		= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c )
+BANKED_CODE_ASMSRC_COMMON	= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm ) $(wildcard $(GENERATED_DIR_BANKED_COMMON)/*.asm )
+BANKED_CODE_CSRC_COMMON		= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c ) $(wildcard $(GENERATED_DIR_BANKED_COMMON)/*.c )
 BANKED_CODE_SRC_COMMON		= $(BANKED_CODE_ASMSRC_COMMON) $(BANKED_CODE_CSRC_COMMON)
 BANKED_CODE_OBJS_COMMON		= $(BANKED_CODE_ASMSRC_COMMON:.asm=.o) $(BANKED_CODE_CSRC_COMMON:.c=.o)
 BIN_BANKED_CODE			= $(BANKED_CODE_DIR)/banked_code.bin
@@ -141,6 +143,7 @@ $(GENERATED_DIR)/game_data.dep: data_depend
 
 data:
 	@./tools/datagen.pl -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes,flow}/*.gdata
+	@./tools/generate_banked_function_defs.pl
 
 data_depend:
 	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
@@ -230,7 +233,7 @@ textbox: tests/textbox.c $(TEXTBOX_OBJS)
 
 # these are game data directories that will be copied from the template when creating
 # a new game
-LIB_GAME_DATA_DIRS	= minimal_game/game_data minimal_game/game_src
+LIB_GAME_DATA_DIRS	= $(TEST_GAMES_DIR)/minimal/game_data $(TEST_GAMES_DIR)/minimal/game_src
 
 # create a minimal game using the library
 new-game:
@@ -243,12 +246,28 @@ new-game:
 	@echo "Done!"
 
 # tools
-mem:
+mem_obj:
 	@echo ""; echo "MEMORY USAGE REPORT BY OBJECT FILE:"
 	@./tools/r1size.sh
-	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION:"
-	@./tools/memmap.pl main.map
+
+mem_main:
+	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (MAIN MEMORY):"
+	@./tools/memmap.pl -m -p main main.map
+
+mem_bank:
+	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (BANKED MEMORY):"
+	@./tools/memmap.pl -m -p bank $(BANKED_CODE_DIR)/banked_code.map
+
+mem: mem_main mem_bank
 
 linecount: clean
-	find . -type f |grep -v -E '^./.git'|xargs -l file|grep -E '(ASCII|Perl)'|cut -f1 -d:|xargs -l cat|wc -l
-
+	@echo -n "Lines of Code (C):         "
+	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'C source'|cut -f1 -d:|xargs -l cat|wc -l
+	@echo -n "Lines of Code (Perl):      "
+	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'Perl'|cut -f1 -d:|xargs -l cat|wc -l
+	@echo -n "Lines of Code (Assembler): "
+	@find . -type f -iname "*.asm"|grep -v -E '^./.git'|grep -v tests/|xargs -l cat|wc -l
+	@echo -n "Lines of Docs:             "
+	@find doc/ -type f|xargs cat|wc -l
+	@echo -n "Lines of Test Games:       "
+	@find $(TEST_GAMES_DIR)/ -type f|xargs -l cat|wc -l

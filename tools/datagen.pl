@@ -17,8 +17,11 @@ use utf8;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
+require RAGE::Config;
 require RAGE::PNGFileUtils;
 require RAGE::FileUtils;
+require RAGE::Arkos2;
+require RAGE::BTileUtils;
 
 use Data::Dumper;
 use List::MoreUtils qw( zip );
@@ -26,6 +29,7 @@ use Getopt::Std;
 use Data::Compare;
 use File::Path qw( make_path );
 use File::Copy;
+use File::Basename;
 
 # final destination address for compilation of datasets and codesets
 my $dataset_base_address = 0x5B00;
@@ -36,7 +40,7 @@ my @codeset_valid_banks = ( 6, );	# non-contended
 
 # global program state
 # if you add any global variable here, don't forget to add a reference to it
-# also in $all_state variable in dump_internal_state function at the end of
+# also in $all_state variable in dump_internal_data function at the end of
 # the script
 my @all_btiles;
 my %btile_name_to_index;
@@ -52,6 +56,11 @@ my %item_name_to_index;
 
 my @all_rules;
 my $max_flow_var_id = undef;
+
+my @game_events_rule_table;
+
+my @all_crumb_types;
+my %crumb_type_name_to_index;
 
 # lists of custom function checks and actions
 my @check_custom_functions;
@@ -72,6 +81,7 @@ my $c_file_game_data		= 'game_data.c';
 my $asm_file_game_data		= 'asm_game_data.asm';
 my $h_file_game_data		= 'game_data.h';
 my $h_file_build_features	= 'features.h';
+my $c_file_banked_data_128	= 'banked/128/game_data_128.c';
 
 # global directories
 my $output_dest_dir;
@@ -98,6 +108,9 @@ my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
 my @h_build_features_lines;
+my @c_banked_data_128_lines;
+
+# misc vars
 my $forced_build_target;
 my %conditional_build_features;
 
@@ -109,7 +122,7 @@ my $syntax = {
     valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
 };
 
-my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop );
+my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop crumb_action );
 
 ##########################################
 ## Input data parsing and state machine
@@ -335,6 +348,7 @@ sub read_input_data {
             }
             if ( $line =~ /^TITLE\s+"(.+)"$/ ) {
                 $cur_screen->{'title'} = $1;
+                add_build_feature( 'SCREEN_TITLES' );
                 next;
             }
             if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
@@ -417,6 +431,30 @@ sub read_input_data {
                 push @all_items, $item;
                 push @{ $cur_screen->{'items'} }, $item_index;
                 $item_name_to_index{ $item->{'name'} } = $item_index;
+                add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+                add_build_feature( 'INVENTORY' );
+                next;
+            }
+            if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                if ( not defined( $crumb_type_name_to_index{ $item->{'type'} } ) ) {
+                    die "CRUMB: undefined crumb TYPE '$item->{type}'\n";
+                }
+
+                # crumbs can change state (=grabbed), so assign a state slot
+                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                push @{ $cur_screen->{'asset_states'} }, { value => 'F_CRUMB_ACTIVE', comment => "Crumb '$item->{name}'" };
+
+                push @{ $cur_screen->{'crumbs'} }, $item;
+
+                add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+                add_build_feature( 'CRUMBS' );
                 next;
             }
             if ( $line =~ /^HOTZONE\s+(\w.*)$/ ) {
@@ -464,6 +502,21 @@ sub read_input_data {
                 push @{ $cur_screen->{'screen_data'} }, $1;
                 next;
             }
+            if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # enemies can always change state (=killed), so assign a state slot
+                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
+
+                push @{ $cur_screen->{'enemies'} }, $item;
+                next;
+            }
             if ( $line =~ /^END_SCREEN$/ ) {
                 validate_and_compile_screen( $cur_screen );
                 $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
@@ -486,6 +539,19 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                next;
+            }
+            if ( $line =~ /^DAMAGE_MODE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                $hero->{'damage_mode'} = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE' );
+                if ( defined( $hero->{'damage_mode'}{'health_display_function'} ) ) {
+                    add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION' );
+                }
                 next;
             }
             if ( $line =~ /^HSTEP\s+(\d+)$/ ) {
@@ -552,11 +618,16 @@ sub read_input_data {
                 next;
             }
             if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
-                $game_config->{'zx_target'} = $1;
+                if ( $forced_build_target ) {
+                    $game_config->{'zx_target'} = $forced_build_target;
+                } else {
+                    $game_config->{'zx_target'} = $1;
+                }
                 if ( ( $game_config->{'zx_target'} ne '48' ) and
                     ( $game_config->{'zx_target'} ne '128' ) ) {
                         die "ZX_TARGET must be either 48 or 128\n";
                     }
+                add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
                 next;
             }
             if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
@@ -618,6 +689,9 @@ sub read_input_data {
 
                 # add the function to the game config
                 $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
+                if ( $codeset ne 'home' ) {
+                    add_build_feature( 'CODESETS' );
+                }
                 next;
             }
             if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
@@ -651,6 +725,10 @@ sub read_input_data {
                 if ( scalar( grep { defined } map { $game_config->{'loading_screen'}{ $_ } } qw( png scr ) ) != 1 ) {
                     die "LOADING_SCREEN: exactly one of PNG or SCR options (but not both) must be specified\n";
                 }
+                add_build_feature( "LOADING_SCREEN" );
+                if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
+                    add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
+                }
                 next;
             }
             if ( $line =~ /^CUSTOM_CHARSET\s+(.*)$/ ) {
@@ -668,6 +746,7 @@ sub read_input_data {
                         die "CUSTOM_CHARSET: RANGE option must be integers MM-NN\n";
                     }
                 }
+                add_build_feature( "CUSTOM_CHARSET" );
                 next;
             }
             if ( $line =~ /^BINARY_DATA\s+(.*)$/ ) {
@@ -693,6 +772,127 @@ sub read_input_data {
                 push @{ $game_config->{'binary_data'} }, $blob_info;
                 next;
             }
+            if ( $line =~ /^CRUMB_TYPE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # check mandatory fields
+                if ( not defined( $item->{'name'} ) ) {
+                    die "CRUMB_TYPE: NAME field is mandatory\n";
+                }
+
+                if ( not defined( $item->{'btile'} ) ) {
+                    die "CRUMB_TYPE: BTILE field is mandatory\n";
+                }
+
+                # if an action_function is defined, do some checks
+                if ( defined( $item->{'action_function' } ) ) {
+
+                    my $action_function = {
+                        name	=> $item->{'action_function' },
+                        codeset	=> ( $item->{'codeset'} || 'home' ),
+                        type	=> 'crumb_action',
+                    };
+
+                    # check that codeset is a valid value
+                    if ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
+                        die sprintf( "CRUMB_TYPE: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                    }
+
+                    # add the needed codeset-related fields.  if a function has
+                    # no codeset directive, it goes to the 'home' codeset
+                    my $codeset = $action_function->{'codeset'};
+                    if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
+                        $codeset_functions_by_codeset{ $codeset } = [];
+                    }
+                    $action_function->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+
+                    # add the function to the codeset lists
+                    push @all_codeset_functions, $action_function;
+                    push @{ $codeset_functions_by_codeset{ $codeset } }, $action_function;
+
+                    # check that the type is a valid function type
+                    if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
+                        die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                    }
+                }
+
+                # add the crumb type to the global list
+                my $index = scalar( @all_crumb_types );
+                push @all_crumb_types, $item;
+                $crumb_type_name_to_index{ $item->{'name'} } = $index;
+                next;	# $line
+            }
+            if ( $line =~ /^TRACKER\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                if ( not defined( $game_config->{'tracker'} ) ) {
+                    $game_config->{'tracker'} = $item;
+                } else {
+                    $game_config->{'tracker'} = { %{ $game_config->{'tracker'} }, %$item };
+                }
+
+                add_build_feature( 'TRACKER' );
+                add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
+
+                if ( defined( $item->{'fx_channel'} ) ) {
+                    if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
+                        die "TRACKER: FX_CHANNEL can only be 0, 1 or 2\n";
+                    }
+                    add_build_feature( 'TRACKER_SOUNDFX' );
+                    if ( defined( $item->{'fx_volume'} ) ) {
+                        if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 16 ) ) {
+                            die "TRACKER: FX_VOLUME must be in range 0-16\n";
+                        }
+                    } else {
+                        # fx_volume is always defined
+                        $item->{'fx_volume'} = 16;	# default value
+                    }
+                }
+                next;
+            }
+            if ( $line =~ /^TRACKER_SONG\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'name'} ) ) {
+                    die "TRACKER_SONG: missing NAME argument\n";
+                }
+                if ( not defined( $item->{'file'} ) ) {
+                    die "TRACKER_SONG: missing FILE argument\n";
+                }
+                my $index = defined( $game_config->{'tracker'}{'songs'} ) ?
+                    scalar( @{ $game_config->{'tracker'}{'songs'} } ) : 0;
+                $item->{'song_index'} = $index;
+                push @{ $game_config->{'tracker'}{'songs'} }, $item;
+                $game_config->{'tracker'}{'song_index'}{ $item->{'name'} } = $index;
+                next;
+            }
+            if ( $line =~ /^TRACKER_FXTABLE\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'file'} ) ) {
+                    die "TRACKER_FXTABLE: missing FILE argument\n";
+                }
+                $game_config->{'tracker'}{'fxtable'} = $item;
+                next;
+            }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
                 next;
@@ -701,10 +901,12 @@ sub read_input_data {
 
         } elsif ( $state eq 'RULE' ) {
             if ( $line =~ /^SCREEN\s+(\w+)$/ ) {
+                # if screen is __EVENTS__ then this rule goes into the game events rule table
                 $cur_rule->{'screen'} = $1;
                 next;
             }
             if ( $line =~ /^WHEN\s+(\w+)$/ ) {
+                # the WHEN clause is ignored if screen is __EVENTS__
                 $cur_rule->{'when'} = lc( $1 );
                 next;
             }
@@ -722,7 +924,7 @@ sub read_input_data {
 
                 # we must delete WHEN and SCREEN for deduplicating rules,
                 # but we must keep them for properly storing the rule
-                my $when = $cur_rule->{'when'};
+                my $when = $cur_rule->{'when'} || '<undefined>';
                 delete $cur_rule->{'when'};
                 my $screen = $cur_rule->{'screen'};
                 delete $cur_rule->{'screen'};
@@ -738,8 +940,12 @@ sub read_input_data {
                     push @all_rules, $cur_rule;
                 }
 
-                # add the rule index to the proper screen rule table
-                push @{ $all_screens[ $screen_name_to_index{ $screen } ]{'rules'}{ $when } }, $index;
+                # add the rule index to the proper screen rule table, or the events rule table
+                if ( $screen eq '__EVENTS__' ) {
+                    push @game_events_rule_table, $index;
+                } else {
+                    push @{ $all_screens[ $screen_name_to_index{ $screen } ]{'rules'}{ $when } }, $index;
+                }
 
                 # clean up for next rule
                 $cur_rule = undef;
@@ -760,11 +966,7 @@ sub read_input_data {
 
 # build features that always selected no matter what
 my @default_build_features = qw(
-<<<<<<< Updated upstream
-    BTILE_PACKED_TYPE_MAP
-=======
     BTILE_4BIT_TYPE_MAP
->>>>>>> Stashed changes
 );
 
 sub add_build_feature {
@@ -782,10 +984,6 @@ sub add_default_build_features {
         add_build_feature( $f );
     }
 }
-
-######################################
-## BTile functions
-######################################
 
 sub validate_and_compile_btile {
     my $tile = shift;
@@ -1052,6 +1250,11 @@ sub validate_and_compile_screen {
     defined( $screen->{'hero'} ) or
         die "Screen '$screen->{name}' has no Hero\n";
 
+    # check for reserved names
+    if ( uc( $screen->{'name'} ) eq '__EVENTS__' ) {
+        die "SCREEN: The screen name __EVENTS__ is reserved for internal purposes and cannot be used\n";
+    }
+
     # if no dataset is specified, store the screen in home dataset
     if ( not defined( $screen->{'dataset'} ) ) {
         $screen->{'dataset'} = 'home';	# must be lowercase
@@ -1083,10 +1286,6 @@ sub validate_and_compile_screen {
     ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
         die "Screen '$screen->{name}' has no Btiles\n";
 
-    # if any screen has a title, activate the corresponding build feature
-    if ( defined( $screen->{'title'} ) ) {
-        add_build_feature( 'SCREEN_TITLES' );
-    }
 }
 
 # SCREEN_DATA and DEFINE compilation
@@ -1283,7 +1482,24 @@ sub generate_screen {
             scalar( @{$screen->{'items'}} ) );
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
                 sprintf( "\t{ %d, %d, %d }", $_, $all_items[ $_ ]->{'row'}, $all_items[ $_ ]->{'col'} )
-            } @{$screen->{'items'}} );
+            } @{ $screen->{'items'} } );
+        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+    }
+
+    # screen crumbs
+    if ( defined( $screen->{'crumbs'} ) ) {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' crumb data\n", $screen->{'name'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct crumb_location_s screen_%s_crumbs[ %d ] = {\n",
+            $screen->{'name'},
+            scalar( @{$screen->{'crumbs'}} ) );
+        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
+                sprintf( "\t{ CRUMB_TYPE_%s, %d, %d, %d }",
+                    uc( $_->{'type'} ),
+                    $_->{'row'},
+                    $_->{'col'},
+                    $_->{'asset_state_index'}
+                )
+            } @{ $screen->{'crumbs'} } );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
     }
 
@@ -1352,6 +1568,23 @@ sub validate_and_compile_hero {
         die "Hero has no HSTEP\n";
     defined( $hero->{'vstep'} ) or
         die "Hero has no VSTEP\n";
+
+    # ensure DAMAGE_MODE is always defined
+    # remember LIVES are handled separately for compatibility
+    my $default_damage_mode = {
+        health_max	=> 1,
+        enemy_damage	=> 1,
+        immunity_period	=> 0,
+    };
+    my $damage_mode;
+    if ( defined( $hero->{'damage_mode'} ) ) {
+        # merge the provided parameters with the defaults
+        $damage_mode = { %{ $default_damage_mode }, %{ $hero->{'damage_mode'} } };
+    } else {
+        $damage_mode = $default_damage_mode;
+    }
+    $hero->{'damage_mode'} = $damage_mode;
+
 }
 
 sub generate_hero {
@@ -1373,6 +1606,10 @@ sub generate_hero {
     my $hstep			= $hero->{'hstep'};
     my $vstep			= $hero->{'vstep'};
     my $local_num_sprite	= $dataset_dependency{'home'}{'sprite_global_to_dataset_index'}{ $num_sprite };
+    my $health_max		= $hero->{'damage_mode'}{'health_max'};
+    my $enemy_damage		= $hero->{'damage_mode'}{'enemy_damage'};
+    my $immunity_period		= $hero->{'damage_mode'}{'immunity_period'};
+    my $health_display_function	= $hero->{'damage_mode'}{'health_display_function'} || '';
 
     push @h_game_data_lines, <<EOF_HERO1
 
@@ -1396,9 +1633,18 @@ sub generate_hero {
 #define	HERO_MOVE_VSTEP			$vstep
 #define	HERO_NUM_LIVES			$num_lives
 #define	HERO_LIVES_BTILE_NUM		$lives_btile_num
+#define HERO_HEALTH_MAX			$health_max
+#define HERO_ENEMY_DAMAGE		$enemy_damage
+#define HERO_IMMUNITY_PERIOD		$immunity_period
+#define HERO_HEALTH_DISPLAY_FUNCTION	$health_display_function
 
 EOF_HERO1
 ;
+
+    if ( $health_display_function ne '' ) {
+        push @h_game_data_lines, "// external declaration for custom health display function\n";
+        push @h_game_data_lines, "void $health_display_function( void );\n\n";
+    }
 
     # hero sprite must be always available - output sprite into home bank
 }
@@ -1421,6 +1667,10 @@ sub generate_bullets {
     my $ythresh = ( defined( $sprite->{'real_pixel_height'} ) ?
         ( 8 - ( $sprite->{'real_pixel_height'} % 8 ) + 1 ) % 8 :
         1 );
+    # sprite frames for the different shot directions. If not defined, use frame 0
+    my ( $sprite_frame_up, $sprite_frame_down, $sprite_frame_left, $sprite_frame_right ) = map {
+        $hero->{'bullet'}{ $_ } || 0,
+    } qw ( sprite_frame_up sprite_frame_down sprite_frame_left sprite_frame_right );
 
     push @h_game_data_lines, <<EOF_BULLET4
 
@@ -1428,17 +1678,20 @@ sub generate_bullets {
 // Bullets definition
 //////////////////////////////
 
-#define	BULLET_MAX_BULLETS	$max_bullets
-#define	BULLET_SPRITE_WIDTH	$width
-#define	BULLET_SPRITE_HEIGHT	$height
-#define BULLET_SPRITE_ID	$local_sprite_index
-#define	BULLET_SPRITE_FRAMES	( home_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames )
-#define	BULLET_SPRITE_XTHRESH	$xthresh
-#define	BULLET_SPRITE_YTHRESH	$ythresh
-#define	BULLET_MOVEMENT_DX	$dx
-#define	BULLET_MOVEMENT_DY	$dy
-#define	BULLET_MOVEMENT_DELAY	$delay
-#define	BULLET_RELOAD_DELAY	$reload_delay
+#define	BULLET_MAX_BULLETS		$max_bullets
+#define	BULLET_SPRITE_WIDTH		$width
+#define	BULLET_SPRITE_HEIGHT		$height
+#define BULLET_SPRITE_ID		$local_sprite_index
+#define	BULLET_SPRITE_XTHRESH		$xthresh
+#define	BULLET_SPRITE_YTHRESH		$ythresh
+#define	BULLET_MOVEMENT_DX		$dx
+#define	BULLET_MOVEMENT_DY		$dy
+#define	BULLET_MOVEMENT_DELAY		$delay
+#define	BULLET_RELOAD_DELAY		$reload_delay
+#define BULLET_SPRITE_FRAME_UP		$sprite_frame_up
+#define BULLET_SPRITE_FRAME_DOWN	$sprite_frame_down
+#define BULLET_SPRITE_FRAME_LEFT	$sprite_frame_left
+#define BULLET_SPRITE_FRAME_RIGHT	$sprite_frame_right
 
 EOF_BULLET4
 ;
@@ -1453,7 +1706,7 @@ struct bullet_state_data_s bullet_state_data[ BULLET_MAX_BULLETS ] = {
 EOF_BULLET5
 ;
     foreach ( 1 .. $max_bullets ) {
-        push @c_game_data_lines, "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, 0 },\n";
+        push @c_game_data_lines, "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, NULL, 0 },\n";
     }
     push @c_game_data_lines, "};\n\n";
 
@@ -1468,8 +1721,6 @@ sub generate_items {
 
     # do not generate anything related to inventory if no items defined
     return if ( not scalar( @all_items ) );
-
-    add_build_feature( 'INVENTORY' );
 
     my $max_items = scalar( @all_items );
     my $all_items_mask = 0;
@@ -1530,6 +1781,65 @@ EOF_ITEMS2
 
 }
 
+########################
+## Crumb functions
+########################
+
+sub generate_crumb_types {
+
+    # do not generate anything related to inventory if no items defined
+    return if ( not scalar( @all_crumb_types ) );
+
+    my $crumb_num_types = scalar( @all_crumb_types );
+
+    push @h_game_data_lines, <<GAME_DATA_H_2
+
+// Global Crumb Types table
+#define CRUMB_NUM_TYPES $crumb_num_types
+
+// Crumb constants
+GAME_DATA_H_2
+;
+
+    # output constants for crumb types
+    foreach my $i ( 0 .. ( $crumb_num_types - 1 ) ) {
+        push @h_game_data_lines, sprintf( "#define\tCRUMB_TYPE_%s\t%d\n",
+            uc( $all_crumb_types[ $i ]{'name'} ), $i
+        );
+    }
+    push @h_game_data_lines, "\n";
+
+    push @c_game_data_lines, <<EOF_CRUMBS1
+
+/////////////////////////////////
+// Global Crumb Types table
+/////////////////////////////////
+
+struct crumb_info_s all_crumb_types[ CRUMB_NUM_TYPES ] = {
+EOF_CRUMBS1
+;
+    push @c_game_data_lines, join( ",\n",
+        map {
+            sprintf( "\t{ .btile_num = BTILE_ID_%s, .counter = 0, .do_action = %s }",
+                uc( $all_crumb_types[ $_ ]{'btile'} ),
+                $all_crumb_types[ $_ ]{'action_function'} || 'NULL',
+            )
+        } ( 0 .. ( $crumb_num_types - 1 ) )
+    );
+
+    push @c_game_data_lines, <<EOF_CRUMBS2
+
+};
+
+EOF_CRUMBS2
+;
+
+}
+
+########################
+## Game functions
+########################
+
 sub generate_game_functions {
     push @h_game_data_lines, "// game config\n";
 
@@ -1557,6 +1867,10 @@ sub generate_game_functions {
 
     push @h_game_data_lines, "\n\n";
 }
+
+###########################
+## Game Area functions
+###########################
 
 sub generate_single_game_area {
     my $area = shift;
@@ -1615,15 +1929,21 @@ sub validate_and_compile_rule {
     defined( $rule->{'screen'} ) or
         die "Rule has no SCREEN\n";
     my $screen = $rule->{'screen'};
-    exists( $screen_name_to_index{ $screen } ) or
-        die "Screen '$screen' is not defined\n";
+    if ( $screen ne '__EVENTS__' ) {
+        exists( $screen_name_to_index{ $screen } ) or
+            die "Screen '$screen' is not defined\n";
+    }
 
-    defined( $rule->{'when'} ) or
-        die "Rule has no WHEN clause\n";
-    my $when = $rule->{'when'};
-    grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
-        die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
+    # WHEN clause is optional when the rule is assigned to __EVENTS__
+    if ( $rule->{'screen'} ne '__EVENTS__' ) {
+        defined( $rule->{'when'} ) or
+            die "Rule has no WHEN clause\n";
+        my $when = $rule->{'when'};
+        grep { $when eq $_ } @{ $syntax->{'valid_whens'} } or
+            die "WHEN must be one of ".join( ", ", map { uc } @{ $syntax->{'valid_whens'} } )."\n";
+    }
 
+    # we explictly allow rules with no checks, which are run always
 #    defined( $rule->{'check'} ) and scalar( @{ $rule->{'check'} } ) or
 #        die "At least one CHECK clause must be specified\n";
 
@@ -1654,7 +1974,6 @@ sub validate_and_compile_rule {
 
         # flow_vars specifics
         if ( $check =~ /^FLOW_VAR/ ) {
-            add_build_feature( 'FLOW_VARS' );
             my $vars = {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $check_data )
@@ -1664,6 +1983,12 @@ sub validate_and_compile_rule {
             }
             $check_data = sprintf( "{ .var_id = %s, .value = %s }",
                 $vars->{'var_id'}, $vars->{'value'} );
+            add_build_feature( 'FLOW_VARS' );
+        }
+
+        # game_time specifics
+        if ( $check =~ /^GAME_TIME_/ ) {
+            add_build_feature( 'GAME_TIME' );
         }
 
         # regenerate the check with filtered data
@@ -1730,7 +2055,6 @@ sub validate_and_compile_rule {
 
         # flow_vars specifics
         if ( $action =~ /^FLOW_VAR/ ) {
-            add_build_feature( 'FLOW_VARS' );
             my $vars = {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $action_data )
@@ -1740,6 +2064,16 @@ sub validate_and_compile_rule {
             }
             $action_data = sprintf( "{ .var_id = %s, .value = %s }",
                 $vars->{'var_id'}, $vars->{'value'} || 0 );
+            add_build_feature( 'FLOW_VARS' );
+        }
+
+        # tracker_select_song specific
+        if ( $action =~ /^TRACKER_SELECT_SONG/ ) {
+            # $action_data may contain the song name - convert into the song
+            # index into the songs table
+            if ( defined( $game_config->{'tracker'}{'song_index'}{ $action_data } ) ) {
+                $action_data = $game_config->{'tracker'}{'song_index'}{ $action_data };
+            }
         }
 
         # regenerate the value with the filtered data
@@ -1787,6 +2121,10 @@ my $check_data_output_format = {
     FLOW_VAR_EQUAL		=> ".data.flow_var = %s",
     FLOW_VAR_MORE_THAN		=> ".data.flow_var = %s",
     FLOW_VAR_LESS_THAN		=> ".data.flow_var = %s",
+    GAME_TIME_EQUAL		=> ".data.game_time.seconds = %s",
+    GAME_TIME_MORE_THAN		=> ".data.game_time.seconds = %s",
+    GAME_TIME_LESS_THAN		=> ".data.game_time.seconds = %s",
+    GAME_EVENT_HAPPENED		=> ".data.game_event.event = %s",
 };
 
 my $action_data_output_format = {
@@ -1810,6 +2148,10 @@ my $action_data_output_format = {
     FLOW_VAR_ADD		=> ".data.flow_var = %s",
     FLOW_VAR_DEC		=> ".data.flow_var = %s",
     FLOW_VAR_SUB		=> ".data.flow_var = %s",
+    TRACKER_SELECT_SONG		=> ".data.tracker_song.num_song = %s",
+    TRACKER_MUSIC_STOP		=> ".data.unused = %d",
+    TRACKER_MUSIC_START		=> ".data.unused = %d",
+    TRACKER_PLAY_FX		=> ".data.tracker_fx.num_effect = %d",
 };
 
 sub generate_rule_checks {
@@ -1983,10 +2325,6 @@ sub check_game_config_is_valid {
         $game_config->{'zx_target'} = '48';
         warn "Game Config: 'zx_target' not defined - building for 48K mode\n";
     }
-    if ( $forced_build_target ) {
-        $game_config->{'zx_target'} = $forced_build_target;
-    }
-
     if ( is_build_feature_enabled( 'INVENTORY') and not defined( $game_config->{'inventory_area'} ) ) {
         warn "Game Config: using INVENTORY feature, but no INVENTORY_AREA defined\n";
         $errors++;
@@ -1995,6 +2333,31 @@ sub check_game_config_is_valid {
     if ( is_build_feature_enabled( 'SCREEN_TITLES') and not defined( $game_config->{'title_area'} ) ) {
         warn "Game Config: using SCREEN_TITLES feature, but no TITLE_AREA defined\n";
         $errors++;
+    }
+
+    # tracker configuration
+    if ( defined( $game_config->{'tracker'} ) ) {
+        if ( not defined( $game_config->{'tracker'}{'type'} ) ) {
+            $game_config->{'tracker'}{'type'} = 'arkos2';
+        }
+        if ( $game_config->{'tracker'}{'type'} ne 'arkos2' ) {
+            warn "TRACKER: only 'arkos2' TYPE is supported\n";
+            $errors++;
+        }
+        if ( not scalar( @{ $game_config->{'tracker'}{'songs'} } ) ) {
+            warn "TRACKER: no music songs defined (TRACKER_SONG directive)\n";
+            $errors++;
+        }
+        if ( defined( $game_config->{'tracker'}{'in_game_song'} ) and 
+                not grep { $_->{'name'} eq $game_config->{'tracker'}{'in_game_song'} } 
+                @{ $game_config->{'tracker'}{'songs'} } ) {
+            warn "TRACKER: unknown song name in IN_GAME_SONG parameter\n";
+            $errors++;
+        }
+        if ( $game_config->{'zx_target'} ne '128' ) {
+            warn "TRACKER: must be used together with ZX_TARGET = 128\n";
+            $errors++;
+        }
     }
 
     return $errors;
@@ -2114,7 +2477,121 @@ EOF_HEADER2
 ;
 }
 
-sub generate_btiles {
+sub generate_btiles_dedupe {
+    my $dataset = shift;
+
+    # generate the list of dataset btiles, return immediately if empty
+    my @dataset_btiles = map { $all_btiles[ $_ ] } @{ $dataset_dependency{ $dataset }{'btiles'} };
+    return if not scalar( @dataset_btiles );
+
+    push @h_game_data_lines, <<EOF_TILES_H
+
+////////////////////////////
+// Big Tile definitions
+////////////////////////////
+
+EOF_TILES_H
+;
+
+    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_TILES
+
+////////////////////////////
+// Big Tile definitions
+////////////////////////////
+
+EOF_TILES
+;
+
+
+    # generate the tiles
+
+    # generate the offsets and byte arena for all btiles in the dataset
+    my @orig_cell_offsets;
+    my @orig_byte_arena;
+    foreach my $tile ( @dataset_btiles ) {
+        my $initial_offset = scalar( @orig_byte_arena );
+        push @orig_byte_arena, map { @$_ } @{ $tile->{'pixel_bytes'} };
+        my $offset = 0;
+        while ( $offset < 8 * scalar( @{ $tile->{'pixel_bytes'} } ) ) {
+            push @orig_cell_offsets, $initial_offset + $offset;
+            $offset += 8;
+        }
+    }
+
+    # deduplication code goes here!
+    my ( $new_cell_offsets, $new_arena ) = btile_deduplicate_arena_best( \@orig_cell_offsets, \@orig_byte_arena );
+    my @cell_offsets = @$new_cell_offsets;
+    my @byte_arena = @$new_arena;
+
+    # generate the code for the arena (offsets will be used later)
+    push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTILE byte arena\n";
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t all_dataset_btile_data[ %d ] = {\n", scalar( @byte_arena ) );
+    my @bytes = @byte_arena;	# splice (below) is destructive!
+    while ( @bytes ) {		# output the arena in 16-byte chunks
+        push @{ $c_dataset_lines->{ $dataset } }, "\t" . join('', map { sprintf( '0x%02x,', $_ ) } splice( @bytes, 0, 16 ) ) . "\n";
+    }
+    push @{ $c_dataset_lines->{ $dataset } }, "};\n";
+    
+    # generate btile data structs
+    my $cell_index = 0;
+    foreach my $tile ( @dataset_btiles ) {
+        my $num_cells = scalar( @{ $tile->{'pixel_bytes'} } );
+        my @btile_cell_offsets = @cell_offsets[ $cell_index .. ( $cell_index + $num_cells - 1 ) ];
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_tiles[ %d ] = { %s\n};\n",
+            $tile->{'name'},
+            $num_cells,
+            join( ",\n\t",
+                map { sprintf( "&all_dataset_btile_data[ %d ]", $_ ) }
+                @btile_cell_offsets
+            ) );
+        $cell_index += $num_cells;
+
+        # manually specified attrs have preference over PNG ones
+        my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
+            $tile->{'name'},
+            scalar( @{ $attrs } ),
+            join( ', ', @{ $attrs } ) );
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
+
+        # output auxiliary definitions
+        if ( $dataset eq 'home' ) {
+            push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+            push @h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+        } else {
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_ID_%s\t%d\n",
+                uc( $tile->{'name'} ),
+                $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
+            );
+        }
+    }
+
+    # generate the global btile table for this dataset
+    push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTile table\n";
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @dataset_btiles ) );
+    foreach my $tile ( @dataset_btiles ) {
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
+            $tile->{'rows'},
+            $tile->{'cols'},
+            $tile->{'name'},
+            $tile->{'name'} );
+    }
+    push @{ $c_dataset_lines->{ $dataset } }, "};\n";
+    push @{ $c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
+
+}
+
+sub generate_btiles_flat_data {
     my $dataset = shift;
 
     # generate the list of dataset btiles, return immediately if empty
@@ -2156,6 +2633,16 @@ EOF_TILES
     push @{ $c_dataset_lines->{ $dataset } }, "};\n";
     push @{ $c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
 
+}
+
+sub generate_btiles {
+    my $dataset = shift;
+    my $cfg = rage1_get_config();
+    if ( $cfg->{'tools'}{'datagen'}{'features'}{'btile_deduplicated_data'} ) {
+        generate_btiles_dedupe( $dataset );
+    } else {
+        generate_btiles_flat_data( $dataset );
+    }
 }
 
 sub generate_sprites {
@@ -2251,6 +2738,9 @@ EOF_MAP
             ( scalar( @all_items) ? sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
+            ( scalar( @all_crumb_types) ? sprintf( "\t\t.crumb_data = { %d, %s },\t// item_data\n",
+                scalar( @{$_->{'crumbs'}} ), ( scalar( @{$_->{'crumbs'}} ) ? sprintf( 'screen_%s_crumbs', $_->{'name'} ) : 'NULL' ) )
+                : '' ) .
             sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
             join( "\n", map {
@@ -2298,9 +2788,9 @@ GAME_DATA_H_1
 }
 
 sub generate_h_ending {
-    push @h_game_data_lines, <<GAME_DATA_H_3
+    push @h_game_data_lines, <<GAME_DATA_H_4
 #endif // _GAME_DATA_H
-GAME_DATA_H_3
+GAME_DATA_H_4
 ;
 }
 
@@ -2369,20 +2859,9 @@ sub generate_game_config {
 EOF_BLDCFG1
 ;
 
-    # add ZX_TARGET definition
-    add_build_feature( sprintf( "ZX_TARGET_%s\n", $game_config->{'zx_target'} ) );
-
-    # add LOADING_SCREEN definitions if present
-    if ( defined( $game_config->{'loading_screen'} ) ) {
-        add_build_feature( "LOADING_SCREEN" );
-        if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
-            add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
-        }
-    }
 
     # add CUSTOM_CHARSET definitions of present
     if ( defined( $game_config->{'custom_charset'} ) ) {
-        add_build_feature( "CUSTOM_CHARSET" );
         my ( $char_min, $char_max ) = ( 32, 127 );	# defaults: all ZX ASCII range
         if ( $game_config->{'custom_charset'}{'range'} ) {
             $game_config->{'custom_charset'}{'range'} =~ m/^(\d+)\-(\d+)$/;
@@ -2538,7 +3017,6 @@ EOF_CODESET_3
     my @non_home_codeset_functions = grep { $_->{'codeset'} ne 'home' } @all_codeset_functions;
 
     if ( scalar( @non_home_codeset_functions ) and ( $game_config->{'zx_target'} ne '48' ) ) {
-        add_build_feature( 'CODESETS' );
         push @c_game_data_lines, "// global codeset functions table\n";
         push @h_game_data_lines, "// global indexes of codeset functions\n";
 
@@ -2575,21 +3053,20 @@ EOF_CODESET_3
         if ( ( $game_config->{'zx_target'} eq '48' ) or ( $function->{'codeset'} eq 'home' ) ) {
             # macros for 48K mode
             push @h_game_data_lines, sprintf(
-                "#define CALL_GAME_FUNCTION_%-30s  (%s())\n",
+                "#define CALL_CODESET_FUNCTION_%-30s  (%s())\n",
                 uc( $function->{'name'} ) . '()',
                 $function->{'name'},
             );
         } else {
             # macros for 128K mode
-            add_build_feature( 'CODESETS' );
             push @h_game_data_lines, sprintf(
-                "#define CALL_GAME_FUNCTION_%-30s  (codeset_call_function( CODESET_FUNCTION_%s ))\n",
+                "#define CALL_CODESET_FUNCTION_%-30s  (codeset_call_function( CODESET_FUNCTION_%s ))\n",
                 uc( $function->{'name'} ) . '()',
                 uc( $function->{'name'} ),
             );
         }
         $function->{'codeset_function_call_macro'} = sprintf(
-            'CALL_GAME_FUNCTION_%s()', uc( $function->{'name'} )
+            'CALL_CODESET_FUNCTION_%s()', uc( $function->{'name'} )
         );
     }
 
@@ -2778,11 +3255,138 @@ sub generate_binary_data_items {
 
 }
 
+sub generate_c_banked_data_128_header {
+    push @c_banked_data_128_lines,<<EOF_BANKED_128_HEADING
+#include <stdint.h>
+#include <stdlib.h>
+
+EOF_BANKED_128_HEADING
+;
+}
+
+sub generate_tracker_data {
+    # tracker songs
+    if ( defined( $game_config->{'tracker'} ) ) {
+
+        push @h_game_data_lines, "/////////////////////\n";
+        push @h_game_data_lines, "// Tracker songs\n";
+        push @h_game_data_lines, "/////////////////////\n\n";
+
+        push @c_banked_data_128_lines, "//////////////////////////////////\n";
+        push @c_banked_data_128_lines, "// Tracker songs data and table\n";
+        push @c_banked_data_128_lines, "//////////////////////////////////\n\n";
+
+        # output the songs data
+
+        # FIX: the song data must be in ASM format: exported songs are full
+        # of pointer references, so they must be compiled, they can't be in
+        # binary form.  This part needs to be redone
+
+        # It's fine that the songs can be specified in AKS format, but they
+        # need to be converted to ASM.  For that we need Arkos installed.
+
+        # This would greatly benefit from having a centralized tool
+        # configuration file, e.g.  ./etc/rage1-tools.conf
+
+        # Alternatively, we can add a new 'ASM_FILE' parameter which allows
+        # us to directly refer to the song's ASM file and convert it
+        # elsewhere
+
+        foreach my $song ( @{ $game_config->{'tracker'}{'songs'} } ) {
+            my $symbol_name = "tracker_song_" . $song->{'name'};
+
+            # generate extern declaration for later use in C file
+            push @c_banked_data_128_lines, sprintf( "extern uint8_t %s[];\n", $symbol_name );
+
+            # generate song ID in header file
+            push @h_game_data_lines, sprintf( "#define TRACKER_SONG_%s\t%d\n",
+                uc( $song->{'name'} ), $song->{'song_index'} );
+            if ( defined( $game_config->{'tracker'}{'in_game_song'} ) ) {
+                push @h_game_data_lines, sprintf( "#define TRACKER_IN_GAME_SONG\tTRACKER_SONG_%s\n",
+                    uc( $game_config->{'tracker'}{'in_game_song'} ) );
+            }
+
+            # generate song ASM file and put it in place for compilation
+            my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+            move( $asm_file, $dest_asm_file ) or
+                die "Could not rename $asm_file to $dest_asm_file\n";
+        }
+
+        # now output the songs table
+        push @c_banked_data_128_lines, "\n// songs table\n";
+        push @c_banked_data_128_lines, sprintf( "uint8_t *all_songs[ %d ] = {\n",
+            scalar( @{ $game_config->{'tracker'}{'songs'} } ) );
+        foreach my $song ( @{ $game_config->{'tracker'}{'songs'} } ) {
+            my $symbol_name = "tracker_song_" . $song->{'name'};
+            push @c_banked_data_128_lines, sprintf( "\t&%s[0],\n", $symbol_name );
+        }
+        push @c_banked_data_128_lines, "};\n";
+
+        # output sound effects table and constants
+        if ( defined( $game_config->{'tracker'}{'fxtable'} ) ) {
+            # generate song ASM file and put it in place for compilation
+            # the extern declaration for this is already in tracker.h
+            my $asm_file = arkos2_convert_effects_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+
+            my $effects_count = arkos2_count_sound_effects( $asm_file );
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_NUM_EFFECTS %d\n", $effects_count );
+
+            move( $asm_file, $dest_asm_file ) or
+                die "Could not rename $asm_file to $dest_asm_file\n";
+        }
+        if ( defined( $game_config->{'tracker'}{'fx_channel'} ) ) {
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_CHANNEL %d\n",
+                $game_config->{'tracker'}{'fx_channel'} );
+        }
+        if ( defined( $game_config->{'tracker'}{'fx_volume'} ) ) {
+            push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_VOLUME %d\n",
+                $game_config->{'tracker'}{'fx_volume'} );
+        }
+
+    }
+}
+
+# generates the game_events_rule_table
+sub generate_game_events_rule_table {
+    # rule checks and actions have been already generated in the home dataset
+    # together with the other datasets. We just output the rule pointers here,
+    # as it is already done when generating the rules for each screen
+
+    my $rule_global_to_dataset_index = $dataset_dependency{ 'home' }{'rule_global_to_dataset_index'};
+
+    # flow rules
+    push @{ $c_dataset_lines->{ 'home' } }, sprintf( "// Game Events rule table\n" );
+    my $num_rules = scalar( @game_events_rule_table );
+    if ( $num_rules ) {
+        push @{ $c_dataset_lines->{ 'home' } }, sprintf( "struct flow_rule_s *game_events_rule_table_rules[ %d ] = {\n\t",
+            $num_rules );
+        push @{ $c_dataset_lines->{ 'home' } }, join( ",\n\t",
+            map {
+                sprintf( "&all_flow_rules[ %d ]", $rule_global_to_dataset_index->{ $_ } )
+            } @game_events_rule_table
+        );
+        push @{ $c_dataset_lines->{ 'home' } }, "\n};\n";
+        push @{ $c_dataset_lines->{ 'home' } },
+            "struct flow_rule_table_s game_events_rule_table = {\n",
+            "\t.num_rules = $num_rules,\n",
+            "\t.rules = &game_events_rule_table_rules[0]\n",
+            "};\n\n";
+
+    } else {
+        push @{ $c_dataset_lines->{ 'home' } }, sprintf( "// Game Events rule table has no rules defined\n" );
+        push @{ $c_dataset_lines->{ 'home' } },
+            "struct flow_rule_table_s game_events_rule_table = { 0, NULL };\n\n";
+    }
+}
+
 # this function is called from main
 sub generate_game_data {
 
     # generate header lines for all output files
     generate_c_home_header;
+    generate_c_banked_data_128_header;
     generate_h_header;
 
     # generate data - each function is free to add lines to the .c or .h
@@ -2803,10 +3407,15 @@ sub generate_game_data {
     generate_hero;
     generate_bullets;
     generate_items;
+    generate_crumb_types;
     generate_global_screen_data;
     generate_game_areas;
     generate_game_config;
     generate_misc_data;
+    generate_game_events_rule_table;
+
+    # tracker items
+    generate_tracker_data;
 
     # codeset items
     generate_codesets;
@@ -2824,8 +3433,7 @@ sub generate_game_data {
     generate_custom_function_tables;
 
     # generate conditional build features
-    add_default_build_features();
-    generate_conditional_build_features();
+    generate_conditional_build_features;
 
     # generate ending lines if needed
     generate_h_ending;
@@ -2918,6 +3526,15 @@ sub output_game_data {
         }
     }
 
+    # output generated banked data for 128 mode
+    if ( $game_config->{'zx_target'} eq '128' ) {
+        open( $output_fh, ">", $c_file_banked_data_128 ) or
+            die "Could not open $c_file_banked_data_128 for writing\n";
+        print $output_fh join( "", @c_banked_data_128_lines );
+        close $output_fh;
+    }
+    
+
     # output game_data.h file
     open( $output_fh, ">", $h_file_game_data ) or
         die "Could not open $h_file_game_data for writing\n";
@@ -3000,9 +3617,20 @@ sub create_dataset_dependencies {
             $btile_name_to_index{ $item->{'btile'} };
     }
 
+    # crumb btiles are always added to the home dataset, since the crumb type table
+    # is global
+    foreach my $crumb_type ( @all_crumb_types ) {
+        push @{ $dataset_dependency{'home'}{'btiles'} },
+            $btile_name_to_index{ $crumb_type->{'btile'} };
+    }
+
     # the same for the Lives btile
     push @{ $dataset_dependency{'home'}{'btiles'} },
         $btile_name_to_index{ $hero->{'lives'}{'btile'} };
+
+    # add rules in the game events rule table to the home dataset
+    push @{ $dataset_dependency{ 'home' }{'rules'} },
+        @game_events_rule_table;
 
     # we must then remove duplicates from the lists
     # we take the oportunity to precalculate some tables
@@ -3052,6 +3680,26 @@ sub create_dataset_dependencies {
     }
 }
 
+# fixes dependencies between build features.  put here all exceptions and
+# mangling needed for build features that need/exclude others, etc.
+sub fix_feature_dependencies {
+
+    # currently, the CRUMBS feature needs to have byte-size tile types, so
+    # if CRUMBS are used, disable the default packed tile map
+    if ( defined( $conditional_build_features{ 'CRUMBS' } ) and
+        defined( $conditional_build_features{ 'BTILE_2BIT_TYPE_MAP' }) ) {
+        delete $conditional_build_features{ 'BTILE_2BIT_TYPE_MAP' };
+    }
+
+    # if ZX_TARGET is 48, CODESETs make no sense
+    if ( defined( $conditional_build_features{ 'ZX_TARGET_48' } ) and
+        defined( $conditional_build_features{ 'CODESETS' }) ) {
+        delete $conditional_build_features{ 'CODESETS' };
+    }
+
+    # additional fixes here...
+}
+
 # creates a dump of internal data so that other tools (e.g.  FLOWGEN) can
 # load it and use the parsed data. Use "-c" option to dump the internal data
 sub dump_internal_data {
@@ -3067,6 +3715,8 @@ sub dump_internal_data {
         sprite_name_to_index		=> \%sprite_name_to_index,
         all_items			=> \@all_items,
         item_name_to_index		=> \%item_name_to_index,
+        all_crumb_types			=> \@all_crumb_types,
+        crumb_type_name_to_index	=> \%crumb_type_name_to_index,
         all_rules			=> \@all_rules,
         hero				=> $hero,
         game_config			=> $game_config,
@@ -3076,6 +3726,8 @@ sub dump_internal_data {
         codeset_functions_by_codeset	=> \%codeset_functions_by_codeset,
         check_custom_functions		=> \@check_custom_functions,
         action_custom_functions		=> \@action_custom_functions,
+        conditional_build_features	=> \%conditional_build_features,
+        game_events_rule_table		=> \@game_events_rule_table,
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
@@ -3086,13 +3738,17 @@ sub dump_internal_data {
 ## Main loop
 #########################
 
+# get tool configuration
+my $cfg = rage1_get_config();
+
 our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
 getopts("b:d:ct:s:");
 if ( defined( $opt_d ) ) {
-    $c_file_game_data = "$opt_d/$c_file_game_data";
-    $asm_file_game_data = "$opt_d/$asm_file_game_data";
-    $h_file_game_data = "$opt_d/$h_file_game_data";
-    $h_file_build_features = "$opt_d/$h_file_build_features";
+    $c_file_game_data		= "$opt_d/$c_file_game_data";
+    $asm_file_game_data		= "$opt_d/$asm_file_game_data";
+    $h_file_game_data		= "$opt_d/$h_file_game_data";
+    $h_file_build_features	= "$opt_d/$h_file_build_features";
+    $c_file_banked_data_128	=  "$opt_d/$c_file_banked_data_128";
     $dump_file = "$opt_d/$dump_file";
     $output_dest_dir = $opt_d;
 }
@@ -3100,14 +3756,20 @@ $build_dir = $opt_b || 'build';
 $game_src_dir = $opt_s || 'build/game_src';
 $forced_build_target = $opt_t || 0;
 
+# add default build features - these will be updated/modified later
+add_default_build_features;
+
 # read, validate and compile input
 read_input_data;
 
 # run consistency checks
 run_consistency_checks;
 
-# generate output
+# process data dependencies
 create_dataset_dependencies;
+fix_feature_dependencies;
+
+# generate output
 generate_game_data;
 output_game_data;
 

@@ -20,6 +20,9 @@ struct time_s {
 };
 extern struct time_s current_time;
 
+extern uint8_t periodic_tasks_enabled;
+
 void init_interrupts(void);
+void interrupt_enable_periodic_isr_tasks( void );
 
 #endif // _INTERRUPTS_H

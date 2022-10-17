@@ -27,6 +27,11 @@
 
 #ifdef BUILD_FEATURE_INVENTORY
 
+// a guard, just in case...
+#ifndef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+  #error BUILD_FEATURE_HERO_CHECK_TILES_BELOW must be defined!
+#endif
+
 void inventory_reset_all(void) {
     uint8_t i;
 

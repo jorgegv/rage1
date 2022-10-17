@@ -17,10 +17,6 @@
 
 #include "rage1/banked.h"
 
-<<<<<<< Updated upstream
-
-#ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
-=======
 // when using a packed tile type map, we pack more tiles per byte
 // if not, we use 1 byte per tile
 #ifdef BUILD_FEATURE_BTILE_2BIT_TYPE_MAP
@@ -29,7 +25,6 @@
     #define TILE_TYPE_TYPE_BITMASK	0x03
     #define TILE_TYPE_POSITION_BITMASK	0x03
 #endif
->>>>>>> Stashed changes
 
 #ifdef BUILD_FEATURE_BTILE_4BIT_TYPE_MAP
     #define TILE_TYPE_TILE_BITS		4
@@ -38,7 +33,7 @@
     #define TILE_TYPE_POSITION_BITMASK	0x01
 #endif
 
-#if defined(BUILD_FEATURE_BTILE_2BIT_TYPE_MAP) || defined(BUILD_FEATURE_BTILE_4BIT_TYPE_MAP)
+#if ( defined( BUILD_FEATURE_BTILE_2BIT_TYPE_MAP ) || defined( BUILD_FEATURE_BTILE_4BIT_TYPE_MAP ) )
 // Accelerated functions for getting/setting tile types
 uint8_t btile_get_tile_type( uint8_t row, uint8_t col ) {
     uint8_t pos = ( row * 32 + col ) / TILE_TYPE_TILES_PER_BYTE;

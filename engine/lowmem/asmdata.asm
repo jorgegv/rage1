@@ -33,6 +33,14 @@ min:		db	0
 sec:		db	0
 frame:		db	0
 
+;; extern uint8_t periodic_tasks_enabled
+
+public		_periodic_tasks_enabled
+
+_periodic_tasks_enabled:
+
+		db	0
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Global structs that hold the current banked and home asset tables.  They

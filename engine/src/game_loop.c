@@ -18,7 +18,7 @@
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"
 #include "rage1/screen.h"
-#include "rage1/sound.h"
+#include "rage1/beeper.h"
 #include "rage1/controller.h"
 #include "rage1/sp1engine.h"
 #include "rage1/sprite.h"
@@ -33,6 +33,7 @@
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
 #include "rage1/memory.h"
+#include "rage1/timer.h"
 
 #include "game_data.h"
 
@@ -44,7 +45,7 @@ void check_game_pause(void) {
    }
 }
 
-void check_game_flags( void ) {
+void check_loop_flags( void ) {
 
     // update screen data if the player has entered new screen
     // also done whe game has just started
@@ -60,23 +61,6 @@ void check_game_flags( void ) {
        RESET_GAME_FLAG( F_GAME_START );
     }
 
-    // check if player has died
-    if ( GET_LOOP_FLAG( F_LOOP_HERO_HIT ) ) {
-       sound_request_fx( SOUND_HERO_DIED );
-       if ( ! --game_state.hero.num_lives )
-          SET_GAME_FLAG( F_GAME_OVER );
-       else {
-          enemy_reset_position_all(
-             game_state.current_screen_ptr->enemy_data.num_enemies, 
-             game_state.current_screen_ptr->enemy_data.enemies
-          );
-          hero_reset_position();
-          bullet_reset_all();
-          hero_update_lives_display();
-          SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
-       }
-    }
-
     // check if hero needs to be redrawn
     if ( GET_LOOP_FLAG( F_LOOP_REDRAW_HERO ) ) {
         hero_draw();
@@ -84,10 +68,18 @@ void check_game_flags( void ) {
     }
 
     // check if sound fx needs to be played
-    if ( GET_LOOP_FLAG( F_LOOP_PLAY_SOUNDFX ) ) {
-        sound_play_pending_fx();
+    if ( GET_LOOP_FLAG( F_LOOP_PLAY_BEEPER_FX ) ) {
+        beeper_play_pending_fx();
         // all loop flags are reset at the beginning of the game loop
     }
+
+#ifdef BUILD_FEATURE_TRACKER
+    // check if tracker sound fx needs to be played
+    if ( GET_LOOP_FLAG( F_LOOP_PLAY_TRACKER_FX ) ) {
+        tracker_play_pending_fx();
+        // all loop flags are reset at the beginning of the game loop
+    }
+#endif
 }
 
 void move_enemies(void) {
@@ -122,12 +114,17 @@ void do_hero_actions(void) {
 
     hero_animate_and_move();
 
-#ifdef BUILD_FEATURE_INVENTORY
-    hero_pickup_items();
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+    hero_check_tiles_below();
 #endif
 
     if ( game_state.controller.state & IN_STICK_FIRE )
         hero_shoot_bullet();
+
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+    if ( game_state.hero.health.immunity_timer )
+        hero_do_immunity_expiration();
+#endif
 }
 
 void check_collisions(void) {
@@ -145,6 +142,12 @@ void show_heartbeat(void) {
     }
 }
 
+// this one is not needed, this task is run from the ISR
+// void run_tracker_tasks( void ) {
+//    RUN_ONLY_ONCE_PER_FRAME;
+//    tracker_do_periodic_tasks();
+//}
+
 void run_main_game_loop(void) {
 
    // seed PRNG. It is important that this is done here, after the menu has been run
@@ -156,9 +159,20 @@ void run_main_game_loop(void) {
    // reset game vars and setup initial state
    game_state_reset_initial();
    hero_update_lives_display();
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+   HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
 
 #ifdef BUILD_FEATURE_INVENTORY
    inventory_show();
+#endif
+
+#ifdef BUILD_FEATURE_TRACKER
+   // start music
+   // music is playing via interrupts
+   tracker_select_song( TRACKER_IN_GAME_SONG );
+   tracker_rewind();
+   tracker_start();
 #endif
 
    // run user game initialization, if any
@@ -167,11 +181,17 @@ void run_main_game_loop(void) {
    // run main game loop
    while ( ! ( GET_GAME_FLAG( F_GAME_OVER ) || GET_GAME_FLAG( F_GAME_END ) ) ) {
 
+#ifdef BUILD_FEATURE_GAME_TIME
+      // update timers
+      timer_update_all_timers();
+#endif
+
       // check if game has been paused (press 'y')
       check_game_pause();
 
-      // reset all loop flags for a clear iteration
+      // reset all loop flags and game events for a clear iteration
       RESET_ALL_LOOP_FLAGS();
+      RESET_ALL_GAME_EVENTS();
 
       // check flow rules before the regular ones. We trust the user :-)
 
@@ -200,21 +220,31 @@ void run_main_game_loop(void) {
       // changes game_state
       check_collisions();
 
-      // check game flags and react to conditions
-      // changes game_state
-      check_game_flags();
+      // run game events rule table
+      check_game_event_rules();
 
       // run user game loop function, if any
       run_game_function_user_game_loop();
+
+
+      // Loop flags are used as a way to defer code execution until the end
+      // of the game loop.  Loop flags may be changed by enemy code, sprite
+      // code, etc.  but crucially, by flow rule code (both in flow rules
+      // and in event rules).  So this function should be called at the very
+      // end of the game loop.
+
+      // check loop flags and react to conditions.
+      // changes game state
+      check_loop_flags();
 
       // update screen
       sp1_UpdateNow();
 
       // do not add an intrinsic_halt() here - It will waste cycles.
-      // if some of these previous functions do not need to be executed continuously
-      // but e.g. just once every frame, please check the frame counter at
-      // current_time.frame and ignore the call if needed. See how it has been
-      // done in move_sprites()
+      // if some of these previous functions do not need to be executed
+      // continuously but e.g.  just once every frame, please use the
+      // RUN_ONLY_ONCE_PER_FRAME macro at the very beginning of the
+      // function.  See how it has been done e.g.  in move_sprites()
 
       // test light just to be sure we did not hang
 //      show_heartbeat();
@@ -224,6 +254,11 @@ void run_main_game_loop(void) {
    // we reach here if game over or game finished successfully
 
    // cleanup
+
+#ifdef BUILD_FEATURE_TRACKER
+   // stop music
+   tracker_stop();
+#endif
 
    // free sprites in the current screen
    map_exit_screen( game_state.current_screen_ptr );

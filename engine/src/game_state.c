@@ -16,6 +16,7 @@
 #include "rage1/inventory.h"
 #include "rage1/controller.h"
 #include "rage1/dataset.h"
+#include "rage1/timer.h"
 
 #include "game_data.h"
 
@@ -69,10 +70,18 @@ void game_state_reset_initial(void) {
    inventory_reset_all();
 #endif
 
+#ifdef BUILD_FEATURE_CRUMBS
+   crumb_reset_all();
+#endif
+
    game_state_assets_reset_all();
 
 #ifdef BUILD_FEATURE_FLOW_VARS
    game_state_flow_vars_reset_all();
+#endif
+
+#ifdef BUILD_FEATURE_GAME_TIME
+   timer_reset_all_timers();
 #endif
 
    // Enemies tally

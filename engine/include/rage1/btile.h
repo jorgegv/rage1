@@ -38,24 +38,25 @@ struct btile_pos_s {
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box );
 void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
 
-// big tile types
+// tile types
 
 // decoration: sprites pass through it
 #define TT_DECORATION	0x00
 // obstacle: sprites do not pass through
 #define TT_OBSTACLE	0x01
-// item: it can be grabbed by the hero
+// item: it can be grabbed by the hero, only one instance
 #define TT_ITEM		0x02
+// reserved: (for killing btiles)
+#define TT_RESERVED	0x03
+// crumb: it can be grabbed by the hero, multiple instances
+// crumb type in lower 4 bits
+#define TT_CRUMB	0x10
 
 // array which contains the btile type on each position of the screen
 // also, macro for getting the btile type at a given screen position
 extern uint8_t screen_pos_tile_type_data[];
 
-<<<<<<< Updated upstream
-#ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
-=======
-#if defined(BUILD_FEATURE_BTILE_2BIT_TYPE_MAP) || defined(BUILD_FEATURE_BTILE_4BIT_TYPE_MAP)
->>>>>>> Stashed changes
+#if ( defined( BUILD_FEATURE_BTILE_2BIT_TYPE_MAP ) || defined( BUILD_FEATURE_BTILE_4BIT_TYPE_MAP ) )
     #define GET_TILE_TYPE_AT(srow,scol)		( btile_get_tile_type( (srow), (scol) ) )
     #define SET_TILE_TYPE_AT(srow,scol,sval)	( btile_set_tile_type( (srow), (scol), (sval) ) )
 #else

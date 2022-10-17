@@ -24,11 +24,12 @@
 #include "rage1/debug.h"
 #include "rage1/interrupts.h"
 #include "rage1/bullet.h"
-#include "rage1/sound.h"
 #include "rage1/hotzone.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
+#include "rage1/crumb.h"
+#include "rage1/enemy.h"
 
 #include "game_data.h"
 
@@ -37,9 +38,17 @@
 /////////////////////////////
 
 struct hero_info_s hero_startup_data = {
-    NULL,		// sprite ptr - will be initialized at program startup
+    NULL,	// sprite ptr - will be initialized at program startup
     HERO_SPRITE_ID,
-    {
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+    {	// damage mode
+        HERO_NUM_LIVES,
+        HERO_HEALTH_MAX,
+        HERO_ENEMY_DAMAGE,
+        HERO_IMMUNITY_PERIOD,
+    },
+#endif
+    {	// animation
         HERO_SPRITE_SEQUENCE_UP,
         HERO_SPRITE_SEQUENCE_DOWN,
         HERO_SPRITE_SEQUENCE_LEFT,
@@ -50,12 +59,19 @@ struct hero_info_s hero_startup_data = {
         HERO_SPRITE_STEADY_FRAME_DOWN,
         HERO_SPRITE_STEADY_FRAME_LEFT,
         HERO_SPRITE_STEADY_FRAME_RIGHT,
-    },	// animation
+    },
     { 0,0,0,0 },	// position - will be reset when entering a screen, including the first one
-    { MOVE_NONE, HERO_MOVE_HSTEP, HERO_MOVE_VSTEP },	// movement
+    {	// movement
+        MOVE_NONE,
+        HERO_MOVE_HSTEP,
+        HERO_MOVE_VSTEP,
+    },
+    {	// health
+        HERO_NUM_LIVES,
+        HERO_HEALTH_MAX,
+        0, // immunity timer
+    },
     0,				// flags
-    HERO_NUM_LIVES,		// lives
-    HERO_LIVES_BTILE_NUM	// btile
 };
 
 void init_hero(void) {
@@ -146,11 +162,20 @@ void hero_shoot_bullet( void ) {
     game_state.bullet.reloading = game_state.bullet.reload_delay;
 }
 
-#ifdef BUILD_FEATURE_INVENTORY
-void hero_pickup_items(void) {
+#ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
+void hero_check_tiles_below(void) {
     struct sp1_ss *s;
-    uint8_t i,j,cols,r,c,item;
+    uint8_t i,j,cols,r,c,tile_type;
+
+#ifdef BUILD_FEATURE_INVENTORY
+    uint8_t item;
     struct item_location_s *item_loc;
+#endif
+
+#ifdef BUILD_FEATURE_CRUMBS
+    uint8_t crumb_type;
+    struct crumb_location_s *crumb_loc;
+#endif
 
     s = game_state.hero.sprite;
 
@@ -163,25 +188,56 @@ void hero_pickup_items(void) {
         j = cols;
         while ( j-- ) {
             c = s->col + j;
-            if ( GET_TILE_TYPE_AT( r, c ) == TT_ITEM ) {
+            tile_type = GET_TILE_TYPE_AT( r, c );
+
+#ifdef BUILD_FEATURE_INVENTORY
+            if ( tile_type == TT_ITEM ) {
+
+                // get item location and number
                 item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
 
                 // add item to inventory
                 inventory_add_item( &game_state.inventory, item );
+
                 // mark the item as inactive
                 RESET_ITEM_FLAG( all_items[ item ], F_ITEM_ACTIVE );
-                // remove item from screen
+
+                // remove item from screen - items always have their btiles in home dataset
                 btile_remove( item_loc->row, item_loc->col, &home_assets->all_btiles[ all_items[ item ].btile_num ] );
+
                 // update inventory on screen (show)
                 inventory_show();
-                // play pickup sound
-                sound_request_fx( SOUND_ITEM_GRABBED );
+
+                // set event
+                SET_GAME_EVENT( E_ITEM_WAS_GRABBED );
             }
+#endif // BUILD_FEATURE_INVENTORY
+
+#ifdef BUILD_FEATURE_CRUMBS
+            if ( ( tile_type & TT_CRUMB ) == TT_CRUMB ) {
+
+                // get crumb location and type (low nibble)
+                crumb_loc = map_get_crumb_location_at_position( game_state.current_screen_ptr, r, c );
+                crumb_type = tile_type & 0x0F;
+
+                // do action for the grabbed crumb
+                crumb_was_grabbed( crumb_type );
+
+                // mark the crumb as inactive
+                RESET_CRUMB_FLAG( game_state.current_screen_asset_state_table_ptr[ crumb_loc->state_index ].asset_state, F_CRUMB_ACTIVE );
+
+                // remove crumb from screen - crumb types always have their btiles in home dataset
+                btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumb_types[ crumb_type ].btile_num ] );
+
+                // set event
+                SET_GAME_EVENT( E_CRUMB_WAS_GRABBED );
+            }
+#endif // BUILD_FEATURE_CRUMBS
         }
     }
 }
-#endif // BUILD_FEATURE_INVENTORY
+#endif // BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 
 // printing context
 struct sp1_pss lives_display_ctx = {
@@ -201,7 +257,7 @@ void hero_update_lives_display(void) {
 
     // draw one tile per live
     col = LIVES_AREA_LEFT;
-    n = game_state.hero.num_lives;
+    n = game_state.hero.health.num_lives;
     while ( n-- ) {
         btile_draw( LIVES_AREA_TOP, col, &home_assets->all_btiles[ HERO_LIVES_BTILE_NUM ], TT_DECORATION, &lives_area );
         col += home_assets->all_btiles[ HERO_LIVES_BTILE_NUM ].num_cols;
@@ -219,3 +275,69 @@ void hero_init_sprites(void) {
         HERO_SPRITE_WIDTH >> 3
     );
 }
+
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+void hero_handle_hit ( void ) {
+    // do the damage calculation in signed 16 bits, so that we can check if
+    // health < 0
+    int16_t health_amount = game_state.hero.health.health_amount;
+
+    health_amount -= game_state.hero.damage_mode.enemy_damage;
+    if ( health_amount <= 0 ) {
+        SET_GAME_EVENT( E_HERO_DIED );
+        if ( ! --game_state.hero.health.num_lives )
+            SET_GAME_FLAG( F_GAME_OVER );
+        else {
+            // reset hero health counter
+            game_state.hero.health.health_amount = game_state.hero.damage_mode.health_max;
+            enemy_reset_position_all(
+                game_state.current_screen_ptr->enemy_data.num_enemies,
+                game_state.current_screen_ptr->enemy_data.enemies
+            );
+            hero_reset_position();
+            bullet_reset_all();
+            hero_update_lives_display();
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+            HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
+            SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+        }
+    } else {
+        SET_GAME_EVENT( E_HERO_WAS_HIT );
+        game_state.hero.health.health_amount -= game_state.hero.damage_mode.enemy_damage;
+        if ( game_state.hero.damage_mode.immunity_period ) {
+            SET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+            game_state.hero.health.immunity_timer = game_state.hero.damage_mode.immunity_period;
+        }
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
+        HERO_HEALTH_DISPLAY_FUNCTION();
+#endif
+    }
+}
+
+void hero_do_immunity_expiration( void ) {
+    // if immunity timer has expired, reset IMMUNE flag
+    if ( ! --game_state.hero.health.immunity_timer )
+        RESET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+}
+
+#else
+
+// simple hit handling with default damage mode
+void hero_handle_hit ( void ) {
+    SET_GAME_EVENT( E_HERO_DIED );
+    if ( ! --game_state.hero.health.num_lives )
+        SET_GAME_FLAG( F_GAME_OVER );
+    else {
+        enemy_reset_position_all(
+            game_state.current_screen_ptr->enemy_data.num_enemies,
+            game_state.current_screen_ptr->enemy_data.enemies
+        );
+        hero_reset_position();
+        bullet_reset_all();
+        hero_update_lives_display();
+        SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
+    }
+}
+
+#endif	// BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE

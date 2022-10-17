@@ -10,6 +10,8 @@
 
 #include <input.h>
 
+#include "features.h"
+
 #include "rage1/memory.h"
 #include "rage1/sp1engine.h"
 #include "rage1/interrupts.h"
@@ -22,6 +24,7 @@
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
 #include "rage1/charset.h"
+#include "rage1/timer.h"
 
 #include "game_data.h"
 
@@ -36,9 +39,26 @@ void init_program(void) {
    init_controllers();
    init_hero();
    init_bullets();
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+   // this one is only needed when compiling for 128
+   // for 48 mode the beepr gets initialized by regular BSS init code
+   init_beeper();
+#endif
 #ifdef	BUILD_FEATURE_CUSTOM_CHARSET
    init_custom_charset();
 #endif	// BUILD_FEATURE_CUSTOM_CHARSET
+#ifdef BUILD_FEATURE_GAME_TIME
+   init_timer();
+#endif
+#ifdef BUILD_FEATURE_TRACKER
+   init_tracker();
+#endif
+#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+   init_tracker_sound_effects();
+#endif
+
+   // this must be called the last
+   interrupt_enable_periodic_isr_tasks();
 }
 
 void main(void)

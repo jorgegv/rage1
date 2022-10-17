@@ -260,6 +260,9 @@ BEGIN_SCREEN
 
 	ITEM		NAME=Heart	ROW=3 COL=6 ITEM_ID=0
 
+	CRUMB		NAME=Crumb01	TYPE=RedPill ROW=5 COL=6
+	CRUMB		NAME=Crumb02	TYPE=RedPill ROW=10 COL=10
+
 	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=22 PROBABILITY=140
 
 	DEFINE		GRAPH=II	TYPE=OBSTACLE   BTILE=Ice01
@@ -312,6 +315,10 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `NAME`: the name of the item
   * `BTILE`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
+* `CRUMB`: positions a crumb on the screen. Arguments:
+  * `NAME`: the name of the crumb
+  * `TYPE`: the crumb type, must have been defined in `GAME_CONFIG` section
+  * `ROW`,`COL`: top left position of the crumb, in char cell coordinates
 * `ENEMY`: defines an enemy on the screen. Arguments:
   * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
     sprite name
@@ -401,7 +408,8 @@ BEGIN_HERO
         HSTEP           1
         VSTEP           1
         LIVES           NUM_LIVES=3 BTILE=Live
-        BULLET          SPRITE=Bullet01 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
+	DAMAGE_MODE	ENEMY_DAMAGE=1 HEALTH_MAX=2 IMMUNITY_PERIOD=100 HEALTH_DISPLAY_FUNCTION=my_hero_display_health
+        BULLET          SPRITE=Bullet01 SPRITE_FRAME_UP=0 SPRITE_FRAME_DOWN=1 SPRITE_FRAME_LEFT=2 SPRITE_FRAME_RIGHT=3 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
 END_HERO
 ```
 
@@ -419,9 +427,21 @@ END_HERO
   frames)
 * `HSTEP`, `VSTEP`: movement increments for the hero
 * `LIVES`: number of lives
+* `DAMAGE_MODE`: defines advanced configuration for the hero lives system.
+  This setting is optional; if it is not specified, the simple schema of N
+  lives and "enemy touch kills one life" is implemented.  Arguments:
+  * `HEALTH_MAX`: (optional) health counter for each life, defaults to 1
+  * `ENEMY_DAMAGE`: (optional) damage inflicted to hero health by 1 enemy
+  impact, defaults to 1
+  * `IMMUNITY_PERIOD`: (optional) period after an enemy impact during which
+  the hero is immune to enemies (in frames - 1/50 s).  Defaults to 0.
+  * `HEALTH_DISPLAY_FUNCTION`: (optional) the function to call when the
+  health display neeeds to be updated (e.g. when a hit has been received).
+  You must provide this function in some file in the `game_src` directory.
+  The function must match the prototype `void my_function( void )`.
 * `BULLET`: configures firing. Arguments;
   * `SPRITE`: sprite to use for the bullet. Must match a graphic sprite
-    definition
+    definition. Currently it _has_ to be a 1x1 cell sprite.
   * `DX`,`DY`: horizontal and vertical increments for moving bullets, in
     pixels
   * `DELAY`: delay between bullet positions (defines the speed of the
@@ -429,6 +449,12 @@ END_HERO
   * `MAX_BULLETS`: maximum number of bullets than can be active at the same
     time
   * `RELOAD_DELAY`: minimum deay between shots, in 1/50s
+  * `SPRITE_FRAME_UP`, `SPRITE_FRAME_DOWN`, `SPRITE_FRAME_LEFT`,
+  `SPRITE_FRAME_RIGHT`: (optional) sprite frames to use when shooting in
+  each direction.  If any of them is not specified, default is 0.  This
+  means that if you don't need to have different bullet graphics for
+  different directions, just don't specify these and the bullets will all
+  use frame 0 of the given sprite
 
 ### GAME_CONFIG data
 
@@ -459,6 +485,11 @@ BEGIN_GAME_CONFIG
         DEBUG_AREA      TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
 	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 	BINARY_DATA     FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
+	CRUMB_TYPE	NAME=RedPill BTILE=RedPill ACTION_FUNCTION=redpill_grabbed FILE=crumb_functions.c CODESET=1
+        TRACKER         TYPE=arkos2 IN_GAME_SONG=in_game_song FX_CHANNEL=0 FX_VOLUME=10
+        TRACKER_SONG    NAME=menu_song FILE=game_data/music/music1.aks
+        TRACKER_SONG    NAME=in_game_song FILE=game_data/music/music2.aks
+	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
 END_GAME_CONFIG
 ```
 
@@ -551,6 +582,48 @@ including different data pieces.  Arguments:
   * `COMPRESS`: optional, if set to 1 the data will be stored compressed in
     the generated variable, ready to decompress with one of the ZX0
     decompression functions.
+
+* `CRUMB_TYPE`: defines a new CRUMB type which may later be used in `SCREEN`
+  definitions.  Arguments:
+  * `NAME`: mandatory, specifies the name of the crumb type
+  * `BTILE`: mandatory, specifies the BTILE that will be used to draw crumbs
+    of this type
+  * `ACTION_FUNCTION`: (optional) specifies an additional function that will
+    be called every time a crumb of this type is grabbed by the hero.  The
+    function receives as a parameter a pointer to the `struct
+    crumb_location_s` data structure that the hero walked over.
+  * `FILE`: (optional) the file name where the function is.  If not
+    specified, the name of the file will be assumed the same as the function
+    name, plus a `.c` extension
+  * `CODESET`: (optional) the codeset where the function must reside.  If
+    not specified, or we are compiling for 48K model, it will go into lowmem
+    area
+
+* `TRACKER`: enables a music tracker in your game. Currently Arkos Tracker 2
+  is the supported player, but other trackers can be easily integrated (open
+  an issue if you need another one!). Arguments:
+  * `TYPE`: (optional) currently only `arkos2` value is supported, and
+    specified by default
+  * `IN_GAME_SONG`: (optional) the song that will be played during the game.
+    The supplied name must be that of a song defined with a `TRACKER_SONG`
+    directive (see below).
+  * `FX_CHANNEL`: (optional) channel to be used for sound effects. Only 0,1
+    or 2 can be specified
+  * `FX_VOLUME`: (optional) volume to use for sound effects. Range is 0-16
+    (low to high), and default value is 16
+
+* `TRACKER_SONG`: specifies a tracker song to be used for the game.  More
+  than one song may be included.  Arkos files (`.aks`) can be used directly,
+  provided that you configure your Arkos Tracker 2 directory so that RAGE1
+  can use the proper conversion tools.  Arguments:
+  * `NAME`: the name of the song. It must be a valid C identifier (in short:
+  letters, numbers and `_`)
+  * `FILE`: the path of the song file
+
+* `TRACKER_FXTABLE`: specifies a tracker sound effects table to be used for
+  the game, in Arkos 2 format (`.aks`). Again, make sure you configure
+  correctly your Arkos Tracker 2 directory. Arguments:
+  * `FILE`: the path of the sound FX file
 
 # FLOWGEN
 
@@ -647,6 +720,9 @@ check is successful. Options:
   - [x] FLOW_VAR_EQUAL VAR_ID=<id> VALUE=<value>
   - [x] FLOW_VAR_MORE_THAN VAR_ID=<id> VALUE=<value>
   - [x] FLOW_VAR_LESS_THAN VAR_ID=<id> VALUE=<value>
+  - [x] GAME_TIME_EQUAL <value> - value: seconds since game start
+  - [x] GAME_TIME_MORE_THAN <value> - value: seconds since game start
+  - [x] GAME_TIME_LESS_THAN <value> - value: seconds since game start
 
 * ACTION_TO_EXECUTE:
   - [x] SET_USER_FLAG <flag>
@@ -669,6 +745,16 @@ check is successful. Options:
   - [x] FLOW_VAR_ADD VAR_ID=<id> VALUE=<value>
   - [x] FLOW_VAR_DEC VAR_ID=<id>
   - [x] FLOW_VAR_SUB VAR_ID=<id> VALUE=<value>
+  - [x] TRACKER_SELECT_SONG <song_name>
+  - [x] TRACKER_MUSIC_STOP
+  - [x] TRACKER_MUSIC_START
+  - [x] TRACKER_PLAY_FX  <fxid> - The number of the effect in your FX sound track (starts at 1!)
+
+A rule may have no CHECK directives, in which case its DO actions will
+always be run at proper moment specified in the WHEN directive. This can be
+used for e.g. running a custom function on each game loop iteration, or
+doing something specific on entering/exiting a screen (e.g. setting an
+ULAplus palette, or selecting a specific music track)
 
 ## FLOWGEN Gdata file syntax
 
@@ -691,12 +777,16 @@ Syntax:
 
 * `BEGIN_RULE` and `END_RULE`: start and end of a rule definition
 
-* `SCREEN`: mandatory. Specifies what screen this rule must be run on
+* `SCREEN`: mandatory. Specifies what screen this rule must be run on. If
+  the rule is assigned to the special screen `__EVENTS__` then it is
+  assigned to the global game events rule table
 
-* `WHEN`: mandatory.  Specifies when this rule must be run.  See previous
-  section for valid values.  For `GAME_LOOP`: the rule will be checked on
-  every iteration of the game loop.  Be careful with rules in this table,
-  they may heavily affect performance of the game
+* `WHEN`: mandatory, except if screen is `__EVENTS__`.  Specifies when this
+  rule must be run.  See previous section for valid values.  For
+  `GAME_LOOP`: the rule will be checked on every iteration of the game loop,
+  so be careful with rules in this table, they may heavily affect game
+  performance.  When the rule is assigned to the `__EVENTS__` special name,
+  the `WHEN` clause is ignored if present
 
 * `CHECK`: specifies a condition to be checked.  See previous section for
   valid values.  There must be at least one `CHECK` and there may be more
