@@ -186,3 +186,78 @@ storage efficiency:
 The memory layout is completely equivalent to the original one regarding
 cell storage and pointers, and has no performance impact, it only increases
 storage efficiency.
+
+## Update and new algorithm: Jigsaw
+
+The actions mentioned in the previous sections have already been integrated
+into RAGE1.  But now, a new algorithm called JIGSAW has been designed, which
+is described below.
+
+The algorithm is called JIGSAW because it follows a strategy similar to the
+one I use for solving jigsaw puzzles:
+
+- I start to try matching a couple of pieces, then try to connect one more,
+  and one more...
+
+- When I cannot find new ones to connect, I start over with a new couple of
+  pieces, connect some more one by one...
+
+- At a point I have several "big" pieces which can be connected between
+  them, until after a few iterations (or hundreds of iterations :-) I have
+  my puzzle finished.
+
+- As you can see the previous method is recursively described, since the big
+  pieces (formed by individual pieces) can be treated again as pieces for
+  matching, and so on until the whole puzzle is matched.
+
+A similar algorithm can be followed for our problem:
+
+- The minimal pieces are the 8-byte sequences that compose our cell tiles
+
+- The "matching" rules for them are overlapping byte sequences to the left
+  or to the right of the sequence, with other sequences.
+
+- The matching has a twist, since there may be overlaps of distinct length
+  for a given sequence, so the "best" ,atch is defined to be the longest
+  match
+
+- The "big pieces" of our "puzzle" are the overlapping 8-byte sequences,
+  which are then compressed (when "matched") to the minimum possible length
+  (as it is already done in the previous algorithms).
+
+- And so for the next iteration, our pieces are the matched pieces of the
+  previous iterations.
+
+So on a practical side, the algorithm described before can be implemented as
+follows:
+
+Inputs:
+
+- A raw byte-arena, which contains the original 8-byte sequences, one
+  after another (the raw tile data)
+
+- A list of offsets into that arena (which represent pointers to each
+  tile's data)
+
+Outputs:
+
+- A deduplicated byte-arena, which contains bytes rearranged in such a
+  ways that all the original byte sequences pointed to by the original
+  pointers are maintained.  This deduplicated arena _always_ has less
+  bytes than the original one, by design
+
+- A list of offsets into the deduplicated arena, such that the Nth pointer
+  in the input and the output point to a place in their respective arenas
+  that contain the same 8 consecutive bytes
+
+Steps:
+
+- Create indexes for all prefixes that exist in the 8-byte cells, of length
+  8, 7, 6, 5, 4, 3, 2, 1 bytes.  Add each cell to a list associated to the
+  prefix in each of the different length indexes. (PREFINDEX)
+
+- Create indexes for all suffixes that exist in the 8-byte cells, of length
+  8, 7, 6, 5, 4, 3, 2, 1 bytes.  Add each cell to a list associated to the
+  suffix in each of the different length indexes. (SUFINDEX)
+
+- Start comparing prefixes
