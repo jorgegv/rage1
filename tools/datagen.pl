@@ -398,6 +398,28 @@ sub read_input_data {
                 $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
                 next;
             }
+            if ( $line =~ /^HARMFUL\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = "$1 TYPE=HARMFUL";
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+
+                # check if it can change state during the game, and assign a
+                # state slot if it can
+                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Harmful '$item->{name}'" } ;
+                } else {
+                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
+                }
+
+                my $index = scalar( @{ $cur_screen->{'btiles'} } );
+                push @{ $cur_screen->{'btiles'} }, $item;
+                $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
+                next;
+            }
             if ( $line =~ /^OBSTACLE\s+(\w.*)$/ ) {
                 # ARG1=val1 ARG2=va2 ARG3=val3...
                 my $args = "$1 TYPE=OBSTACLE";
