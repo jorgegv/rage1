@@ -186,3 +186,145 @@ storage efficiency:
 The memory layout is completely equivalent to the original one regarding
 cell storage and pointers, and has no performance impact, it only increases
 storage efficiency.
+
+## Update and new algorithm: Jigsaw
+
+The actions mentioned in the previous sections have already been integrated
+into RAGE1.  But now, a new algorithm called JIGSAW has been designed, which
+is described below.
+
+The algorithm is called JIGSAW because it follows a strategy similar to the
+one I use for solving jigsaw puzzles:
+
+- I start to try matching a couple of pieces, then try to connect one more,
+  and one more...
+
+- When I cannot find new ones to connect, I start over with a new couple of
+  pieces, connect some more one by one...
+
+- At a point I have several "big" pieces which can be connected between
+  them, until after a few iterations (or hundreds of iterations :-) I have
+  my puzzle finished and all pieces are connected
+
+- As you can see the previous method is recursively described, since the big
+  pieces (formed by individual pieces) can be treated again as pieces for
+  matching, and so on until the whole puzzle is connected
+
+A similar algorithm can be followed for our problem:
+
+- The starting pieces are the 8-byte sequences that compose our cell tiles
+
+- The "matching" rules for them are overlapping byte sequences to the left
+  or to the right of the sequence, with other sequences.
+
+- The matching has a twist, since there may be overlaps of distinct length
+  for a given sequence, so the "best" match is defined to be the longest
+  match
+
+- The "big pieces" of our "puzzle" are the overlapping 8-byte sequences,
+  which are then compressed (when "matched") to the minimum possible length
+  (as it is already done in the previous algorithms).
+
+- And so for the next iteration, our pieces are the matched pieces of the
+  previous iterations.
+
+- Also anoher difference with the real jigsaw puzzle algorithm is that we
+  can have pieces with no matching ones ("leftovers").  It does not affect
+  the algorithm and they will be carried over until the final result is
+  obtained.
+
+So on a practical side, the algorithm described before can be implemented as
+follows:
+
+Inputs:
+
+- A raw byte-arena, which contains the original 8-byte sequences, one
+  after another (the raw tile data)
+
+- A list of offsets into that arena (which represent pointers to each
+  tile's data)
+
+Outputs:
+
+- A deduplicated byte-arena, which contains bytes rearranged in such a
+  ways that all the original byte sequences pointed to by the original
+  pointers are maintained.  This deduplicated arena _always_ has less
+  bytes than the original arena, by design
+
+- A list of offsets into the deduplicated arena, such that the Nth pointer
+  in the input and the output point to a place in their respective arenas
+  that contain the same 8 consecutive bytes
+
+Steps:
+
+- Stage 1:
+
+  - For the first iteration, N=8 and all the sequences are 8-byte long. 
+    This changes for subsequent iterations.
+
+  - Create indexes for all prefixes that exist in the N-byte sequences, of
+    length N, N-1, N-2, ...  3, 2, 1 bytes.  Add each cell to a list
+    associated to the prefix in each of the different length indexes. 
+    (PREFINDEX)
+
+  - Create indexes for all suffixes that exist in the N-byte sequences, of
+    length N, N-1, N-2, ...  4, 3, 2, 1 bytes.  Add each cell to a list
+    associated to the suffix in each of the different length indexes. 
+    (SUFINDEX)
+
+  - Start comparing prefixes and suffixes of the same length in the longest
+    sequence indexes (N) until the same sequence is found in both (if any).
+
+  - If it is found, get the first cells associated to the found sequence in
+    PREFINDEX and SUFINDEX and create a new cell composed by both, but
+    overlapping the common bytes.  Save the cell in a new MATCHED cells
+    list.
+
+  - Mark both cells as "matched" and continue matching pairs until no more
+    can be matched for the same prefix/suffix length.
+
+  - Repeat with the lower sequence length indexes (N-1, N-2, ...  to 1),
+    until no more matches can be found and all indexes for all sequence
+    lengths have been examined.
+
+  - Scan the original list for the cells that have not been matched and copy
+    them as-is to the new MATCHED cells list.
+
+  - Up to this point, the result is a new list of byte sequences which are
+    at most 2N-1 bytes in length each (and hopefully less).
+
+- Stage 2:
+
+  - Repeat Stage 1 using the output list from one iteration as the input
+    list for the next one
+
+  - Continue repeating until no matches are done in a single algorithm run,
+    i.e.  where the number of elements of the input list and of the output
+    list are the same.  This means that no sequences have been coalesced in
+    that run, so it makes no sense to try further.
+
+  - The output from this stage is a list of variable length sequences
+
+- Stage 3:
+
+  - Using the output from the previous stage as the input, emit all the
+    sequences in the list, one after another, to the new deduplicated byte
+    arena.
+
+  - When that is done, start walking the byte arena from the first byte, 1
+    byte at a time with a 8-byte sliding window, and register all possible
+    8-byte sequences that can be found in the arena, associating each of
+    them with its offset inside the arena.  E.g.  if the deduplicated arena
+    is M bytes long, the number of possible sequences should be at most
+    (M-7), which is the total number of possible 8-byte windows into the
+    arena.
+
+  - Start walking the original pointer list and getting the original 8-byte
+    sequence, then get the translated value of the pointer into the newly
+    generated arena.  Since all original sequences are also present in the
+    dedupe arena, all sequences should be found in the sequence registry
+    created in the previous step.
+
+The new pointer list and the deduplicated byte arena created in the previous
+steps are the final result from the algorithm.
+
