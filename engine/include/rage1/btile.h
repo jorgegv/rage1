@@ -46,10 +46,10 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
 #define TT_OBSTACLE	0x01
 // item: it can be grabbed by the hero, only one instance
 #define TT_ITEM		0x02
-// reserved: (for killing btiles)
-#define TT_RESERVED	0x03
+// harmful: a decoration that kills you if you move over it
+#define TT_HARMFUL	0x03
 // crumb: it can be grabbed by the hero, multiple instances
-// crumb type in lower 4 bits
+// crumb type in lower 4 bits, so tile types 0x10 to 0x1F belong to crumbs
 #define TT_CRUMB	0x10
 
 // array which contains the btile type on each position of the screen

@@ -1290,6 +1290,13 @@ sub validate_and_compile_screen {
     ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
         die "Screen '$screen->{name}' has no Btiles\n";
 
+    # check if HARMFUL btiles are used and enable the BUILD_FEATURE
+    foreach my $btile ( @{$screen->{'btiles'} } ) {
+        if ( $btile->{'type'} eq 'HARMFUL' ) {
+            add_build_feature( 'HARMFUL_BTILES' );
+            add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+        }
+    }
 }
 
 # SCREEN_DATA and DEFINE compilation

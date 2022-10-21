@@ -234,6 +234,13 @@ void hero_check_tiles_below(void) {
                 SET_GAME_EVENT( E_CRUMB_WAS_GRABBED );
             }
 #endif // BUILD_FEATURE_CRUMBS
+
+#ifdef BUILD_FEATURE_HARMFUL_BTILES
+            if ( tile_type == TT_HARMFUL ) {
+                hero_handle_hit();
+            }
+#endif // BUILD_FEATURE_HARMFUL_BTILES
+
         }
     }
 }
