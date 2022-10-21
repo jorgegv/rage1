@@ -212,7 +212,7 @@ one I use for solving jigsaw puzzles:
 
 A similar algorithm can be followed for our problem:
 
-- The minimal pieces are the 8-byte sequences that compose our cell tiles
+- The starting pieces are the 8-byte sequences that compose our cell tiles
 
 - The "matching" rules for them are overlapping byte sequences to the left
   or to the right of the sequence, with other sequences.
