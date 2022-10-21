@@ -13,6 +13,7 @@ BEGIN_SCREEN
 
 	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=21 PROBABILITY=128
 
+	DEFINE		NAME=RedIce	DIGRAPH=KK	TYPE=HARMFUL	BTILE=RedIce01
 	DEFINE		NAME=Ice	DIGRAPH=II	TYPE=OBSTACLE	BTILE=Ice01
 	DEFINE		NAME=Rock	DIGRAPH=RR	TYPE=OBSTACLE	BTILE=Rock01
 	DEFINE		NAME=Tree	DIGRAPH=TT	TYPE=OBSTACLE	BTILE=Tree01
@@ -32,8 +33,8 @@ BEGIN_SCREEN
 	SCREEN_DATA	"                  IIIIIIII            IIII                  "
 	SCREEN_DATA	"                  IIII                                      "
 	SCREEN_DATA	"      TTTT                                          TTTT    "
-	SCREEN_DATA	"      TTTT                            IIII          TTTT    "
-	SCREEN_DATA	"      TTTTTTTT        RRRRRRRR        IIII          TTTT    "
+	SCREEN_DATA	"      TTTT                            KKKK          TTTT    "
+	SCREEN_DATA	"      TTTTTTTT        RRRRRRRR        KKKK          TTTT    "
 	SCREEN_DATA	"          TTTT        RRRRRRRR                              "
 	SCREEN_DATA	"          TTTT                                              "
 	SCREEN_DATA	"                                                            "
