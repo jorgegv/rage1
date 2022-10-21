@@ -69,6 +69,9 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
   sounds from demo games have been migrated to the new event system.  More
   info on the available events can be found in `doc/GAME-EVENTS.md`
 
+- New HARMFUL btiles: decorations that kill you if you step over them (or
+  take energy from you if using advanced Damage mode for your hero).
+
 ### Enhancements, Fixes and Optimizations
 
 - The hero can now move diagonally!
