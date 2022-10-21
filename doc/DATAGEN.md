@@ -292,6 +292,9 @@ this element (=obstacle) but s/he must move around. Arguments:
   its state will not change during the game.
 * `DECORATION`: places a decoration on the screen. The hero can go over it.
   Arguments are the same as for OBSTACLEs.
+* `HARMFUL`: places a harmful decoration on the screen.  The hero gets
+  killed/harmed if s/he goes over it.  Arguments are the same as for
+  OBSTACLEs.
 * `HOTZONE`: a zone on the screen where something happens when the hero goes
   over it.  HOTZONEs are only definitions, not graphic elements, i.e.  they
   only define coordinate checks and actions to be done when inside.  If you
