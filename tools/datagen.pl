@@ -24,7 +24,7 @@ require RAGE::Arkos2;
 require RAGE::BTileUtils;
 
 use Data::Dumper;
-use List::MoreUtils qw( zip );
+use List::MoreUtils qw( zip uniq );
 use Getopt::Std;
 use Data::Compare;
 use File::Path qw( make_path );
@@ -813,6 +813,9 @@ sub read_input_data {
                     if ( $blob_info->{'compress'} !~ m/^[01]$/ ) {
                         die "BINARY_DATA: COMPRESS option must be 0 or 1\n";
                     }
+                }
+                if ( not defined( $blob_info->{'codeset'} ) ) {
+                    $blob_info->{'codeset'} = 'home';
                 }
                 # there can be more than one instance of BINARY_DATA for
                 # different pieces of data
@@ -3122,17 +3125,26 @@ EOF_CODESET_4
 ;
 }
 
-sub generate_codesets {
+sub all_codesets_except_home {
+    # codesets used by functions
+    my @function_codesets = grep { "$_" ne 'home' } keys %codeset_functions_by_codeset;
 
-    # If in 128K mode, for each codeset except 'home' codeset we create the
-    # needed data structures.  If we are in 48K mode, there will be no
-    # codesets besides 'home' so this will not run
-    foreach my $codeset ( grep { "$_" ne 'home' } keys %codeset_functions_by_codeset ) {
+    # codesets used by binary items
+    my @blob_codesets = grep { "$_" ne 'home' } map { $_->{'codeset'} } @{ $game_config->{'binary_data'} };
 
-        my $num_codeset_functions = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+    # all unique codesets except 'home'
+    my @all_codesets = uniq @function_codesets, @blob_codesets;
 
-        push @h_game_data_lines, "// codeset assets struct - only valid in codesets\n";
-        push @h_game_data_lines, "extern struct codeset_assets_s all_codeset_assets;\n";
+#    print Dumper( \@all_codesets );
+    return @all_codesets;
+}
+
+sub generate_codeset_headers {
+
+    push @h_game_data_lines, "// codeset assets struct - only valid in codesets\n";
+    push @h_game_data_lines, "extern struct codeset_assets_s all_codeset_assets;\n";
+
+    foreach my $codeset ( all_codesets_except_home ) {
 
         # add the needed source lines to the C and ASM files for this
         # codeset: the main codeset_assets_s struct at the beginning, the
@@ -3155,9 +3167,6 @@ _all_codeset_assets:
 	dw	0			;; .game_state
 	dw	0			;; .banked_assets
 	dw	0			;; .home_assets
-	db	$num_codeset_functions			;; .num_functions
-	dw	_codeset_functions	;; .functions
-
 EOF_CODESET_LINES_MAIN_ASM
 ;
 
@@ -3173,19 +3182,33 @@ EOF_CODESET_LINES_MAIN_ASM
 EOF_CODESET_LINES_MAIN
 ;
 
-        # add extern codeset function declarations
-        push @{ $c_codeset_lines->{ $codeset } }, "// codeset functions table\n";
-        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
-            push @{ $c_codeset_lines->{ $codeset } }, sprintf( "extern void %s( void );\n", $function->{'name'} );
-        }
+    }
+}
 
-        # add the codeset function table
-        push @{ $c_codeset_lines->{ $codeset } }, "codeset_function_t codeset_functions[ $num_codeset_functions ] = {\n";
-        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
-            push @{ $c_codeset_lines->{ $codeset } }, sprintf( "\t&%s,\n", $function->{'name'} );
-        }
-        push @{ $c_codeset_lines->{ $codeset } }, "};\n\n";
+sub generate_codeset_functions {
 
+    # If in 128K mode, for each codeset except 'home' codeset we create the
+    # needed data structures.  If we are in 48K mode, there will be no
+    # codesets besides 'home' so this will not run
+    foreach my $codeset ( all_codesets_except_home ) {
+        next if not defined( $codeset_functions_by_codeset{ $codeset } );
+        my $num_codeset_functions = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+        if ( $num_codeset_functions ) {
+            # add extern codeset function declarations
+            push @{ $c_codeset_lines->{ $codeset } }, "// codeset functions table\n";
+            foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+                push @{ $c_codeset_lines->{ $codeset } }, sprintf( "extern void %s( void );\n", $function->{'name'} );
+            }
+
+            # add the codeset function table
+            push @{ $asm_codeset_lines->{ $codeset } }, "	db	$num_codeset_functions			;; .num_functions\n";
+            push @{ $asm_codeset_lines->{ $codeset } }, "	dw	_codeset_functions	;; .functions\n";
+            push @{ $c_codeset_lines->{ $codeset } }, "codeset_function_t codeset_functions[ $num_codeset_functions ] = {\n";
+            foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+                push @{ $c_codeset_lines->{ $codeset } }, sprintf( "\t&%s,\n", $function->{'name'} );
+            }
+            push @{ $c_codeset_lines->{ $codeset } }, "};\n\n";
+        }
     }
 }
 
@@ -3451,11 +3474,10 @@ sub generate_game_data {
     generate_tracker_data;
 
     # codeset items
-    generate_codesets;
+    generate_codeset_headers;
+    generate_codeset_functions;
     generate_global_codeset_data;
-
-    # binary data items
-    # this needs to be done after codeset generation, since codesets may be needed
+    # binary data items, may be stored in codesets
     generate_binary_data_items;
 
     # this must be generated after codesets, it needs the codeset function
