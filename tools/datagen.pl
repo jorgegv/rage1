@@ -122,7 +122,7 @@ my $syntax = {
     valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
 };
 
-my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop crumb_action );
+my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop crumb_action custom );
 
 ######################################
 ## Build Feature functions
@@ -712,13 +712,12 @@ sub read_input_data {
                     if ( $item->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
                         die sprintf( "CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
                     }
+                } else {
+                    $item->{'codeset'} = 'home';
                 }
 
                 # add the needed codeset-related fields.  if a function has
                 # no codeset directive, it goes to the 'home' codeset
-                if ( not defined( $item->{'codeset'} ) ) {
-                    $item->{'codeset'} = 'home';
-                }
                 my $codeset = $item->{'codeset'};
                 if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
                     $codeset_functions_by_codeset{ $codeset } = [];
@@ -734,8 +733,15 @@ sub read_input_data {
                     die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
                 }
 
+                # if a filename was not provided, assign a default one
+                if ( not defined( $item->{'file'} ) ) {
+                    $item->{'file'} = $item->{'name'} . '.c';
+                }
+
                 # add the function to the game config
                 $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
+
+                # adjust build feature
                 if ( $codeset ne 'home' ) {
                     add_build_feature( 'CODESETS' );
                 }

@@ -551,6 +551,9 @@ END_GAME_CONFIG
     started.
     * `USER_GAME_LOOP`: this function runs once in every game loop. Use with
     care, this function can hurt performance badly!
+    * `CUSTOM`: a generic function which will be included in the final
+    binary. Mainly used to include it in a specific CODE SET with the
+    relevant directive (see below)
   * `NAME`: the function name. Must follow C function naming conventions
   * `FILE`: (optional) the file name where the function is. If not
     specified, the name of the file will be assumed the same as the function
