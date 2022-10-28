@@ -39,46 +39,17 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
             continue;
 
         g = dataset_get_banked_sprite_ptr( e->num_graphic );
+        anim = &e->animation;
 
         // animate sprite
         // animation can be in 2 states: animating frames or waiting for the next sequence run
         // logic: if sequence_delay_counter is 0, we are animating frames, so do the frame_delay_counter logic
         // if it is != 0, we are waiting to the next sequence run, so do the sequence_delay_counter logic
         // the animation is constantly switching from counting with sequence_delay_counter to counting with frame_delay_counter and back
-        anim = &e->animation;
 
         // optimization: only animate if the sprite has frames > 1; quickly skip if not
-        if ( g->frame_data.num_frames > 1 ) {
-            if ( anim->current.sequence_delay_counter ) {
-                // sequence_delay_counter is active, animation is waiting for next cycle
-                if ( ! --anim->current.sequence_delay_counter ) {
-                    // if it reaches 0, we have finished the wait period, so
-                    // reload the frame_delay_counter so that on the next
-                    // iteration we do the frame animation logic, and reset
-                    // animation to initial frame index
-                    anim->current.frame_delay_counter = anim->delay_data.frame_delay;
-                    anim->current.sequence_counter = 0;
-                }
-            } else {
-                // sequence_delay_counter is 0, so frame_delay_counter must be
-                // active, animation is animating frames
-                if ( ! --anim->current.frame_delay_counter ) {
-                    // if it reaches 0, we have finished wait period between
-                    // animation frames, get next frame if possible
-
-                    // reload frame_delay_counter.  sequence_counter holds the
-                    // current frame index into the sequence
-                    anim->current.frame_delay_counter = anim->delay_data.frame_delay;
-
-                    // check for the next frame
-                    if ( ++anim->current.sequence_counter == g->sequence_data.sequences[ anim->current.sequence ].num_elements ) {
-                        // there were no more frames, so restart sequence and go to sequence_delay loop
-                        anim->current.sequence_delay_counter = anim->delay_data.sequence_delay;
-                        anim->current.sequence_counter = 0;	// initial frame index
-                    }
-                }
-            }
-        }
+        if ( g->frame_data.num_frames > 1 )
+            animation_sequence_tick( anim, g->sequence_data.sequences[ anim->current.sequence ].num_elements );
 
         // set new sprite position according to movement rules
         pos = &e->position;
