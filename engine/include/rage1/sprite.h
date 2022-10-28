@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
+#include "rage1/animation.h"
+
 #include "features.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -40,23 +42,6 @@ struct  sprite_graphic_data_s {
         uint8_t num_sequences;
         struct animation_sequence_s *sequences;
     } sequence_data;
-};
-
-//////////////////////////////////////////////////////////////////////////
-// animation data structs which can be included in others (e.g. enemy, hero, etc.)
-//////////////////////////////////////////////////////////////////////////
-
-struct  sprite_animation_data_s {
-    struct {
-        uint8_t frame_delay;		// frames are changed every 'frame_delay' calls
-        uint8_t sequence_delay;		// a sequence is repeated after waiting 'sequence_delay' screen frames
-    } delay_data;
-    struct {
-        uint8_t sequence;		// current animation sequence
-        uint8_t sequence_counter;	// current sequence index (used to get frame number)
-        uint8_t frame_delay_counter;	// current frame delay counter
-        uint8_t sequence_delay_counter;	// current sequence delay counter
-    } current;
 };
 
 //////////////////////////////////////////////////////////////////////////

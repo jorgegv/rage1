@@ -18,6 +18,7 @@
 #include "rage1/debug.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
+#include "rage1/animation.h"
 
 #include "game_data.h"
 
@@ -25,7 +26,7 @@
 
 void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies ) {
     struct enemy_info_s *e;
-    struct sprite_animation_data_s *anim;
+    struct animation_data_s *anim;
     struct position_data_s *pos;
     struct enemy_movement_data_s *move;
     struct sprite_graphic_data_s *g;

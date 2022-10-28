@@ -16,6 +16,7 @@
 #include "rage1/debug.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
+#include "rage1/animation.h"
 
 #include "game_data.h"
 
@@ -61,7 +62,7 @@ void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
     uint8_t n;
     struct enemy_info_s *e;
     struct sprite_graphic_data_s *g;
-    struct sprite_animation_data_s *anim;
+    struct animation_data_s *anim;
     struct position_data_s *pos;
 
     n = num_enemies;
