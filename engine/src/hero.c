@@ -71,7 +71,11 @@ struct hero_info_s hero_startup_data = {
         HERO_HEALTH_MAX,
         0, // immunity timer
     },
-    0,				// flags
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
+    0 | BULLET_INITIAL_ENABLE,		// flags
+#else
+    0,					// flags
+#endif
 };
 
 void init_hero(void) {
@@ -151,6 +155,7 @@ void hero_draw( void ) {
 // moved to banked_code
 //
 
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
 void hero_shoot_bullet( void ) {
 
     // ignore the shot if we are in the "reloading" phase
@@ -161,6 +166,7 @@ void hero_shoot_bullet( void ) {
     bullet_add();
     game_state.bullet.reloading = game_state.bullet.reload_delay;
 }
+#endif
 
 #ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 void hero_check_tiles_below(void) {
@@ -196,6 +202,12 @@ void hero_check_tiles_below(void) {
                 // get item location and number
                 item_loc = map_get_item_location_at_position( game_state.current_screen_ptr, r, c );
                 item = item_loc->item_num;
+
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
+                // if the item grabbed is the weapon, arm the hero
+                if ( item == WEAPON_ITEM_NUM )
+                    SET_HERO_FLAG( game_state.hero, F_HERO_CAN_SHOOT );
+#endif
 
                 // add item to inventory
                 inventory_add_item( &game_state.inventory, item );
@@ -302,7 +314,9 @@ void hero_handle_hit ( void ) {
                 game_state.current_screen_ptr->enemy_data.enemies
             );
             hero_reset_position();
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
             bullet_reset_all();
+#endif
             hero_update_lives_display();
 #ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
             HERO_HEALTH_DISPLAY_FUNCTION();
@@ -341,7 +355,9 @@ void hero_handle_hit ( void ) {
             game_state.current_screen_ptr->enemy_data.enemies
         );
         hero_reset_position();
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
         bullet_reset_all();
+#endif
         hero_update_lives_display();
         SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
     }

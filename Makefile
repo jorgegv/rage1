@@ -109,6 +109,9 @@ build-mapgen:
 build-damage_mode:
 	@$(MAKE) -s build target_game=$(TEST_GAMES_DIR)/damage_mode
 
+build-get_weapon:
+	@$(MAKE) -s build target_game=$(TEST_GAMES_DIR)/get_weapon
+
 # just a target for the default game for completeness
 build-default: build
 

@@ -1627,6 +1627,18 @@ sub validate_and_compile_hero {
     }
     $hero->{'damage_mode'} = $damage_mode;
 
+    # check for bullet
+    if ( defined( $hero->{'bullet'} ) ) {
+        add_build_feature( 'HERO_HAS_WEAPON' );
+        if ( defined( $hero->{'bullet'}{'initially_enabled'} ) ) {
+            add_build_feature( 'INVENTORY' );	# if it not initially enabled we need inventory
+            if ( ( not $hero->{'bullet'}{'initially_enabled'} ) and not defined( $hero->{'bullet'}{'weapon_item'} ) ) {
+                die "HERO: When BULLET is INITIALLY_ENABLED=0, a WEAPON_ITEM is needed\n";
+            }
+        } else {
+            $hero->{'bullet'}{'initially_enabled'} = 1;
+        }
+    }
 }
 
 sub generate_hero {
@@ -1692,6 +1704,9 @@ EOF_HERO1
 }
 
 sub generate_bullets {
+
+    return if not defined( $hero->{'bullet'} );
+    
     my $sprite = $all_sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
     my $sprite_name = $hero->{'bullet'}{'sprite'};
     my $sprite_index = $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
@@ -1714,6 +1729,8 @@ sub generate_bullets {
         $hero->{'bullet'}{ $_ } || 0,
     } qw ( sprite_frame_up sprite_frame_down sprite_frame_left sprite_frame_right );
 
+    my $initial_enable = $hero->{'bullet'}{'initially_enabled'} ? 'F_HERO_CAN_SHOOT' : 0;
+
     push @h_game_data_lines, <<EOF_BULLET4
 
 //////////////////////////////
@@ -1734,6 +1751,8 @@ sub generate_bullets {
 #define BULLET_SPRITE_FRAME_DOWN	$sprite_frame_down
 #define BULLET_SPRITE_FRAME_LEFT	$sprite_frame_left
 #define BULLET_SPRITE_FRAME_RIGHT	$sprite_frame_right
+
+#define BULLET_INITIAL_ENABLE		$initial_enable
 
 EOF_BULLET4
 ;
@@ -1795,6 +1814,14 @@ GAME_DATA_H_3
         );
     }
     push @h_game_data_lines, "\n";
+
+    # output Inventory item for weapon if selected
+    if ( defined( $hero->{'bullet'} ) ) {
+        if ( defined( $hero->{'bullet'}{'weapon_item'} ) ) {
+            push @h_game_data_lines, sprintf( "#define WEAPON_ITEM INVENTORY_ITEM_%s\n", uc( $hero->{'bullet'}{'weapon_item'} ) );
+            push @h_game_data_lines, sprintf( "#define WEAPON_ITEM_NUM INVENTORY_ITEM_%s_NUM\n", uc( $hero->{'bullet'}{'weapon_item'} ) );
+        }
+    }
 
     push @c_game_data_lines, <<EOF_ITEMS1
 
@@ -2874,9 +2901,11 @@ sub generate_game_config {
     $max_spritechars += ( $hs->{'rows'} + 1 ) * ( $hs->{'cols'} + 1 );
 
     # add the bullet sprites - the N bullets
-    $max_sprites += $hero->{'bullet'}{'max_bullets'};
-    my $bs = $all_sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
-    $max_spritechars += $hero->{'bullet'}{'max_bullets'} * ( $bs->{'rows'} + 1 ) * ( $bs->{'cols'} + 1 );
+    if ( defined( $hero->{'bullet'} ) ) {
+        $max_sprites += $hero->{'bullet'}{'max_bullets'};
+        my $bs = $all_sprites[ $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} } ];
+        $max_spritechars += $hero->{'bullet'}{'max_bullets'} * ( $bs->{'rows'} + 1 ) * ( $bs->{'cols'} + 1 );
+    }
 
     # 20 bytes for a safety margin, plus 6 bytes per allocation, plus 20
     # bytes per sprite, plus 24 bytes per sprite char
@@ -3668,8 +3697,10 @@ sub create_dataset_dependencies {
         $sprite_name_to_index{ $hero->{'sprite'} };
 
     # ...bullet sprite
-    push @{ $dataset_dependency{'home'}{'sprites'} },
-        $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
+    if ( defined( $hero->{'bullet'} ) ) {
+        push @{ $dataset_dependency{'home'}{'sprites'} },
+            $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
+    }
 
     # item btiles are always added to the home dataset, since the item table
     # is global

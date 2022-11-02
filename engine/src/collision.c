@@ -57,6 +57,8 @@ void collision_check_hero_with_sprites(void) {
     }
 }
 
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
+
 void collision_check_bullets_with_sprites( void ) {
     struct bullet_state_data_s *b;
     struct enemy_info_s *s;
@@ -88,3 +90,5 @@ void collision_check_bullets_with_sprites( void ) {
         }
     }
 }
+
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON

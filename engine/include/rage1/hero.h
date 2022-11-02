@@ -91,13 +91,15 @@ extern struct sp1_ss *hero_sprite;
 #define SET_HERO_FLAG(s,f)	( (s).flags |= (f) )
 #define RESET_HERO_FLAG(s,f)	( (s).flags &= ~(f) )
 
-#define F_HERO_ALIVE	0x01
-#define F_HERO_STEADY	0x02
-#define F_HERO_IMMUNE	0x04
+#define F_HERO_ALIVE		0x01
+#define F_HERO_STEADY		0x02
+#define F_HERO_IMMUNE		0x04
+#define F_HERO_CAN_SHOOT	0x08
 
 #define IS_HERO_ALIVE(s)	(GET_HERO_FLAG((s),F_HERO_ALIVE))
 #define IS_HERO_STEADY(s)	(GET_HERO_FLAG((s),F_HERO_STEADY))
 #define IS_HERO_IMMUNE(s)	(GET_HERO_FLAG((s),F_HERO_IMMUNE))
+#define CAN_HERO_SHOOT(s)	(GET_HERO_FLAG((s),F_HERO_CAN_SHOOT))
 
 void init_hero(void);
 void hero_reset_all(void);

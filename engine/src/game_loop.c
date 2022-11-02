@@ -57,7 +57,11 @@ void check_loop_flags( void ) {
           game_state.current_screen_ptr->enemy_data.num_enemies, 
           game_state.current_screen_ptr->enemy_data.enemies
        );
+
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
        bullet_reset_all();
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON
+
        RESET_GAME_FLAG( F_GAME_START );
     }
 
@@ -95,6 +99,7 @@ void move_enemies(void) {
    );
 }
 
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
 void move_bullets(void) {
    RUN_ONLY_ONCE_PER_FRAME;
 
@@ -104,6 +109,7 @@ void move_bullets(void) {
    // redraw bullets that have moved
    bullet_redraw_all();
 }
+#endif
 
 void check_controller(void) {
    game_state.controller.state = controller_read_state();
@@ -118,8 +124,10 @@ void do_hero_actions(void) {
     hero_check_tiles_below();
 #endif
 
-    if ( game_state.controller.state & IN_STICK_FIRE )
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
+    if ( ( game_state.controller.state & IN_STICK_FIRE ) && CAN_HERO_SHOOT( game_state.hero ) )
         hero_shoot_bullet();
+#endif
 
 #ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
     if ( game_state.hero.health.immunity_timer )
@@ -131,7 +139,9 @@ void check_collisions(void) {
     RUN_ONLY_ONCE_PER_FRAME;
 
     collision_check_hero_with_sprites();
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
     collision_check_bullets_with_sprites();
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON
 }
 
 void show_heartbeat(void) {
@@ -205,7 +215,10 @@ void run_main_game_loop(void) {
       // update sprites
       // does not change game_state
       move_enemies();
+
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
       move_bullets();
+#endif
 
       // read controller
       // changes game_state
@@ -269,7 +282,9 @@ void run_main_game_loop(void) {
       game_state.current_screen_ptr->enemy_data.num_enemies,
       game_state.current_screen_ptr->enemy_data.enemies
    );
+
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
    bullet_move_offscreen_all();
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON
 
 }
-

@@ -45,7 +45,9 @@ banked_functions:
   - name: enemy_animate_and_move_all
   # bullet
   - name: bullet_animate_and_move_all
+    build_dependency: BUILD_FEATURE_HERO_HAS_WEAPON
   - name: bullet_add
+    build_dependency: BUILD_FEATURE_HERO_HAS_WEAPON
   # tracker
   - name: init_tracker
     build_dependency: BUILD_FEATURE_TRACKER
