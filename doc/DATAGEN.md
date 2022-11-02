@@ -412,7 +412,7 @@ BEGIN_HERO
         VSTEP           1
         LIVES           NUM_LIVES=3 BTILE=Live
 	DAMAGE_MODE	ENEMY_DAMAGE=1 HEALTH_MAX=2 IMMUNITY_PERIOD=100 HEALTH_DISPLAY_FUNCTION=my_hero_display_health
-        BULLET          SPRITE=Bullet01 SPRITE_FRAME_UP=0 SPRITE_FRAME_DOWN=1 SPRITE_FRAME_LEFT=2 SPRITE_FRAME_RIGHT=3 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
+        BULLET          SPRITE=Bullet01 SPRITE_FRAME_UP=0 SPRITE_FRAME_DOWN=1 SPRITE_FRAME_LEFT=2 SPRITE_FRAME_RIGHT=3 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3 INITIALLY_ENABLED=0 WEAPON_ITEM=Knife
 END_HERO
 ```
 
@@ -458,6 +458,12 @@ END_HERO
   means that if you don't need to have different bullet graphics for
   different directions, just don't specify these and the bullets will all
   use frame 0 of the given sprite
+  * `INITIALLY_ENABLED`: (optional) indicates if the hero has the weapon
+  active at the beginning of the game (1). If it is 0, a `WEAPON_ITEM`
+  directive is needed, see below.
+  * `WEAPON_ITEM`: when the weapon is not initially active, indicates which
+  of the game Items will be considered the Weapon. The weapon will be
+  enabled when the hero grabs this item.
 
 ### GAME_CONFIG data
 
