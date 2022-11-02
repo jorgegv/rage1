@@ -16,6 +16,11 @@
 
 #include "rage1/banked.h"
 
+// animation can be in 2 states: animating frames or waiting for the next sequence run
+// logic: if sequence_delay_counter is 0, we are animating frames, so do the frame_delay_counter logic
+// if it is != 0, we are waiting to the next sequence run, so do the sequence_delay_counter logic
+// the animation is constantly switching from counting with sequence_delay_counter to counting with frame_delay_counter and back
+
 void animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames ) {
     if ( anim->current.sequence_delay_counter ) {
         // sequence_delay_counter is active, animation is waiting for next cycle
@@ -46,4 +51,9 @@ void animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames 
             }
         }
     }
+}
+
+void animation_set_sequence( struct animation_data_s *anim, uint8_t sequence ) {
+    anim->current.sequence = sequence;
+    anim->current.sequence_counter = 0;
 }

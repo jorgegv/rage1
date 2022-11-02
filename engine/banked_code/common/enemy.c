@@ -42,11 +42,6 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
         anim = &e->animation;
 
         // animate sprite
-        // animation can be in 2 states: animating frames or waiting for the next sequence run
-        // logic: if sequence_delay_counter is 0, we are animating frames, so do the frame_delay_counter logic
-        // if it is != 0, we are waiting to the next sequence run, so do the sequence_delay_counter logic
-        // the animation is constantly switching from counting with sequence_delay_counter to counting with frame_delay_counter and back
-
         // optimization: only animate if the sprite has frames > 1; quickly skip if not
         if ( g->frame_data.num_frames > 1 )
             animation_sequence_tick( anim, g->sequence_data.sequences[ anim->current.sequence ].num_elements );
@@ -79,11 +74,11 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
                                 // adjust animation sequence if the enemy is configured for it
                                 // sequence_a if dx > 0, sequence_b if dx < 0
                                 if ( ENEMY_MOVE_CHANGES_SEQUENCE_HORIZ( *move ) ) {
-                                    anim->current.sequence = ( move->data.linear.dx > 0 ?
+                                    animation_set_sequence( anim, 
+                                        move->data.linear.dx > 0 ?
                                         move->data.linear.sequence_a :
-                                        move->data.linear.sequence_b );
-                                    // always reset the sequence frame index
-                                    anim->current.sequence_counter = 0;
+                                        move->data.linear.sequence_b
+                                    );
                                 }
                             }
                         }
@@ -106,11 +101,11 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
                                 // adjust animation sequence if the enemy is configured for it
                                 // sequence_a if dy > 0, sequence_b if dy < 0
                                 if ( ENEMY_MOVE_CHANGES_SEQUENCE_VERT( *move ) ) {
-                                    anim->current.sequence = ( move->data.linear.dy > 0 ?
+                                    animation_set_sequence( anim, 
+                                        move->data.linear.dy > 0 ?
                                         move->data.linear.sequence_a :
-                                        move->data.linear.sequence_b );
-                                    // always reset the sequence frame index
-                                    anim->current.sequence_counter = 0;
+                                        move->data.linear.sequence_b
+                                    );
                                 }
                             }
                         }
