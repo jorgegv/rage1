@@ -101,8 +101,10 @@ struct flow_rule_check_s {
 #define RULE_ACTION_TRACKER_MUSIC_STOP		21
 #define RULE_ACTION_TRACKER_MUSIC_START		22
 #define RULE_ACTION_TRACKER_PLAY_FX		23
+#define RULE_ACTION_HERO_ENABLE_WEAPON		24
+#define RULE_ACTION_HERO_DISABLE_WEAPON		25
 
-#define RULE_ACTION_MAX				23
+#define RULE_ACTION_MAX				25
 
 struct flow_rule_action_s {
     uint8_t type;

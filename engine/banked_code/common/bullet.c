@@ -22,6 +22,8 @@
 
 #include "rage1/banked.h"
 
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
+
 void bullet_animate_and_move_all(void) {
     uint8_t i;
     struct bullet_info_s *bi;
@@ -141,3 +143,4 @@ void bullet_add( void ) {
     }
 }
 
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON

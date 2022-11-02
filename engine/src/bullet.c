@@ -20,6 +20,7 @@
 
 #include "game_data.h"
 
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
 void init_bullets( void ) {
     bullet_init_sprites();
 }
@@ -103,3 +104,5 @@ void bullet_init_sprites(void) {
     memcpy( &game_state.bullet, &bullet_startup_data, sizeof( struct bullet_info_s ) );
     game_state.bullet.frames = home_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames;
 }
+
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON

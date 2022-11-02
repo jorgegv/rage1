@@ -64,7 +64,10 @@ void game_state_reset_initial(void) {
 
    // reset everything
    hero_reset_all();
+
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
    bullet_reset_all();
+#endif
 
 #ifdef BUILD_FEATURE_INVENTORY
    inventory_reset_all();
@@ -105,7 +108,10 @@ void game_state_switch_to_next_screen(void) {
         game_state.current_screen_ptr->enemy_data.num_enemies,
         game_state.current_screen_ptr->enemy_data.enemies
     );
+
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
     bullet_move_offscreen_all();
+#endif
 
     // run EXIT_SCREEN hooks for the old screen
     map_exit_screen( game_state.current_screen_ptr );
