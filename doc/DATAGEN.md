@@ -755,6 +755,8 @@ check is successful. Options:
   - [x] TRACKER_MUSIC_STOP
   - [x] TRACKER_MUSIC_START
   - [x] TRACKER_PLAY_FX  <fxid> - The number of the effect in your FX sound track (starts at 1!)
+  - [x] HERO_ENABLE_WEAPON
+  - [x] HERO_DISABLE_WEAPON
 
 A rule may have no CHECK directives, in which case its DO actions will
 always be run at proper moment specified in the WHEN directive. This can be

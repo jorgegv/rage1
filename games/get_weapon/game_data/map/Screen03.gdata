@@ -1,0 +1,51 @@
+BEGIN_SCREEN
+	NAME		Screen03
+	DATASET		2
+
+	// Decoration for a hotzone must defined separately
+	// warp to Screen02
+	HOTZONE		NAME=Stairs	ROW=17 COL=11 WIDTH=1 HEIGHT=2 ACTIVE=1
+
+	ENEMY  		NAME=Ghost1	SPRITE=Ghost01 MOVEMENT=LINEAR XMIN=8 YMIN=8 XMAX=233 YMAX=8 INITX=70 INITY=8 DX=2 DY=0 SPEED_DELAY=2 ANIMATION_DELAY=25 BOUNCE=1 COLOR=INK_YELLOW
+	ENEMY  		NAME=Ghost2	SPRITE=GhostPNG MOVEMENT=LINEAR XMIN=40 YMIN=8 XMAX=233 YMAX=159 INITX=50 INITY=8 DX=1 DY=2 SPEED_DELAY=2 ANIMATION_DELAY=25 SEQUENCE_DELAY=50 ANIMATION_SEQUENCE=Reverse BOUNCE=1 COLOR=INK_BLUE
+
+	HERO		STARTUP_XPOS=20 STARTUP_YPOS=20
+
+	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=21 PROBABILITY=128
+
+	DEFINE		NAME=RedIce	DIGRAPH=KK	TYPE=HARMFUL	BTILE=RedIce01
+	DEFINE		NAME=Ice	DIGRAPH=II	TYPE=OBSTACLE	BTILE=Ice01
+	DEFINE		NAME=Rock	DIGRAPH=RR	TYPE=OBSTACLE	BTILE=Rock01
+	DEFINE		NAME=Tree	DIGRAPH=TT	TYPE=OBSTACLE	BTILE=Tree01
+	DEFINE		NAME=Stairs	DIGRAPH=SS	TYPE=DECORATION	BTILE=Stairs
+	DEFINE		NAME=QuePereza	DIGRAPH=QP	TYPE=DECORATION	BTILE=QuePereza
+	DEFINE		NAME=TomaEmail	DIGRAPH=TE	TYPE=OBSTACLE	BTILE=TomaEmail
+	DEFINE		NAME=PNGTest	DIGRAPH=PN	TYPE=OBSTACLE	BTILE=PNGTest
+	DEFINE		NAME=Wal1x1	DIGRAPH=WW	TYPE=OBSTACLE	BTILE=Wall1x1
+
+	//                                   1                   2                   3
+	//               0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	SCREEN_DATA	"                                                TTTT        "
+	SCREEN_DATA	"TTTT                                            TTTT        "
+	SCREEN_DATA	"TTTT                          IIII              TTTT        "
+	SCREEN_DATA	"TTTT                      IIIIIIIIIIII                      "
+	SCREEN_DATA	"                      IIIIIIII    IIIIIIII                  "
+	SCREEN_DATA	"                  IIIIIIII            IIII                  "
+	SCREEN_DATA	"                  IIII                                      "
+	SCREEN_DATA	"      TTTT                                          TTTT    "
+	SCREEN_DATA	"      TTTT                            KKKK          TTTT    "
+	SCREEN_DATA	"      TTTTTTTT        RRRRRRRR        KKKK          TTTT    "
+	SCREEN_DATA	"          TTTT        RRRRRRRR                              "
+	SCREEN_DATA	"          TTTT                                              "
+	SCREEN_DATA	"                                                            "
+	SCREEN_DATA	"                                        RRRRRRRR            "
+	SCREEN_DATA	"                                    RRRRRRRRRRRR            "
+	SCREEN_DATA	"                  SSSSSS        RRRRRRRR      RRRR          "
+	SCREEN_DATA	"                  SSSSSS        RRRR          RRRR          "
+	SCREEN_DATA	"                  SSSSSS      RRRR              RRRR        "
+	SCREEN_DATA	"                  SSSSSS      RRRR              RRRR        "
+	SCREEN_DATA	"                                                            "
+	SCREEN_DATA	"                                                            "
+
+
+END_SCREEN

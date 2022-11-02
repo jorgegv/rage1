@@ -467,6 +467,18 @@ void do_rule_action_tracker_play_fx( struct flow_rule_action_s *action ) __z88dk
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_HERO_ENABLE_WEAPON
+void do_rule_action_hero_enable_weapon( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    SET_HERO_FLAG( game_state.hero, F_HERO_CAN_SHOOT );
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_HERO_DISABLE_WEAPON
+void do_rule_action_hero_disable_weapon( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    RESET_HERO_FLAG( game_state.hero, F_HERO_CAN_SHOOT );
+}
+#endif
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -729,6 +741,16 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
     do_rule_action_tracker_play_fx,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_HERO_ENABLE_WEAPON
+    do_rule_action_hero_enable_weapon,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_HERO_DISABLE_WEAPON
+    do_rule_action_hero_disable_weapon,
 #else
     NULL,
 #endif

@@ -38,7 +38,9 @@ void init_program(void) {
 #endif	// BUILD_FEATURE_CODESETS
    init_controllers();
    init_hero();
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
    init_bullets();
+#endif
 #ifdef BUILD_FEATURE_ZX_TARGET_128
    // this one is only needed when compiling for 128
    // for 48 mode the beepr gets initialized by regular BSS init code
