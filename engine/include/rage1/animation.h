@@ -30,7 +30,7 @@ struct animation_data_s {
     } current;
 };
 
-void animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames );
+uint8_t animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames );
 void animation_set_sequence( struct animation_data_s *anim, uint8_t sequence );
 
 #endif	// _ANIMATION_H

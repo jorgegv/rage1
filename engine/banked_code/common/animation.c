@@ -21,7 +21,8 @@
 // if it is != 0, we are waiting to the next sequence run, so do the sequence_delay_counter logic
 // the animation is constantly switching from counting with sequence_delay_counter to counting with frame_delay_counter and back
 
-void animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames ) {
+uint8_t animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames ) {
+    uint8_t frame_changed = 0;
     if ( anim->current.sequence_delay_counter ) {
         // sequence_delay_counter is active, animation is waiting for next cycle
         if ( ! --anim->current.sequence_delay_counter ) {
@@ -31,6 +32,7 @@ void animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames 
             // animation to initial frame index
             anim->current.frame_delay_counter = anim->delay_data.frame_delay;
             anim->current.sequence_counter = 0;
+            frame_changed = 1;
         }
     } else {
         // sequence_delay_counter is 0, so frame_delay_counter must be
@@ -44,6 +46,7 @@ void animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames 
             anim->current.frame_delay_counter = anim->delay_data.frame_delay;
 
             // check for the next frame
+            frame_changed = 1;
             if ( ++anim->current.sequence_counter == max_frames ) {
                 // there were no more frames, so restart sequence and go to sequence_delay loop
                 anim->current.sequence_delay_counter = anim->delay_data.sequence_delay;
@@ -51,6 +54,7 @@ void animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames 
             }
         }
     }
+    return frame_changed;
 }
 
 void animation_set_sequence( struct animation_data_s *anim, uint8_t sequence ) {

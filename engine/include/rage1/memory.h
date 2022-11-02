@@ -32,13 +32,13 @@ void init_memory(void);
     // types for all different function signatures used must be defined here
     typedef void (*banked_function_t)( void );
     typedef void (*banked_function_a16_t)( uint16_t arg );
-    typedef void (*banked_function_a16_a8_t)( uint16_t arg1, uint8_t arg2 );
+    typedef uint8_t (*banked_function_a16_a8_r8_t)( uint16_t arg1, uint8_t arg2 );
 
     // trampoline functions to call banked functions
     // functions for all different function signatures used must exist
     void memory_call_banked_function( uint8_t function_id );
     void memory_call_banked_function_a16( uint8_t function_id, uint16_t arg );
-    void memory_call_banked_function_a16_a8( uint8_t function_id, uint16_t arg1, uint8_t arg2 );
+    uint8_t memory_call_banked_function_a16_a8_r8( uint8_t function_id, uint16_t arg1, uint8_t arg2 );
 
     //////////////////////////////////////////////////////////////////////////
     // Definitions for engine banked functions are generated automatically

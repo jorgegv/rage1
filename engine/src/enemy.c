@@ -8,6 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <arch/zx.h>
+
 #include "rage1/game_state.h"
 #include "rage1/sprite.h"
 #include "rage1/enemy.h"
@@ -65,6 +67,7 @@ void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
     struct animation_data_s *anim;
     struct position_data_s *pos;
 
+    zx_border( INK_YELLOW );
     n = num_enemies;
     while( n-- ) {
         e = &enemies[n];		// efficiency matters ;-)
@@ -84,6 +87,7 @@ void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
             RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
         }
     }
+    zx_border( INK_BLACK );
 }
 
 void enemy_move_offscreen_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {

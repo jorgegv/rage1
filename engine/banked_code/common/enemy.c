@@ -41,10 +41,18 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
         g = dataset_get_banked_sprite_ptr( e->num_graphic );
         anim = &e->animation;
 
+        // Sprite may need update either because of animation, movement, or
+        // both.  We only set F_ENEMY_NEEDS_REDRAW if it really needs it -
+        // there are lots of cases where we are just waiting!
+
         // animate sprite
+
         // optimization: only animate if the sprite has frames > 1; quickly skip if not
         if ( g->frame_data.num_frames > 1 )
-            animation_sequence_tick( anim, g->sequence_data.sequences[ anim->current.sequence ].num_elements );
+            // animation_sequence_tick returns tryu if the frame has changed, 0 otherwise
+            // so only update the sprite if frame has changed
+            if ( animation_sequence_tick( anim, g->sequence_data.sequences[ anim->current.sequence ].num_elements ) )
+                SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
 
         // set new sprite position according to movement rules
         pos = &e->position;
@@ -81,6 +89,7 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
                                     );
                                 }
                             }
+                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
                         }
 
                         // optimization: only calculate vertical movement if dy != 0
@@ -107,6 +116,7 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
                                         move->data.linear.sequence_b
                                     );
                                 }
+                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
                             }
                         }
                     }
@@ -115,9 +125,6 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
             default:
                 break;
         }
-
-        // sprite may need update either because of animation, movement, or both
-        SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
     }
 }
 
