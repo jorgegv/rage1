@@ -260,6 +260,21 @@ sub read_input_data {
                 $cur_btile->{'png_attr'} = $data->{'attrs'};
                 next;
             }
+            if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
+                $cur_btile->{'frames'} = $1;
+                next;
+            }
+            if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
+                my $args = $1;
+                my $vars = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                my $index = defined( $cur_btile->{'sequences'} ) ? scalar( @{ $cur_btile->{'sequences'} } ) : 0 ;
+                push @{ $cur_btile->{'sequences'} }, $vars;
+                $cur_btile->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
+                next;
+            }
             if ( $line =~ /^END_BTILE$/ ) {
                 validate_and_compile_btile( $cur_btile );
                 my $index = scalar( @all_btiles );
@@ -1022,6 +1037,12 @@ sub read_input_data {
 
 sub validate_and_compile_btile {
     my $tile = shift;
+
+    # FRAMES is not mandatory for BTILEs
+    if ( not defined( $tile->{'frames'} ) ) {
+        $tile->{'frames'} = 1;
+    }
+
     defined( $tile->{'name'} ) or
         die "Btile has no NAME\n";
     defined( $tile->{'rows'} ) or
@@ -1032,7 +1053,7 @@ sub validate_and_compile_btile {
         die "Btile '$tile->{name}' has no PIXELS\n";
     defined( $tile->{'attr'} ) or defined( $tile->{'png_attr'} ) or
         die "Btile '$tile->{name}' has no ATTR or PNG_ATTRS\n";
-    my $num_attrs = $tile->{'rows'} * $tile->{'cols'};
+    my $num_attrs = $tile->{'rows'} * $tile->{'cols'} * $tile->{'frames'};
     if ( defined( $tile->{'attr'} ) ) {
         ( scalar( @{$tile->{'attr'}} ) == $num_attrs ) or
             die "Btile '$tile->{name}' should have $num_attrs ATTR elements\n";
@@ -1040,8 +1061,8 @@ sub validate_and_compile_btile {
         ( scalar( @{$tile->{'png_attr'}} ) == $num_attrs ) or
             die "Btile '$tile->{name}' should have $num_attrs elements in PNG_ATTR\n";
     }
-    ( scalar( @{$tile->{'pixels'}} ) == $tile->{'rows'} * 8 ) or
-        die "Btile '$tile->{name}' should have ".( $tile->{'rows'} * 8 )." PIXELS elements\n";
+    ( scalar( @{$tile->{'pixels'}} ) == $tile->{'rows'} * 8 * $tile->{'frames'} ) or
+        die "Btile '$tile->{name}' should have ".( $tile->{'rows'} * 8 * $tile->{'frames'} )." PIXELS elements\n";
     foreach my $p ( @{$tile->{'pixels'}} ) {
         ( length( $p ) == $tile->{'cols'} * 2 * 8 ) or
             die "Btile PIXELS line should be of length ".( $tile->{'rows'} * 2 * 8 );
