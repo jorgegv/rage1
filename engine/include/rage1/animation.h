@@ -13,6 +13,13 @@
 
 #include <stdint.h>
 
+// an animation sequence is an array of frame numbers
+// the frame numbers in a sequence are used to show the corresponding frame for the sprite
+struct animation_sequence_s {
+    uint8_t num_elements;              // number of elements in this sequence
+    uint8_t *frame_numbers;            // ptr to array of sequence of frame numbers
+};
+
 //////////////////////////////////////////////////////////////////////////
 // animation data structs which can be included in others (e.g. enemy, hero, etc.)
 //////////////////////////////////////////////////////////////////////////

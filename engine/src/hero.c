@@ -204,9 +204,11 @@ void hero_check_tiles_below(void) {
                 item = item_loc->item_num;
 
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
+    #ifndef BUILD_FEATURE_HERO_WEAPON_ALWAYS_ENABLED
                 // if the item grabbed is the weapon, arm the hero
                 if ( item == WEAPON_ITEM_NUM )
                     SET_HERO_FLAG( game_state.hero, F_HERO_CAN_SHOOT );
+    #endif
 #endif
 
                 // add item to inventory

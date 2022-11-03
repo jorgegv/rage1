@@ -22,13 +22,6 @@
 // structs for storing a single copy of each sprite graphics in memory
 //////////////////////////////////////////////////////////////////////////
 
-// an animation sequence is an array of frame numbers
-// the frame numbers in a sequence are used to show the corresponding frame for the sprite
-struct animation_sequence_s {
-    uint8_t num_elements;              // number of elements in this sequence
-    uint8_t *frame_numbers;            // ptr to array of sequence of frame numbers
-};
-
 // structs for storing a single sprite's data
 struct  sprite_graphic_data_s {
     uint8_t width,height;               // dimensions in pixels ( rows,cols * 8 )

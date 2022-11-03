@@ -220,6 +220,10 @@ void run_main_game_loop(void) {
       move_bullets();
 #endif
 
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+      btile_animate_all();
+#endif
+
       // read controller
       // changes game_state
       check_controller();

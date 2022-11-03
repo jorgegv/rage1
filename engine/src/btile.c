@@ -34,6 +34,44 @@
 uint8_t screen_pos_tile_type_data[ TILE_TYPE_DATA_SIZE ];
 
 // draw a given btile
+
+// If we are using animated btiles, we include a generic function to display
+// a given frame (btile_draw_frame), and a compatibility function
+// (btile_draw) which just calls btile_draw_frame with frame number 0.  If
+// animated btiles are not in use, we include an optimized version of
+// btile_draw (the one that was used when animated btiles were not
+// implemented)
+
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box, uint8_t num_frame ) {
+    uint8_t dr, dc, r, c, n, rmax, cmax;
+    uint8_t brmin, brmax, bcmin, bcmax;
+
+    brmin = box->row;
+    bcmin = box->col;
+    brmax = brmin + box->height - 1;
+    bcmax = bcmin + box->width - 1;
+
+    n = 0;	// tile counter
+    rmax = b->num_rows;
+    cmax = b->num_cols;
+    for ( dr = 0; dr < rmax; ++dr )
+        for ( dc = 0; dc < cmax; ++dc, ++n ) {
+            r = row + dr;
+            c = col + dc;
+            if ( ( r >= brmin ) && ( r <= brmax ) && ( c >= bcmin ) && ( c <= bcmax ) )  {
+                sp1_PrintAtInv( r, c, b->frames[ num_frame ]->attrs[n], (uint16_t)b->frames[ num_frame ]->tiles[n] );
+                SET_TILE_TYPE_AT( r, c, type );
+            }
+        }
+}
+
+void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
+    btile_draw_frame( row, col, b, type, box, 0 );	// frame number 0 always exists
+}
+
+#else // BUILD_FEATURE_ANIMATED_BTILES
+
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
     uint8_t dr, dc, r, c, n, rmax, cmax;
     uint8_t brmin, brmax, bcmin, bcmax;
@@ -56,6 +94,8 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, stru
             }
         }
 }
+
+#endif // BUILD_FEATURE_ANIMATED_BTILES
 
 void btile_remove( uint8_t row, uint8_t col, struct btile_s *b ) {
     uint8_t dr, dc, rmax, cmax;

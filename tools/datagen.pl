@@ -1658,6 +1658,7 @@ sub validate_and_compile_hero {
             }
         } else {
             $hero->{'bullet'}{'initially_enabled'} = 1;
+            add_build_feature( 'HERO_WEAPON_ALWAYS_ENABLED' );
         }
     }
 }
