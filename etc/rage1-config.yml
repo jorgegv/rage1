@@ -13,9 +13,6 @@ build:
 tools:
   arkos:
     dir: '/home/jorgegv/src/spectrum/arkos/Arkos Tracker 2'
-  datagen:
-    features:
-      btile_deduplicated_data: 1
 
 ##
 ## banked functions database

@@ -2568,7 +2568,7 @@ EOF_HEADER2
 ;
 }
 
-sub generate_btiles_dedupe {
+sub generate_btiles {
     my $dataset = shift;
 
     # generate the list of dataset btiles, return immediately if empty
@@ -2680,60 +2680,6 @@ EOF_TILES
     push @{ $c_dataset_lines->{ $dataset } }, "};\n";
     push @{ $c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
 
-}
-
-sub generate_btiles_flat_data {
-    my $dataset = shift;
-
-    # generate the list of dataset btiles, return immediately if empty
-    my @dataset_btiles = map { $all_btiles[ $_ ] } @{ $dataset_dependency{ $dataset }{'btiles'} };
-    return if not scalar( @dataset_btiles );
-
-    push @h_game_data_lines, <<EOF_TILES_H
-
-////////////////////////////
-// Big Tile definitions
-////////////////////////////
-
-EOF_TILES_H
-;
-
-    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_TILES
-
-////////////////////////////
-// Big Tile definitions
-////////////////////////////
-
-EOF_TILES
-;
-
-
-    # generate the tiles
-    foreach my $tile ( @dataset_btiles ) { generate_btile( $tile, $dataset ); }
-
-    # generate the global btile table for this dataset
-    push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTile table\n";
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @dataset_btiles ) );
-    foreach my $tile ( @dataset_btiles ) {
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
-            $tile->{'rows'},
-            $tile->{'cols'},
-            $tile->{'name'},
-            $tile->{'name'} );
-    }
-    push @{ $c_dataset_lines->{ $dataset } }, "};\n";
-    push @{ $c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
-
-}
-
-sub generate_btiles {
-    my $dataset = shift;
-    my $cfg = rage1_get_config();
-    if ( $cfg->{'tools'}{'datagen'}{'features'}{'btile_deduplicated_data'} ) {
-        generate_btiles_dedupe( $dataset );
-    } else {
-        generate_btiles_flat_data( $dataset );
-    }
 }
 
 sub generate_sprites {
