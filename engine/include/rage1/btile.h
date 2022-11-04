@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "rage1/animation.h"
+
 #include "features.h"
 
 // Big tiles functions and definitions
@@ -46,9 +48,13 @@ struct btile_pos_s {
     uint8_t row, col;
     uint8_t btile_id;			// index into the dataset btile table
     uint8_t state_index;		// index into screen asset state table
-#ifdef BUILD_FEATURE_ANIMATED_BTILES
-    struct animation_data_s *anim;	// animation state data
-#endif
+};
+
+// data structure for an animated btile
+struct animated_btile_s {
+    uint8_t btile_id;			// for efficiency
+    uint8_t btile_pos_id;
+    struct animation_data_s anim;
 };
 
 #ifdef BUILD_FEATURE_ANIMATED_BTILES

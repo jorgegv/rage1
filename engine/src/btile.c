@@ -70,7 +70,7 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, stru
     btile_draw_frame( row, col, b, type, box, 0 );	// frame number 0 always exists
 }
 
-#else // BUILD_FEATURE_ANIMATED_BTILES
+#else // BUILD_FEATURE_ANIMATED_BTILES not defined
 
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
     uint8_t dr, dc, r, c, n, rmax, cmax;

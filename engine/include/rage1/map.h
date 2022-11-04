@@ -45,7 +45,7 @@ struct map_screen_s {
 #ifdef BUILD_FEATURE_ANIMATED_BTILES
     struct {
         uint8_t num_btiles;
-        uint8_t *btiles;
+        struct animated_btile_s *btiles;
     } animated_btile_data;
 #endif
     struct { 
