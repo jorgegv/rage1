@@ -262,6 +262,10 @@ sub read_input_data {
             }
             if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
                 $cur_btile->{'frames'} = $1;
+                if ( $cur_btile->{'frames'} > 1 ) {
+                    # FIXME: this should instead be activated when we _use_ an animated BTILE in a screen
+                    add_build_feature( 'ANIMATED_BTILES' );
+                }
                 next;
             }
             if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
@@ -273,6 +277,8 @@ sub read_input_data {
                 my $index = defined( $cur_btile->{'sequences'} ) ? scalar( @{ $cur_btile->{'sequences'} } ) : 0 ;
                 push @{ $cur_btile->{'sequences'} }, $vars;
                 $cur_btile->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
+                # FIXME: this should instead be activated when we _use_ an animated BTILE in a screen
+                add_build_feature( 'ANIMATED_BTILES' );
                 next;
             }
             if ( $line =~ /^END_BTILE$/ ) {
@@ -2596,7 +2602,12 @@ EOF_TILES
 
     # generate the tiles
 
+    my $animated_btiles = $conditional_build_features{'ANIMATED_BTILES'} || 0;
+
     # generate the offsets and byte arena for all btiles in the dataset
+
+    # the whole dedupe schema works also for animated btiles, since
+    # everything is stored as 8-byte tiles
     my @orig_cell_offsets;
     my @orig_byte_arena;
     foreach my $tile ( @dataset_btiles ) {
@@ -2624,26 +2635,82 @@ EOF_TILES
     push @{ $c_dataset_lines->{ $dataset } }, "};\n";
     
     # generate btile data structs
+    # btiles always have 'frames' == 1, or the number of frames if specified
     my $cell_index = 0;
     foreach my $tile ( @dataset_btiles ) {
-        my $num_cells = scalar( @{ $tile->{'pixel_bytes'} } );
-        my @btile_cell_offsets = @cell_offsets[ $cell_index .. ( $cell_index + $num_cells - 1 ) ];
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_tiles[ %d ] = { %s\n};\n",
-            $tile->{'name'},
-            $num_cells,
-            join( ",\n\t",
-                map { sprintf( "&all_dataset_btile_data[ %d ]", $_ ) }
-                @btile_cell_offsets
-            ) );
-        $cell_index += $num_cells;
+
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// Start of Big tile '%s'\n\n", $tile->{'name'} );
+
+        # output frame tiles
+        foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
+            my $num_cells = scalar( @{ $tile->{'pixel_bytes'} } ) / $tile->{'frames'};
+            my @btile_cell_offsets = @cell_offsets[ $cell_index .. ( $cell_index + $num_cells - 1 ) ];
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_frame_%d_tiles[ %d ] = {\n\t%s\n};\n",
+                $tile->{'name'},
+                $frame,
+                $num_cells,
+                join( ",\n\t",
+                    map { sprintf( "&all_dataset_btile_data[ %d ]", $_ ) }
+                    @btile_cell_offsets
+                ) );
+            $cell_index += $num_cells;
+        }
 
         # manually specified attrs have preference over PNG ones
-        my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
-            $tile->{'name'},
-            scalar( @{ $attrs } ),
-            join( ', ', @{ $attrs } ) );
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
+        # warning: this list will be destroyed by splice calls later!
+        my @attrs = @{ $tile->{'attr'} || $tile->{'png_attr'} };
+        foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
+            my @frame_attrs = splice( @attrs, 0, $tile->{'rows'} * $tile->{'cols'} );
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_frame_%d_attrs[ %d ] = {\n\t%s\n};\n",
+                $tile->{'name'},
+                $frame,
+                scalar( @frame_attrs ),
+                join( ",\n\t", @frame_attrs ) );
+        }
+
+        # if using ANIMATED_BTILES, frame and sequence tables for the btile have to be output
+        if ( $animated_btiles ) {
+
+            # output frame table
+            push @{ $c_dataset_lines->{ $dataset } },
+                sprintf( "struct btile_frame_s btile_%s_frames[ %d ] = {\n\t%s\n};\n\n",
+                    $tile->{'name'},
+                    $tile->{'frames'},
+                    join( ",\n\t", map {
+                            sprintf( "{ .tiles = &btile_%s_frame_%d_tiles[0], .attrs = &btile_%s_frame_%d_attrs[0] }",
+                                $tile->{'name'}, $_,
+                                $tile->{'name'}, $_,
+                            )
+                        } ( 0 .. ( $tile->{'frames'} - 1 ) ) ),
+                );
+
+            # output sequence table
+            # first output each sequence
+            foreach my $seq ( @{ $tile->{'sequences' } } ) {
+                push @{ $c_dataset_lines->{ $dataset } },
+                    sprintf( "uint8_t btile_%s_sequence_%s_frame_numbers[ %d ] = { %s };\n",
+                        $tile->{'name'},
+                        $seq->{'name'},
+                        scalar( split( ',', $seq->{'frames'} ) ),
+                        $seq->{'frames'},
+                    );
+            }
+
+            # now the table of sequences itself
+            push @{ $c_dataset_lines->{ $dataset } },
+                sprintf( "struct animation_sequence_s btile_%s_sequences[ %d ] = {\n\t%s\n};\n\n",
+                    $tile->{'name'},
+                    scalar( @{ $tile->{'sequences'} } ),
+                    join( ",\n\t", map {
+                            sprintf( "{ .num_elements = %d, .frame_numbers = &btile_%s_sequence_%s_frame_numbers[0] };\n",
+                                scalar( split( ',', $_->{'frames'} ) ),
+                                $tile->{'name'},
+                                $_->{'name'},
+                            );
+                        } ( @{ $tile->{'sequences'} } )
+                    ),
+                );
+        }
 
         # output auxiliary definitions
         if ( $dataset eq 'home' ) {
@@ -2665,20 +2732,49 @@ EOF_TILES
                 $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
             );
         }
+
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
     }
 
     # generate the global btile table for this dataset
+
+    # the btile_s structures differ when using (or not) ANIMATED_BTILES
     push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTile table\n";
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @dataset_btiles ) );
     foreach my $tile ( @dataset_btiles ) {
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ %d, %d, &btile_%s_tiles[0], &btile_%s_attrs[0] },\n",
-            $tile->{'rows'},
-            $tile->{'cols'},
-            $tile->{'name'},
-            $tile->{'name'} );
+        if ( $animated_btiles ) {
+            push @{ $c_dataset_lines->{ $dataset } },
+                sprintf( "\t{ .num_rows = %d, .num_cols = %d, ",
+                    $tile->{'rows'},
+                    $tile->{'cols'}
+                );
+            push @{ $c_dataset_lines->{ $dataset } },
+                sprintf( ".num_frames = %d, .frames = &btile_%s_frames[0], ",
+                    $tile->{'frames'},
+                    $tile->{'name'}
+                );
+            push @{ $c_dataset_lines->{ $dataset } },
+                sprintf( ".num_sequences = %d, .sequences = %s\n",
+                    scalar( @{ $tile->{'sequences'} } ),
+                    ( scalar( @{ $tile->{'sequences'} } ) ? 
+                        sprintf( "&btile_%s_sequences[0]", $tile->{'name'} ) :
+                        'NULL'
+                    )
+                );
+        } else {
+            # when no ANIMATED_BTILES are used, the tiles and attrs pointers
+            # are short-circuited to frame 0, which always exists
+            push @{ $c_dataset_lines->{ $dataset } },
+                sprintf( "\t{ %d, %d, &btile_%s_frame_0_tiles[0], &btile_%s_frame_0_attrs[0] },\n",
+                    $tile->{'rows'},
+                    $tile->{'cols'},
+                    $tile->{'name'},
+                    $tile->{'name'} );
+        }
     }
     push @{ $c_dataset_lines->{ $dataset } }, "};\n";
     push @{ $c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
+
 
 }
 
@@ -3336,20 +3432,6 @@ sub generate_tracker_data {
         push @c_banked_data_128_lines, "//////////////////////////////////\n\n";
 
         # output the songs data
-
-        # FIX: the song data must be in ASM format: exported songs are full
-        # of pointer references, so they must be compiled, they can't be in
-        # binary form.  This part needs to be redone
-
-        # It's fine that the songs can be specified in AKS format, but they
-        # need to be converted to ASM.  For that we need Arkos installed.
-
-        # This would greatly benefit from having a centralized tool
-        # configuration file, e.g.  ./etc/rage1-tools.conf
-
-        # Alternatively, we can add a new 'ASM_FILE' parameter which allows
-        # us to directly refer to the song's ASM file and convert it
-        # elsewhere
 
         foreach my $song ( @{ $game_config->{'tracker'}{'songs'} } ) {
             my $symbol_name = "tracker_song_" . $song->{'name'};
