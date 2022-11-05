@@ -144,6 +144,13 @@ void check_collisions(void) {
 #endif // BUILD_FEATURE_HERO_HAS_WEAPON
 }
 
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+void animate_btiles( void ) {
+    RUN_ONLY_ONCE_PER_FRAME;
+    btile_animate_all();
+}
+#endif
+
 void show_heartbeat(void) {
     if ( current_time.frame & 0x08 ) {
         sp1_PrintAtInv(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, DEFAULT_BG_ATTR, ' ');
@@ -221,7 +228,7 @@ void run_main_game_loop(void) {
 #endif
 
 #ifdef BUILD_FEATURE_ANIMATED_BTILES
-      btile_animate_all();
+      animate_btiles();
 #endif
 
       // read controller
