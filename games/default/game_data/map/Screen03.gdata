@@ -13,6 +13,8 @@ BEGIN_SCREEN
 
 	BACKGROUND	BTILE=Back01	ROW=1 COL=1 WIDTH=30 HEIGHT=21 PROBABILITY=128
 
+	OBSTACLE	NAME=Fire	BTILE=AnimatedFire ROW=18 COL=2 ACTIVE=1 SEQUENCE=FireSeq ANIMATION_DELAY=10 SEQUENCE_DELAY=20
+
 	DEFINE		NAME=RedIce	DIGRAPH=KK	TYPE=HARMFUL	BTILE=RedIce01
 	DEFINE		NAME=Ice	DIGRAPH=II	TYPE=OBSTACLE	BTILE=Ice01
 	DEFINE		NAME=Rock	DIGRAPH=RR	TYPE=OBSTACLE	BTILE=Rock01
@@ -22,7 +24,6 @@ BEGIN_SCREEN
 	DEFINE		NAME=TomaEmail	DIGRAPH=TE	TYPE=OBSTACLE	BTILE=TomaEmail
 	DEFINE		NAME=PNGTest	DIGRAPH=PN	TYPE=OBSTACLE	BTILE=PNGTest
 	DEFINE		NAME=Wal1x1	DIGRAPH=WW	TYPE=OBSTACLE	BTILE=Wall1x1
-	DEFINE		NAME=Fire	DIGRAPH=FF	TYPE=OBSTACLE	BTILE=AnimatedFire
 
 	//                                   1                   2                   3
 	//               0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -44,7 +45,7 @@ BEGIN_SCREEN
 	SCREEN_DATA	"                  SSSSSS        RRRRRRRR      RRRR          "
 	SCREEN_DATA	"                  SSSSSS        RRRR          RRRR          "
 	SCREEN_DATA	"                  SSSSSS      RRRR              RRRR        "
-	SCREEN_DATA	"    FF            SSSSSS      RRRR              RRRR        "
+	SCREEN_DATA	"                  SSSSSS      RRRR              RRRR        "
 	SCREEN_DATA	"                                                            "
 	SCREEN_DATA	"                                                            "
 

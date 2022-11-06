@@ -262,10 +262,6 @@ sub read_input_data {
             }
             if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
                 $cur_btile->{'frames'} = $1;
-                if ( $cur_btile->{'frames'} > 1 ) {
-                    # FIXME: this should instead be activated when we _use_ an animated BTILE in a screen
-                    add_build_feature( 'ANIMATED_BTILES' );
-                }
                 next;
             }
             if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
@@ -277,8 +273,6 @@ sub read_input_data {
                 my $index = defined( $cur_btile->{'sequences'} ) ? scalar( @{ $cur_btile->{'sequences'} } ) : 0 ;
                 push @{ $cur_btile->{'sequences'} }, $vars;
                 $cur_btile->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
-                # FIXME: this should instead be activated when we _use_ an animated BTILE in a screen
-                add_build_feature( 'ANIMATED_BTILES' );
                 next;
             }
             if ( $line =~ /^END_BTILE$/ ) {
@@ -1493,7 +1487,7 @@ sub generate_screen {
                         $btile->{'sequence_delay'}
                     );
                     push @{ $c_dataset_lines->{ $dataset } }, sprintf( ".anim.current.sequence = %d },\n",
-                        $btile->{'sequence_name_to_index'}{ $btile->{'sequence'} }
+                        $all_btiles[ $btile_name_to_index{ $btile->{'btile'} } ]{'sequence_name_to_index'}{ $btile->{'sequence'} }
                     );
                 }
                 $btile_pos_index++;
