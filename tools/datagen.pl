@@ -2864,23 +2864,36 @@ EOF_MAP
     push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
             my $screen_name = $_->{'name'};
             my $screen = $_;
+            my $num_animated_btiles = scalar( grep { $_->{'is_animated'} } @{ $_->{'btiles'} } );
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
+
             sprintf( "\t\t.global_screen_num = %d,\n", $screen_name_to_index{ $_->{'name'} } ) .
+
             sprintf( "\t\t.title = %s,\n", ( defined( $screen->{'title'} ) ? '"'.$screen->{'title'}.'"' : 'NULL' ) ) .
+
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
+
+            sprintf( "\t\t.animated_btile_data = { %d, %s },\t// btile_data\n",
+                $num_animated_btiles, ( $num_animated_btiles ? sprintf( 'screen_%s_animated_btiles', $_->{'name'} ) : 'NULL' ) ) .
+
             sprintf( "\t\t.enemy_data = { %d, %s },\t// enemy_data\n",
                 scalar( @{$_->{'enemies'}} ), ( scalar( @{$_->{'enemies'}} ) ? sprintf( 'screen_%s_enemies', $_->{'name'} ) : 'NULL' ) ) .
+
             sprintf( "\t\t.hero_data = { %d, %d },\t// hero_data\n",
                 $_->{'hero'}{'startup_xpos'}, $_->{'hero'}{'startup_ypos'} ) .
+
             ( scalar( @all_items) ? sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
+
             ( scalar( @all_crumb_types) ? sprintf( "\t\t.crumb_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'crumbs'}} ), ( scalar( @{$_->{'crumbs'}} ) ? sprintf( 'screen_%s_crumbs', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
+
             sprintf( "\t\t.hotzone_data = { %d, %s },\t// hotzone_data\n",
                 scalar( @{$_->{'hotzones'}} ), ( scalar( @{$_->{'hotzones'}} ) ? sprintf( 'screen_%s_hotzones', $_->{'name'} ) : 'NULL' ) ) .
+
             join( "\n", map {
                 sprintf( "\t\t.flow_data.rule_tables.%s = { %d, %s },",
                     $_,
@@ -2894,6 +2907,7 @@ EOF_MAP
                     )
                 )
                 } @{ $syntax->{'valid_whens'} } ) . "\n" .
+
             ( defined( $_->{'background'} ) ?
                 sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } }\t// background_data\n",
                     sprintf( "BTILE_ID_%s", uc( $_->{'background'}{'btile'} ) ),
@@ -2902,8 +2916,10 @@ EOF_MAP
                     $_->{'background'}{'width'}, $_->{'background'}{'height'}
                 ) :
                 "\t\t.background_data = { 0, 0, { 0,0,0,0 } }\t// background_data\n" ) .
+
             "\t}"
         } @dataset_screens );
+
     push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
 
 }
