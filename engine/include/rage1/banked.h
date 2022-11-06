@@ -28,6 +28,7 @@
     #define	banked_assets			( *( struct dataset_assets_s **)	MAIN_SYMBOL_banked_assets )
     #define	bullet_state_data		( ( struct bullet_state_data_s **)	MAIN_SYMBOL_bullet_state_data )
     #define	full_screen			( *( struct sp1_Rect *)			MAIN_SYMBOL_full_screen )
+    #define	game_area			( *( struct sp1_Rect *)			MAIN_SYMBOL_game_area )
 
 #endif // _BANKED_CODE_BUILD
 

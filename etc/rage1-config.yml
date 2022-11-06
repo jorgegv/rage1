@@ -54,8 +54,8 @@ banked_functions:
     build_dependency: BUILD_FEATURE_HERO_HAS_WEAPON
 
   # btiles
-  - name: btile_animate_all
-    build_dependency: BUILD_FEATURE_ANIMATED_BTILES
+#  - name: btile_animate_all
+#    build_dependency: BUILD_FEATURE_ANIMATED_BTILES
 
   # tracker
   - name: init_tracker

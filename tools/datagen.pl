@@ -1086,55 +1086,10 @@ sub validate_and_compile_btile {
             if ( not ( ++$byte_count % ( 8 * $tile->{'cols'} ) ) ) { $cur_row++; }
         }
     }
-}
 
-sub generate_btile {
-    my ( $tile, $dataset ) = @_;
-
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Big tile '%s'\n\n", $tile->{'name'} );
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_tile_data[%d] = {\n%s\n};\n",
-        $tile->{'name'},
-        scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ),
-        join( ", ",
-            map { '0x'.sprintf('%02x',$_) }
-            map { @$_ }
-            @{ $tile->{'pixel_bytes'} }
-        ) );
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_tiles[%d] = { %s };\n",
-        $tile->{'name'},
-        scalar( map { @$_ } @{ $tile->{'pixel_bytes'} } ) / 8,
-        join( ', ',
-            map { sprintf( "&btile_%s_tile_data[%d]", $tile->{'name'}, $_ ) }
-            grep { ( $_ % 8 ) == 0 }
-            ( 0 .. ( $tile->{'rows'} * $tile->{'cols'} * 8 - 1 ) )
-        ) );
-    # manually specified attrs have preference over PNG ones
-    my $attrs = ( $tile->{'attr'} || $tile->{'png_attr'} );
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_attrs[%d] = { %s };\n",
-        $tile->{'name'},
-        scalar( @{ $attrs } ),
-        join( ', ', @{ $attrs } ) );
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
-
-    # output auxiliary definitions
-    if ( $dataset eq 'home' ) {
-        push @h_game_data_lines, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
-            uc( $tile->{'name'} ),
-            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
-        );
-        push @h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
-            uc( $tile->{'name'} ),
-            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
-        );
-    } else {
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
-            uc( $tile->{'name'} ),
-            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
-        );
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_ID_%s\t%d\n",
-            uc( $tile->{'name'} ),
-            $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $btile_name_to_index{ $tile->{'name'} } },
-        );
+    # compile animation sequences
+    foreach my $seq ( @{ $tile->{'sequences'} } ) {
+        $seq->{'frame_list'} = [ split( /,/, $seq->{'frames'} ) ];
     }
 }
 
@@ -1346,7 +1301,7 @@ sub validate_and_compile_screen {
     compile_screen_data( $screen );
 
     ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
-        die "Screen '$screen->{name}' has no Btiles\n";
+        die "SCREEN: Screen '$screen->{name}' has no Btiles\n";
 
     # check if HARMFUL btiles are used and enable the BUILD_FEATURE
     foreach my $btile ( @{$screen->{'btiles'} } ) {
@@ -1355,6 +1310,28 @@ sub validate_and_compile_screen {
             add_build_feature( 'HERO_CHECK_TILES_BELOW' );
         }
     }
+
+    # check if animated btiles are used, ensure all have the needed
+    # paremeters and add build feature
+    foreach my $btile ( @{$screen->{'btiles'} } ) {
+        if ( defined( $btile->{'animation_delay'} ) or
+            defined( $btile->{'sequence_delay'} ) or
+            defined( $btile->{'sequence'} ) ) {
+
+            # if any of the above are used, all of them must be specified
+            if ( defined( $btile->{'animation_delay'} ) and
+                defined( $btile->{'sequence_delay'} ) and
+                defined( $btile->{'sequence'} ) ) {
+                add_build_feature( 'ANIMATED_BTILES' );
+                $btile->{'is_animated'} = 1;
+            } else {
+                die "SCREEN: Animated BTILES must define SEQUENCE, ANIMATION_DELAY and SEQUENCE_DELAY\n";
+            }
+        } else {
+            $btile->{'is_animated'} = 0;
+        }
+    }
+
 }
 
 # SCREEN_DATA and DEFINE compilation
@@ -1491,6 +1468,38 @@ sub generate_screen {
                     ( "$_->{'asset_state_index'}" eq 'ASSET_NO_STATE' ? 'ASSET_NO_STATE' : $_->{'asset_state_index'} ) )
             } @{$screen->{'btiles'}} );
         push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+
+        # generate animated_btile_s records, they have been previously
+        # classified with 'is_animated' = 1
+        my $num_animated_btiles = scalar( grep { $_->{'is_animated'} } @{ $screen->{'btiles'} } );
+        if ( $num_animated_btiles ) {
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' animated btile records\n", $screen->{'name'} );
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct animated_btile_s screen_%s_animated_btiles[ %d ] = {\n",
+                $screen->{'name'},
+                $num_animated_btiles
+            );
+
+            my $btile_pos_index = 0;
+            foreach my $btile ( @{ $screen->{'btiles'} } ) {
+                if ( $btile->{'is_animated'} ) {
+                    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\t{ .btile_id = %d, .btile_pos_id = %d, ",
+                        $btile_global_to_dataset_index->{ $btile_name_to_index{ $btile->{'btile'} } },
+                        $btile_pos_index,
+                    );
+                    push @{ $c_dataset_lines->{ $dataset } }, sprintf( ".anim.delay_data.frame_delay = %d, ",
+                        $btile->{'animation_delay'}
+                    );
+                    push @{ $c_dataset_lines->{ $dataset } }, sprintf( ".anim.delay_data.sequence_delay = %d, ",
+                        $btile->{'sequence_delay'}
+                    );
+                    push @{ $c_dataset_lines->{ $dataset } }, sprintf( ".anim.current.sequence = %d },\n",
+                        $btile->{'sequence_name_to_index'}{ $btile->{'sequence'} }
+                    );
+                }
+                $btile_pos_index++;
+            }
+            push @{ $c_dataset_lines->{ $dataset } }, "};\n\n";
+        }
     }
 
     # screen enemies
@@ -2691,25 +2700,27 @@ EOF_TILES
                     sprintf( "uint8_t btile_%s_sequence_%s_frame_numbers[ %d ] = { %s };\n",
                         $tile->{'name'},
                         $seq->{'name'},
-                        scalar( split( ',', $seq->{'frames'} ) ),
-                        $seq->{'frames'},
+                        scalar( @{ $seq->{'frame_list'} } ),
+                        join( ',', @{ $seq->{'frame_list'} } ),
                     );
             }
 
             # now the table of sequences itself
-            push @{ $c_dataset_lines->{ $dataset } },
-                sprintf( "struct animation_sequence_s btile_%s_sequences[ %d ] = {\n\t%s\n};\n\n",
-                    $tile->{'name'},
-                    scalar( @{ $tile->{'sequences'} } ),
-                    join( ",\n\t", map {
-                            sprintf( "{ .num_elements = %d, .frame_numbers = &btile_%s_sequence_%s_frame_numbers[0] };\n",
-                                scalar( split( ',', $_->{'frames'} ) ),
-                                $tile->{'name'},
-                                $_->{'name'},
-                            );
-                        } ( @{ $tile->{'sequences'} } )
-                    ),
-                );
+            if ( scalar( @{ $tile->{'sequences'} } ) ) {
+                push @{ $c_dataset_lines->{ $dataset } },
+                    sprintf( "struct animation_sequence_s btile_%s_sequences[ %d ] = {\n\t%s\n};\n\n",
+                        $tile->{'name'},
+                        scalar( @{ $tile->{'sequences'} } ),
+                        join( ",\n\t", map {
+                                sprintf( "{ .num_elements = %d, .frame_numbers = &btile_%s_sequence_%s_frame_numbers[0] }",
+                                    scalar( @{ $_->{'frame_list'} } ),
+                                    $tile->{'name'},
+                                    $_->{'name'},
+                                );
+                            } ( @{ $tile->{'sequences'} } )
+                        ),
+                    );
+            }
         }
 
         # output auxiliary definitions
@@ -2754,7 +2765,7 @@ EOF_TILES
                     $tile->{'name'}
                 );
             push @{ $c_dataset_lines->{ $dataset } },
-                sprintf( ".num_sequences = %d, .sequences = %s\n",
+                sprintf( ".num_sequences = %d, .sequences = %s },\n",
                     scalar( @{ $tile->{'sequences'} } ),
                     ( scalar( @{ $tile->{'sequences'} } ) ? 
                         sprintf( "&btile_%s_sequences[0]", $tile->{'name'} ) :
