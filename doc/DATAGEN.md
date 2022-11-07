@@ -282,7 +282,8 @@ dataset is defined for a screen, the default value `home` is used.
 * `TITLE`: an optional title for the screen that can be used in the game.
 The title must be enclosed between double quotes ("")
 * `OBSTACLE`: places an element on the screen. The Hero can not go through
-this element (=obstacle) but s/he must move around. Arguments:
+this element (=obstacle) but s/he must move around. An OBSTACLE can be
+animated (see below for details). Arguments:
   * `NAME`: the Btile that will be used to draw this obstacle
   * `ROW`, `COL`: position of the obstacle on the screen
   * `ACTIVE`: 1 if this obstacle is active, 0 if not. Obstacles can be
@@ -291,10 +292,11 @@ this element (=obstacle) but s/he must move around. Arguments:
   * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not. If it is ommited,
   its state will not change during the game.
 * `DECORATION`: places a decoration on the screen. The hero can go over it.
-  Arguments are the same as for OBSTACLEs.
+  Arguments are the same as for OBSTACLEs. A DECORATION can be animated (see
+  below for details).
 * `HARMFUL`: places a harmful decoration on the screen.  The hero gets
   killed/harmed if s/he goes over it.  Arguments are the same as for
-  OBSTACLEs.
+  OBSTACLEs. A HARMFUL can be animated (see below for details).
 * `HOTZONE`: a zone on the screen where something happens when the hero goes
   over it.  HOTZONEs are only definitions, not graphic elements, i.e.  they
   only define coordinate checks and actions to be done when inside.  If you
@@ -347,16 +349,16 @@ this element (=obstacle) but s/he must move around. Arguments:
     * `INITIAL_SEQUENCE`: (optional) name of the initial animation sequence.
     If not specified, 'Main' is assumed
     * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
-    (screen frames)
+    (screen frames). Minimum 1: specifying 0 means 256, that is, a delay of
+    around 5 seconds.
     * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
     will switch from animation sequence A to B and viceversa when bouncing
     horizontally: sequence A for incrementing X, sequence B for decrementing X
     * `CHANGE_SEQUENCE_VERT`: (optional) if this flag is 1, the enemy sprite
     will switch from animation sequence A to B and viceversa when bouncing
     vertically: sequence A for incrementing Y, sequence B for decrementing Y
-
-`CHANGE_SEQUENCE_HORIZ` and `CHANGE_SEQUENCE_VERT` animations should be
-used separately and never together in the same enemy.
+    * `CHANGE_SEQUENCE_HORIZ` and `CHANGE_SEQUENCE_VERT` animations should
+    be used separately and never together in the same enemy.
 
 * `BACKGROUND`: defines a background as a rectangle of repeated tiles.
 Arguments:
@@ -381,15 +383,25 @@ characters long.
   * `BTILE`: the btile name for this graph
   * `TYPE`: OBSTACLE or DECORATION
 
-*Special Note:*
+*Special Notes:*
 
-The order in which the elements are placed on the screen is the following:
+- The order in which the elements are placed on the screen is the following:
 
-- If SCREEN_DATA lines exist, SCREEN_DATA elements are generated.  There
-  must be exactly GAME_AREA_HEIGHT lines, and each line must be 2 x
-  GAME_AREA_WIDTH characters long (not counting the enclosing quotes).
+  - If SCREEN_DATA lines exist, SCREEN_DATA elements are generated.  There
+    must be exactly GAME_AREA_HEIGHT lines, and each line must be 2 x
+    GAME_AREA_WIDTH characters long (not counting the enclosing quotes).
 
-- Remaining elements are positioned over the previous ones if there are any.
+  - Remaining elements are positioned over the previous ones if there are any.
+
+- OBSTACLEs, DECORATIONs and HARMFULs can be animated. This is achieved by
+  specifying all of the following arguments, additionally to the regular
+  element definition (all delays are specified in 1/50th os a second):
+
+  - `ANIMATION_DELAY`: the delay between animation frames
+  - `SEQUENCE_DELAY`: the delay between animation sequence runs (minimum 1:
+    if 0, then this is 256 frames, that is ~5 seconds)
+  - `SEQUENCE`: the name of the sequence to use for animation. The BTILE
+    used for the element must have defined this sequence
 
 ### HERO data
 

@@ -17,6 +17,8 @@
 #include "rage1/inventory.h"
 #include "rage1/screen.h"
 
+#include "rage1/memory.h"
+
 #include "game_data.h"
 
 #ifdef BUILD_FEATURE_SCREEN_TITLES
@@ -72,6 +74,11 @@ void map_draw_screen(struct map_screen_s *s) {
             IS_BTILE_ACTIVE( all_screen_asset_state_tables[ s->global_screen_num ].states[ t->state_index ].asset_state ) )
             btile_draw( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ), t->type, &game_area );
     }
+
+    // reset animation sequence counters in animated btiles
+    i = s->animated_btile_data.num_btiles;
+    while ( i-- )
+        animation_reset_state( &s->animated_btile_data.btiles[ i ].anim );
 
 #ifdef BUILD_FEATURE_INVENTORY
     // draw items

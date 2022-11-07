@@ -13,6 +13,8 @@
 
 #include <stdint.h>
 
+#include "rage1/animation.h"
+
 #include "features.h"
 
 // Big tiles functions and definitions
@@ -20,20 +22,45 @@
 // rectangular form. Array is in row form. Tiles can be either
 // <256, for regular UDGs, or >=256 for address-specified ones
 
+// struct for defining a big tile frame
+struct btile_frame_s {
+    uint8_t **tiles;
+    uint8_t *attrs;
+};
+
 // struct for defining a big tile
 struct btile_s {
     uint8_t num_rows,num_cols;
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+    uint8_t num_frames;
+    struct btile_frame_s *frames;
+    uint8_t num_sequences;
+    struct animation_sequence_s *sequences;
+#else
     uint8_t **tiles;
     uint8_t *attrs;
+#endif
 };
 
 // struct for defining a tile's position on a given screen
 struct btile_pos_s {
     uint8_t type;
     uint8_t row, col;
-    uint8_t btile_id;		// index into the dataset btile table
-    uint8_t state_index;	// index into screen asset state table
+    uint8_t btile_id;			// index into the dataset btile table
+    uint8_t state_index;		// index into screen asset state table
 };
+
+// data structure for an animated btile
+struct animated_btile_s {
+    uint8_t btile_id;			// for efficiency
+    uint8_t btile_pos_id;
+    struct animation_data_s anim;
+};
+
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box, uint8_t num_frame );
+void btile_animate_all( void );
+#endif
 
 void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box );
 void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
