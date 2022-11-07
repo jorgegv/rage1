@@ -40,6 +40,8 @@ banked_functions:
   # animation
   - name: animation_sequence_tick
     signature: a16_a8_r8
+  - name: animation_reset_state
+    signature: a16
 
   # hero
   - name: hero_animate_and_move

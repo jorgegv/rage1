@@ -39,5 +39,6 @@ struct animation_data_s {
 
 uint8_t animation_sequence_tick( struct animation_data_s *anim, uint8_t max_frames );
 void animation_set_sequence( struct animation_data_s *anim, uint8_t sequence );
+void animation_reset_state( struct animation_data_s *anim );
 
 #endif	// _ANIMATION_H

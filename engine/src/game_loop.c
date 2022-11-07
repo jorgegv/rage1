@@ -227,10 +227,6 @@ void run_main_game_loop(void) {
       move_bullets();
 #endif
 
-#ifdef BUILD_FEATURE_ANIMATED_BTILES
-      animate_btiles();
-#endif
-
       // read controller
       // changes game_state
       check_controller();
@@ -260,6 +256,10 @@ void run_main_game_loop(void) {
       // check loop flags and react to conditions.
       // changes game state
       check_loop_flags();
+
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+      animate_btiles();
+#endif
 
       // update screen
       sp1_UpdateNow();

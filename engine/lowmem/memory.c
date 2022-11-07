@@ -61,12 +61,12 @@ void memory_call_banked_function_a16( uint8_t function_id, uint16_t arg ) {
 
 uint8_t memory_call_banked_function_a16_a8_r8( uint8_t function_id, uint16_t arg1, uint8_t arg2 ) {
 
-    uint8_t retval;
 
     // pointer to table of functions in bank
     banked_function_a16_a8_r8_t *run_function = (banked_function_a16_a8_r8_t *) 0xC000;
 
     uint8_t previous_memory_bank;
+    uint8_t retval;
 
     // save current memory bank
     previous_memory_bank = memory_current_memory_bank;

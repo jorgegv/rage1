@@ -15,6 +15,8 @@
 
 #include "rage1/btile.h"
 #include "rage1/memory.h"
+#include "rage1/debug.h"
+#include "rage1/game_state.h"
 
 #include "game_data.h"
 
@@ -88,17 +90,23 @@ void btile_animate_all( void ) {
         if ( ( btile_pos->state_index != ASSET_NO_STATE ) &&
             ! IS_BTILE_ACTIVE( all_screen_asset_state_tables[ game_state.current_screen_ptr->global_screen_num ].states[ btile_pos->state_index ].asset_state ) )
             continue;
-        // otherwise (no state, or state == enabled), go on
+
+        // we animate if there is no state ( no state = always active ), or if the btile is active
 
         anim = &game_state.current_screen_ptr->animated_btile_data.btiles[ i ].anim;
         max_frame = dataset_get_banked_btile_ptr( btile_id )->sequences[ anim->current.sequence ].num_elements - 1;
 
         // animation_sequence_tick returns 1 if a frame change is needed, 0 if not
-        if ( animation_sequence_tick( anim, max_frame ) ) {
-            // we draw if there is no state ( no state = always active ), or if the btile is active
+        uint8_t tmp;
+        if ( tmp = animation_sequence_tick( anim, max_frame ) ) {
             btile = dataset_get_banked_btile_ptr( btile_id );
             num_frame = btile->sequences[ anim->current.sequence ].frame_numbers[ anim->current.sequence_counter ];
             btile_draw_frame( btile_pos->row, btile_pos->col, btile, btile_pos->type, &game_area, num_frame );
+        }
+        if ( game_state.current_screen == 2 ) {
+            debug_out("\nF:"); debug_out( i8toa( game_state.current_screen_ptr->animated_btile_data.btiles[0].anim.current.frame_delay_counter ) );
+            debug_out(" S:"); debug_out( i8toa( game_state.current_screen_ptr->animated_btile_data.btiles[0].anim.current.sequence_delay_counter ) );
+            debug_out(" C:"); debug_out( i8toa( tmp ) );
         }
     }
 }
