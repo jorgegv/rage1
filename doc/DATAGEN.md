@@ -349,7 +349,8 @@ animated (see below for details). Arguments:
     * `INITIAL_SEQUENCE`: (optional) name of the initial animation sequence.
     If not specified, 'Main' is assumed
     * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
-    (screen frames)
+    (screen frames). Minimum 1: specifying 0 means 256, that is, a delay of
+    around 5 seconds.
     * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
     will switch from animation sequence A to B and viceversa when bouncing
     horizontally: sequence A for incrementing X, sequence B for decrementing X
@@ -397,7 +398,8 @@ characters long.
   element definition (all delays are specified in 1/50th os a second):
 
   - `ANIMATION_DELAY`: the delay between animation frames
-  - `SEQUENCE_DELAY`: the delay between animation sequence runs
+  - `SEQUENCE_DELAY`: the delay between animation sequence runs (minimum 1:
+    if 0, then this is 256 frames, that is ~5 seconds)
   - `SEQUENCE`: the name of the sequence to use for animation. The BTILE
     used for the element must have defined this sequence
 
