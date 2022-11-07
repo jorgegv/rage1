@@ -26,7 +26,7 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
 - BTILEGEN: an auxiliary tool that creates your BTILE definitions from your
   PNG tile files and a small trivial metadata file (TILEDEF)
 
-### New Features
+### New Features and Gameplay Options
 
 - The game can now have a Loading Screen, just provide the image in .SCR or
   .PNG format and you are all done
@@ -72,6 +72,18 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
 - New HARMFUL btiles: decorations that kill you if you step over them (or
   take energy from you if using advanced Damage mode for your hero).
 
+- New ANIMATED btiles: decorations can now also have animations, which are
+  configured in the same way as sprite animations. Animated btiles go
+  specially well with HARMFUL btiles, so that your player know that some
+  background that moves may harm te hero!
+
+- The hero shooting system is now optional!  You can design games where you
+  don't need weapons, or where the weapon is acquired during the game.  You
+  can even disable or enable it based in game conditions specified as usual
+  FLOW rules.  Of course, if your game does not use weapons at all, a whole
+  bunch of code is not included (thanks, conditional compilation!) and you
+  have a lot more space for graphics, screens, rules, enemies, etc.
+
 ### Enhancements, Fixes and Optimizations
 
 - The hero can now move diagonally!
@@ -89,6 +101,13 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
 - Bullets can now have different graphics depending on the direction they
   are shot.  If you shoot balls, this does not matter very much, but it
   makes a difference if you shoot knives!
+
+- A very powerful data analyzer and deduplicator has been included with
+  DATAGEN.  You, game developer, do not need any more to take care of where
+  your repeated tiles are and manage them manually for efficiency.  Just
+  define all your btiles and DATAGEN will compress them all and find
+  repeated tiles and byte sequences so that the space used by them is
+  minimized!
 
 ### Documentation
 
