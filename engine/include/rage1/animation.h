@@ -16,8 +16,8 @@
 // an animation sequence is an array of frame numbers
 // the frame numbers in a sequence are used to show the corresponding frame for the sprite
 struct animation_sequence_s {
-    uint8_t num_elements;              // number of elements in this sequence
-    uint8_t *frame_numbers;            // ptr to array of sequence of frame numbers
+    uint8_t num_frames;			// number of frames in this sequence
+    uint8_t *frame_numbers;		// ptr to array of sequence of frame numbers
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -208,7 +208,7 @@ void hero_animate_and_move( void ) {
     // animate hero
     if ( ++anim->delay_counter == anim->delay ) {
         anim->delay_counter = 0;
-        if ( ++anim->current_frame == home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].sequence_data.sequences[ anim->current_sequence ].num_elements ) {
+        if ( ++anim->current_frame == home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].sequence_data.sequences[ anim->current_sequence ].num_frames ) {
             anim->current_frame = 0;
         }
     }

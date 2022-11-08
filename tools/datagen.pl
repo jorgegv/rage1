@@ -2706,7 +2706,7 @@ EOF_TILES
                         $tile->{'name'},
                         scalar( @{ $tile->{'sequences'} } ),
                         join( ",\n\t", map {
-                                sprintf( "{ .num_elements = %d, .frame_numbers = &btile_%s_sequence_%s_frame_numbers[0] }",
+                                sprintf( "{ .num_frames = %d, .frame_numbers = &btile_%s_sequence_%s_frame_numbers[0] }",
                                     scalar( @{ $_->{'frame_list'} } ),
                                     $tile->{'name'},
                                     $_->{'name'},

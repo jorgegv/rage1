@@ -100,7 +100,7 @@ void btile_animate_all( void ) {
         // we animate if there is no state ( no state = always active ), or if the btile is active
 
         anim = &game_state.current_screen_ptr->animated_btile_data.btiles[ i ].anim;
-        max_frames = dataset_get_banked_btile_ptr( btile_id )->sequences[ anim->current.sequence ].num_elements;
+        max_frames = dataset_get_banked_btile_ptr( btile_id )->sequences[ anim->current.sequence ].num_frames;
 
         // animation_sequence_tick returns 1 if a frame change is needed, 0 if not
         if ( animation_sequence_tick( anim, max_frames ) ) {
