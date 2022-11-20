@@ -42,10 +42,4 @@ USER z88dk
 
 WORKDIR /src/
 
-RUN \
-	if [ ! -d rage1 ]; then \
-		git clone https://github.com/jorgegv/rage1.git --branch docker_support; \
-		cp rage1/docker/rage1-config.yaml rage1/etc ; \
-	fi
-
 CMD /bin/bash
