@@ -1,6 +1,11 @@
 # RAGE1 ChangeLog
 
-## 0.5.0 (XXXX-XX-XX) - WORK IN PROGRESS!
+## 0.6.0 (XXXX-XX-XX) - WORK IN PROGRESS
+
+- WIP: The all wanted TUTORIAL is still in the works!  Sorry for moving this
+  here from 0.5.0 release :-)
+
+## 0.5.0 (2022-12-11)
 
 NEWS: RAGE1 is being used to develop the game "Cesare the Somnambule", by
 Team Moritz! "Cesare" is a game based around the classic film "The cabinet of Dr.
@@ -113,8 +118,6 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
 
 - Of course, all the previous features and tools have been thoroughly
   documented in the associated files (DATAGEN, MAPGEN, etc.)
-
-- WIP: The all wanted TUTORIAL is in the works!
 
 ## 0.4.0 (2021-09-01)
 
