@@ -12,7 +12,8 @@ build:
 ##
 tools:
   arkos:
-    dir: '/home/jorgegv/src/spectrum/arkos/Arkos Tracker 2'
+    # standard directory when running under Docker
+    dir: '/opt/arkos/Arkos Tracker 2'
 
 ##
 ## banked functions database
