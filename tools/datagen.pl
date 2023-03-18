@@ -2874,8 +2874,11 @@ EOF_MAP
             sprintf( "\t\t.btile_data = { %d, %s },\t// btile_data\n",
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
 
-            sprintf( "\t\t.animated_btile_data = { %d, %s },\t// btile_data\n",
-                $num_animated_btiles, ( $num_animated_btiles ? sprintf( 'screen_%s_animated_btiles', $_->{'name'} ) : 'NULL' ) ) .
+            # onlye output if ANIMATED_BTILES are used
+            ( is_build_feature_enabled( 'ANIMATED_BTILES' ) ?
+                sprintf( "\t\t.animated_btile_data = { %d, %s },\t// btile_data\n",
+                $num_animated_btiles, ( $num_animated_btiles ? sprintf( 'screen_%s_animated_btiles', $_->{'name'} ) : 'NULL' ) )
+                : '' ) .
 
             sprintf( "\t\t.enemy_data = { %d, %s },\t// enemy_data\n",
                 scalar( @{$_->{'enemies'}} ), ( scalar( @{$_->{'enemies'}} ) ? sprintf( 'screen_%s_enemies', $_->{'name'} ) : 'NULL' ) ) .
@@ -2883,10 +2886,12 @@ EOF_MAP
             sprintf( "\t\t.hero_data = { %d, %d },\t// hero_data\n",
                 $_->{'hero'}{'startup_xpos'}, $_->{'hero'}{'startup_ypos'} ) .
 
+            # only output if INVENTORY is used
             ( scalar( @all_items) ? sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
 
+            # only output if CRUMBS are used
             ( scalar( @all_crumb_types) ? sprintf( "\t\t.crumb_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'crumbs'}} ), ( scalar( @{$_->{'crumbs'}} ) ? sprintf( 'screen_%s_crumbs', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
