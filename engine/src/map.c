@@ -75,10 +75,12 @@ void map_draw_screen(struct map_screen_s *s) {
             btile_draw( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ), t->type, &game_area );
     }
 
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
     // reset animation sequence counters in animated btiles
     i = s->animated_btile_data.num_btiles;
     while ( i-- )
         animation_reset_state( &s->animated_btile_data.btiles[ i ].anim );
+#endif // BUILD_FEATURE_ANIMATED_BTILES
 
 #ifdef BUILD_FEATURE_INVENTORY
     // draw items
