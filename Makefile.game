@@ -1,0 +1,20 @@
+# This Makefile should be run from the game base directory
+
+GAMEDIR := $(shell pwd)
+RAGE1DIR := $(shell realpath "$(GAMEDIR)/../rage1")
+
+info:
+	@echo "Game Directory: $(GAMEDIR)"
+	@echo "RAGE1 Directory: $(RAGE1DIR)"
+
+build: info
+	@bash -c "cd $(RAGE1DIR) && source env.sh && make -s build target_game=$(GAMEDIR)"
+
+build-debug: info
+	@bash -c "cd $(RAGE1DIR) && source env.sh && make -s build-debug target_game=$(GAMEDIR)"
+
+run:
+	@bash -c "cd $(RAGE1DIR) && make -s run"
+
+mem:
+	@bash -c "cd $(RAGE1DIR) && source env.sh && make -s mem"
