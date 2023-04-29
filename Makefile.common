@@ -243,6 +243,7 @@ new-game:
 	@mkdir -p "$(target)/"
 	@echo -n "Syncing library and game template files... "
 	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)"
+	@rsync -ap Makefile.game "$(target)/Makefile"
 	@echo "Done!"
 
 # tools

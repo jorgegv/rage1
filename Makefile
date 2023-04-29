@@ -24,7 +24,6 @@ help:
 	@grep -P '^[\w\-]+:' Makefile | grep -v ":=" | cut -f1 -d: | grep -v -E '^default' | sed 's/^/    /g'
 	@echo ""
 	@echo "* Use 'make new-game' for creating a new template game using the library"
-	@echo "* Use 'make update-game' for updating library code in an existing game"
 	@echo ""
 
 clean:
