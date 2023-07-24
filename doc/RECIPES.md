@@ -27,7 +27,7 @@ This is accomplished by using HOTZONES and FLOWGEN rules.  Let's assume you
 want to implement the switching from Screen A to Screen B and vice versa.
 
 - First, you would define a hotzone in Screen A, with a name and pixel
-  coordinates (x,y,width and height).  This is the area in SCreen A that
+  coordinates (x,y,width and height).  This is the area in Screen A that
   takes you to Screen B
 
 - Then you would do the same in Screen B, for the area that takes you back
@@ -37,7 +37,7 @@ want to implement the switching from Screen A to Screen B and vice versa.
   is running over the Screen A hotzone.  If it is, it executes an action of
   type WARP_TO_SCREEN to switch into Screen B
 
-- Then again you define the reciprocal Game Loop ruls in Screen B for the
+- Then again you define the reciprocal Game Loop rules in Screen B for the
   Screen B hotzone that takes you to Screen A
 
 - The hotzones can be decorated with some DECORATION btiles, in case they
@@ -71,7 +71,7 @@ END_RULE
 
 The reciprocal zone and rule from Screen B to SCreen A would be similar.
 
-(As always, check the exhaustive syntax guide in DATAGEN and FLOWGEN docs)
+(As always, check the exhaustive syntax guide in DATAGEN docs)
 
 ## Automatically drop an item somewhere in the game
 
@@ -109,11 +109,11 @@ You would do it like this:
     - AND it has the item in his/her inventory
   - THEN:
     - Activate the BTILE in Screen B (this makes the item appear where it
-      should be dropped - It is not the item, it is an obstacle with the
+      should be dropped - It is not the item, it is an obstacle with
       a similar/equal tile, but the player does not know that :-) )
     - AND Deactivate the (optional) holder decoration
     - AND Remove the item from the inventory
-    - AND Set whatever flag you need to note that the iem has been dropped
+    - AND Set whatever flag you need to note that the item has been dropped
     in its place
 
 The DATAGEN code would be like:
@@ -154,7 +154,7 @@ END_RULE
 Remember that ITEM_ID=bit_number and ITEM_MASK=bit_mask, so for ITEM_ID=4,
 ITEM_MASK=0x10 (the fourth bit is 1)
 
-(As always, check the exhaustive syntax guide in DATAGEN and FLOWGEN docs)
+(As always, check the exhaustive syntax guide in DATAGEN docs)
 
 ## Action at a distance: enabling/disabling an element from another screen
 
@@ -175,7 +175,7 @@ The procedure would be the following:
   to be acted upon resides). You can use a SET_SCREEN_FLAG action to do
   this.
 - In Screen B, setup an ENTER_SCREEN rule that checks the SCREEN FLAG you
-  used in the previous rule in SCreen A (use a SCREEN_FLAG_IS_SET check)
+  used in the previous rule in Screen A (use a SCREEN_FLAG_IS_SET check)
 - If the flag is active, act upon the (now local) element (enable/disable
   the btile, enemy, etc.), and also, RESET the screen flag to avoid further
   processing (use a RESET_SCREEN_FLAG action)
