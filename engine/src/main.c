@@ -8,6 +8,10 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <input.h>
+
+#include "features.h"
+
 #include "rage1/memory.h"
 #include "rage1/sp1engine.h"
 #include "rage1/interrupts.h"
@@ -19,6 +23,8 @@
 #include "rage1/debug.h"
 #include "rage1/dataset.h"
 #include "rage1/codeset.h"
+#include "rage1/charset.h"
+#include "rage1/timer.h"
 
 #include "game_data.h"
 
@@ -32,11 +38,38 @@ void init_program(void) {
 #endif	// BUILD_FEATURE_CODESETS
    init_controllers();
    init_hero();
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
    init_bullets();
+#endif
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+   // this one is only needed when compiling for 128
+   // for 48 mode the beepr gets initialized by regular BSS init code
+   init_beeper();
+#endif
+#ifdef	BUILD_FEATURE_CUSTOM_CHARSET
+   init_custom_charset();
+#endif	// BUILD_FEATURE_CUSTOM_CHARSET
+#ifdef BUILD_FEATURE_GAME_TIME
+   init_timer();
+#endif
+#ifdef BUILD_FEATURE_TRACKER
+   init_tracker();
+#endif
+#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+   init_tracker_sound_effects();
+#endif
+
+   // this must be called the last
+   interrupt_enable_periodic_isr_tasks();
 }
 
 void main(void)
 {
+#ifdef BUILD_FEATURE_LOADING_SCREEN_WAIT_ANY_KEY
+   in_wait_key();
+   in_wait_nokey();
+#endif
+
    init_program();
 
    // run one-time initialization, if any

@@ -1,0 +1,29 @@
+# This Makefile should be run from the game base directory
+GAMEDIR := $(shell pwd)
+RAGE1DIR := $(shell realpath "$(GAMEDIR)/../rage1")
+
+# You can pin any RAGE1 tag or commit here so that your game always will be
+# built with a given RAGE1 version.  By default use master
+RAGE1_TAG = master
+
+# game targets
+info:
+	@echo "Game Directory: $(GAMEDIR)"
+	@echo "RAGE1 Directory: $(RAGE1DIR)"
+	@echo "RAGE1 Tag: $(RAGE1_TAG)"
+
+rage1-checkout:
+	@bash -c "( cd '$(RAGE1DIR)' && git co $(RAGE1_TAG) >/dev/null 2>&1 ) || echo 'Git: error checking out $(RAGE1_TAG)'"
+
+build: info rage1-checkout
+	@bash -c "cd $(RAGE1DIR) && source env.sh && make -s build target_game=$(GAMEDIR)"
+
+build-debug: info rage1-checkout
+	@bash -c "cd $(RAGE1DIR) && source env.sh && make -s build-debug target_game=$(GAMEDIR)"
+
+run:
+	@bash -c "cd $(RAGE1DIR) && make -s run"
+
+mem:
+	@bash -c "cd $(RAGE1DIR) && source env.sh && make -s mem"
+

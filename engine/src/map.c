@@ -18,6 +18,8 @@
 #include "rage1/screen.h"
 #include "rage1/debug.h"
 
+#include "rage1/memory.h"
+
 #include "game_data.h"
 
 #ifdef BUILD_FEATURE_SCREEN_TITLES
@@ -77,6 +79,13 @@ void map_draw_screen(struct map_screen_s *s) {
             btile_draw( t->row, t->col, dataset_get_banked_btile_ptr( t->btile_id ), t->type, &game_area );
     }
 
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+    // reset animation sequence counters in animated btiles
+    i = s->animated_btile_data.num_btiles;
+    while ( i-- )
+        animation_reset_state( &s->animated_btile_data.btiles[ i ].anim );
+#endif // BUILD_FEATURE_ANIMATED_BTILES
+
 #ifdef BUILD_FEATURE_INVENTORY
     // draw items
     i = s->item_data.num_items;
@@ -85,7 +94,27 @@ void map_draw_screen(struct map_screen_s *s) {
         it = &s->item_data.items[i];
         if ( ! IS_ITEM_ACTIVE( all_items[ it->item_num ] ) )
             continue;
-        btile_draw( it->row, it->col, &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ], TT_ITEM, &game_area );
+        btile_draw( it->row, it->col,
+            &home_assets->all_btiles[ all_items[ it->item_num ].btile_num ],
+            TT_ITEM,
+            &game_area
+        );
+    }
+#endif // BUILD_FEATURE_INVENTORY
+
+#ifdef BUILD_FEATURE_CRUMBS
+    // draw crumbs
+    i = s->crumb_data.num_crumbs;
+    while ( i-- ) {
+        struct crumb_location_s *cr;
+        cr = &s->crumb_data.crumbs[ i ];
+        if ( ! IS_CRUMB_ACTIVE( game_state.current_screen_asset_state_table_ptr[ cr->state_index ].asset_state ) )
+            continue;
+        btile_draw( cr->row, cr->col,
+            &home_assets->all_btiles[ all_crumb_types[ cr->crumb_type ].btile_num ],
+            TT_CRUMB | cr->crumb_type,	// crumb type is in lower nibble
+            &game_area
+        );
     }
 #endif // BUILD_FEATURE_INVENTORY
 
@@ -116,6 +145,24 @@ struct item_location_s *map_get_item_location_at_position( struct map_screen_s *
     return NULL;	// no object
 }
 #endif // BUILD_FEATURE_INVENTORY
+
+#ifdef BUILD_FEATURE_CRUMBS
+struct crumb_location_s *map_get_crumb_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col ) {
+    uint8_t i, rmax, cmax;
+    struct crumb_location_s *cr;
+
+    i = s->crumb_data.num_crumbs;
+    while ( i-- ) {
+        cr = &s->crumb_data.crumbs[i];
+        rmax = cr->row + home_assets->all_btiles[ all_crumb_types[ cr->crumb_type ].btile_num ].num_rows - 1;
+        cmax = cr->col + home_assets->all_btiles[ all_crumb_types[ cr->crumb_type ].btile_num ].num_cols - 1;
+        if ( ( row >= cr->row ) && ( row <= rmax ) &&
+             ( col >= cr->col ) && ( col <= cmax ) )
+            return cr;
+    }
+    return NULL;	// no object
+}
+#endif // BUILD_FEATURE_CRUMBS
 
 void map_enter_screen( uint8_t screen_num ) {
     // If we are in 128 mode, we need to switch to the dataset where the

@@ -8,6 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <arch/zx.h>
+
 #include "rage1/game_state.h"
 #include "rage1/sprite.h"
 #include "rage1/enemy.h"
@@ -16,6 +18,9 @@
 #include "rage1/debug.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
+#include "rage1/animation.h"
+
+#include "rage1/memory.h"
 
 #include "game_data.h"
 
@@ -36,9 +41,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
 
         // animation
         // e->animation.current.sequence is already assigned at data definition
-        e->animation.current.sequence_counter = 0;					// initial frame index
-        e->animation.current.frame_delay_counter = e->animation.delay_data.frame_delay;	// initial frame delay counter
-        e->animation.current.sequence_delay_counter = 0;				// initial sequence delay counter
+        animation_reset_state( &e->animation );
         // position - update also xmax and ymax
         e->position.x = e->movement.data.linear.initx;
         e->position.y = e->movement.data.linear.inity;
@@ -61,7 +64,7 @@ void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
     uint8_t n;
     struct enemy_info_s *e;
     struct sprite_graphic_data_s *g;
-    struct sprite_animation_data_s *anim;
+    struct animation_data_s *anim;
     struct position_data_s *pos;
 
     n = num_enemies;

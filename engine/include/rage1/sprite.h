@@ -14,18 +14,13 @@
 #include <stdint.h>
 #include <games/sp1.h>
 
+#include "rage1/animation.h"
+
 #include "features.h"
 
 //////////////////////////////////////////////////////////////////////////
 // structs for storing a single copy of each sprite graphics in memory
 //////////////////////////////////////////////////////////////////////////
-
-// an animation sequence is an array of frame numbers
-// the frame numbers in a sequence are used to show the corresponding frame for the sprite
-struct animation_sequence_s {
-    uint8_t num_elements;              // number of elements in this sequence
-    uint8_t *frame_numbers;            // ptr to array of sequence of frame numbers
-};
 
 // structs for storing a single sprite's data
 struct  sprite_graphic_data_s {
@@ -40,23 +35,6 @@ struct  sprite_graphic_data_s {
         uint8_t num_sequences;
         struct animation_sequence_s *sequences;
     } sequence_data;
-};
-
-//////////////////////////////////////////////////////////////////////////
-// animation data structs which can be included in others (e.g. enemy, hero, etc.)
-//////////////////////////////////////////////////////////////////////////
-
-struct  sprite_animation_data_s {
-    struct {
-        uint8_t frame_delay;		// frames are changed every 'frame_delay' calls
-        uint8_t sequence_delay;		// a sequence is repeated after waiting 'sequence_delay' screen frames
-    } delay_data;
-    struct {
-        uint8_t sequence;		// current animation sequence
-        uint8_t sequence_counter;	// current sequence index (used to get frame number)
-        uint8_t frame_delay_counter;	// current frame delay counter
-        uint8_t sequence_delay_counter;	// current sequence delay counter
-    } current;
 };
 
 //////////////////////////////////////////////////////////////////////////

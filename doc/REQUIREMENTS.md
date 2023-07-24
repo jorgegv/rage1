@@ -8,6 +8,8 @@
   * `Data::Compare`
   * `List::MoreUtils`
   * `File::Copy`
+  * `GD`
+  * `YAML`
 * M4
 * Fuse (ZX Spectrum Emulator)
 * make
@@ -26,4 +28,6 @@ With the exception of Z88DK, all the other modules and requirements are availabl
   * perl-Data-Compare
   * perl-List-MoreUtils
   * perl-File-Copy
+  * perl-GD
+  * perl-YAML
 * [Fuse (ZX Spectrum Emulator)](https://sourceforge.net/projects/fuse-emulator/files/fuse/)

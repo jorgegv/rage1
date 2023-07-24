@@ -12,7 +12,7 @@ MYMAKE			= $(MAKE) -f Makefile-48
 ZPRAGMA_INC		= zpragma-48.inc
 
 # All taps
-TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(MAIN_TAP)
 
 -include Makefile.common
 
@@ -23,7 +23,7 @@ SRC			+= $(BANKED_CODE_SRC_COMMON)
 OBJS			+= $(BANKED_CODE_OBJS_COMMON)
 
 build:
-	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
+	@cp $(ENGINE_DIR)/loader48/$(LOADER48) $(BAS_LOADER)
 	@$(MYMAKE) -s -j8 main
 	@$(MYMAKE) -s -j8 taps
 	@$(MYMAKE) -s final
