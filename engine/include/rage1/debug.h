@@ -24,7 +24,7 @@ void debug_flush( void );
 // and then will halt the machine with a fancy color screen. You will
 // then be able to launch the debugger and examine memory to get the
 // panic cause. Panic codes must be defined below.
-void debug_panic( uint8_t code );
+void debug_panic( uint16_t code ) __z88dk_fastcall;
 
 char *itohex( uint16_t );
 char *i8toa( uint8_t i );
@@ -41,24 +41,23 @@ extern uint16_t debug_flags;
 #endif
 
 // DEBUG_PANIC codes
-#define PANIC_GENERIC					0xF0
-#define PANIC_SPRITE_IS_NULL				0x40
-#define PANIC_DATASET_INVALID_PREVIOUS_BANK		0x50
-#define PANIC_DATASET_ACTIVATE_INVALID			0x51
-#define PANIC_DATASET_INVALID_NEW_BANK			0x52
-#define PANIC_CODESET_INVALID_PREVIOUS_BANK		0x60
-#define PANIC_CODESET_INVALID_FUNCTION			0x61
-#define PANIC_CODESET_INVALID_NEW_BANK			0x62
-#define PANIC_CODESET_INVALID_FUNCTION_POINTER		0x63
-#define PANIC_HERO_DRAW_INVALID_X			0x70
-#define PANIC_HERO_DRAW_INVALID_XMAX			0x71
-#define PANIC_HERO_DRAW_INVALID_Y			0x72
-#define PANIC_HERO_DRAW_INVALID_YMAX			0x73
-#define PANIC_MAP_DRAW_SCREEN_NULL_PTR			0x80
-#define PANIC_MAP_DRAW_SCREEN_NO_BTILES			0x81
-#define PANIC_MAP_ENTER_SCREEN_INVALID			0x82
-#define PANIC_MAP_EXIT_SCREEN_NULL_PTR			0x83
-#define PANIC_MAP_FREE_SPRITES_NULL_PTR			0x84
-
+#define PANIC_GENERIC					0x00F0
+#define PANIC_SPRITE_IS_NULL				0x0040
+#define PANIC_DATASET_INVALID_PREVIOUS_BANK		0x0050
+#define PANIC_DATASET_ACTIVATE_INVALID			0x0051
+#define PANIC_DATASET_INVALID_NEW_BANK			0x0052
+#define PANIC_CODESET_INVALID_PREVIOUS_BANK		0x0060
+#define PANIC_CODESET_INVALID_FUNCTION			0x0061
+#define PANIC_CODESET_INVALID_NEW_BANK			0x0062
+#define PANIC_CODESET_INVALID_FUNCTION_POINTER		0x0063
+#define PANIC_HERO_DRAW_INVALID_X			0x0070
+#define PANIC_HERO_DRAW_INVALID_XMAX			0x0071
+#define PANIC_HERO_DRAW_INVALID_Y			0x0072
+#define PANIC_HERO_DRAW_INVALID_YMAX			0x0073
+#define PANIC_MAP_DRAW_SCREEN_NULL_PTR			0x0080
+#define PANIC_MAP_DRAW_SCREEN_NO_BTILES			0x0081
+#define PANIC_MAP_ENTER_SCREEN_INVALID			0x0082
+#define PANIC_MAP_EXIT_SCREEN_NULL_PTR			0x0083
+#define PANIC_MAP_FREE_SPRITES_NULL_PTR			0x0084
 
 #endif // _DEBUG_H
