@@ -1,6 +1,6 @@
 # This Makefile should be run from the game base directory
 
-.SILENT
+.SILENT:
 
 # You can pin any RAGE1 tag or commit here so that your game always will be
 # built with a given RAGE1 version.  By default use master
