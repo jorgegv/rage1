@@ -27,9 +27,11 @@ rage1-checkout: rage1-clone
 
 build: info rage1-checkout
 	@bash -c "cd $(RAGE1DIR) && make -s build target_game=$(GAMEDIR)"
+	cp "$(RAGE1DIR)/game.tap" .
 
 build-debug: info rage1-checkout
 	@bash -c "cd $(RAGE1DIR) && make -s build-debug target_game=$(GAMEDIR)"
+	cp "$(RAGE1DIR)/game.tap" .
 
 run:
 	@bash -c "cd $(RAGE1DIR) && make -s run"
