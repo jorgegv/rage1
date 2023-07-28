@@ -17,12 +17,12 @@ while (my $line = <>) {
         my ( $id, $r, $c, $w, $h ) = ( $1, $2, $3, $4, $5 );
         if ( $opt_h ) {
             # for horizontal mirror, top-right corner becomes top-left, and
-            # (r,c) becomes (r,W-c).  Height and width are maintained
-            printf "%-30s%d %d %d %d\n", $id, $r, $opt_W - $c - $w, $w, $h;
+            # (r,c) becomes (r,W-c).  Height and width are maintained. Names is suffixed with _h_mirror
+            printf "%-40s %d %d %d %d\n", $id.'_h_mirror', $r, $opt_W - $c - $w, $w, $h;
         } else {
             # for vertical mirror, bottom-left corner becomes top-left, and
-            # (r,c) becomes (H-r,c).  Height and width are maintained
-            printf "%-30s%d %d %d %d\n", $id, $opt_H - $r - $h, $c, $w, $h;
+            # (r,c) becomes (H-r,c).  Height and width are maintained. Name is suffixed with _v_mirror
+            printf "%-40s %d %d %d %d\n", $id.'_v_mirror', $opt_H - $r - $h, $c, $w, $h;
         }
     } else {
         print $line;

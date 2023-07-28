@@ -17,12 +17,12 @@ while (my $line = <>) {
         my ( $id, $r, $c, $w, $h ) = ( $1, $2, $3, $4, $5 );
         if ( $opt_l ) {
             # for rotating left (counterclockwise), top-right corner will
-            # become top-left, and we exchange width and height
-            printf "%-30s%d %d %d %d\n", $id, $opt_W - $c - $w, $r, $h, $w;
+            # become top-left, and we exchange width and height. Name is suffixed with _l_rot
+            printf "%-40s %d %d %d %d\n", $id.'_l_rot', $opt_W - $c - $w, $r, $h, $w;
         } else {
             # for rotating right (clockwise), bottom-left corner will become
-            # top-left, and we exchange width and height
-            printf "%-30s%d %d %d %d\n", $id, $c, $opt_H - $r - $h, $h, $w;
+            # top-left, and we exchange width and height. Name is suffixed with _r_rot
+            printf "%-40s %d %d %d %d\n", $id.'_r_rot', $c, $opt_H - $r - $h, $h, $w;
         }
     } else {
         print $line;
