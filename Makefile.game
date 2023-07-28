@@ -1,5 +1,9 @@
 # This Makefile should be run from the game base directory
 
+# Do not modify this Makefile, use it as is!  If you want to add new targets
+# or rules, add them to Makefile.custom in your game directory, and they
+# will be automatically included from this Makefile
+
 .SILENT:
 
 # You can pin any RAGE1 tag or commit here so that your game always will be
@@ -20,10 +24,10 @@ info:
 
 rage1-clone:
 	if [ ! -d "$(RAGE1DIR)" ]; then git clone "$(RAGE1REPO)" "$(RAGE1DIR)" ]; fi
-	cd "$(RAGE1DIR)" && git pull --all
+	cd "$(RAGE1DIR)" && git checkout master && git pull --all
 
 rage1-checkout: rage1-clone
-	@bash -c "( cd '$(RAGE1DIR)' && git co $(RAGE1_TAG) && git pull >/dev/null 2>&1 ) || echo 'Git: error checking out $(RAGE1_TAG)'"
+	@bash -c "( cd '$(RAGE1DIR)' && git co $(RAGE1_TAG) >/dev/null 2>&1 ) || echo 'Git: error checking out $(RAGE1_TAG)'"
 
 build: info rage1-checkout
 	@bash -c "cd $(RAGE1DIR) && make -s build target_game=$(GAMEDIR)"
@@ -39,3 +43,5 @@ run:
 mem:
 	@bash -c "cd $(RAGE1DIR) && make -s mem"
 
+# include additional rules specified in the game, if any
+include Makefile.custom
