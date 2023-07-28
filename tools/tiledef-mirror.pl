@@ -18,11 +18,11 @@ while (my $line = <>) {
         if ( $opt_h ) {
             # for horizontal mirror, top-right corner becomes top-left, and
             # (r,c) becomes (r,W-c).  Height and width are maintained
-            printf "%-30s%d %d %d %d\n", $id, $r, $opt_W - $c - $w, $h, $w;
+            printf "%-30s%d %d %d %d\n", $id, $r, $opt_W - $c - $w, $w, $h;
         } else {
             # for vertical mirror, bottom-left corner becomes top-left, and
             # (r,c) becomes (H-r,c).  Height and width are maintained
-            printf "%-30s%d %d %d %d\n", $id, $opt_H - $r - $h, $c, $h, $w;
+            printf "%-30s%d %d %d %d\n", $id, $opt_H - $r - $h, $c, $w, $h;
         }
     } else {
         print $line;
