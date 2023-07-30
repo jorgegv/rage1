@@ -71,13 +71,13 @@ Where <options> can be the following:
 
 Required:
 
-    --screen-cols <cols>		Width of each screen, in 8x8 cells
-    --screen-rows <rows>		Height of each screen, in 8x8 cells
+    --screen-cols <cols>		Width of each screen, in 8x8 cells [1-32]
+    --screen-rows <rows>		Height of each screen, in 8x8 cells [1-24]
     --game-data-dir <dir>		game_data directory where Map and Flow GDATA files will be generated
-    --game-area-top <row>		Top row of the Game Area
-    --game-area-left <col>		Left column of the Game Area
-    --hero-sprite-width <n>		Width of the Hero sprite, in pixels
-    --hero-sprite-height <n>		Height of the Hero sprite, in pixels
+    --game-area-top <row>		Top row of the Game Area [0-23]
+    --game-area-left <col>		Left column of the Game Area [0-31]
+    --hero-sprite-width <n>		Width of the Hero sprite, in pixels [>0]
+    --hero-sprite-height <n>		Height of the Hero sprite, in pixels [>0]
 
 Optional:
 
@@ -91,6 +91,25 @@ Colors are specified as RRGGBB (RGB components in hex notation)
 
 EOF_HELP
 ;
+
+##########################
+## 0. Validate args
+##########################
+
+( ( $screen_cols >= 1 ) and ( $screen_cols <= 32 ) ) or
+    die "--screen-cols must be in 1-32 range\n";
+( ( $screen_rows >= 1 ) and ( $screen_rows <= 24 ) ) or
+    die "--screen-rows must be in 1-24 range\n";
+( ( $game_area_top >= 0 ) and ( $game_area_top <= 23 ) ) or
+    die "--game-area-top must be in 0-23 range\n";
+( ( $game_area_left >= 0 ) and ( $game_area_left <= 31 ) ) or
+    die "--game-area-left must be in 0-31 range\n";
+( $hero_sprite_width > 0 ) or
+    die "--hero-sprite-width must be greater than 0\n";
+( $hero_sprite_height > 0 ) or
+    die "--hero-sprite-height must be greater than 0\n";
+
+# continue
 
 my @png_files = @ARGV;	# remaining args after option processing
 
