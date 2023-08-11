@@ -318,7 +318,9 @@ void do_rule_action_play_sound( struct flow_rule_action_s *action ) __z88dk_fast
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_INC_LIVES
 void do_rule_action_inc_lives( struct flow_rule_action_s *action ) __z88dk_fastcall {
     game_state.hero.health.num_lives += action->data.lives.count;
+#ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
     hero_update_lives_display();
+#endif
 }
 #endif
 

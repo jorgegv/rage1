@@ -781,6 +781,7 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                add_build_feature( 'SCREEN_AREA_' . $directive );
                 next;
             }
             if ( $line =~ /^LOADING_SCREEN\s+(.*)$/ ) {
@@ -1974,6 +1975,7 @@ sub generate_game_functions {
 
 sub generate_single_game_area {
     my $area = shift;
+    return if not defined ( $game_config->{ $area } );
     push @c_game_data_lines, "\n" . join( "\n", map {
         sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )
