@@ -260,6 +260,7 @@ void hero_check_tiles_below(void) {
 }
 #endif // BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 
+#ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
 // printing context
 struct sp1_pss lives_display_ctx = {
    &lives_area,				// bounds
@@ -269,7 +270,6 @@ struct sp1_pss lives_display_ctx = {
    0,0					// RESERVED
 };
 
-#ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
 void hero_update_lives_display(void) {
     uint8_t col;
     uint8_t n;
