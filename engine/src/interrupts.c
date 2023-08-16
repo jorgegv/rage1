@@ -32,6 +32,7 @@
 
 // timer tick routine, invoked from ISR
 void do_timer_tick( void ) {
+   current_time.ticks++;
    if ( ++current_time.frame == 50 ) {		// 50 frames per second
       current_time.frame = 0;
       if ( ++current_time.sec == 60 ) {
