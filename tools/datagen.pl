@@ -1697,6 +1697,11 @@ sub generate_hero {
     my $immunity_period		= $hero->{'damage_mode'}{'immunity_period'};
     my $health_display_function	= $hero->{'damage_mode'}{'health_display_function'} || '';
 
+    my $move_xmin		= $game_config->{'game_area'}{'left'} * 8;
+    my $move_xmax		= ( $game_config->{'game_area'}{'right'} + 1 ) * 8 - $width;
+    my $move_ymin		= $game_config->{'game_area'}{'top'} * 8;
+    my $move_ymax		= ( $game_config->{'game_area'}{'bottom'} + 1 ) * 8 - $height;
+
     push @h_game_data_lines, <<EOF_HERO1
 
 /////////////////////////////
@@ -1717,6 +1722,10 @@ sub generate_hero {
 #define HERO_SPRITE_HEIGHT		$height
 #define	HERO_MOVE_HSTEP			$hstep
 #define	HERO_MOVE_VSTEP			$vstep
+#define	HERO_MOVE_XMIN			$move_xmin
+#define	HERO_MOVE_XMAX			$move_xmax
+#define	HERO_MOVE_YMIN			$move_ymin
+#define	HERO_MOVE_YMAX			$move_ymax
 #define	HERO_NUM_LIVES			$num_lives
 #define	HERO_LIVES_BTILE_NUM		$lives_btile_num
 #define HERO_HEALTH_MAX			$health_max

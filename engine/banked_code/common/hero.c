@@ -60,21 +60,29 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
     // hero can move in one direction if there are no obstacles in the new position
     switch (direction ) {
         case MOVE_UP:
+            if ( y <= HERO_MOVE_YMIN )
+                return 0;
             r = PIXEL_TO_CELL_COORD( y - dy );
             c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
             return hero_can_move_vertical( x, r, c );
             break;
         case MOVE_DOWN:
+            if ( y >= HERO_MOVE_YMAX )
+                return 0;
             r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 + dy );
             c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
             return hero_can_move_vertical( x, r, c );
             break;
         case MOVE_LEFT:
+            if ( x <= HERO_MOVE_XMIN )
+                return 0;
             r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
             c = PIXEL_TO_CELL_COORD( x - dx );
             return hero_can_move_horizontal( y, r, c );
             break;
         case MOVE_RIGHT:
+            if ( x >= HERO_MOVE_XMAX )
+                return 0;
             r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
             c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 + dx );
             return hero_can_move_horizontal( y, r, c );
