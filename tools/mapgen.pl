@@ -635,9 +635,11 @@ sub match_rectangle_in_map {
         # if a match was found but was not wide enough, stop matching lines
         last if ( $matched_x < $hotzone_min_width );
 
-        # if the matched width is not the same as the previous lines that
-        # have already been matched, stop matching lines
-        last if ( $matched_width and ( $matched_x < $matched_width ) );
+        # if the matched width is less than the previous lines that have
+        # already been matched, we can use the new smaller width
+        if ( $matched_width and ( $matched_x < $matched_width ) ) {
+            $matched_width = $matched_x;
+        }
 
         # save first matched width
         if ( not $matched_width ) {
