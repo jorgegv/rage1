@@ -1159,9 +1159,10 @@ sub validate_and_compile_sprite {
     }
     $sprite->{'sequence_name_to_index'}{'Main'} = $index;
 
-    # if the sprite has no 'sequence_delay' parameter, define as 0
+    # if the sprite has no 'sequence_delay' parameter, define as 1 (minimum;
+    # 0 means 256, which is 5 seconds!)
     if ( not defined( $sprite->{'sequence_delay'} ) ) {
-        $sprite->{'sequence_delay'} = 0;
+        $sprite->{'sequence_delay'} = 1;
     }
 
     # compile animation sequences

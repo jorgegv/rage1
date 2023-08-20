@@ -350,7 +350,7 @@ animated (see below for details). Arguments:
     If not specified, 'Main' is assumed
     * `SEQUENCE_DELAY`: (optional) delay between animation sequence runs
     (screen frames). Minimum 1: specifying 0 means 256, that is, a delay of
-    around 5 seconds.
+    around 5 seconds. If not specified, default is 1.
     * `CHANGE_SEQUENCE_HORIZ`: (optional) if this flag is 1, the enemy sprite
     will switch from animation sequence A to B and viceversa when bouncing
     horizontally: sequence A for incrementing X, sequence B for decrementing X
