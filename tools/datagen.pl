@@ -328,6 +328,7 @@ sub read_input_data {
                 my $fgcolor = uc( $vars->{'fgcolor'} );
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
                 map_png_colors_to_zx_colors( $png );
+
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
@@ -1290,6 +1291,16 @@ sub validate_and_compile_screen {
         }
         if ( not defined( $s->{'initial_sequence'} ) ) {
             $s->{'initial_sequence'} = 'Main';
+        }
+        # check that it has an associated sprite
+        defined( $s->{'sprite'} ) or
+            die "SCREEN $screen->{name}: ENEMY $s->{name} has no associated sprite\n";
+        # check that defined sequences exist for the given sprite
+        foreach my $seq_param ( qw( sequence_a sequence_b initial_sequence ) ) {
+            if ( defined( $s->{ $seq_param } ) and
+                not defined( $all_sprites[ $sprite_name_to_index{ $s->{'sprite'} } ]{'sequence_name_to_index'}{ $s->{ $seq_param } } ) ) {
+                    die "SCREEN $screen->{name}: ENEMY $s->{name}: sequence specified with ".uc($seq_param)." is not defined\n";
+            }
         }
     }
 
