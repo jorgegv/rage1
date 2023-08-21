@@ -164,6 +164,7 @@ sub read_input_data {
 
     # read and process input
     my $num_line = 0;
+    my $patching = 0;
     while (my $line = <>) {
 
         $num_line++;
@@ -188,6 +189,16 @@ sub read_input_data {
                 # asset_state: the first one (0) for this screen, with all
                 # flags reset
                 $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_states => [ { value => 0, comment => 'Screen state' } ] };
+                next;
+            }
+            if ( $line =~ /^PATCH_SCREEN\s+NAME=(.+)$/ ) {
+                my $name = $1;
+                if ( not defined( $screen_name_to_index{ $name } ) ) {
+                    die "PATCH_SCREEN: '$name' is not the name of an existing screen\n";
+                }
+                $state = 'SCREEN';
+                $patching = 1;
+                $cur_screen = $all_screens[ $screen_name_to_index{ $name } ];
                 next;
             }
             if ( $line =~ /^BEGIN_SPRITE$/ ) {
@@ -581,9 +592,14 @@ sub read_input_data {
                 next;
             }
             if ( $line =~ /^END_SCREEN$/ ) {
-                validate_and_compile_screen( $cur_screen );
-                $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
-                push @all_screens, $cur_screen;
+                validate_screen( $cur_screen );
+                if ( not $patching ) {
+                    compile_screen( $cur_screen );
+                    $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
+                    push @all_screens, $cur_screen;
+                } else {
+                    $patching = 0;
+                }
                 $state = 'NONE';
                 next;
             }
@@ -1257,7 +1273,7 @@ sub generate_sprite {
 ## Map Screen functions
 ######################################
 
-sub validate_and_compile_screen {
+sub validate_screen {
     my $screen = shift;
     defined( $screen->{'name'} ) or
         die "Screen has no NAME\n";
@@ -1303,7 +1319,10 @@ sub validate_and_compile_screen {
             }
         }
     }
+}
 
+sub compile_screen {
+    my $screen = shift;
     # compile SCREEN_DATA lines
     compile_screen_data( $screen );
 
