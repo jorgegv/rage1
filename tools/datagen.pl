@@ -164,7 +164,8 @@ sub read_input_data {
 
     # read and process input
     my $num_line = 0;
-    my $patching = 0;
+    my $screen_patching = 0;
+    my $pending_split_lines;
     while (my $line = <>) {
 
         $num_line++;
@@ -175,6 +176,20 @@ sub read_input_data {
         $line =~ s/\s*$//g;		# remove trailing blanks
         $line =~ s/\/\/.*$//g;		# remove comments (//...)
         next if $line eq '';		# ignore blank lines
+
+        # if there were previous pending split lines (ending in '\'), add
+        # them to the beginning of the current line
+        if ( defined( $pending_split_lines ) ) {
+            $line = $pending_split_lines . $line;
+            $pending_split_lines = undef;
+        }
+
+        # if the current line ends in '\', save it for next iteration
+        if ( $line =~ /\\$/ ) {
+            $line =~ s/\\$//g;	# remove trailing '\' char
+            $pending_split_lines = $line;
+            next;
+        }
 
         # process the line
         if ( $state eq 'NONE' ) {
@@ -197,7 +212,7 @@ sub read_input_data {
                     die "PATCH_SCREEN: '$name' is not the name of an existing screen\n";
                 }
                 $state = 'SCREEN';
-                $patching = 1;
+                $screen_patching = 1;
                 $cur_screen = $all_screens[ $screen_name_to_index{ $name } ];
                 next;
             }
@@ -593,12 +608,12 @@ sub read_input_data {
             }
             if ( $line =~ /^END_SCREEN$/ ) {
                 validate_screen( $cur_screen );
-                if ( not $patching ) {
+                if ( not $screen_patching ) {
                     compile_screen( $cur_screen );
                     $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
                     push @all_screens, $cur_screen;
                 } else {
-                    $patching = 0;
+                    $screen_patching = 0;
                 }
                 $state = 'NONE';
                 next;

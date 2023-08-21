@@ -13,6 +13,9 @@ data text description files. Data files must have a .gdata extension.
 * Each element definition begins with a BEGIN_xxxx line and ends with an
   END_xxxx line, being xxxx the type of the element being defined (see below
   for details for each element type)
+* A line can end in a '\' character, in which case it will be concatenated
+  with the next line.  Multiple lines can be concatenated in a single
+  logical one using this feature, for better readability
 
 ### BTILE data
 
