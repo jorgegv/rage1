@@ -41,7 +41,7 @@ The regular mapping of banks 5,2,0 is used at program startup.
 - Bank 5 is used for screen, lowmem buffer and heap
 
 - Banks 2 and 0 are used for lowmem code and SP1 data (SP1 code is not
-  current banked in RAGE1)
+  currently banked in RAGE1)
 
 - Bank 4 is used by RAGE1 for its banked code (owned by RAGE1; non-contended)
 
