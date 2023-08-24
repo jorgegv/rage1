@@ -43,5 +43,8 @@ run:
 mem:
 	@bash -c "cd $(RAGE1DIR) && make -s mem"
 
+mem-128:
+	@bash -c "cd $(RAGE1DIR) && make -s mem-128"
+
 # include additional rules specified in the game, if any
 include Makefile.custom

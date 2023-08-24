@@ -269,6 +269,9 @@ mem_bank:
 
 mem: mem_main mem_bank
 
+mem-128:
+	@./tools/mem-summary.sh
+
 linecount: clean
 	@echo -n "Lines of Code (C):         "
 	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'C source'|cut -f1 -d:|xargs -l cat|wc -l
