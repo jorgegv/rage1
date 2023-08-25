@@ -25,7 +25,7 @@ STARTUP_END=$MAIN_DATA_START
 INT_START=$( echo 8000 | hex2dec )
 INT_END=$( echo 8183 | hex2dec )
 
-echo "Banks 5,0 (Lowmem):"
+echo "Banks 5,0 [Lowmem]"
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
 printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
@@ -46,7 +46,7 @@ BANKED_BSS_END=$( map_data $BANKED_MAP | grep -E '^__bss_compiler_tail' | awk '{
 BANKED_CODE_START=$( map_data $BANKED_MAP | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 BANKED_CODE_END=$( map_data $BANKED_MAP | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
 
-echo "Bank 4 (RAGE1 banked code):"
+echo "Bank 4 [RAGE1 banked code]"
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
 printf "  %-12s  \$%04x  \$%04x  %5d\n" code $BANKED_CODE_START $BANKED_CODE_END $(( BANKED_CODE_END - BANKED_CODE_START ))
@@ -67,7 +67,7 @@ for bank_num in $( grep -E '^codeset' build/generated/bank_bins.cfg | awk '{prin
 	CODESET_CODE_START=$( map_data $codeset_map | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 	CODESET_CODE_END=$( map_data $codeset_map | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
 
-	echo "Bank $bank_num (CODESET $codeset_num):"
+	echo "Bank $bank_num [codeset $codeset_num]"
 	printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
 	printf "  %-12s  \$%04x  \$%04x  %5d\n" code $CODESET_CODE_START $CODESET_CODE_END $(( CODESET_CODE_END - CODESET_CODE_START ))
@@ -80,7 +80,7 @@ done
 
 # datasets
 for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{print $2}' ); do
-	echo "Bank $bank_num (DATASETs):"
+	echo "Bank $bank_num [datasets]"
 	echo "  SECTION                      SIZE"
 	BANK_TOTAL=0
 	for dataset in $( grep -P "^dataset $bank_num" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
