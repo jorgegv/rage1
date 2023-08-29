@@ -195,7 +195,7 @@ sub is_background_btile {
             # return immediately when we find something non-bg
             return undef
                 # background is 8 zero bytes (ignore the 9th, it's the attribute)
-                if ( $val->{'hexdump'} =~ '^0000000000000000' );
+                if ( $val->{'hexdump'} !~ '^0000000000000000' );
         }
     }
     # everything was bg, return true
