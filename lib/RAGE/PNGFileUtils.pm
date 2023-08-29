@@ -203,7 +203,14 @@ sub png_to_pixels_and_attrs {
         while ( $x < ( $xpos + $width ) ) {
             my $c = extract_colors_from_cell( $png, $x, $y );
             push @colors, $c;
-            push @pixels, pick_pixel_data_by_color_from_png( $png, $x, $y, 8, 8, $c->{'fg'} );
+            if ( $c->{'fg'} ne $c->{'bg'} ) {
+                # FIXME!
+                push @pixels, pick_pixel_data_by_color_from_png( $png, $x, $y, 8, 8, $c->{'fg'} );
+            } else {
+                if ( $c->{'fg'} ne '000000' ) {
+                } else {
+                }
+            }
             $x += 8;
         }
         $y += 8;
