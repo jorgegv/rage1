@@ -37,6 +37,9 @@ my $auto_hotzones;
 my $auto_hotzone_bgcolor = '000000';
 my $auto_hotzone_width = 8;
 my $generate_check_map;
+my $auto_tileset_btiles;
+my $auto_tileset_max_rows = 16;
+my $auto_tileset_max_cols = 16;
 
 # global variables
 my %map_crumb_types;
@@ -56,6 +59,9 @@ my %map_crumb_types;
         "generate-check-map"		=> \$generate_check_map,	# optional, default false
         "hero-sprite-width=i"		=> \$hero_sprite_width,
         "hero-sprite-height=i"		=> \$hero_sprite_height,
+        "auto-tileset-btiles"		=> \$auto_tileset_btiles,	# optional, default false
+        "auto-tileset-max-rows:i"	=> \$auto_tileset_max_rows,	# optional, default 16
+        "auto-tileset-max-cols:i"	=> \$auto_tileset_max_cols,	# optional, default 16
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -86,6 +92,9 @@ Optional:
     --auto-hotzone-width		When --auto-hotzones is enabled, specifies HOTZONE width in pixels (default: 4)
     --hotzone-color			When --auto-hotzones is disabled, specifies HOTZONE color to match (default: 000000)
     --generate-check-map		Generates a check-map with outlines for the matched objects (PNG)
+    --auto-tileset-btiles		Automatically creates BTILE definitions for all possible BTILEs in tilesets
+    --auto-tileset-max-rows		Maximum rows for automatically created BTILE definitions (default: 16)
+    --auto-tileset-max-cols		Maximum cols for automatically created BTILE definitions (default: 16)
 
 Colors are specified as RRGGBB (RGB components in hex notation)
 
@@ -192,6 +201,13 @@ sub is_background_btile {
     return 1;
 }
 
+sub int_min {
+    my ( $a, $b ) = @_;
+    return $a if not defined( $b );
+    return $b if not defined( $a );
+    return ( $a <= $b ? $a : $b );
+}
+
 # process all PNG Btile files
 foreach my $png_file ( @btile_files ) {
 
@@ -201,25 +217,31 @@ foreach my $png_file ( @btile_files ) {
 
     my $file_prefix = basename( $png_file, '.png', '.PNG' );
 
+    # if automatic generation of btiles in tilesets has been requested,
     # create the list of all possible tiles of all sizes, except those that are full background
-    my ( $width, $height ) = ( png_get_width_cells( $png ), png_get_height_cells( $png ) );
-    foreach my $cur_height ( 1 .. $height ) {
-        foreach my $cur_width ( 1 .. $width ) {
-            foreach my $cur_row ( 0 .. ( $height - $cur_height ) ) {
-                foreach my $cur_col ( 0 .. ( $width - $cur_width ) ) {
-                    my $btile_name = sprintf("%s_r%03dc%03dw%03dh%03d",$file_prefix,$cur_row,$cur_col,$cur_width,$cur_height);
-                    my $btile_data = png_get_all_cell_data( $png, $cur_row, $cur_col, $cur_width, $cur_height );
-                    if ( not is_background_btile( $btile_data ) ) {
-                        $all_possible_btiles{ $btile_name } = {
-                            name		=> $btile_name,
-                            default_type	=> 'obstacle',
-                            metadata	=> undef,
-                            cell_row	=> $cur_row,
-                            cell_col	=> $cur_col,
-                            cell_width	=> $cur_width,
-                            cell_height	=> $cur_height,
-                            cell_data	=> $btile_data,
-                        };
+    if ( $auto_tileset_btiles ) {
+        my ( $width, $height ) = ( png_get_width_cells( $png ), png_get_height_cells( $png ) );
+        foreach my $cur_height ( 1 .. int_min( $auto_tileset_max_rows, $height ) ) {
+            foreach my $cur_width ( 1 .. int_min( $auto_tileset_max_cols, $width ) ) {
+                foreach my $cur_row ( 0 .. ( $height - $cur_height ) ) {
+                    foreach my $cur_col ( 0 .. ( $width - $cur_width ) ) {
+                        my $btile_name = sprintf("%s_r%03dc%03dw%03dh%03d",$file_prefix,$cur_row,$cur_col,$cur_width,$cur_height);
+                        my $btile_data = png_get_all_cell_data( $png, $cur_row, $cur_col, $cur_width, $cur_height );
+                        if ( not is_background_btile( $btile_data ) ) {
+                            $all_possible_btiles{ $btile_name } = {
+                                name		=> $btile_name,
+                                default_type	=> 'obstacle',
+                                metadata	=> undef,
+                                cell_row	=> $cur_row,
+                                cell_col	=> $cur_col,
+                                cell_width	=> $cur_width,
+                                cell_height	=> $cur_height,
+                                cell_data	=> $btile_data,
+                                png_file	=> $png_file,
+                                tiledef_line	=> sprintf( "%s %d %d %d %d %s",
+                                    $btile_name,$cur_row,$cur_col,$cur_width,$cur_height,'obstacle' ),
+                            };
+                        }
                     }
                 }
             }
@@ -247,10 +269,17 @@ foreach my $png_file ( @btile_files ) {
 
         # store the btile cell data into the main btile list
         push @all_btiles, {
-            cell_data		=> $btile_data,
             name		=> $tiledef->{'name'},
             default_type	=> $tiledef->{'default_type'},
             metadata		=> $tiledef->{'metadata'},
+            cell_row		=> $tiledef->{'cell_row'},
+            cell_col		=> $tiledef->{'cell_col'},
+            cell_width		=> $tiledef->{'cell_width'},
+            cell_height		=> $tiledef->{'cell_height'},
+            cell_data		=> $btile_data,
+            png_file		=> $png_file,
+            tiledef_line	=> sprintf( "%s %d %d %d %d %s",
+                ( map { $tiledef->{$_} } qw( name cell_row cell_col cell_width cell_height ) ), 'obstacle' ),
         };
 
         # ...and update the index
@@ -273,14 +302,17 @@ foreach my $png_file ( @btile_files ) {
     printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
 }
 
-# now add all the autogenerated btiles that remain
-foreach my $bk ( keys %all_possible_btiles ) {
-    my $btile = $all_possible_btiles{ $bk };
-    my $current_btile_index = scalar( @all_btiles );
-    push @all_btiles, $btile;
-    push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+# if automatic tileset btile generation was requested,
+# add all the autogenerated btiles that remain
+if ( $auto_tileset_btiles ) {
+    foreach my $bk ( keys %all_possible_btiles ) {
+        my $btile = $all_possible_btiles{ $bk };
+        my $current_btile_index = scalar( @all_btiles );
+        push @all_btiles, $btile;
+        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+    }
+    printf "-- Added %d autogenerated BTILEs\n", scalar( keys %all_possible_btiles );
 }
-printf "-- Added %d autogenerated BTILEs\n", scalar( keys %all_possible_btiles );
 
 # Since there may be more than one BTILE with the same top-left cell, we now
 # sort the lists associated to the cell hashes, in descending size order
@@ -1468,6 +1500,50 @@ EOF_MAP_GDATA_END
     close GDATA;
 
     printf "-- File %s for screen '%s' was created\n", $output_file, $screen_name;
+}
+
+###########################################################################
+###########################################################################
+##
+## 9.1. Generate GDATA files with BTILE definitions
+##
+###########################################################################
+###########################################################################
+
+# This is run in all cases.  If autogenerated BTILEs were created, they will be included in the
+# generation.  If only the TILEDEF definitions are used, only those tiles will be output.  This
+# replaces functionality previously in btilegen.pl script
+
+print "Generating BTile GDATA files...\n";
+
+my $btile_format = <<"END_FORMAT";
+// tiledef line: '%s'
+BEGIN_BTILE
+        NAME    %s
+        ROWS    %d
+        COLS    %d
+
+        PNG_DATA        FILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d
+END_BTILE
+
+END_FORMAT
+
+# create the btiles directory if it does not exist
+mkdir( "$game_data_dir/btiles" )
+    if ( not -d "$game_data_dir/btiles" );
+
+foreach my $btile_data ( @all_btiles ) {
+    my $output_file = sprintf( "%s/btiles/auto_%s.gdata", $game_data_dir, $btile_data->{'name'} );
+    open GDATA,">$output_file" or
+        die "** Error: could not open file $output_file for writing\n";
+
+    printf GDATA $btile_format,
+        ( map { $btile_data->{$_} } qw( tiledef_line name cell_height cell_width png_file ) ),
+        ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) );
+
+    close GDATA;
+
+    printf "-- File %s for BTILE '%s' was created\n", $output_file, $btile_data->{'name'};
 }
 
 ###########################################################################
