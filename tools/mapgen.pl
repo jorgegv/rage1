@@ -54,8 +54,8 @@ my %map_crumb_types;
         "auto-hotzone-bgcolor:s"	=> \$auto_hotzone_bgcolor,	# optional, default '000000'
         "auto-hotzone-width:i"		=> \$auto_hotzone_width,	# optional, default 4
         "generate-check-map"		=> \$generate_check_map,	# optional, default false
-        "hero-sprite-width:i"		=> \$hero_sprite_width,
-        "hero-sprite-height:i"		=> \$hero_sprite_height,
+        "hero-sprite-width=i"		=> \$hero_sprite_width,
+        "hero-sprite-height=i"		=> \$hero_sprite_height,
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
