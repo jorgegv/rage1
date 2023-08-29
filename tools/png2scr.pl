@@ -57,7 +57,9 @@ sub output_scr_file {
 my $file = $ARGV[0];
 my $out_file = $ARGV[1];
 
-my $png = load_png_file( $file );
+my $png = load_png_file( $file ) or
+    die "** Error: could not load PNG file $file\n";
+
 map_png_colors_to_zx_colors( $png );
 ( ( scalar( @$png ) == 192 ) and ( scalar( @{$png->[0]} ) == 256 ) ) or
     die "** Error: PNG image must be exactly 256x192 pixels\n";

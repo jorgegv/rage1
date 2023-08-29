@@ -275,8 +275,11 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    die "** Error: could not load PNG file $file" . $build_dir . '/' . $vars->{'file'} . "\n";
+
                 map_png_colors_to_zx_colors( $png );
+
                 my $data = png_to_pixels_and_attrs(
                     $png,
                     $vars->{'xpos'}, $vars->{'ypos'},
@@ -352,7 +355,9 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    die "** Error: could not load PNG file $file" . $build_dir . '/' . $vars->{'file'} . "\n";
+
                 map_png_colors_to_zx_colors( $png );
 
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
@@ -372,8 +377,11 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    die "** Error: could not load PNG file $file" . $build_dir . '/' . $vars->{'file'} . "\n";
+
                 map_png_colors_to_zx_colors( $png );
+
                 push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };

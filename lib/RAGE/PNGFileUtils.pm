@@ -54,6 +54,13 @@ sub load_png_file {
     my $command = sprintf( "pngtopam '%s' | pamtable", $file );
     my @pixel_lines = `$command`;
     chomp @pixel_lines;
+
+    # ensure the PNG is in RGB format (pixels separated by '|') and is not indexed
+    if ( not grep { /\|/ } @pixel_lines ) {
+        warn "** Warning: PNG File $file is not in RGB(A) format\n";
+        return undef;
+    }
+
     my @pixels = map {			# for each line...
         s/(\d+)/sprintf("%02X",$1)/ge;	# replace decimals by upper hex equivalent
         s/ //g;				# remove spaces

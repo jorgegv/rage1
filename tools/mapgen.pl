@@ -213,7 +213,9 @@ sub int_min {
 foreach my $png_file ( @btile_files ) {
 
     # load the PNG and convert it to the ZX Spectrum color palette
-    my $png = load_png_file( $png_file );
+    my $png = load_png_file( $png_file ) or
+        die "** Error: could not load PNG file $png_file\n";
+
     map_png_colors_to_zx_colors( $png );
 
     my $file_prefix = basename( $png_file, '.png', '.PNG' );
@@ -355,7 +357,9 @@ print "Processing Main Map...\n";
 #   - Process the MAPDEF file if it exists and get the screen metadata
 
 # load the PNG and convert it to the ZX Spectrum color palette
-my $main_map_png = load_png_file( $map_png_file );
+my $main_map_png = load_png_file( $map_png_file ) or
+    die "** Error: could not load PNG file $map_png_file\n";
+
 map_png_colors_to_zx_colors( $main_map_png );
 
 # Make sure the map PNG has valid dimensions
