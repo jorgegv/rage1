@@ -584,6 +584,9 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                                 btile_index	=> $btile_index,
                             };
 
+                            # mark it as used in the global BTILE list
+                            $all_btiles[ $btile_index ]{'used_in_screen'}++;
+
                             # we also mark all of its cells as checked and matched
                             foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
                                 foreach my $c ( 0 .. ( $btile_cols - 1 ) ) {
@@ -1532,7 +1535,7 @@ END_FORMAT
 mkdir( "$game_data_dir/btiles" )
     if ( not -d "$game_data_dir/btiles" );
 
-foreach my $btile_data ( @all_btiles ) {
+foreach my $btile_data ( grep { $_->{'used_in_screen'} } @all_btiles ) {
     my $output_file = sprintf( "%s/btiles/auto_%s.gdata", $game_data_dir, $btile_data->{'name'} );
     open GDATA,">$output_file" or
         die "** Error: could not open file $output_file for writing\n";
