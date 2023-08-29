@@ -14,6 +14,9 @@ use strict;
 use warnings;
 use utf8;
 
+use Carp;
+use Data::Dumper;
+
 # standard ZX Spectrum color palette
 my %zx_colors = (
     '000000' => 'BLACK',
@@ -89,11 +92,11 @@ sub png_get_height_cells {
 # example: ##..####....##.. (for 10110010 - ##: pixel on; ..: pixel off)
 # returns: listref - [ line1_data, line2_data, ... ]
 sub pick_pixel_data_by_color_from_png {
-    my ( $png, $xpos, $ypos, $width, $height, $hex_fgcolor, $hmirror, $vmirror ) = @_;
+    my ( $png, $xpos, $ypos, $width, $height, $hex_bgcolor, $hmirror, $vmirror ) = @_;
     my @pixels = map {
         join( "",
             map {
-                $_ eq $hex_fgcolor ? "##" : "..";		# filter color
+                $_ eq $hex_bgcolor ? ".." : "##";		# filter color
                 } @$_[ $xpos .. ( $xpos + $width - 1 ) ]	# select cols
         )
     } @$png[ $ypos .. ( $ypos + $height - 1 ) ];		# select rows
@@ -112,6 +115,13 @@ sub pick_pixel_data_by_color_from_png {
 # returns: hashref - { fg => <fg_color>, bg => <bg_color> }
 sub extract_colors_from_cell {
     my ( $png, $xpos, $ypos ) = @_;
+
+    ( $xpos < png_get_width_pixels( $png ) ) or do {
+        confess( sprintf( "Invalid xpos %d, should be less than %d\n", $xpos, png_get_width_pixels( $png ) ) );
+    };
+    ( $ypos < png_get_height_pixels( $png ) ) or do {
+        confess( sprintf( "Invalid ypos %d, should be less than %d\n", $ypos, png_get_height_pixels( $png ) ) );
+    };
 
     my %histogram;
     foreach my $x ( $xpos .. ( $xpos + 7 ) ) {
@@ -203,7 +213,7 @@ sub png_to_pixels_and_attrs {
         while ( $x < ( $xpos + $width ) ) {
             my $c = extract_colors_from_cell( $png, $x, $y );
             push @colors, $c;
-            push @pixels, pick_pixel_data_by_color_from_png( $png, $x, $y, 8, 8, $c->{'fg'} );
+            push @pixels, pick_pixel_data_by_color_from_png( $png, $x, $y, 8, 8, $c->{'bg'} );
             $x += 8;
         }
         $y += 8;
