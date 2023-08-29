@@ -3,6 +3,12 @@
 MAIN_MAP=main.map
 BANKED_MAP=engine/banked_code/banked_code.map
 
+# ansi color sequences
+RED='\e[41m\e[37;1m'
+GREEN='\e[42m\e[37;1m'
+RESET='\e[0m'
+
+
 function map_data {
 	grep -E '^__.*(_tail|_head)' "$1" |sort|uniq|sort -k3|sed 's/= \$/= /g'
 }
@@ -35,7 +41,10 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $MAIN_BSS_START $MAIN_BSS_END $(( MA
 printf "  %-12s  \$%04x  \$%04x  %5d\n" code $MAIN_CODE_START $MAIN_CODE_END $(( MAIN_CODE_END - MAIN_CODE_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" sp1data $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
 echo
-printf "  TOTAL                      %6d\n" $(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
+
+TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
+printf "$GREEN  TOTAL                      %6d$RESET\n" $TOTAL
+printf "$RED  FREE                       %6d$RESET\n" $(( 32768 - TOTAL ))
 echo
 
 # banked.map
@@ -53,7 +62,9 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" code $BANKED_CODE_START $BANKED_CODE_END
 printf "  %-12s  \$%04x  \$%04x  %5d\n" data $BANKED_DATA_START $BANKED_DATA_END $(( BANKED_DATA_END - BANKED_DATA_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $BANKED_BSS_START $BANKED_BSS_END $(( BANKED_BSS_END - BANKED_BSS_START ))
 echo
-printf "  TOTAL                      %6d\n" $(( BANKED_DATA_END - BANKED_DATA_START + BANKED_BSS_END - BANKED_BSS_START + BANKED_CODE_END - BANKED_CODE_START ))
+TOTAL=$(( BANKED_DATA_END - BANKED_DATA_START + BANKED_BSS_END - BANKED_BSS_START + BANKED_CODE_END - BANKED_CODE_START ))
+printf "$GREEN  TOTAL                      %6d$RESET\n" $TOTAL
+printf "$RED  FREE                       %6d$RESET\n" $(( 16384 - TOTAL ))
 echo
 
 # codesets
@@ -74,7 +85,9 @@ for bank_num in $( grep -E '^codeset' build/generated/bank_bins.cfg | awk '{prin
 	printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $CODESET_BSS_START $CODESET_BSS_END $(( CODESET_BSS_END - CODESET_BSS_START ))
 	printf "  %-12s  \$%04x  \$%04x  %5d\n" data $CODESET_DATA_START $CODESET_DATA_END $(( CODESET_DATA_END - CODESET_DATA_START ))
 	echo
-	printf "  TOTAL                      %6d\n" $(( CODESET_DATA_END - CODESET_DATA_START + CODESET_BSS_END - CODESET_BSS_START + CODESET_CODE_END - CODESET_CODE_START ))
+	TOTAL=$(( CODESET_DATA_END - CODESET_DATA_START + CODESET_BSS_END - CODESET_BSS_START + CODESET_CODE_END - CODESET_CODE_START ))
+	printf "$GREEN  TOTAL                      %6d$RESET\n" $TOTAL
+	printf "$RED  FREE                       %6d$RESET\n" $(( 16384 - TOTAL ))
 	echo
 done
 
@@ -89,7 +102,8 @@ for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{prin
 		BANK_TOTAL=$(( BANK_TOTAL + size ))
 	done
 	echo
-	printf "  TOTAL                       %5d\n" $BANK_TOTAL
+	printf "$GREEN  TOTAL                      %6d$RESET\n" $BANK_TOTAL
+	printf "$RED  FREE                       %6d$RESET\n" $(( 16384 - BANK_TOTAL ))
 	echo
 done
 
