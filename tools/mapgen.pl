@@ -194,7 +194,8 @@ sub is_background_btile {
         foreach my $val ( @$rows ) {
             # return immediately when we find something non-bg
             return undef
-                if ( $val->{'hexdump'} ne '0000000000000000' );
+                # background is 8 zero bytes (ignore the 9th, it's the attribute)
+                if ( $val->{'hexdump'} =~ '^0000000000000000' );
         }
     }
     # everything was bg, return true
