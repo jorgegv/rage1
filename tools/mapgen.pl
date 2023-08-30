@@ -241,8 +241,6 @@ foreach my $png_file ( @btile_files ) {
                                 cell_height	=> $cur_height,
                                 cell_data	=> $btile_data,
                                 png_file	=> $png_file,
-                                tiledef_line	=> sprintf( "%s %d %d %d %d %s",
-                                    $btile_name,$cur_row,$cur_col,$cur_width,$cur_height,'obstacle' ),
                             };
                         }
                     }
@@ -281,8 +279,6 @@ foreach my $png_file ( @btile_files ) {
             cell_height		=> $tiledef->{'cell_height'},
             cell_data		=> $btile_data,
             png_file		=> $png_file,
-            tiledef_line	=> sprintf( "%s %d %d %d %d %s",
-                ( map { $tiledef->{$_} } qw( name cell_row cell_col cell_width cell_height ) ), 'obstacle' ),
         };
         push @all_btiles, $btile;
 
@@ -1526,7 +1522,7 @@ EOF_MAP_GDATA_END
 print "Generating BTile GDATA files...\n";
 
 my $btile_format = <<"END_FORMAT";
-// tiledef line: '%s'
+// tiledef line: '%s %d %d %d %d %s'
 BEGIN_BTILE
         NAME    %s
         ROWS    %d
@@ -1547,7 +1543,8 @@ foreach my $btile_data ( grep { $_->{'used_in_screen'} } @all_btiles ) {
         die "** Error: could not open file $output_file for writing\n";
 
     printf GDATA $btile_format,
-        ( map { $btile_data->{$_} } qw( tiledef_line name cell_height cell_width png_file ) ),
+        ( map { $btile_data->{$_} } qw( name cell_row cell_col cell_width cell_height default_type ) ),
+        ( map { $btile_data->{$_} } qw( name cell_height cell_width png_file ) ),
         ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) );
 
     close GDATA;
