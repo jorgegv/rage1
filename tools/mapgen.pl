@@ -562,6 +562,9 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                 # get the hash of the top-left cell
                 my $top_left_cell_hash = $main_map_cell_data->[ $global_cell_row ][ $global_cell_col ]{'hexdump'};
 
+                # skip if it is a background tile
+                next if ( $top_left_cell_hash eq '000000000000000000' );
+
                 # if there are one or more btiles with that cell hash as its
                 # top-left, try to match all btiles from the list.
                 if ( defined( $btile_index{ $top_left_cell_hash } ) ) {
