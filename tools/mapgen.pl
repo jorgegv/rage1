@@ -507,20 +507,23 @@ sub match_btile_in_map {
     return undef if ( $pos_row < $screen_top );
     return undef if ( $pos_col < $screen_left );
 
-    foreach my $r ( 0 .. ( scalar( @$btile_data ) - 1 ) ) {
-        foreach my $c ( 0 .. ( scalar( @{ $btile_data->[0] } ) - 1 ) ) {
+    foreach my $btile_row ( 0 .. ( scalar( @$btile_data ) - 1 ) ) {
+        foreach my $btile_col ( 0 .. ( scalar( @{ $btile_data->[0] } ) - 1 ) ) {
+
+            my $screen_row = $pos_row + $btile_row;
+            my $screen_col = $pos_col + $btile_col;
 
             # return undef if out of the screen
-            return undef if ( ( $pos_row + $r ) > $screen_bottom );
-            return undef if ( ( $pos_col + $c ) > $screen_right );
+            return undef if ( $screen_row > $screen_bottom );
+            return undef if ( $screen_col > $screen_right );
 
             # return undef if the cell has already been matched by a
             # previous btile
-            return undef if $matched_cells->[ $pos_row + $r ][ $pos_col + $c ];
+            return undef if $matched_cells->[ $screen_row ][ $screen_col ];
 
             # return undef as soon as there is a cell mismatch
-            return undef if ( $map->[ $pos_row + $r ][ $pos_col + $c ]{'hexdump'} ne
-                $btile_data->[ $r ][ $c ]{'hexdump'} );
+            return undef if ( $map->[ $screen_row ][ $screen_col ]{'hexdump'} ne
+                $btile_data->[ $btile_row ][ $btile_col ]{'hexdump'} );
         }
     }
 
