@@ -16,6 +16,7 @@ use utf8;
 
 use Carp;
 use Data::Dumper;
+use List::MoreUtils qw( frequency );
 
 # standard ZX Spectrum color palette
 my %zx_colors = (
@@ -130,13 +131,8 @@ sub extract_colors_from_cell {
         confess( sprintf( "Invalid ypos %d, should be less than %d\n", $ypos, png_get_height_pixels( $png ) ) );
     };
 
-    my %histogram;
-    foreach my $x ( $xpos .. ( $xpos + 7 ) ) {
-        foreach my $y ( $ypos .. ( $ypos + 7 ) ) {
-            my $pixel_color = $png->[$y][$x];
-            $histogram{$pixel_color}++;
-        }
-    }
+    my %histogram = frequency map { @$_[ $xpos .. ($xpos + 7) ] } @$png[ $ypos .. ($ypos + 7) ];
+
     my @l = sort { $histogram{ $a } > $histogram{ $b } } keys %histogram;
     if (scalar( @l ) > 2 ) {
         foreach my $e ( 3 .. $#l ) {
