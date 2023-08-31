@@ -276,7 +276,7 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                    die "** Error: could not load PNG file $file" . $build_dir . '/' . $vars->{'file'} . "\n";
+                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                 map_png_colors_to_zx_colors( $png );
 
@@ -356,7 +356,7 @@ sub read_input_data {
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                    die "** Error: could not load PNG file $file" . $build_dir . '/' . $vars->{'file'} . "\n";
+                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                 map_png_colors_to_zx_colors( $png );
 
@@ -378,7 +378,7 @@ sub read_input_data {
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                    die "** Error: could not load PNG file $file" . $build_dir . '/' . $vars->{'file'} . "\n";
+                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                 map_png_colors_to_zx_colors( $png );
 
