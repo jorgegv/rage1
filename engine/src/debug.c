@@ -20,6 +20,7 @@ uint8_t initialized = 0;
 
 uint16_t debug_flags = 0;
 
+#ifdef BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA
 struct sp1_pss debug_ctx = { &debug_area, SP1_PSSFLAG_INVALIDATE, 0, 0, 0, INK_WHITE | PAPER_BLACK, 0, 0 };
 
 void debug_out( char *txt ) {
@@ -34,6 +35,7 @@ void debug_out( char *txt ) {
     }
     sp1_PrintString( &debug_ctx, txt );
 }
+#endif
 
 uint8_t *digits="0123456789abcdef";
 
@@ -61,10 +63,6 @@ char *i8toa( uint8_t i ){
 void debug_waitkey(void) {
     in_wait_key();
     in_wait_nokey();
-}
-
-void debug_flush(void) {
-    sp1_UpdateNow();
 }
 
 void debug_pause( uint16_t delay ) __z88dk_fastcall {

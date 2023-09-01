@@ -42,9 +42,10 @@ sub gather_datasets {
     foreach my $bin ( grep { /^dataset_.*\Q$ext\E/ } readdir BINDIR ) {
         $bin =~ m/dataset_(.*)\Q$ext\E/;
         $binaries{ $1 } = {
-                'name'	=> $bin,
-                'size'	=> ( stat( "$dir/$bin" ) )[7],
-                'dir'	=> $dir,
+                'dataset_num'	=> $1,
+                'name'		=> $bin,
+                'size'		=> ( stat( "$dir/$bin" ) )[7],
+                'dir'		=> $dir,
         };
     }
     close BINDIR;
@@ -61,9 +62,10 @@ sub gather_codesets {
     foreach my $bin ( grep { /^codeset_.*\Q$ext\E/ } readdir BINDIR ) {
         $bin =~ m/codeset_(.*)\Q$ext\E/;
         $binaries{ $1 } = {
-                'name'	=> $bin,
-                'size'	=> ( stat( "$dir/$bin" ) )[7],
-                'dir'	=> $dir,
+                'codeset_num'	=> $1,
+                'name'		=> $bin,
+                'size'		=> ( stat( "$dir/$bin" ) )[7],
+                'dir'		=> $dir,
         };
     }
     close BINDIR;
@@ -102,6 +104,7 @@ sub layout_dataset_binaries {
         # then update the bank layout
         push @{ $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
         $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
+        $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'type'} = 'dataset';
     }
 }
 
@@ -127,6 +130,7 @@ sub layout_codeset_binaries {
         $bin->{'bank'} = $codeset_valid_banks[ $current_bank_index ];
         push @{ $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
         $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
+        $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'type'} = 'codeset';
 
         # update used bank index
         $current_bank_index++;
@@ -170,7 +174,20 @@ sub generate_bank_config {
 
     open my $bankcfg_h, ">", $bankcfg
         or die "\n** Error: could not open $bankcfg for writing\n";
-    print $bankcfg_h join("\n", map { $layout->{ $_ }{'binary'} } sort keys %$layout );
+
+    print $bankcfg_h "# <type> <bank_num> <path> <codesets/datasets>\n";
+
+    foreach my $bank ( sort keys %$layout ) {
+        my $ids;
+        if ( $layout->{ $bank }{'type'} eq 'dataset' ) {
+            $ids = join( " ", map { $_->{'dataset_num' } } @{ $layout->{ $bank }{'binaries'} } );
+        } elsif ( $layout->{ $bank }{'type'} eq 'codeset' ) {
+            $ids = join( " ", map { $_->{'codeset_num' } } @{ $layout->{ $bank }{'binaries'} } );
+        } else {
+            die "BANK $bank: unknown type $layout->{ $bank }{'type'}\n";
+        }
+        printf $bankcfg_h "%s %d %s %s\n", $layout->{ $bank }{'type'}, $bank, $layout->{ $bank }{'binary'}, $ids;
+    }
     print $bankcfg_h "\n";
     close $bankcfg_h;
     print "OK\n";

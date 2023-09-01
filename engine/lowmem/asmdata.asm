@@ -32,6 +32,7 @@ hour:		db	0
 min:		db	0
 sec:		db	0
 frame:		db	0
+ticks:		dq	0	;; 32-bit
 
 ;; extern uint8_t periodic_tasks_enabled
 

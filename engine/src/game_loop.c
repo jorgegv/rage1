@@ -175,7 +175,9 @@ void run_main_game_loop(void) {
 
    // reset game vars and setup initial state
    game_state_reset_initial();
+#ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
    hero_update_lives_display();
+#endif
 #ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
    HERO_HEALTH_DISPLAY_FUNCTION();
 #endif

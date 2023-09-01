@@ -164,6 +164,8 @@ sub read_input_data {
 
     # read and process input
     my $num_line = 0;
+    my $screen_patching = 0;
+    my $pending_split_lines;
     while (my $line = <>) {
 
         $num_line++;
@@ -174,6 +176,20 @@ sub read_input_data {
         $line =~ s/\s*$//g;		# remove trailing blanks
         $line =~ s/\/\/.*$//g;		# remove comments (//...)
         next if $line eq '';		# ignore blank lines
+
+        # if there were previous pending split lines (ending in '\'), add
+        # them to the beginning of the current line
+        if ( defined( $pending_split_lines ) ) {
+            $line = $pending_split_lines . $line;
+            $pending_split_lines = undef;
+        }
+
+        # if the current line ends in '\', save it for next iteration
+        if ( $line =~ /\\$/ ) {
+            $line =~ s/\\$//g;	# remove trailing '\' char
+            $pending_split_lines = $line;
+            next;
+        }
 
         # process the line
         if ( $state eq 'NONE' ) {
@@ -188,6 +204,16 @@ sub read_input_data {
                 # asset_state: the first one (0) for this screen, with all
                 # flags reset
                 $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_states => [ { value => 0, comment => 'Screen state' } ] };
+                next;
+            }
+            if ( $line =~ /^PATCH_SCREEN\s+NAME=(.+)$/ ) {
+                my $name = $1;
+                if ( not defined( $screen_name_to_index{ $name } ) ) {
+                    die "PATCH_SCREEN: '$name' is not the name of an existing screen\n";
+                }
+                $state = 'SCREEN';
+                $screen_patching = 1;
+                $cur_screen = $all_screens[ $screen_name_to_index{ $name } ];
                 next;
             }
             if ( $line =~ /^BEGIN_SPRITE$/ ) {
@@ -249,8 +275,11 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+
                 map_png_colors_to_zx_colors( $png );
+
                 my $data = png_to_pixels_and_attrs(
                     $png,
                     $vars->{'xpos'}, $vars->{'ypos'},
@@ -326,8 +355,11 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $fgcolor = uc( $vars->{'fgcolor'} );
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+
                 map_png_colors_to_zx_colors( $png );
+
                 push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
@@ -345,8 +377,11 @@ sub read_input_data {
                     split( /\s+/, $args )
                 };
                 my $maskcolor = uc( $vars->{'maskcolor'} );
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} );
+                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+
                 map_png_colors_to_zx_colors( $png );
+
                 push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                     ) };
@@ -580,9 +615,14 @@ sub read_input_data {
                 next;
             }
             if ( $line =~ /^END_SCREEN$/ ) {
-                validate_and_compile_screen( $cur_screen );
-                $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
-                push @all_screens, $cur_screen;
+                validate_screen( $cur_screen );
+                if ( not $screen_patching ) {
+                    compile_screen( $cur_screen );
+                    $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
+                    push @all_screens, $cur_screen;
+                } else {
+                    $screen_patching = 0;
+                }
                 $state = 'NONE';
                 next;
             }
@@ -781,6 +821,7 @@ sub read_input_data {
                     map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                     split( /\s+/, $args )
                 };
+                add_build_feature( 'SCREEN_AREA_' . $directive );
                 next;
             }
             if ( $line =~ /^LOADING_SCREEN\s+(.*)$/ ) {
@@ -1158,9 +1199,10 @@ sub validate_and_compile_sprite {
     }
     $sprite->{'sequence_name_to_index'}{'Main'} = $index;
 
-    # if the sprite has no 'sequence_delay' parameter, define as 0
+    # if the sprite has no 'sequence_delay' parameter, define as 1 (minimum;
+    # 0 means 256, which is 5 seconds!)
     if ( not defined( $sprite->{'sequence_delay'} ) ) {
-        $sprite->{'sequence_delay'} = 0;
+        $sprite->{'sequence_delay'} = 1;
     }
 
     # compile animation sequences
@@ -1254,7 +1296,7 @@ sub generate_sprite {
 ## Map Screen functions
 ######################################
 
-sub validate_and_compile_screen {
+sub validate_screen {
     my $screen = shift;
     defined( $screen->{'name'} ) or
         die "Screen has no NAME\n";
@@ -1289,8 +1331,21 @@ sub validate_and_compile_screen {
         if ( not defined( $s->{'initial_sequence'} ) ) {
             $s->{'initial_sequence'} = 'Main';
         }
+        # check that it has an associated sprite
+        defined( $s->{'sprite'} ) or
+            die "SCREEN $screen->{name}: ENEMY $s->{name} has no associated sprite\n";
+        # check that defined sequences exist for the given sprite
+        foreach my $seq_param ( qw( sequence_a sequence_b initial_sequence ) ) {
+            if ( defined( $s->{ $seq_param } ) and
+                not defined( $all_sprites[ $sprite_name_to_index{ $s->{'sprite'} } ]{'sequence_name_to_index'}{ $s->{ $seq_param } } ) ) {
+                    die "SCREEN $screen->{name}: ENEMY $s->{name}: sequence specified with ".uc($seq_param)." is not defined\n";
+            }
+        }
     }
+}
 
+sub compile_screen {
+    my $screen = shift;
     # compile SCREEN_DATA lines
     compile_screen_data( $screen );
 
@@ -1696,6 +1751,11 @@ sub generate_hero {
     my $immunity_period		= $hero->{'damage_mode'}{'immunity_period'};
     my $health_display_function	= $hero->{'damage_mode'}{'health_display_function'} || '';
 
+    my $move_xmin		= $game_config->{'game_area'}{'left'} * 8;
+    my $move_xmax		= ( $game_config->{'game_area'}{'right'} + 1 ) * 8 - $width;
+    my $move_ymin		= $game_config->{'game_area'}{'top'} * 8;
+    my $move_ymax		= ( $game_config->{'game_area'}{'bottom'} + 1 ) * 8 - $height;
+
     push @h_game_data_lines, <<EOF_HERO1
 
 /////////////////////////////
@@ -1716,6 +1776,10 @@ sub generate_hero {
 #define HERO_SPRITE_HEIGHT		$height
 #define	HERO_MOVE_HSTEP			$hstep
 #define	HERO_MOVE_VSTEP			$vstep
+#define	HERO_MOVE_XMIN			$move_xmin
+#define	HERO_MOVE_XMAX			$move_xmax
+#define	HERO_MOVE_YMIN			$move_ymin
+#define	HERO_MOVE_YMAX			$move_ymax
 #define	HERO_NUM_LIVES			$num_lives
 #define	HERO_LIVES_BTILE_NUM		$lives_btile_num
 #define HERO_HEALTH_MAX			$health_max
@@ -1974,6 +2038,7 @@ sub generate_game_functions {
 
 sub generate_single_game_area {
     my $area = shift;
+    return if not defined ( $game_config->{ $area } );
     push @c_game_data_lines, "\n" . join( "\n", map {
         sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )

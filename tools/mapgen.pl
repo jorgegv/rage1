@@ -21,7 +21,7 @@ require RAGE::PNGFileUtils;
 require RAGE::BTileUtils;
 
 use Data::Dumper;
-use File::Basename;
+use File::Basename qw( basename );
 use Getopt::Long;
 use GD;
 
@@ -37,6 +37,9 @@ my $auto_hotzones;
 my $auto_hotzone_bgcolor = '000000';
 my $auto_hotzone_width = 8;
 my $generate_check_map;
+my $auto_tileset_btiles;
+my $auto_tileset_max_rows = 16;
+my $auto_tileset_max_cols = 16;
 
 # global variables
 my %map_crumb_types;
@@ -54,8 +57,11 @@ my %map_crumb_types;
         "auto-hotzone-bgcolor:s"	=> \$auto_hotzone_bgcolor,	# optional, default '000000'
         "auto-hotzone-width:i"		=> \$auto_hotzone_width,	# optional, default 4
         "generate-check-map"		=> \$generate_check_map,	# optional, default false
-        "hero-sprite-width:i"		=> \$hero_sprite_width,
-        "hero-sprite-height:i"		=> \$hero_sprite_height,
+        "hero-sprite-width=i"		=> \$hero_sprite_width,
+        "hero-sprite-height=i"		=> \$hero_sprite_height,
+        "auto-tileset-btiles"		=> \$auto_tileset_btiles,	# optional, default false
+        "auto-tileset-max-rows:i"	=> \$auto_tileset_max_rows,	# optional, default 16
+        "auto-tileset-max-cols:i"	=> \$auto_tileset_max_cols,	# optional, default 16
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -71,13 +77,13 @@ Where <options> can be the following:
 
 Required:
 
-    --screen-cols <cols>		Width of each screen, in 8x8 cells
-    --screen-rows <rows>		Height of each screen, in 8x8 cells
+    --screen-cols <cols>		Width of each screen, in 8x8 cells [1-32]
+    --screen-rows <rows>		Height of each screen, in 8x8 cells [1-24]
     --game-data-dir <dir>		game_data directory where Map and Flow GDATA files will be generated
-    --game-area-top <row>		Top row of the Game Area
-    --game-area-left <col>		Left column of the Game Area
-    --hero-sprite-width <n>		Width of the Hero sprite, in pixels
-    --hero-sprite-height <n>		Height of the Hero sprite, in pixels
+    --game-area-top <row>		Top row of the Game Area [0-23]
+    --game-area-left <col>		Left column of the Game Area [0-31]
+    --hero-sprite-width <n>		Width of the Hero sprite, in pixels [>0]
+    --hero-sprite-height <n>		Height of the Hero sprite, in pixels [>0]
 
 Optional:
 
@@ -86,11 +92,33 @@ Optional:
     --auto-hotzone-width		When --auto-hotzones is enabled, specifies HOTZONE width in pixels (default: 4)
     --hotzone-color			When --auto-hotzones is disabled, specifies HOTZONE color to match (default: 000000)
     --generate-check-map		Generates a check-map with outlines for the matched objects (PNG)
+    --auto-tileset-btiles		Automatically creates BTILE definitions for all possible BTILEs in tilesets
+    --auto-tileset-max-rows		Maximum rows for automatically created BTILE definitions (default: 16)
+    --auto-tileset-max-cols		Maximum cols for automatically created BTILE definitions (default: 16)
 
 Colors are specified as RRGGBB (RGB components in hex notation)
 
 EOF_HELP
 ;
+
+##########################
+## 0. Validate args
+##########################
+
+( ( $screen_cols >= 1 ) and ( $screen_cols <= 32 ) ) or
+    die "--screen-cols must be in 1-32 range\n";
+( ( $screen_rows >= 1 ) and ( $screen_rows <= 24 ) ) or
+    die "--screen-rows must be in 1-24 range\n";
+( ( $game_area_top >= 0 ) and ( $game_area_top <= 23 ) ) or
+    die "--game-area-top must be in 0-23 range\n";
+( ( $game_area_left >= 0 ) and ( $game_area_left <= 31 ) ) or
+    die "--game-area-left must be in 0-31 range\n";
+( $hero_sprite_width > 0 ) or
+    die "--hero-sprite-width must be greater than 0\n";
+( $hero_sprite_height > 0 ) or
+    die "--hero-sprite-height must be greater than 0\n";
+
+# continue
 
 my @png_files = @ARGV;	# remaining args after option processing
 
@@ -156,22 +184,76 @@ print "Loading BTILEs...\n";
 #   - The hash of the cell is the 'hexdump' field, which is just the
 #     concatenation of the 8 bytes plus the attr byte, all in hex form
 
-my @all_btiles;		# list of all found btiles
-my %btile_index;	# map of cell->hexdump => btile index
+my @all_btiles;			# list of all found btiles
+my %btile_index;		# map of cell->hexdump => btile index
+my %all_possible_btiles;	# map of all possible BTILEs
+
+sub is_background_btile {
+    my $btile_data = shift;
+    foreach my $rows ( @$btile_data ) {
+        foreach my $val ( @$rows ) {
+            # return immediately when we find something non-bg
+            return undef
+                # background is 8 zero bytes (ignore the 9th, it's the attribute)
+                if ( $val->{'hexdump'} !~ '^0000000000000000' );
+        }
+    }
+    # everything was bg, return true
+    return 1;
+}
+
+sub int_min {
+    my ( $a, $b ) = @_;
+    return $a if not defined( $b );
+    return $b if not defined( $a );
+    return ( $a <= $b ? $a : $b );
+}
 
 # process all PNG Btile files
 foreach my $png_file ( @btile_files ) {
 
-    my $tile_count = 0;
+    # load the PNG and convert it to the ZX Spectrum color palette
+    my $png = load_png_file( $png_file ) or
+        die "** Error: could not load PNG file $png_file\n";
+
+    map_png_colors_to_zx_colors( $png );
+
+    my $file_prefix = basename( $png_file, '.png', '.PNG' );
+
+    # if automatic generation of btiles in tilesets has been requested,
+    # create the list of all possible tiles of all sizes, except those that are full background
+    if ( $auto_tileset_btiles ) {
+        my ( $width, $height ) = ( png_get_width_cells( $png ), png_get_height_cells( $png ) );
+        foreach my $cur_height ( 1 .. int_min( $auto_tileset_max_rows, $height ) ) {
+            foreach my $cur_width ( 1 .. int_min( $auto_tileset_max_cols, $width ) ) {
+                foreach my $cur_row ( 0 .. ( $height - $cur_height ) ) {
+                    foreach my $cur_col ( 0 .. ( $width - $cur_width ) ) {
+                        my $btile_name = sprintf("%s_r%03dc%03dw%03dh%03d",$file_prefix,$cur_row,$cur_col,$cur_width,$cur_height);
+                        my $btile_data = png_get_all_cell_data( $png, $cur_row, $cur_col, $cur_width, $cur_height );
+                        if ( not is_background_btile( $btile_data ) ) {
+                            $all_possible_btiles{ $btile_name } = {
+                                name		=> $btile_name,
+                                default_type	=> 'obstacle',
+                                metadata	=> undef,
+                                cell_row	=> $cur_row,
+                                cell_col	=> $cur_col,
+                                cell_width	=> $cur_width,
+                                cell_height	=> $cur_height,
+                                cell_data	=> $btile_data,
+                                png_file	=> $png_file,
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     # get all the tiledefs for the file
     my $tiledefs = btile_read_png_tiledefs( $png_file );
 
-    # load the PNG and convert it to the ZX Spectrum color palette
-    my $png = load_png_file( $png_file );
-    map_png_colors_to_zx_colors( $png );
-
     # process the PNG's cells and extract the btiles
+    my $tile_count = 0;
     foreach my $tiledef ( @$tiledefs ) {
 
         # get all cell data for the btile
@@ -187,19 +269,49 @@ foreach my $png_file ( @btile_files ) {
         my $current_btile_index = scalar( @all_btiles );
 
         # store the btile cell data into the main btile list
-        push @all_btiles, {
-            cell_data		=> $btile_data,
+        my $btile = {
             name		=> $tiledef->{'name'},
             default_type	=> $tiledef->{'default_type'},
             metadata		=> $tiledef->{'metadata'},
+            cell_row		=> $tiledef->{'cell_row'},
+            cell_col		=> $tiledef->{'cell_col'},
+            cell_width		=> $tiledef->{'cell_width'},
+            cell_height		=> $tiledef->{'cell_height'},
+            cell_data		=> $btile_data,
+            png_file		=> $png_file,
         };
+        push @all_btiles, $btile;
 
         # ...and update the index
         push @{ $btile_index{ $btile_data->[0][0]{'hexdump'} } }, $current_btile_index;
 
+        # remove the equivalent autogenerated btile
+        my $autobtile_name = sprintf("%s_r%03dc%03dw%03dh%03d",
+            $file_prefix,
+            $tiledef->{'cell_row'},
+            $tiledef->{'cell_col'},
+            $tiledef->{'cell_width'},
+            $tiledef->{'cell_height'}
+        );
+        if ( defined( $all_possible_btiles{ $autobtile_name } ) ) {
+            delete $all_possible_btiles{ $autobtile_name };
+        }
+
         $tile_count++;
     }
     printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
+}
+
+# if automatic tileset btile generation was requested,
+# add all the autogenerated btiles that remain
+if ( $auto_tileset_btiles ) {
+    foreach my $bk ( keys %all_possible_btiles ) {
+        my $btile = $all_possible_btiles{ $bk };
+        my $current_btile_index = scalar( @all_btiles );
+        push @all_btiles, $btile;
+        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+    }
+    printf "-- Added %d autogenerated BTILEs\n", scalar( keys %all_possible_btiles );
 }
 
 # Since there may be more than one BTILE with the same top-left cell, we now
@@ -241,7 +353,9 @@ print "Processing Main Map...\n";
 #   - Process the MAPDEF file if it exists and get the screen metadata
 
 # load the PNG and convert it to the ZX Spectrum color palette
-my $main_map_png = load_png_file( $map_png_file );
+my $main_map_png = load_png_file( $map_png_file ) or
+    die "** Error: could not load PNG file $map_png_file\n";
+
 map_png_colors_to_zx_colors( $main_map_png );
 
 # Make sure the map PNG has valid dimensions
@@ -393,20 +507,23 @@ sub match_btile_in_map {
     return undef if ( $pos_row < $screen_top );
     return undef if ( $pos_col < $screen_left );
 
-    foreach my $r ( 0 .. ( scalar( @$btile_data ) - 1 ) ) {
-        foreach my $c ( 0 .. ( scalar( @{ $btile_data->[0] } ) - 1 ) ) {
+    foreach my $btile_row ( 0 .. ( scalar( @$btile_data ) - 1 ) ) {
+        foreach my $btile_col ( 0 .. ( scalar( @{ $btile_data->[0] } ) - 1 ) ) {
+
+            my $screen_row = $pos_row + $btile_row;
+            my $screen_col = $pos_col + $btile_col;
 
             # return undef if out of the screen
-            return undef if ( ( $pos_row + $r ) > $screen_bottom );
-            return undef if ( ( $pos_col + $c ) > $screen_right );
+            return undef if ( $screen_row > $screen_bottom );
+            return undef if ( $screen_col > $screen_right );
 
             # return undef if the cell has already been matched by a
             # previous btile
-            return undef if $matched_cells->[ $pos_row + $r ][ $pos_col + $c ];
+            return undef if $matched_cells->[ $screen_row ][ $screen_col ];
 
             # return undef as soon as there is a cell mismatch
-            return undef if ( $map->[ $pos_row + $r ][ $pos_col + $c ]{'hexdump'} ne
-                $btile_data->[ $r ][ $c ]{'hexdump'} );
+            return undef if ( $map->[ $screen_row ][ $screen_col ]{'hexdump'} ne
+                $btile_data->[ $btile_row ][ $btile_col ]{'hexdump'} );
         }
     }
 
@@ -445,6 +562,9 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                 # get the hash of the top-left cell
                 my $top_left_cell_hash = $main_map_cell_data->[ $global_cell_row ][ $global_cell_col ]{'hexdump'};
 
+                # skip if it is a background tile
+                next if ( $top_left_cell_hash eq '000000000000000000' );
+
                 # if there are one or more btiles with that cell hash as its
                 # top-left, try to match all btiles from the list.
                 if ( defined( $btile_index{ $top_left_cell_hash } ) ) {
@@ -471,6 +591,9 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                                 global_cell_col	=> $global_cell_col,
                                 btile_index	=> $btile_index,
                             };
+
+                            # mark it as used in the global BTILE list
+                            $all_btiles[ $btile_index ]{'used_in_screen'}++;
 
                             # we also mark all of its cells as checked and matched
                             foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
@@ -616,9 +739,11 @@ sub match_rectangle_in_map {
         # if a match was found but was not wide enough, stop matching lines
         last if ( $matched_x < $hotzone_min_width );
 
-        # if the matched width is not the same as the previous lines that
-        # have already been matched, stop matching lines
-        last if ( $matched_width and ( $matched_x < $matched_width ) );
+        # if the matched width is less than the previous lines that have
+        # already been matched, we can use the new smaller width
+        if ( $matched_width and ( $matched_x < $matched_width ) ) {
+            $matched_width = $matched_x;
+        }
 
         # save first matched width
         if ( not $matched_width ) {
@@ -1386,6 +1511,51 @@ EOF_MAP_GDATA_END
     close GDATA;
 
     printf "-- File %s for screen '%s' was created\n", $output_file, $screen_name;
+}
+
+###########################################################################
+###########################################################################
+##
+## 9.1. Generate GDATA files with BTILE definitions
+##
+###########################################################################
+###########################################################################
+
+# This is run in all cases.  If autogenerated BTILEs were created, they will be included in the
+# generation.  If only the TILEDEF definitions are used, only those tiles will be output.  This
+# replaces functionality previously in btilegen.pl script
+
+print "Generating BTile GDATA files...\n";
+
+my $btile_format = <<"END_FORMAT";
+// tiledef line: '%s %d %d %d %d %s'
+BEGIN_BTILE
+        NAME    %s
+        ROWS    %d
+        COLS    %d
+
+        PNG_DATA        FILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d
+END_BTILE
+
+END_FORMAT
+
+# create the btiles directory if it does not exist
+mkdir( "$game_data_dir/btiles" )
+    if ( not -d "$game_data_dir/btiles" );
+
+foreach my $btile_data ( grep { $_->{'used_in_screen'} } @all_btiles ) {
+    my $output_file = sprintf( "%s/btiles/auto_%s.gdata", $game_data_dir, $btile_data->{'name'} );
+    open GDATA,">$output_file" or
+        die "** Error: could not open file $output_file for writing\n";
+
+    printf GDATA $btile_format,
+        ( map { $btile_data->{$_} } qw( name cell_row cell_col cell_width cell_height default_type ) ),
+        ( map { $btile_data->{$_} } qw( name cell_height cell_width png_file ) ),
+        ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) );
+
+    close GDATA;
+
+    printf "-- File %s for BTILE '%s' was created\n", $output_file, $btile_data->{'name'};
 }
 
 ###########################################################################

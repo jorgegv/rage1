@@ -264,6 +264,7 @@ void hero_check_tiles_below(void) {
 }
 #endif // BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 
+#ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
 // printing context
 struct sp1_pss lives_display_ctx = {
    &lives_area,				// bounds
@@ -288,6 +289,7 @@ void hero_update_lives_display(void) {
         col += home_assets->all_btiles[ HERO_LIVES_BTILE_NUM ].num_cols;
     }
 }
+#endif
 
 void hero_move_offscreen(void) {
     sprite_move_offscreen( game_state.hero.sprite );
@@ -323,7 +325,9 @@ void hero_handle_hit ( void ) {
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
             bullet_reset_all();
 #endif
+#ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
             hero_update_lives_display();
+#endif
 #ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION
             HERO_HEALTH_DISPLAY_FUNCTION();
 #endif
@@ -364,7 +368,9 @@ void hero_handle_hit ( void ) {
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
         bullet_reset_all();
 #endif
+#ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
         hero_update_lives_display();
+#endif
         SET_HERO_FLAG( game_state.hero, F_HERO_ALIVE );
     }
 }

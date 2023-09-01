@@ -17,6 +17,12 @@
 
 struct time_s {
    uint8_t hour, min, sec, frame;
+   union {
+      uint32_t ticks;
+      struct {
+         uint8_t b0,b1,b2,b3;
+      } ticks_bytes;
+   };
 };
 extern struct time_s current_time;
 

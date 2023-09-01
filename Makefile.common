@@ -141,13 +141,21 @@ $(GENERATED_DIR_DATASETS)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
 
 $(GENERATED_DIR)/game_data.dep: data_depend
 
+GDATA_FILES =	$(wildcard $(GAME_DATA_DIR)/game_config/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/btiles/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/sprites/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/map/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/heroes/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/flow/*.gdata)
+GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata)
+
 data:
-	@./tools/datagen.pl -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes,flow}/*.gdata
+	@./tools/datagen.pl -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
 	@./tools/generate_banked_function_defs.pl
 
 data_depend:
-	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
-	@ls -1 $(GAME_DATA_DIR)/{game_config,btiles,sprites,map,heroes}/*.gdata | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
+	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GDATA_FILES) $(GDATA_PATCHES) | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
+	@ls -1 $(GDATA_FILES) $(GDATA_PATCHES) | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
 	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
 
 ## Taps
@@ -260,6 +268,9 @@ mem_bank:
 	@./tools/memmap.pl -m -p bank $(BANKED_CODE_DIR)/banked_code.map
 
 mem: mem_main mem_bank
+
+mem-128:
+	@./tools/mem-summary.sh
 
 linecount: clean
 	@echo -n "Lines of Code (C):         "
