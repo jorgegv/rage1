@@ -65,10 +65,6 @@ void debug_waitkey(void) {
     in_wait_nokey();
 }
 
-void debug_flush(void) {
-    sp1_UpdateNow();
-}
-
 void debug_pause( uint16_t delay ) __z88dk_fastcall {
     while ( delay-- );
 }

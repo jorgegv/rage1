@@ -22,7 +22,7 @@ void debug_out( char * );
   #define debug_out(a) __DEBUG_AREA_should_be_defined_when_usng_debug_out__()
 #endif
 void debug_waitkey( void );
-void debug_flush( void );
+#define debug_flush() sp1_UpdateNow()
 
 // debug panic will store the given panic code at fixed address $FFFF
 // and then will halt the machine with a fancy color screen. You will
