@@ -62,12 +62,6 @@ build:
 build-debug:
 	@export RAGE1_DEBUG=1 && $(MAKE) -s build
 
-build-minimal:
-	@$(MAKE) -s clean
-	@$(MAKE) -s ZX_TARGET=48 config target_game=minimal_game
-	@$(MAKE) -s ZX_TARGET=48 data
-	@$(MAKE) -s -f Makefile-48 build
-
 # forced config build for 48 mode
 build48:
 	@$(MAKE) -s clean
