@@ -43,8 +43,8 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" sp1data $SP1_START $SP1_END $(( SP1_END 
 echo
 
 TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
-printf "$GREEN  TOTAL                      %6d$RESET\n" $TOTAL
-printf "$RED  FREE                       %6d$RESET\n" $(( 32768 - TOTAL ))
+printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
+printf "$RED  FREE                       %6d  $RESET\n" $(( 32768 - TOTAL ))
 echo
 
 # banked.map
@@ -63,8 +63,8 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" data $BANKED_DATA_START $BANKED_DATA_END
 printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $BANKED_BSS_START $BANKED_BSS_END $(( BANKED_BSS_END - BANKED_BSS_START ))
 echo
 TOTAL=$(( BANKED_DATA_END - BANKED_DATA_START + BANKED_BSS_END - BANKED_BSS_START + BANKED_CODE_END - BANKED_CODE_START ))
-printf "$GREEN  TOTAL                      %6d$RESET\n" $TOTAL
-printf "$RED  FREE                       %6d$RESET\n" $(( 16384 - TOTAL ))
+printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
+printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - TOTAL ))
 echo
 
 # codesets
@@ -86,8 +86,8 @@ for bank_num in $( grep -E '^codeset' build/generated/bank_bins.cfg | awk '{prin
 	printf "  %-12s  \$%04x  \$%04x  %5d\n" data $CODESET_DATA_START $CODESET_DATA_END $(( CODESET_DATA_END - CODESET_DATA_START ))
 	echo
 	TOTAL=$(( CODESET_DATA_END - CODESET_DATA_START + CODESET_BSS_END - CODESET_BSS_START + CODESET_CODE_END - CODESET_CODE_START ))
-	printf "$GREEN  TOTAL                      %6d$RESET\n" $TOTAL
-	printf "$RED  FREE                       %6d$RESET\n" $(( 16384 - TOTAL ))
+	printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
+	printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - TOTAL ))
 	echo
 done
 
@@ -102,8 +102,8 @@ for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{prin
 		BANK_TOTAL=$(( BANK_TOTAL + size ))
 	done
 	echo
-	printf "$GREEN  TOTAL                      %6d$RESET\n" $BANK_TOTAL
-	printf "$RED  FREE                       %6d$RESET\n" $(( 16384 - BANK_TOTAL ))
+	printf "$GREEN  TOTAL                      %6d  $RESET\n" $BANK_TOTAL
+	printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - BANK_TOTAL ))
 	echo
 done
 
