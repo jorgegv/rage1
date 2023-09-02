@@ -398,4 +398,56 @@ sub png_get_all_cell_data {
     return \@rows;
 }
 
+# rotates a PNG by N right angles (0,1,2,3) and returns the new rotated png
+sub png_rotate {
+    my ( $png, $count ) = @_;
+
+    if ( $count ) {
+        my $old_png = $png;
+        my $new_png;
+        while ( $count-- ) {
+            $new_png = undef;
+            my $width = png_get_width_pixels( $old_png );
+            my $height = png_get_height_pixels( $old_png );
+            foreach my $i ( 0 .. $height - 1 ) {
+                foreach my $j ( 0 .. $width - 1 ) {
+                    $new_png->[ $width - $j - 1 ][ $i ] = $old_png->[ $i ][ $j ];
+                }
+            }
+            $old_png = $new_png;
+        }
+        return $new_png;
+    } else {
+        return $png;
+    }
+}
+
+# mirrors a PNG horizontally and returns the new mirrored png
+sub png_hmirror {
+    my $png = shift;
+    my $width = png_get_width_pixels( $png );
+    my $height = png_get_height_pixels( $png );
+    my $new_png;
+    foreach my $i ( 0 .. $height - 1 ) {
+        foreach my $j ( 0 .. $width - 1 ) {
+            $new_png->[ $i ][ $width - 1 - $j ] = $png->[ $i ][ $j ];
+        }
+    }
+    return $new_png;
+}
+
+# mirrors a PNG vertically and returns the new mirrored png
+sub png_vmirror {
+    my $png = shift;
+    my $width = png_get_width_pixels( $png );
+    my $height = png_get_height_pixels( $png );
+    my $new_png;
+    foreach my $i ( 0 .. $height - 1 ) {
+        foreach my $j ( 0 .. $width - 1 ) {
+            $new_png->[ $height - 1 - $i ][ $j ] = $png->[ $i ][ $j ];
+        }
+    }
+    return $new_png;
+}
+
 1;
