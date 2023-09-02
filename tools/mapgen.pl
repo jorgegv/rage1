@@ -186,7 +186,6 @@ print "Loading BTILEs...\n";
 
 my @all_btiles;			# list of all found btiles
 my %btile_index;		# map of cell->hexdump => btile index
-my %all_possible_btiles;	# map of all possible BTILEs
 
 sub is_background_btile {
     my $btile_data = shift;
@@ -202,23 +201,13 @@ sub is_background_btile {
     return 1;
 }
 
-# process all PNG Btile files
-foreach my $png_file ( @btile_files ) {
+# generates the
+sub generate_btiles {
+    my ( $png, $tiledefs, $png_file, $prefix ) = @_;
 
-    # load the PNG and convert it to the ZX Spectrum color palette
-    my $png = load_png_file( $png_file ) or
-        die "** Error: could not load PNG file $png_file\n";
+    my $file_prefix = basename( $png_file, '.png', '.PNG' ) . $prefix;
 
-    map_png_colors_to_zx_colors( $png );
-
-    my $file_prefix = basename( $png_file, '.png', '.PNG' );
-
-
-    # get all the tiledefs for the file
-    my $tiledefs = btile_read_png_tiledefs( $png_file );
-
-    # process the PNG's cells and extract the btiles
-    my $tile_count = 0;
+    my @generated_btiles;
     foreach my $tiledef ( @$tiledefs ) {
 
         # get all cell data for the btile
@@ -244,10 +233,7 @@ foreach my $png_file ( @btile_files ) {
         };
 
         # store the btile cell data into the main btile list and update the index
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile_data->[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+        push @generated_btiles, $btile;
 
         # if automatic generation of btiles in tilesets has been requested,
         # create the list of all possible subtiles of all sizes (up to the
@@ -273,18 +259,37 @@ foreach my $png_file ( @btile_files ) {
                                     cell_data		=> $btile_data,
                                     png_file		=> $png_file,
                                 };
-
-                                # store the btile cell data into the main btile list and update the index
-                                my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-                                push @all_btiles, $btile;
-                                push @{ $btile_index{ $btile_data->[0][0]{'hexdump'} } }, $current_btile_index;
-                                $tile_count++;
+                                push @generated_btiles, $btile;
                             }
                         }
                     }
                 }
             }
         }
+    }
+    return @generated_btiles;
+}
+
+# process all PNG Btile files
+foreach my $png_file ( @btile_files ) {
+
+    # load the PNG and convert it to the ZX Spectrum color palette
+    my $png = load_png_file( $png_file ) or
+        die "** Error: could not load PNG file $png_file\n";
+    map_png_colors_to_zx_colors( $png );
+
+    my $prefix = '';
+
+    # get all the tiledefs for the file
+    my $tiledefs = btile_read_png_tiledefs( $png_file );
+
+    # process the PNG's cells and extract the btiles
+    my $tile_count = 0;
+    foreach my $btile ( generate_btiles( $png, $tiledefs, $png_file, $prefix ) ) {
+        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+        push @all_btiles, $btile;
+        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+        $tile_count++;
     }
     printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
 }
