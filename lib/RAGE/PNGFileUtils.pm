@@ -176,12 +176,18 @@ sub extract_colors_from_cell {
     my $bg = $l[0];
     my $fg = $l[1] || $l[0];	# just in case there is only 1 color
 
+    # if fg and bg are equal, set bg to black
+    if ( $fg eq $bg ) {
+        $bg = '000000';
+    }
+
     # if one of them is black, it is preferred as bg color, swap them if needed
     if ( $fg eq '000000' ) {
         $fg = $bg;
         $bg = '000000';
     }
 
+#    printf "*** FG=%s BG=%s\n", $fg, $bg;
     return { 'bg' => $bg, 'fg' => $fg };
 }
 
