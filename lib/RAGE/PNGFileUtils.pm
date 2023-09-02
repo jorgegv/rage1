@@ -96,10 +96,38 @@ sub png_get_height_cells {
     return png_get_height_pixels( $png ) / 8;
 }
 
-# extracts pixel data in GDATA format from a PNG structure
+# extracts pixel data in GDATA format from a PNG structure, by foreground color
 # example: ##..####....##.. (for 10110010 - ##: pixel on; ..: pixel off)
 # returns: listref - [ line1_data, line2_data, ... ]
+
+# note: we NEED to pick by exact color (hex_fgcolor), since this function is
+# used to get tile and sprite pixel data (normally white or similar), but
+# also sprite _mask_ data (normally red).  So this function can't pick
+# "anything but background", but a specific color
+
 sub pick_pixel_data_by_color_from_png {
+    my ( $png, $xpos, $ypos, $width, $height, $hex_fgcolor, $hmirror, $vmirror ) = @_;
+    my @pixels = map {
+        join( "",
+            map {
+                $_ eq $hex_fgcolor ? "##" : "..";		# filter color
+                } @$_[ $xpos .. ( $xpos + $width - 1 ) ]	# select cols
+        )
+    } @$png[ $ypos .. ( $ypos + $height - 1 ) ];		# select rows
+    if ( $hmirror ) {
+        my @tmp = map { scalar reverse } @pixels;
+        @pixels = @tmp;
+    }
+    if ( $vmirror ) {
+        my @tmp = reverse @pixels;
+        @pixels = @tmp;
+    }
+    return \@pixels;
+}
+
+# extracts pixel data in GDATA format from a PNG structure, by background color
+
+sub pick_pixel_data_by_background_from_png {
     my ( $png, $xpos, $ypos, $width, $height, $hex_bgcolor, $hmirror, $vmirror ) = @_;
     my @pixels = map {
         join( "",
@@ -121,6 +149,7 @@ sub pick_pixel_data_by_color_from_png {
 
 # extracts fg and bg color for a given 8x8 cell
 # returns: hashref - { fg => <fg_color>, bg => <bg_color> }
+# note: prefers '000000' as bg color if present
 sub extract_colors_from_cell {
     my ( $png, $xpos, $ypos ) = @_;
 
@@ -133,21 +162,26 @@ sub extract_colors_from_cell {
 
     my %histogram = frequency map { @$_[ $xpos .. ($xpos + 7) ] } @$png[ $ypos .. ($ypos + 7) ];
 
+    # get list of colors sorted by frequency
     my @l = sort { $histogram{ $a } > $histogram{ $b } } keys %histogram;
-    if (scalar( @l ) > 2 ) {
-        foreach my $e ( 3 .. $#l ) {
-            printf STDERR "Warning: color #%s (%s)  detected but ignored\n",
-                $l[$e], $zx_colors{ $l[$e] };
+
+    # if more than 2 colors detected, warn the user
+    if ( scalar( @l ) > 2 ) {
+        foreach my $e ( 2 .. $#l ) {
+            warn sprintf( "Warning: color #%s (%s)  detected but ignored\n",
+                $l[$e], $zx_colors{ $l[$e] } );
         }
     }
+
     my $bg = $l[0];
     my $fg = $l[1] || $l[0];	# just in case there is only 1 color
+
     # if one of them is black, it is preferred as bg color, swap them if needed
     if ( $fg eq '000000' ) {
-        my $tmp = $bg;
-        $bg = $fg;
-        $fg = $tmp;
+        $fg = $bg;
+        $bg = '000000';
     }
+
     return { 'bg' => $bg, 'fg' => $fg };
 }
 
@@ -216,7 +250,7 @@ sub png_to_pixels_and_attrs {
         while ( $x < ( $xpos + $width ) ) {
             my $c = extract_colors_from_cell( $png, $x, $y );
             push @colors, $c;
-            push @pixels, pick_pixel_data_by_color_from_png( $png, $x, $y, 8, 8, $c->{'bg'} );
+            push @pixels, pick_pixel_data_by_background_from_png( $png, $x, $y, 8, 8, $c->{'bg'} );
             $x += 8;
         }
         $y += 8;
