@@ -187,7 +187,6 @@ sub extract_colors_from_cell {
         $bg = '000000';
     }
 
-#    printf "*** FG=%s BG=%s\n", $fg, $bg;
     return { 'bg' => $bg, 'fg' => $fg };
 }
 

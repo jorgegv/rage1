@@ -260,10 +260,7 @@ foreach my $png_file ( @btile_files ) {
                     foreach my $cur_row ( $tiledef->{'cell_row'} .. ( $tiledef->{'cell_row'} + $height - $cur_height ) ) {
                         foreach my $cur_col ( $tiledef->{'cell_col'} .. ( $tiledef->{'cell_col'} + $width - $cur_width ) ) {
                             my $btile_name = sprintf("%s_r%03dc%03dw%03dh%03d",$file_prefix,$cur_row,$cur_col,$cur_width,$cur_height);
-#                            printf "*** ORIGNAME: %s\n", $tiledef->{'name'};
-#                            printf "*** GENNAME: %s\n", $btile_name;
                             my $btile_data = png_get_all_cell_data( $png, $cur_row, $cur_col, $cur_width, $cur_height );
-#                            print Dumper( $btile_data );
                             if ( not is_background_btile( $btile_data ) ) {
                                 my $btile = {
                                     name		=> $btile_name,
