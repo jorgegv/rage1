@@ -364,10 +364,6 @@ sub read_input_data {
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                     ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
-                push @{$cur_sprite->{'png_attr'}}, @{ attr_data_from_png(
-                    $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'},
-                    ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
-                    ) };
                 next;
             }
             if ( $line =~ /^PNG_MASK\s+(.*)$/ ) {
