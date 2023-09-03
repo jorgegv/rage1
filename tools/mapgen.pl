@@ -205,7 +205,7 @@ sub is_background_btile {
 sub generate_btiles {
     my ( $png, $tiledefs, $png_file, $prefix ) = @_;
 
-    my $file_prefix = basename( $png_file, '.png', '.PNG' ) . $prefix;
+    my $file_prefix = basename( $png_file, '.png', '.PNG' ) . '_' . $prefix;
 
     my @generated_btiles;
     foreach my $tiledef ( @$tiledefs ) {
@@ -278,19 +278,58 @@ foreach my $png_file ( @btile_files ) {
         die "** Error: could not load PNG file $png_file\n";
     map_png_colors_to_zx_colors( $png );
 
-    my $prefix = '';
-
     # get all the tiledefs for the file
     my $tiledefs = btile_read_png_tiledefs( $png_file );
 
-    # process the PNG's cells and extract the btiles
+    # initialize tile counter
     my $tile_count = 0;
+
+    # process the PNG's cells and extract the btiles in all posible positions.
+    #
+    # There are 8 possible combinations of rotation and mirror):
+    #
+    #   R0  : 0 deg rotation, no mirror (the PNG file as-is)
+    #   R0MV: 0 deg rotation, vert mirror
+    #   R1  : 90 deg rotation, no mirror
+    #   R1MH: 90 deg rotation, horiz mirror
+    #   R2  : 180 rotation, no mirror
+    #   R2MV: 180 rotation, vert mirror
+    #   R3  : 270 rotation, no mirror
+    #   R3MH: 270 rotation, horiz mirror
+
+    my $prefix;
+
+    # config: r0
+    $prefix = 'r0_';
     foreach my $btile ( generate_btiles( $png, $tiledefs, $png_file, $prefix ) ) {
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
         $tile_count++;
     }
+
+    # config: r0mv
+    $prefix = 'r0mv_';
+
+    # config: r1
+    $prefix = 'r1_';
+
+    # config: r1mh
+    $prefix = 'r1mh_';
+
+    # config: r2
+    $prefix = 'r2_';
+
+    # config: r2mv
+    $prefix = 'r2mv_';
+
+    # config: r3
+    $prefix = 'r3_';
+
+    # config: r3mh
+    $prefix = 'r3mh_';
+
+    # report
     printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
 }
 
