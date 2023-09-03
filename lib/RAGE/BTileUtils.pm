@@ -91,14 +91,16 @@ sub btile_rotate_tiledefs {
     if ( $count ) {
         my $old_tiledefs = $tiledefs;
         my $new_tiledefs;
+        my $new_width = $width;
+        my $new_height = $height;
         while ( $count-- ) {
             $new_tiledefs = undef;
             foreach my $t ( @$old_tiledefs ) {
-                my $new_r = $width - $t->{'cell_col'} - $t->{'cell_width'};
+                my $new_r = $new_width - $t->{'cell_col'} - $t->{'cell_width'};
                 my $new_c = $t->{'cell_row'};
                 my $new_w = $t->{'cell_height'};
                 my $new_h = $t->{'cell_width'};
-                push @$new_tiledefs, {
+                my $item = {
                     name		=> $t->{'name'},
                     default_type	=> $t->{'default_type'},
                     cell_row		=> $new_r,
@@ -110,13 +112,18 @@ sub btile_rotate_tiledefs {
                     pixel_width		=> 8 * $new_w,
                     pixel_height	=> 8 * $new_h,
                     tiledef_line	=> sprintf( "%s %d %d %d %d %s",
-                                                $t->{'name'}, $new_r, $new_c, $new_w, $new_h, $t->{'metadata'},
+                                                $t->{'name'}, $new_r, $new_c, $new_w, $new_h, $t->{'metadata'} || '',
                                             ),
                     png_file		=> $t->{'png_file'},
                     metadata		=> $t->{'metadata'},
                 };
+                push @$new_tiledefs, $item;
             }
             $old_tiledefs = $new_tiledefs;
+            # swap new_height and new_width
+            my $tmp = $new_width;
+            $new_width = $new_height;
+            $new_height = $tmp;
         }
         return $new_tiledefs;
     } else {
@@ -129,10 +136,10 @@ sub btile_hmirror_tiledefs {
     my $new_tiledefs;
     foreach my $t ( @$tiledefs ) {
         my $new_r = $t->{'cell_row'};
-        my $new_c = $width - $t->{'cell_col'} - 1;
+        my $new_c = $width - $t->{'cell_col'} - $t->{'cell_width'};
         my $new_w = $t->{'cell_width'};
         my $new_h = $t->{'cell_height'};
-        push @$new_tiledefs, {
+        my $item = {
             name		=> $t->{'name'},
             default_type	=> $t->{'default_type'},
             cell_row		=> $new_r,
@@ -144,11 +151,12 @@ sub btile_hmirror_tiledefs {
             pixel_width		=> 8 * $new_w,
             pixel_height	=> 8 * $new_h,
             tiledef_line	=> sprintf( "%s %d %d %d %d %s",
-                                        $t->{'name'}, $new_r, $new_c, $new_w, $new_h, $t->{'metadata'},
+                                        $t->{'name'}, $new_r, $new_c, $new_w, $new_h, $t->{'metadata'} || '',
                                     ),
             png_file		=> $t->{'png_file'},
-            metadata		=> $t->{'metadata'},
+            metadata		=> $t->{'metadata'} || '',
         };
+        push @$new_tiledefs, $item;
     }
     return $new_tiledefs;
 }
@@ -157,11 +165,11 @@ sub btile_vmirror_tiledefs {
     my ( $tiledefs, $width, $height ) = @_;
     my $new_tiledefs;
     foreach my $t ( @$tiledefs ) {
-        my $new_r = $height - $t->{'cell_row'} - 1;
+        my $new_r = $height - $t->{'cell_row'} - $t->{'cell_height'};
         my $new_c = $t->{'cell_col'};
         my $new_w = $t->{'cell_width'};
         my $new_h = $t->{'cell_height'};
-        push @$new_tiledefs, {
+        my $item = {
             name		=> $t->{'name'},
             default_type	=> $t->{'default_type'},
             cell_row		=> $new_r,
@@ -173,11 +181,12 @@ sub btile_vmirror_tiledefs {
             pixel_width		=> 8 * $new_w,
             pixel_height	=> 8 * $new_h,
             tiledef_line	=> sprintf( "%s %d %d %d %d %s",
-                                        $t->{'name'}, $new_r, $new_c, $new_w, $new_h, $t->{'metadata'},
+                                        $t->{'name'}, $new_r, $new_c, $new_w, $new_h, $t->{'metadata'} || '',
                                     ),
             png_file		=> $t->{'png_file'},
-            metadata		=> $t->{'metadata'},
+            metadata		=> $t->{'metadata'} || '',
         };
+        push @$new_tiledefs, $item;
     }
     return $new_tiledefs;
 }
