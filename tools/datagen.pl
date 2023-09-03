@@ -380,6 +380,7 @@ sub read_input_data {
 
                 push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
                     $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
+                    ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                     ) };
                 next;
             }
