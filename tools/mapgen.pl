@@ -60,8 +60,6 @@ my %map_crumb_types;
         "hero-sprite-width=i"		=> \$hero_sprite_width,
         "hero-sprite-height=i"		=> \$hero_sprite_height,
         "auto-tileset-btiles"		=> \$auto_tileset_btiles,	# optional, default false
-        "auto-tileset-max-rows:i"	=> \$auto_tileset_max_rows,	# optional, default 16
-        "auto-tileset-max-cols:i"	=> \$auto_tileset_max_cols,	# optional, default 16
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -93,8 +91,6 @@ Optional:
     --hotzone-color			When --auto-hotzones is disabled, specifies HOTZONE color to match (default: 000000)
     --generate-check-map		Generates a check-map with outlines for the matched objects (PNG)
     --auto-tileset-btiles		Automatically creates BTILE definitions for all possible BTILEs in tilesets
-    --auto-tileset-max-rows		Maximum rows for automatically created BTILE definitions (default: 16)
-    --auto-tileset-max-cols		Maximum cols for automatically created BTILE definitions (default: 16)
 
 Colors are specified as RRGGBB (RGB components in hex notation)
 
