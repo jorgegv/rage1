@@ -94,10 +94,12 @@ END_BTILE
   it will be preferred as the background color.
   * For best results, you can use the ZX-Spectrum palette definition for
   GIMP and use it for coloring your PNG file with the tiles.
-  * `HMIRROR`, `VMIRROR`: if these arguments exist and are set to 1, a
-  horizontal or vertical mirror will be applied to the pixels and mask. 
-  This is very useful for defining multiple sprites from one graphic asset,
-  going in all direction or the other.
+  * `PNG_HMIRROR`, `PNG_VMIRROR`, `PNG_ROTATE`: if these arguments have a
+  value, a transformation is applied to the PNG data before extracting pixel
+  data from it.  `PNG_HMIRROR=1` and `PNG_VMIRROR=1` apply horizontal and
+  vertical mirroring as expected.  `PNG_ROTATE=n` rotates the PNG by `90*n`
+  degrees counter-clockwise.  The previous `XPOS`, `YPOS`, `WIDTH`, `HEIGHT`
+  values are relative to the transformed PNG.
 
 ### SPRITE data
 

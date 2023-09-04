@@ -278,6 +278,16 @@ sub read_input_data {
                 my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
                     die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
+                if ( $vars->{'png_rotate'} || 0 ) {
+                    $png = png_rotate( $png, $vars->{'png_rotate'} );
+                }
+                if ( $vars->{'png_hmirror'} || 0 ) {
+                    $png = png_hmirror( $png );
+                }
+                if ( $vars->{'png_vmirror'} || 0 ) {
+                    $png = png_vmirror( $png );
+                }
+
                 map_png_colors_to_zx_colors( $png );
 
                 my $data = png_to_pixels_and_attrs(

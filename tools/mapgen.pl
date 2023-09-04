@@ -302,7 +302,7 @@ foreach my $png_file ( @btile_files ) {
     my $n_tiledefs;
 
     # config: r0
-    $prefix = 'r0_';
+    $prefix = 'r0';
     foreach my $btile ( generate_btiles( $png, $tiledefs, $png_file, $prefix ) ) {
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
@@ -311,10 +311,11 @@ foreach my $png_file ( @btile_files ) {
     }
 
     # config: r0mv
-    $prefix = 'r0mv_';
+    $prefix = 'r0mv';
     $n_png = png_vmirror( $png );
     $n_tiledefs = btile_vmirror_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ) );
     foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+        $btile->{'png_vmirror'} = 1;
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
@@ -322,10 +323,11 @@ foreach my $png_file ( @btile_files ) {
     }
 
     # config: r1
-    $prefix = 'r1_';
+    $prefix = 'r1';
     $n_png = png_rotate( $png, 1 );
     $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 );
     foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+        $btile->{'png_rotate'} = 1;
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
@@ -333,7 +335,7 @@ foreach my $png_file ( @btile_files ) {
     }
 
     # config: r1mh
-    $prefix = 'r1mh_';
+    $prefix = 'r1mh';
     $n_png = png_hmirror( png_rotate( $png, 1 ) );
     $n_tiledefs = btile_hmirror_tiledefs(
         btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 ),
@@ -341,6 +343,8 @@ foreach my $png_file ( @btile_files ) {
         png_get_width_cells( $png ),
     );
     foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+        $btile->{'png_rotate'} = 1;
+        $btile->{'png_hmirror'} = 1;
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
@@ -348,10 +352,11 @@ foreach my $png_file ( @btile_files ) {
     }
 
     # config: r2
-    $prefix = 'r2_';
+    $prefix = 'r2';
     $n_png = png_rotate( $png, 2 );
     $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 );
     foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+        $btile->{'png_rotate'} = 2;
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
@@ -359,7 +364,7 @@ foreach my $png_file ( @btile_files ) {
     }
 
     # config: r2mv
-    $prefix = 'r2mv_';
+    $prefix = 'r2mv';
     $n_png = png_vmirror( png_rotate( $png, 2 ) );
     $n_tiledefs = btile_vmirror_tiledefs(
         btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 ),
@@ -367,6 +372,8 @@ foreach my $png_file ( @btile_files ) {
         png_get_height_cells( $png ),
     );
     foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+        $btile->{'png_rotate'} = 2;
+        $btile->{'png_vmirror'} = 1;
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
@@ -374,10 +381,11 @@ foreach my $png_file ( @btile_files ) {
     }
 
     # config: r3
-    $prefix = 'r3_';
+    $prefix = 'r3';
     $n_png = png_rotate( $png, 3 );
     $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 );
     foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+        $btile->{'png_rotate'} = 3;
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
@@ -385,7 +393,7 @@ foreach my $png_file ( @btile_files ) {
     }
 
     # config: r3mh
-    $prefix = 'r3mh_';
+    $prefix = 'r3mh';
     $n_png = png_hmirror( png_rotate( $png, 3 ) );
     $n_tiledefs = btile_hmirror_tiledefs(
         btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 ),
@@ -393,6 +401,8 @@ foreach my $png_file ( @btile_files ) {
         png_get_width_cells( $png ),
     );
     foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+        $btile->{'png_rotate'} = 3;
+        $btile->{'png_hmirror'} = 1;
         my $current_btile_index = scalar( @all_btiles );	# pos of new list element
         push @all_btiles, $btile;
         push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
@@ -1623,7 +1633,7 @@ BEGIN_BTILE
         ROWS    %d
         COLS    %d
 
-        PNG_DATA        FILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d
+        PNG_DATA        FILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d %s %s %s
 END_BTILE
 
 END_FORMAT
@@ -1640,7 +1650,11 @@ foreach my $btile_data ( grep { $_->{'used_in_screen'} } @all_btiles ) {
     printf GDATA $btile_format,
         ( map { $btile_data->{$_} } qw( name cell_row cell_col cell_width cell_height default_type ) ),
         ( map { $btile_data->{$_} } qw( name cell_height cell_width png_file ) ),
-        ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) );
+        ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) ),
+        ( defined( $btile_data->{'png_rotate'} ) ? sprintf('PNG_ROTATE=%d',$btile_data->{'png_rotate'}) : '' ),
+        ( defined( $btile_data->{'png_hmirror'} ) ? sprintf('PNG_HMIRROR=%d',$btile_data->{'png_hmirror'}) : '' ),
+        ( defined( $btile_data->{'png_vmirror'} ) ? sprintf('PNG_VMIRROR=%d',$btile_data->{'png_vmirror'}) : '' ),
+    ;
 
     close GDATA;
 
