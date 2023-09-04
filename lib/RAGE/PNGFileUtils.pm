@@ -402,6 +402,11 @@ sub png_rotate {
     my ( $png, $count ) = @_;
 
     if ( $count ) {
+
+        if ( not ( $count =~ /^[0123]$/g ) ) {
+            confess( sprintf( "Invalid rotation count '%s', must be 0-3\n", $count ) );
+        }
+
         my $old_png = $png;
         my $new_png;
         while ( $count-- ) {
