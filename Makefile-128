@@ -67,7 +67,10 @@ dataset_%.bin:
 	@# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
 	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin).src/*.{asm,c}
 	@cp $@ $@.save
-	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(DATASET_MAXSIZE) bytes"; exit 1; fi
+	@if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then \
+		echo "** ERROR: $$( basename $@ ) size ($$( stat -c%s $@ ) bytes) is greater than $(DATASET_MAXSIZE) bytes"; \
+		exit 1; \
+	fi
 
 dataset_%.zx0: dataset_%.bin
 	@echo "Compressing DATASET $< ..."
