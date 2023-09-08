@@ -716,8 +716,12 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
  
             }
         } # end of cell-walk inside a screen
-        printf "-- Screen (%d,%d): matched %d BTILEs\n",
-            $screen_row, $screen_col, $btile_count;
+
+        # only report BTILE count for screens with some identified
+        if ( $btile_count ) {
+            printf "-- Screen (%d,%d): matched %d BTILEs\n",
+                $screen_row, $screen_col, $btile_count;
+        }
     }
 } # end of screen-walk
 
