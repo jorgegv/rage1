@@ -744,6 +744,14 @@ if ( scalar( @non_checked_cells ) ) {
         join( "\n", @non_checked_cells ) . "\n";
 }
 
+# now count the number of btiles identified by screen, we will need it when
+# identifying hotzones
+my $btile_count_by_screen;
+foreach my $bt ( @matched_btiles ) {
+    $btile_count_by_screen->[ $bt->{'screen_row'} ][ $bt->{'screen_col'} ]++;
+}
+
+
 ###########################################################################
 ###########################################################################
 ##
@@ -1217,6 +1225,10 @@ foreach my $hotzone ( @matched_hotzones ) {
     if ( scalar( keys %covered_screens ) == 1 ) {
         # if only one screen is covered, just save the hotzone to the final list
         my ( $screen ) = map { $covered_screens{ $_ } } keys %covered_screens;
+
+        # only add the hotzone if the screen contains btiles, not if it's empty
+        next if ( not $btile_count_by_screen->[ $screen->{'row'} ][ $screen->{'col'} ] );
+
         my $index = scalar( @all_hotzones );
         push @all_hotzones, {
             index		=> $index,
@@ -1235,10 +1247,14 @@ foreach my $hotzone ( @matched_hotzones ) {
         };
     } elsif ( scalar( keys %covered_screens ) == 2 ) {
 
-        $split_hotzone_count++;
-
         # if two screens are covered, split the hotzone in two and link them
         my ( $screen_a, $screen_b ) = map { $covered_screens{ $_ } } sort keys %covered_screens;
+
+        # only add the hotzone if both screens contain btiles, not if any of them is empty
+        next if ( ( not $btile_count_by_screen->[ $screen_a->{'row'} ][ $screen_a->{'col'} ] ) or
+            ( not $btile_count_by_screen->[ $screen_b->{'row'} ][ $screen_b->{'col'} ] ) );
+
+        $split_hotzone_count++;
 
         # save the indexes that they will have, for future reference
         my $index_a = scalar( @all_hotzones );
