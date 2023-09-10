@@ -204,6 +204,32 @@ sub generate_btiles {
     my $file_prefix = basename( $png_file, '.png', '.PNG' ) . '_' . $prefix;
 
     my @generated_btiles;
+
+    # first generate btiles for the individual 8x8 cells, as a fallback
+    foreach my $r ( 0 .. png_get_height_cells( $png ) - 1 ) {
+        foreach my $c ( 0 .. png_get_width_cells( $png ) - 1 ) {
+            # get all cell data for the btile
+            my $btile_data = png_get_all_cell_data( $png, $r, $c, 1, 1 );
+
+            # prepare btile cell data struct
+            my $btile = {
+                name		=> $file_prefix . '_' . sprintf( "cell_r%03dc%03d",$r,$c ),
+                default_type	=> 'obstacle',
+                metadata	=> '',
+                cell_row	=> $r,
+                cell_col	=> $c,
+                cell_width	=> 1,
+                cell_height	=> 1,
+                cell_data	=> $btile_data,
+                png_file	=> $png_file,
+            };
+
+            # store the btile cell data into the main btile list and update the index
+            push @generated_btiles, $btile;
+        }
+    }
+
+    # then generate the btiles for the tiledef definitions
     foreach my $tiledef ( @$tiledefs ) {
 
         # get all cell data for the btile
