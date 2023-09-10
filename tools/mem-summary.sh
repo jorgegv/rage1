@@ -97,6 +97,7 @@ for bank_num in $( grep -E '^codeset' build/generated/bank_bins.cfg | awk '{prin
 done
 
 # datasets
+DATASET_MAX_SIZE=$( grep BUILD_MAX_DATASET_SIZE build/generated/game_data.h | awk '{print $3'} )
 for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{print $2}' ); do
 	echo "Bank $bank_num [datasets]"
 	echo "  SECTION              SIZE   CSIZE"
@@ -107,6 +108,10 @@ for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{prin
 		printf "  %-12s       %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
 		BANK_TOTAL=$(( BANK_TOTAL + comp_size ))
 	done
+
+	echo
+	echo "  Max. allowed dataset size: $DATASET_MAX_SIZE"
+
 	echo
 	printf "$GREEN  TOTAL                      %6d  $RESET\n" $BANK_TOTAL
 	printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - BANK_TOTAL ))
