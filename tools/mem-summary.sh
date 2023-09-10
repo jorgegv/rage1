@@ -17,6 +17,11 @@ function hex2dec {
 	read -r n && printf "%d" "0x$n"
 }
 
+echo
+echo -e "${GREEN}    MEMORY AND BANK USAGE REPORT     ${RESET}"
+echo
+
+
 # main.map
 MAIN_DATA_START=$( map_data $MAIN_MAP | grep -E '^__data_compiler_head' | awk '{print $3}' | hex2dec )
 MAIN_DATA_END=$( map_data $MAIN_MAP | grep -E '^__data_stdlib_tail' | awk '{print $3}' | hex2dec )
@@ -31,7 +36,7 @@ STARTUP_END=$MAIN_DATA_START
 INT_START=$( echo 8000 | hex2dec )
 INT_END=$( echo 8183 | hex2dec )
 
-echo "Banks 5,0 [Lowmem]"
+echo "Banks 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
 printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
@@ -55,7 +60,7 @@ BANKED_BSS_END=$( map_data $BANKED_MAP | grep -E '^__bss_compiler_tail' | awk '{
 BANKED_CODE_START=$( map_data $BANKED_MAP | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 BANKED_CODE_END=$( map_data $BANKED_MAP | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
 
-echo "Bank 4 [RAGE1 banked code]"
+echo "Bank 4 [RAGE1 banked code + Tracker data]"
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
 printf "  %-12s  \$%04x  \$%04x  %5d\n" code $BANKED_CODE_START $BANKED_CODE_END $(( BANKED_CODE_END - BANKED_CODE_START ))
@@ -94,12 +99,13 @@ done
 # datasets
 for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{print $2}' ); do
 	echo "Bank $bank_num [datasets]"
-	echo "  SECTION                      SIZE"
+	echo "  SECTION              SIZE   CSIZE"
 	BANK_TOTAL=0
 	for dataset in $( grep -P "^dataset $bank_num" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
-		size=$( grep -A 2 ";; dataset $dataset" build/generated/lowmem/dataset_info.asm | tail -1 | awk '{print $2}' )
-		printf "  %-12s               %6d\n" "dataset_$dataset" $size
-		BANK_TOTAL=$(( BANK_TOTAL + size ))
+		comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
+		uncomp_size=$( stat "build/generated/datasets/dataset_$dataset.bin.save" -t|awk '{print $2}' )
+		printf "  %-12s       %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
+		BANK_TOTAL=$(( BANK_TOTAL + comp_size ))
 	done
 	echo
 	printf "$GREEN  TOTAL                      %6d  $RESET\n" $BANK_TOTAL
