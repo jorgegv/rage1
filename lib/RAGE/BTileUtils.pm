@@ -32,6 +32,8 @@ sub btile_read_png_tiledefs {
 
     open TILEDEF, $tiledef_file or
         die "Could not open $tiledef_file for reading\n";
+
+    my %name_already_seen_on_line;
     my $linecount = 0;
     while ( my $line = <TILEDEF> ) {
         $linecount++;
@@ -43,12 +45,26 @@ sub btile_read_png_tiledefs {
         # get fields - type and metadata may be empty
         my ( $name, $row, $col, $width, $height, $type, @metadata ) = split( /\s+/, $line );
 
-        # setup the type of tile
+        # validate params
+        if ( $name_already_seen_on_line{ $name } ) {
+            die "$tiledef_file:$linecount: BTILE name '$name' is duplicated (previous: line $name_already_seen_on_line{ $name })\n";
+        }
+        $name_already_seen_on_line{ $name } = $linecount;
+
+        ( $row =~ /^\d+$/ ) or
+            die "$tiledef_file:$linecount: row must be an integer value\n";
+        ( $col =~ /^\d+$/ ) or
+            die "$tiledef_file:$linecount: column must be an integer value\n";
+        ( $width =~ /^\d+$/ ) or
+            die "$tiledef_file:$linecount: width must be an integer value\n";
+        ( $height =~ /^\d+$/ ) or
+            die "$tiledef_file:$linecount: height must be an integer value\n";
+
         my $default_type = lc( $type || 'obstacle' );
         grep { $default_type } qw( obstacle item decoration crumb ) or
             die "$tiledef_file:$linecount: '$type' is not a valid BTILE type\n";
 
-        # process the metadata
+        # validate and process the metadata
         my $metadata;
         foreach my $meta ( @metadata ) {
             if ( not ( $meta =~ /([\w\.]+)=(.*)/ ) ) {
