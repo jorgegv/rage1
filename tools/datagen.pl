@@ -1565,7 +1565,7 @@ sub generate_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d }, %s }, %s }",
+                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d }, %s }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
@@ -1577,10 +1577,10 @@ sub generate_screen {
 
                     # animation_data: delay_data values
                     $_->{'animation_delay'}, ( $_->{'sequence_delay'} || 0 ),
-                    # animation_data: current values (initial)
-                    # sequence number
+                    # animation_data: sequence_data values
                     $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'initial_sequence'} },
-                    0,0,0, # sequence_counter, frame_delay_counter, sequence_delay_counter: will be initialized later
+                    # animation_data: current values
+                    0,0,0,0, # sequence number, sequence_counter, frame_delay_counter, sequence_delay_counter: will be initialized later
 
                     # position_data
                     0,0,0,0,				# position gets reset on initialization

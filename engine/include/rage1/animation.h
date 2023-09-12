@@ -30,6 +30,9 @@ struct animation_data_s {
         uint8_t sequence_delay;		// a sequence is repeated after waiting 'sequence_delay' screen frames
     } delay_data;
     struct {
+        uint8_t initial_sequence;	// sequence to activate when resetting
+    } sequence_data;
+    struct {
         uint8_t sequence;		// current animation sequence
         uint8_t sequence_counter;	// current sequence index (used to get frame number)
         uint8_t frame_delay_counter;	// current frame delay counter

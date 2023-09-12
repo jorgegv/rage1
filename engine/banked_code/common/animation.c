@@ -63,6 +63,7 @@ void animation_set_sequence( struct animation_data_s *anim, uint8_t sequence ) {
 
 void animation_reset_state( struct animation_data_s *anim ) {
     anim->current.frame_delay_counter = anim->delay_data.frame_delay;
+    anim->current.sequence = anim->sequence_data.initial_sequence;
     anim->current.sequence_counter = 0;
     anim->current.sequence_delay_counter = 0;
 }
