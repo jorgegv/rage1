@@ -1565,7 +1565,7 @@ sub generate_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data.%s={ %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d }, %s }, %s }",
+                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data = { .%s = { %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }, %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
 
