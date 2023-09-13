@@ -183,3 +183,41 @@ The procedure would be the following:
 With this schema, you are passing 1 bit of information from Screen A to
 Screen B.  Both rules have to agree on using the same SCREEN FLAG number, of
 course.
+
+## Having an open/closed door that allows entering a room
+
+You may want to have two rooms communicated by a door that can be open or
+closed during the game, so that the hero can cross it if it is open, but not
+if it is closed (standard door behaviour :-)
+
+How to get this effect:
+
+- Define the HOTZONEs that communicate the screens as usual, create them for
+  the "open" position (i.e.  allows crossing the door and going from one
+  screen to the next)
+
+- Define 2 different door tiles with the size of the hole that communicates
+  both screens, one for "open" state and another one for "closed".
+
+- In the map SCREEN definition, position both tiles on the same spot,
+  covering the screen-switching hotzone. The "closed" door btile must be
+  defined as type OBSTACLE (the hero can't passthrough it), and the "open"
+  door btile must be defined as DECORATION (the hero can walk over it)
+
+- Make sure both tiles on the SCREEN have different names (e.g. ending in
+  ".._open" or ".._closed"), and also have attribute CAN_CHANGE_STATE=1 and
+  ACTIVE=0/1, depending on initial state.
+
+- With the previous setup, you can open/close the door by enabling/disabling
+  the proper tiles by name using FLOW rules in the normal way.  Since the
+  "closed" tile is of type OBSTACLE, it won't allow he hero to pass, but
+  when it's "open" the tile is a DECORATION and the hero will walk over it
+  and reach the hotzone to switch screen.
+
+If you are generating the game map with MAPGEN and with automatic
+screen-switching HOTZONEs (recommended!), the simplest way to accomplish the
+previous workflow is to draw the map without door tiles, leaving empty space
+at their positions (so the auto hotzones get detected and generated).  Then
+manually add the open/closed door tiles with PATCH_SCREEN sections in patch
+files under `game_data/patches/map`.  Patching allows you to regenerate the
+map anytime without overwriting your additions.
