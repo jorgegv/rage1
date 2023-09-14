@@ -1565,13 +1565,20 @@ sub generate_screen {
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
         push @{ $c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf( "\t{ %s, %d, %s, { { %d, %d }, { %d }, { %d, %d, %d, %d } }, { %d, %d, %d, %d }, { %s, %d, %d, .data = { .%s = { %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } }, %s }, %s }",
+                sprintf( "\t{ .sprite = %s, .num_graphic = %d, .color = %s,\n" .
+                        "\t\t.animation = {\n" .
+                        "\t\t\t.delay_data = { .frame_delay = %d, .sequence_delay = %d },\n" .
+                        "\t\t\t.sequence_data = { .initial_sequence = %d },\n" .
+                        "\t\t\t.current =  { .sequence = %d, .sequence_counter = %d, .frame_delay_counter = %d, .sequence_delay_counter = %d } },\n" .
+                        "\t\t.position = { .x = %d, .y = %d, .xmax = %d, .ymax = %d },\n" .
+                        "\t\t.movement = { .type = %s, .delay = %d, .delay_counter = %d,\n" .
+                        "\t\t\t.data = { .%s = { %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } },\n" .
+                        "\t\t\t.flags = %s },\n" .
+                        "\t\t.state_index = %s }",
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
-
                     # index into global sprite graphics table
                     $sprite_global_to_dataset_index->{ $sprite_name_to_index{ $_->{'sprite'} } },
-
                     # color for the sprite
                     $_->{'color'},
 
@@ -1597,7 +1604,6 @@ sub generate_screen {
                     $_->{'dx'}, $_->{'dy'},
                     $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
                     $all_sprites[ $sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_b'} },
-
                     # movement flags
                     $_->{'movement_flags'},
 
