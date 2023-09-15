@@ -1,6 +1,6 @@
 # Linux Requirements
 
-* [Z88DK](https://github.com/z88dk/z88dk/wiki)
+* [Z88DK version 2.2](https://github.com/z88dk/z88dk/wiki)
 * [bas2tap](https://github.com/speccyorg/bas2tap)
 * netpbm-progs
 * Perl 5
