@@ -133,7 +133,7 @@ void tracker_request_fx( uint16_t fxid ) {
 }
 
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
-void wrapper() __naked {
+void wrapper( void ) __naked {
 __asm
     include "engine/banked_code/128/arkos2-stubs_asm.inc"
     include "engine/banked_code/128/arkos2-player_asm.inc"
