@@ -85,6 +85,9 @@ struct bullet_info_s bullet_startup_data = {
     .bullets		= &bullet_state_data[0],
     .reload_delay	= BULLET_RELOAD_DELAY,
     .reloading		= 0,
+#ifndef BUILD_FEATURE_HERO_WEAPON_AUTOFIRE
+    .firing		= 0,
+#endif
 };
 
 // Bullet Sprites initialization function

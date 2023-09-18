@@ -158,13 +158,44 @@ void hero_draw( void ) {
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
 void hero_shoot_bullet( void ) {
 
-    // ignore the shot if we are in the "reloading" phase
-    if ( game_state.bullet.reloading-- )
-        return;
+    // only do anything if the hero can shoot!
+    if ( CAN_HERO_SHOOT( game_state.hero ) ) {
 
-    // add a new bullet and load the "reload" counter
-    bullet_add();
-    game_state.bullet.reloading = game_state.bullet.reload_delay;
+        // If we are in the reload period, ignore fire actions
+        if ( game_state.bullet.reloading ) {
+            game_state.bullet.reloading--;
+            return;
+        }
+
+#ifdef BUILD_FEATURE_HERO_WEAPON_AUTOFIRE
+        // For Autofire, we just spit out the next bullet quickly as long as
+        // the user keeps the FIRE button pressed
+        if ( game_state.controller.state & IN_STICK_FIRE ) {
+            bullet_add();
+            game_state.bullet.reloading = game_state.bullet.reload_delay;
+        }
+#else
+        // When Autofire is not used, we want the user to press and release
+        // for each shot.  For this, we only check 2 cases: either the user
+        // is pressing and was not pressing before (FIRE edge -> launch a
+        // new bullet), or the user was pressing before and is not pressing
+        // now (RELEASE edge -> reset state).  All other cases do not matter
+        // and are ignored
+
+        // Case 1:
+        if ( ( game_state.controller.state & IN_STICK_FIRE ) && ( ! game_state.bullet.firing ) ) {
+            game_state.bullet.firing++;
+            bullet_add();
+            game_state.bullet.reloading = game_state.bullet.reload_delay;
+        }
+
+        // Case 2:
+        if ( ( ! ( game_state.controller.state & IN_STICK_FIRE ) ) && game_state.bullet.firing ) {
+            game_state.bullet.firing = 0;
+        }
+#endif
+    }
+
 }
 #endif
 

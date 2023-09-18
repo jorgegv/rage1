@@ -458,7 +458,7 @@ BEGIN_HERO
         VSTEP           1
         LIVES           NUM_LIVES=3 BTILE=Live
 	DAMAGE_MODE	ENEMY_DAMAGE=1 HEALTH_MAX=2 IMMUNITY_PERIOD=100 HEALTH_DISPLAY_FUNCTION=my_hero_display_health
-        BULLET          SPRITE=Bullet01 SPRITE_FRAME_UP=0 SPRITE_FRAME_DOWN=1 SPRITE_FRAME_LEFT=2 SPRITE_FRAME_RIGHT=3 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3 INITIALLY_ENABLED=0 WEAPON_ITEM=Knife
+        BULLET          SPRITE=Bullet01 SPRITE_FRAME_UP=0 SPRITE_FRAME_DOWN=1 SPRITE_FRAME_LEFT=2 SPRITE_FRAME_RIGHT=3 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3 INITIALLY_ENABLED=0 WEAPON_ITEM=Knife AUTOFIRE=1
 END_HERO
 ```
 
@@ -510,6 +510,10 @@ END_HERO
   * `WEAPON_ITEM`: when the weapon is not initially active, indicates which
   of the game Items will be considered the Weapon. The weapon will be
   enabled when the hero grabs this item.
+  * `AUTOFIRE`: (optional) when set to 1, the hero shoots bullets as fast as
+  allowed by the `RELOAD_DELAY` parameter by just keeping the fire button
+  pressed.  If it is 0 or not defined (the default), the user will have to
+  release the fire button and press again in order to shoot the next bullet.
 
 ### GAME_CONFIG data
 

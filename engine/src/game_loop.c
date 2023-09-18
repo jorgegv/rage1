@@ -125,8 +125,7 @@ void do_hero_actions(void) {
 #endif
 
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
-    if ( ( game_state.controller.state & IN_STICK_FIRE ) && CAN_HERO_SHOOT( game_state.hero ) )
-        hero_shoot_bullet();
+    hero_shoot_bullet();
 #endif
 
 #ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE

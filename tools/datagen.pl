@@ -1737,6 +1737,9 @@ sub validate_and_compile_hero {
             $hero->{'bullet'}{'initially_enabled'} = 1;
             add_build_feature( 'HERO_WEAPON_ALWAYS_ENABLED' );
         }
+        if ( $hero->{'bullet'}{'autofire'} || 0 ) {
+            add_build_feature( 'HERO_WEAPON_AUTOFIRE' );
+        }
     }
 }
 

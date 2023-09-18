@@ -42,6 +42,9 @@ struct bullet_info_s {
     struct bullet_state_data_s *bullets;
     uint8_t reload_delay;
     uint8_t reloading;
+#ifndef BUILD_FEATURE_HERO_WEAPON_AUTOFIRE
+    uint8_t firing;
+#endif
 };
 
 // bullet initialization
