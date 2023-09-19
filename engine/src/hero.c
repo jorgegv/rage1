@@ -374,9 +374,10 @@ void hero_handle_hit ( void ) {
 }
 
 void hero_do_immunity_expiration( void ) {
-    // if immunity timer has expired, reset IMMUNE flag
-    if ( ! --game_state.hero.health.immunity_timer )
-        RESET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
+    if ( game_state.hero.health.immunity_timer )
+        // if immunity timer has expired, reset IMMUNE flag
+        if ( ! --game_state.hero.health.immunity_timer )
+            RESET_HERO_FLAG( game_state.hero, F_HERO_IMMUNE );
 }
 
 #else

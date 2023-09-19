@@ -129,8 +129,7 @@ void do_hero_actions(void) {
 #endif
 
 #ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
-    if ( game_state.hero.health.immunity_timer )
-        hero_do_immunity_expiration();
+    hero_do_immunity_expiration();
 #endif
 }
 
