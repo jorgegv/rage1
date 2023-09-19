@@ -31,7 +31,10 @@ void bullet_animate_and_move_all(void) {
 
     bi = &game_state.bullet;
 
-    i = bi->num_bullets;
+    if ( ! bi->active_bullets )
+        return;
+
+    i = BULLET_MAX_BULLETS;
     while ( i-- ) {
         bs = &bi->bullets[ i ];
 
@@ -93,14 +96,18 @@ void bullet_add( void ) {
     struct hero_info_s *hero;
 
     bi = &game_state.bullet;
+    if ( bi->active_bullets == BULLET_MAX_BULLETS )
+        return;
+
     hero = &game_state.hero;
 
     // search for an inactive slot in hero table
-    i = bi->num_bullets;
+    i = BULLET_MAX_BULLETS;
     while ( i-- ) {
         bs = &game_state.bullet.bullets[ i ];
         if ( ! GET_BULLET_FLAG( *bs, F_BULLET_ACTIVE ) ) {
             SET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
+            &game_state.bullet.active_bullets++;
             h_dy = ( HERO_SPRITE_HEIGHT - bi->height ) / 2;
             v_dx = ( HERO_SPRITE_WIDTH - bi->width ) / 2;
 

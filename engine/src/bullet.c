@@ -31,8 +31,10 @@ void bullet_redraw_all( void ) {
     struct bullet_state_data_s *bs;
 
     bi = &game_state.bullet;
+    if ( ! bi->active_bullets )
+        return;
 
-    i = bi->num_bullets;
+    i = BULLET_MAX_BULLETS;
     while ( i-- ) {
         bs = &bi->bullets[ i ];
 
@@ -42,6 +44,7 @@ void bullet_redraw_all( void ) {
                 sprite_move_offscreen( bs->sprite );
                 RESET_BULLET_FLAG( *bs, F_BULLET_MOVE_OFFSCREEN );
                 RESET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
+                game_state.bullet.active_bullets--;
             }
             if ( BULLET_NEEDS_REDRAW( *bs ) ) {
                 sp1_MoveSprPix( bs->sprite, &game_area, bs->frame, bs->position.x, bs->position.y );
@@ -55,19 +58,20 @@ void bullet_reset_all(void) {
     uint8_t i;
     struct sp1_ss *save;
 
-    i = game_state.bullet.num_bullets;
+    i = BULLET_MAX_BULLETS;
     while ( i-- ) {
         save = game_state.bullet.bullets[ i ].sprite;
         memset( &game_state.bullet.bullets[ i ], 0, sizeof( struct bullet_state_data_s ) );
         game_state.bullet.bullets[ i ].sprite = save;
         sprite_move_offscreen( save );
+        game_state.bullet.active_bullets = 0;
     }
 }
 
 void bullet_move_offscreen_all(void) {
     uint8_t i;
 
-    i = game_state.bullet.num_bullets;
+    i = BULLET_MAX_BULLETS;
     while ( i-- )
         sprite_move_offscreen( game_state.bullet.bullets[i].sprite );
 }
@@ -81,8 +85,8 @@ struct bullet_info_s bullet_startup_data = {
         .dy = BULLET_MOVEMENT_DY,
         .delay = BULLET_MOVEMENT_DELAY,
         },
-    .num_bullets	= BULLET_MAX_BULLETS,
     .bullets		= &bullet_state_data[0],
+    .active_bullets	= 0,
     .reload_delay	= BULLET_RELOAD_DELAY,
     .reloading		= 0,
 #ifndef BUILD_FEATURE_HERO_WEAPON_AUTOFIRE

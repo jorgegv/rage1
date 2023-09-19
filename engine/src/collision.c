@@ -64,7 +64,7 @@ void collision_check_bullets_with_sprites( void ) {
     struct enemy_info_s *s;
     uint8_t si,bi;
 
-    bi = game_state.bullet.num_bullets;
+    bi = BULLET_MAX_BULLETS;
     while ( bi-- ) {
         b = &game_state.bullet.bullets[ bi ];
         if ( IS_BULLET_ACTIVE( *b ) ) {
@@ -75,6 +75,7 @@ void collision_check_bullets_with_sprites( void ) {
                     if ( collision_check( &b->position, &s->position ) ) {
                         // set bullet inactive and move away
                         RESET_BULLET_FLAG( *b, F_BULLET_ACTIVE );
+                        game_state.bullet.active_bullets--;
                         sprite_move_offscreen( b->sprite );
                         // set sprite inactive and move away
                         RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state, F_ENEMY_ACTIVE );

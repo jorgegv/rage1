@@ -38,8 +38,8 @@ struct bullet_info_s {
     uint8_t width, height;
     uint8_t **frames;
     struct bullet_movement_data_s movement;
-    uint8_t num_bullets;
     struct bullet_state_data_s *bullets;
+    uint8_t active_bullets;
     uint8_t reload_delay;
     uint8_t reloading;
 #ifndef BUILD_FEATURE_HERO_WEAPON_AUTOFIRE

@@ -158,8 +158,8 @@ void hero_draw( void ) {
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
 void hero_shoot_bullet( void ) {
 
-    // only do anything if the hero can shoot!
-    if ( CAN_HERO_SHOOT( game_state.hero ) ) {
+    // only do anything if the hero can shoot and there are bullet slots available!
+    if ( CAN_HERO_SHOOT( game_state.hero ) && ( game_state.bullet.active_bullets < BULLET_MAX_BULLETS ) ) {
 
         // If we are in the reload period, ignore fire actions
         if ( game_state.bullet.reloading ) {
