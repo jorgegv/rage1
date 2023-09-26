@@ -1012,6 +1012,19 @@ sub read_input_data {
                 $game_config->{'tracker'}{'fxtable'} = $item;
                 next;
             }
+            if ( $line =~ /^COLOR\s+(\w.*)$/ ) {
+                # ARG1=val1 ARG2=va2 ARG3=val3...
+                my $args = $1;
+                my $item = {
+                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                    split( /\s+/, $args )
+                };
+                if ( not defined( $item->{'mode'} ) ) {
+                    die "COLOR: missing MODE argument\n";
+                }
+                $game_config->{'color'} = $item;
+                next;
+            }
             if ( $line =~ /^END_GAME_CONFIG$/ ) {
                 $state = 'NONE';
                 next;
@@ -2541,6 +2554,32 @@ sub check_game_config_is_valid {
         }
     }
 
+    # check color mode, if nothing specified set to FULL
+    if ( defined( $game_config->{'color'} ) ) {
+        if ( not defined( $game_config->{'color'}{'mode'} ) ) {
+            warn "COLOR: MODE parameter is mandatory\n";
+            $errors++;
+        } else {
+            if ( lc( $game_config->{'color'}{'mode'} ) eq 'mono' ) {
+                if ( not defined( $game_config->{'color'}{'gamearea_attr'} ) ) {
+                    warn "COLOR: when MODE=MONO, GAMEAREA_ATTR parameter is mandatory\n";
+                    $errors++;
+                }
+            } elsif ( lc( $game_config->{'color'}{'mode'} ) ne 'full' ) {
+                warn "COLOR: parameter MODE must be one of MONO, FULL\n";
+                $errors++;
+            }
+        }
+    } else {
+        $game_config->{'color'}{'mode'} = 'full';
+    }
+    # now we are sure color mode is one of 'full' or 'mono'
+    if ( lc( $game_config->{'color'}{'mode'} ) eq 'mono' ) {
+        add_build_feature( 'GAMEAREA_COLOR_MONO' );
+    } else {
+        add_build_feature( 'GAMEAREA_COLOR_FULL' );
+    }
+
     return $errors;
 }
 
@@ -2688,6 +2727,8 @@ EOF_TILES
 
     my $animated_btiles = $conditional_build_features{'ANIMATED_BTILES'} || 0;
 
+    my $gamearea_color_full = $conditional_build_features{'GAMEAREA_COLOR_FULL'} || 0;
+
     # generate the offsets and byte arena for all btiles in the dataset
 
     # the whole dedupe schema works also for animated btiles, since
@@ -2742,31 +2783,48 @@ EOF_TILES
 
         # manually specified attrs have preference over PNG ones
         # warning: this list will be destroyed by splice calls later!
-        my @attrs = @{ $tile->{'attr'} || $tile->{'png_attr'} };
-        foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
-            my @frame_attrs = splice( @attrs, 0, $tile->{'rows'} * $tile->{'cols'} );
-            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_frame_%d_attrs[ %d ] = {\n\t%s\n};\n",
-                $tile->{'name'},
-                $frame,
-                scalar( @frame_attrs ),
-                join( ",\n\t", @frame_attrs ) );
+        # attrs are not output when in monochrome mode
+        if ( $gamearea_color_full ) {
+            my @attrs = @{ $tile->{'attr'} || $tile->{'png_attr'} };
+            foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
+                my @frame_attrs = splice( @attrs, 0, $tile->{'rows'} * $tile->{'cols'} );
+                push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_frame_%d_attrs[ %d ] = {\n\t%s\n};\n",
+                    $tile->{'name'},
+                    $frame,
+                    scalar( @frame_attrs ),
+                    join( ",\n\t", @frame_attrs ) );
+            }
         }
 
         # if using ANIMATED_BTILES, frame and sequence tables for the btile have to be output
         if ( $animated_btiles ) {
 
             # output frame table
-            push @{ $c_dataset_lines->{ $dataset } },
-                sprintf( "struct btile_frame_s btile_%s_frames[ %d ] = {\n\t%s\n};\n\n",
-                    $tile->{'name'},
-                    $tile->{'frames'},
-                    join( ",\n\t", map {
-                            sprintf( "{ .tiles = &btile_%s_frame_%d_tiles[0], .attrs = &btile_%s_frame_%d_attrs[0] }",
-                                $tile->{'name'}, $_,
-                                $tile->{'name'}, $_,
-                            )
-                        } ( 0 .. ( $tile->{'frames'} - 1 ) ) ),
-                );
+            # attrs are not output when in monochrome mode
+            if ( $gamearea_color_full ) {
+                push @{ $c_dataset_lines->{ $dataset } },
+                    sprintf( "struct btile_frame_s btile_%s_frames[ %d ] = {\n\t%s\n};\n\n",
+                        $tile->{'name'},
+                        $tile->{'frames'},
+                        join( ",\n\t", map {
+                                sprintf( "{ .tiles = &btile_%s_frame_%d_tiles[0], .attrs = &btile_%s_frame_%d_attrs[0] }",
+                                    $tile->{'name'}, $_,
+                                    $tile->{'name'}, $_,
+                                )
+                            } ( 0 .. ( $tile->{'frames'} - 1 ) ) ),
+                    );
+            } else {
+                push @{ $c_dataset_lines->{ $dataset } },
+                    sprintf( "struct btile_frame_s btile_%s_frames[ %d ] = {\n\t%s\n};\n\n",
+                        $tile->{'name'},
+                        $tile->{'frames'},
+                        join( ",\n\t", map {
+                                sprintf( "{ .tiles = &btile_%s_frame_%d_tiles[0] }",
+                                    $tile->{'name'}, $_,
+                                )
+                            } ( 0 .. ( $tile->{'frames'} - 1 ) ) ),
+                    );
+            }
 
             # output sequence table
             # first output each sequence
@@ -2850,12 +2908,22 @@ EOF_TILES
         } else {
             # when no ANIMATED_BTILES are used, the tiles and attrs pointers
             # are short-circuited to frame 0, which always exists
-            push @{ $c_dataset_lines->{ $dataset } },
-                sprintf( "\t{ %d, %d, &btile_%s_frame_0_tiles[0], &btile_%s_frame_0_attrs[0] },\n",
-                    $tile->{'rows'},
-                    $tile->{'cols'},
-                    $tile->{'name'},
-                    $tile->{'name'} );
+
+            # attrs are not output when in monochrome mode
+            if ( $gamearea_color_full ) {
+                push @{ $c_dataset_lines->{ $dataset } },
+                    sprintf( "\t{ %d, %d, &btile_%s_frame_0_tiles[0], &btile_%s_frame_0_attrs[0] },\n",
+                        $tile->{'rows'},
+                        $tile->{'cols'},
+                        $tile->{'name'},
+                        $tile->{'name'} );
+            } else {
+                push @{ $c_dataset_lines->{ $dataset } },
+                    sprintf( "\t{ %d, %d, &btile_%s_frame_0_tiles[0] },\n",
+                        $tile->{'rows'},
+                        $tile->{'cols'},
+                        $tile->{'name'} );
+            }
         }
     }
     push @{ $c_dataset_lines->{ $dataset } }, "};\n";
@@ -3129,6 +3197,12 @@ EOF_BLDCFG1
         push @c_game_data_lines, "uint8_t custom_charset[ ( CUSTOM_CHARSET_MAX_CHAR - CUSTOM_CHARSET_MIN_CHAR + 1 ) * 8 ] = {\n";
         push @c_game_data_lines, "\t" . join( ", ", map { sprintf "0x%02x", $_ } unpack('C*', $data ) ) . "\n";
         push @c_game_data_lines, "};\n\n";
+    }
+
+    # add gamearea default attribute if monochrome mode is used
+    if ( defined( $game_config->{'color'}{'gamearea_attr'} ) ) {
+        push @h_game_data_lines, "\n// gamearea default attr for monochrome mode\n";
+        push @h_game_data_lines, sprintf( "#define GAMEAREA_COLOR_MONO_ATTR (%s)\n", $game_config->{'color'}{'gamearea_attr'} );
     }
 
 }

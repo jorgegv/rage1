@@ -25,7 +25,9 @@
 // struct for defining a big tile frame
 struct btile_frame_s {
     uint8_t **tiles;
+#ifdef BUILD_FEATURE_GAMEAREA_COLOR_FULL
     uint8_t *attrs;
+#endif
 };
 
 // struct for defining a big tile
@@ -38,7 +40,9 @@ struct btile_s {
     struct animation_sequence_s *sequences;
 #else
     uint8_t **tiles;
+    #ifdef BUILD_FEATURE_GAMEAREA_COLOR_FULL
     uint8_t *attrs;
+    #endif
 #endif
 };
 
