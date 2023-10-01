@@ -1,31 +1,39 @@
 # szxdata script for 'default' RAGE1 game
-pw _banked_assets
-pw _home_assets
-pw _codeset_assets
+pw _home_assets:home_dataset
+pw _banked_assets:banked_dataset
+pw _codeset_assets:banked_codeset
+
+# These two are defined in variables in the program, but some day those vars
+# may disappear, and the following def's will be useful
+#def $5B00:banked_dataset
+#def $C000:banked_codeset
+
+# game state
+
 
 # home dataset
-pb _all_assets_dataset_home+0:home_dataset.num_btiles
-pw _all_assets_dataset_home+1:home_dataset.btile_table_ptr
-pb _all_assets_dataset_home+3:home_dataset.num_sprites
-pw _all_assets_dataset_home+4:home_dataset.sprite_table_ptr
-pb _all_assets_dataset_home+6:home_dataset.num_rules
-pw _all_assets_dataset_home+7:home_dataset.rule_table_ptr
-pb _all_assets_dataset_home+9:home_dataset.num_screens
-pw _all_assets_dataset_home+10:home_dataset.screen_table_ptr
+pb home_dataset+0:home_dataset.num_btiles
+pw home_dataset+1:home_dataset.btile_table_ptr
+pb home_dataset+3:home_dataset.num_sprites
+pw home_dataset+4:home_dataset.sprite_table_ptr
+pb home_dataset+6:home_dataset.num_rules
+pw home_dataset+7:home_dataset.rule_table_ptr
+pb home_dataset+9:home_dataset.num_screens
+pw home_dataset+10:home_dataset.screen_table_ptr
 
 # current banked dataset at $5B00
-pb $5B00:banked_dataset.num_btiles
-pw $5B01:banked_dataset.btile_table_ptr
-pb $5B03:banked_dataset.num_sprites
-pw $5B04:banked_dataset.sprite_table_ptr
-pb $5B06:banked_dataset.num_flow_rules
-pw $5B07:banked_dataset.flow_table_ptr
-pb $5B09:banked_dataset.num_screens
-pw $5B0A:banked_dataset.screen_table_ptr
+pb banked_dataset+0:banked_dataset.num_btiles
+pw banked_dataset+1:banked_dataset.btile_table_ptr
+pb banked_dataset+3:banked_dataset.num_sprites
+pw banked_dataset+4:banked_dataset.sprite_table_ptr
+pb banked_dataset+6:banked_dataset.num_flow_rules
+pw banked_dataset+7:banked_dataset.flow_table_ptr
+pb banked_dataset+9:banked_dataset.num_screens
+pw banked_dataset+10:banked_dataset.screen_table_ptr
 
 # current banked codeset at $C000
-pw $C000:banked_codeset.game_state_ptr
-pw $C002:banked_codeset.banked_assets_ptr
-pw $C004:banked_codeset.home_assets_ptr
-pb $C006:banked_codeset.num_codeset_functions
-pw $C007:banked_codeset.codeset_function_table
+pw banked_codeset+0:banked_codeset.game_state_ptr
+pw banked_codeset+2:banked_codeset.banked_assets_ptr
+pw banked_codeset+4:banked_codeset.home_assets_ptr
+pb banked_codeset+6:banked_codeset.num_codeset_functions
+pw banked_codeset+7:banked_codeset.codeset_function_table
