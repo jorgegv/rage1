@@ -1,7 +1,4 @@
 # szxdata script for 'default' RAGE1 game
-pw _home_assets:home_dataset
-pw _banked_assets:banked_dataset
-pw _codeset_assets:banked_codeset
 
 # These two are defined in variables in the program, but some day those vars
 # may disappear, and the following def's will be useful
@@ -9,9 +6,16 @@ pw _codeset_assets:banked_codeset
 #def $C000:banked_codeset
 
 # game state
-
+def _game_state:game_state
+pb game_state+0:game_state.current_screen
+pb game_state+1:game_state.next_screen
+pw game_state+2:game_state.current_screen_ptr
+pw game_state+4:game_state.current_screen_asset_state_table_ptr
+def game_state+6:game_state.hero
+pw game_state.hero+0:hero.sprite_ptr
 
 # home dataset
+pw _home_assets:home_dataset
 pb home_dataset+0:home_dataset.num_btiles
 pw home_dataset+1:home_dataset.btile_table_ptr
 pb home_dataset+3:home_dataset.num_sprites
@@ -22,6 +26,7 @@ pb home_dataset+9:home_dataset.num_screens
 pw home_dataset+10:home_dataset.screen_table_ptr
 
 # current banked dataset at $5B00
+pw _banked_assets:banked_dataset
 pb banked_dataset+0:banked_dataset.num_btiles
 pw banked_dataset+1:banked_dataset.btile_table_ptr
 pb banked_dataset+3:banked_dataset.num_sprites
@@ -32,6 +37,7 @@ pb banked_dataset+9:banked_dataset.num_screens
 pw banked_dataset+10:banked_dataset.screen_table_ptr
 
 # current banked codeset at $C000
+pw _codeset_assets:banked_codeset
 pw banked_codeset+0:banked_codeset.game_state_ptr
 pw banked_codeset+2:banked_codeset.banked_assets_ptr
 pw banked_codeset+4:banked_codeset.home_assets_ptr
