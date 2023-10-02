@@ -111,6 +111,9 @@ build-damage_mode:
 build-get_weapon:
 	@$(MAKE) -s build target_game=$(TEST_GAMES_DIR)/get_weapon
 
+build-monochrome:
+	@$(MAKE) -s build target_game=$(TEST_GAMES_DIR)/monochrome
+
 # just a target for the default game for completeness
 build-default: build
 
