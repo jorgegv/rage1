@@ -267,9 +267,9 @@ mem_bank:
 	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (BANKED MEMORY):"
 	@./tools/memmap.pl -m -p bank $(BANKED_CODE_DIR)/banked_code.map
 
-mem: mem_main mem_bank
+mem-old: mem_main mem_bank
 
-mem-128:
+mem:
 	@./tools/mem-summary.sh
 
 linecount: clean
