@@ -2,6 +2,7 @@
 
 MAIN_MAP=main.map
 BANKED_MAP=engine/banked_code/banked_code.map
+GAME_MODE=$( grep BUILD_FEATURE_ZX_TARGET build/generated/features.h|awk '{print $2}'|sed 's/BUILD_FEATURE_ZX_TARGET_//g' )
 
 # ansi color sequences
 RED='\e[41m\e[37;1m'
@@ -51,6 +52,10 @@ TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
 printf "$RED  FREE                       %6d  $RESET\n" $(( 32768 - TOTAL ))
 echo
+
+if [ "$GAME_MODE" != "128" ]; then
+	exit 0
+fi
 
 # banked.map
 BANKED_DATA_START=$( map_data $BANKED_MAP | grep -E '^__data_compiler_head' | awk '{print $3}' | hex2dec )
