@@ -16,6 +16,8 @@ use utf8;
 
 use File::Basename;
 
+use RAGE::PNGFileUtils;
+
 sub btile_get_png_tiledef_filename {
     my $png_file = shift;
     return dirname( $png_file ) . '/' . basename( $png_file, '.png', '.PNG' ) . '.tiledef';
@@ -100,6 +102,33 @@ sub btile_read_png_tiledefs {
     }
     close TILEDEF;
     return \@tiledefs;    
+}
+
+sub btile_validate_png_tiledefs {
+    my ( $png, $tiledefs ) = @_;
+    my $max_row = png_get_height_cells( $png ) - 1;
+    my $max_col = png_get_width_cells( $png ) - 1;
+    my $max_x = png_get_width_pixels( $png ) - 1;
+    my $max_y = png_get_height_pixels( $png ) - 1;
+    my $errors = 0;
+    foreach my $t ( @$tiledefs ) {
+        if (
+            ( $t->{'cell_row'} > $max_row ) or
+            ( $t->{'cell_col'} > $max_col ) or
+            ( $t->{'pixel_pos_x'} > $max_x ) or
+            ( $t->{'pixel_pos_y'} > $max_y ) or
+            ( $t->{'cell_row'} + $t->{'cell_height'} - 1 > $max_row ) or
+            ( $t->{'cell_col'} + $t->{'cell_width'} - 1 > $max_col ) or
+            ( $t->{'pixel_pos_x'} + $t->{'pixel_width'} - 1 > $max_x ) or
+            ( $t->{'pixel_pos_y'} + $t->{'pixel_height'} - 1 > $max_y )
+            ) {
+            warn sprintf( "TILEDEF: Definition '%s' is not compatible with PNG file %s\n",
+                $t->{'tiledef_line'}, $t->{'png_file'} );
+            $errors++;
+        }
+    }
+    return undef if $errors;
+    return 1;
 }
 
 sub btile_rotate_tiledefs {

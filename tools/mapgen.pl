@@ -303,6 +303,9 @@ foreach my $png_file ( @btile_files ) {
     # get all the tiledefs for the file
     my $tiledefs = btile_read_png_tiledefs( $png_file );
 
+    btile_validate_png_tiledefs( $png, $tiledefs ) or
+        die sprintf( "** Error: errors found in TILEDEF file for %s\n", $png_file );
+
     # initialize tile counter
     my $tile_count = 0;
 
