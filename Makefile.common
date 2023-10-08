@@ -147,7 +147,7 @@ GDATA_FILES =	$(wildcard $(GAME_DATA_DIR)/game_config/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/map/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/heroes/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/flow/*.gdata)
-GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata)
+GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata) $(wildcard $(GAME_DATA_DIR)/patches/flow/*.gdata)
 
 data:
 	@./tools/datagen.pl -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
