@@ -9,12 +9,12 @@ scalar( @ARGV ) or
     die "usage: ".basename( $0 )." <dump_files>\n";
 
 # load screen data from dump files
-my %screens;
+my %all_screens;
 foreach my $file ( @ARGV ) {
     my $VAR1;
     eval `cat "$file"`;
     foreach my $screen_name ( keys %$VAR1 ) {
-        $screens{ $screen_name } = $VAR1->{ $screen_name };
+        $all_screens{ $screen_name } = $VAR1->{ $screen_name };
     }
 }
 
@@ -23,20 +23,63 @@ foreach my $file ( @ARGV ) {
 # crunch data
 
 # generate global ordered screen list
-my @screen_names = sort keys %screens;
+my @screen_names = sort keys %all_screens;
 
 # generate ordered btile lists for all screens
 foreach my $s ( @screen_names ) {
-    $screens{ $s }{'btile_list'} = [ sort keys %{ $screens{ $s }{'btile_count'} } ];
+    $all_screens{ $s }{'btile_list'} = [ sort keys %{ $all_screens{ $s }{'btile_count'} } ];
 }
 
-print Dumper( \%screens );
+# all_screens{ $s } = {
+#   btile_count => { btile_name => count, btile_name => count, ...},
+#   btile_list => [ btile_name, btile_name, ... ],
+# }
+
+#print Dumper( \%all_screens );
 
 # generate bidimensional symmetric matrix with the number of common btiles of each screen with each
 # other
+foreach my $src ( @screen_names ) {
+    foreach my $dst ( @screen_names ) {
+        $all_screens{ $src }{'shared_btile_count'}{ $dst } = 0;
+        foreach my $k ( keys %{ $all_screens{ $src }{'btile_count'} } ) {
+            if ( defined( $all_screens{ $dst }{'btile_count'}{ $k } ) ) {
+                $all_screens{ $src }{'shared_btile_count'}{ $dst }++;
+            }
+        }
+    }
+}
 
-# for each screen, generate a sorted list of the other screens, in descending order of number of
-# common btiles
+# all_screens{ $s } = {
+#   btile_count => { btile_name => count, btile_name => count, ... },
+#   btile_list => [ btile_name, btile_name, ... ],
+#   shared_btile_count => { btile_name1 => count, btile_name2 => count, ... },
+# }
+
+#print Dumper( \%all_screens );
+
+# for each screen, generate a sorted list of the other screens, in
+# descending order of number of common btiles.  The first element of this
+# lists is _always_ the current screen (each screen has 100% of btiles in
+# common with itself) so we discard it.
+foreach my $screen ( @screen_names ) {
+    $all_screens{ $screen }{'sharing_screens'} = [
+        sort {
+            $all_screens{ $screen }{'shared_btile_count'}{ $b } <=> $all_screens{$screen}{'shared_btile_count'}{ $a }
+        } @screen_names
+    ];
+    # discard the first, it's always itself
+    shift @{ $all_screens{ $screen }{'sharing_screens'} };
+}
+
+# all_screens{ $s } = {
+#   btile_count => { btile_name => count, btile_name => count, ... },
+#   btile_list => [ btile_name, btile_name, ... ],
+#   shared_btile_count => { screen_name1 => count, screen_name2 => count, ... },
+#   sharing_screens => [ screen_name1, screen_name2, ... ],
+# }
+
+print Dumper( \%all_screens );
 
 # For a given starting screen (screen A), create groups of N screens. Grouping algorithm:
 # 1) Add A to the current group and mark it as USED
