@@ -1742,7 +1742,7 @@ if ( $generate_btile_report ) {
     my %screen_report;
     foreach my $screen_name ( sort keys %screen_data ) {
         foreach my $btile ( @{ $screen_data{ $screen_name }{'btiles'} } ) {
-            $screen_report{ $screen_name }{'btiles'}{ $all_btiles[ $btile->{'btile_index'} ]{'name'} }++;
+            $screen_report{ $screen_name }{'btile_count'}{ $all_btiles[ $btile->{'btile_index'} ]{'name'} }++;
         }
     }
     # write report in Data::Dumper format
