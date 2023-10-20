@@ -303,6 +303,9 @@ foreach my $png_file ( @btile_files ) {
     # get all the tiledefs for the file
     my $tiledefs = btile_read_png_tiledefs( $png_file );
 
+    btile_validate_png_tiledefs( $png, $tiledefs ) or
+        die sprintf( "** Error: errors found in TILEDEF file for %s\n", $png_file );
+
     # initialize tile counter
     my $tile_count = 0;
 
@@ -655,6 +658,7 @@ sub match_btile_in_map {
 print "Identifying BTILEs in Main Map...\n";
 
 # walk the screen array
+my $screens_with_too_many_btiles = 0;
 foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
     foreach my $screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
 
@@ -745,11 +749,21 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
 
         # only report BTILE count for screens with some identified
         if ( $btile_count ) {
-            printf "-- Screen (%d,%d): matched %d BTILEs\n",
-                $screen_row, $screen_col, $btile_count;
+            if ( $btile_count > 255 ) {
+                warn sprintf( "** WARNING: Screen (%d,%d): matched %d BTILEs (more than 255)\n",
+                    $screen_row, $screen_col, $btile_count );
+                $screens_with_too_many_btiles++;
+            } else {
+                printf "-- Screen (%d,%d): matched %d BTILEs\n",
+                    $screen_row, $screen_col, $btile_count;
+            }
         }
     }
 } # end of screen-walk
+
+if ( $screens_with_too_many_btiles ) {
+    die "** Error: screens were found with more than 255 BTILEs\n";
+}
 
 # At this point, we have:
 #   - A list of matched BTILEs, with its associated metadata:  screen

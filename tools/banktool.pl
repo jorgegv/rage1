@@ -81,7 +81,7 @@ sub layout_dataset_binaries {
     # more binaries left
 
     my $current_bank_index = 0;
-    foreach my $bk ( sort keys %$bins ) {
+    foreach my $bk ( sort { $a <=> $b } keys %$bins ) {
         my $bin = $bins->{ $bk };
         # just error if any dataset is too big
         if ( $bin->{'size'} > $max_bank_size ) {
@@ -113,7 +113,7 @@ sub layout_codeset_binaries {
 
     # a codeset is directly assigned to a bank
     my $current_bank_index = 0;
-    foreach my $bk ( sort keys %$bins ) {
+    foreach my $bk ( sort { $a <=> $b } keys %$bins ) {
         my $bin = $bins->{ $bk };
 
         # just error if any codeset is too big
@@ -140,7 +140,7 @@ sub layout_codeset_binaries {
 sub generate_bank_binaries {
     my ( $layout, $outdir ) = @_;
 
-    foreach my $bank ( sort keys %$layout ) {
+    foreach my $bank ( sort { $a <=> $b } keys %$layout ) {
         my $bank_binary = $outdir . '/' . sprintf( $bank_binaries_name_format, $bank );
 
         open my $bank_out, '>', $bank_binary or
@@ -177,7 +177,7 @@ sub generate_bank_config {
 
     print $bankcfg_h "# <type> <bank_num> <path> <codesets/datasets>\n";
 
-    foreach my $bank ( sort keys %$layout ) {
+    foreach my $bank ( sort { $a <=> $b } keys %$layout ) {
         my $ids;
         if ( $layout->{ $bank }{'type'} eq 'dataset' ) {
             $ids = join( " ", map { $_->{'dataset_num' } } @{ $layout->{ $bank }{'binaries'} } );
@@ -226,7 +226,7 @@ EOF_DSMAP_3
                 $datasets->{ $_ }{'bank'},
                 $datasets->{ $_ }{'size'},
                 $datasets->{ $_ }{'offset'} );
-        } sort keys %$datasets
+        } sort { $a <=> $b } keys %$datasets
     );
 
     close $dsmap_h;

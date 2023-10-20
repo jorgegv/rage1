@@ -147,7 +147,7 @@ GDATA_FILES =	$(wildcard $(GAME_DATA_DIR)/game_config/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/map/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/heroes/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/flow/*.gdata)
-GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata)
+GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata) $(wildcard $(GAME_DATA_DIR)/patches/flow/*.gdata)
 
 data:
 	@./tools/datagen.pl -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
@@ -267,9 +267,9 @@ mem_bank:
 	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (BANKED MEMORY):"
 	@./tools/memmap.pl -m -p bank $(BANKED_CODE_DIR)/banked_code.map
 
-mem: mem_main mem_bank
+mem-old: mem_main mem_bank
 
-mem-128:
+mem:
 	@./tools/mem-summary.sh
 
 linecount: clean
