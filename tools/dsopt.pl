@@ -25,10 +25,15 @@ foreach my $file ( @ARGV ) {
 # generate global ordered screen list
 my @screen_names = sort keys %all_screens;
 
-# generate ordered btile lists for all screens
+# generate ordered btile lists for all screens and compute global number of unique btiles
+my %global_btiles;
 foreach my $s ( @screen_names ) {
     $all_screens{ $s }{'btile_list'} = [ sort keys %{ $all_screens{ $s }{'btile_count'} } ];
+    foreach my $b ( @{ $all_screens{ $s }{'btile_list'} } ) {
+        $global_btiles{ $b }++;
+    }
 }
+printf "total unique btiles: %d\n", scalar( keys %global_btiles );
 
 # all_screens{ $s } = {
 #   btile_count => { btile_name => count, btile_name => count, ...},
@@ -91,7 +96,7 @@ foreach my $screen ( @screen_names ) {
 # 5) If no screens can be picked from 3) and 4), we have exhausted all screens, so END of algorithm
 # 6) From B and C, pick the one which has the most btiles in common with A
 # 7) Use the screen picked in 6) as the new screen A and repeat from step 1)
-
+#
 # The previous algorithm creates a screen grouping structure, and the only parameter is the screen
 # we will use for starting the walk.  Given that the number of screens should not be very big, we
 # can exhaustively explore all possible groupings (by repeating the algorithm using each of the
@@ -100,6 +105,8 @@ foreach my $screen ( @screen_names ) {
 # value which we can use to sort them, and pick the one that maximizes btile sharing.  The weight
 # function can be the number of unique btiles in the screen group (union of the btiles of all
 # screens belonging to that group)
+#
+# This weight is calculated in a separate step.
 
 my $max_screens_per_dataset = 5;
 
@@ -126,7 +133,7 @@ foreach my $start_screen ( @screen_names ) {
         # step 2
         # if cluster has max elements, save cluster and start a new one
         if ( scalar( @current_cluster ) == $max_screens_per_dataset ) {
-            push @{ $cluster_lists_by_start_screen{ $start_screen } }, [ @current_cluster ];
+            push @{ $cluster_lists_by_start_screen{ $start_screen }{'clusters'} }, [ @current_cluster ];
             @current_cluster = ();
         }
 
@@ -179,13 +186,36 @@ foreach my $start_screen ( @screen_names ) {
         } else {
             # step 5: end if no more screens found
             # don't forget to push the last (possibly incomplete) cluster!
-            push @{ $cluster_lists_by_start_screen{ $start_screen } }, [ @current_cluster ];
+            push @{ $cluster_lists_by_start_screen{ $start_screen }{'clusters'} }, [ @current_cluster ];
             $exit_loop++;
         }
 
     } while ( not $exit_loop );
 
+    # calculate the weight of this cluster list as the number of shared btiles
+    # between screens.  We walk all the groups, and for each screen in the
+    # groups we increment a counter for all its btiles.  We then count the
+    # number of btiles that have a count number >= 2, which means they are
+    # shared between some screens.
+    my $weight = 0;
+    foreach my $cluster ( @{ $cluster_lists_by_start_screen{ $start_screen }{'clusters'} } ) {
+        my %seen_btiles;
+        foreach my $screen ( @$cluster ) {
+            foreach my $btile ( @{ $all_screens{ $screen }{'btile_list'} } ) {
+                $seen_btiles{ $btile }++;
+            }
+        }
+        $weight += scalar( grep { $seen_btiles{ $_ } >= 2 } keys %seen_btiles );
+    }
+    $cluster_lists_by_start_screen{ $start_screen }{'weight'} = $weight;
 }
 
 #print Dumper( \%cluster_lists_by_start_screen );
+my @sorted = sort { 
+    $cluster_lists_by_start_screen{ $b }{'weight'}	# reverse order
+    <=> 
+    $cluster_lists_by_start_screen{ $a }{'weight'}
+} keys %cluster_lists_by_start_screen;
 
+printf "Most efficient clustering starts with screen '%s', and shares %d btiles\n",
+    $sorted[0], $cluster_lists_by_start_screen{ $sorted[0] }{'weight'};
