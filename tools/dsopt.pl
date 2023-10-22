@@ -4,9 +4,22 @@ use Modern::Perl;
 
 use File::Basename;
 use Data::Dumper;
+use Getopt::Std;
 
-scalar( @ARGV ) or
-    die "usage: ".basename( $0 )." <dump_files>\n";
+sub show_usage {
+    die "usage: ".basename( $0 )." [-p] [-n <max_screens_per_dataset>] <dump_files>\n";
+}
+
+our ( $opt_n, $opt_p );
+getopts( 'n:p' ) or
+    show_usage;
+
+# default values
+my $max_screens_per_dataset = $opt_n || 5;
+my $patch_requested = $opt_p || 0;
+
+# ARGV not contains filenames
+scalar( @ARGV ) or show_usage;
 
 # load screen data from dump files
 my %all_screens;
@@ -33,7 +46,6 @@ foreach my $s ( @screen_names ) {
         $global_btiles{ $b }++;
     }
 }
-printf "total unique btiles: %d\n", scalar( keys %global_btiles );
 
 # all_screens{ $s } = {
 #   btile_count => { btile_name => count, btile_name => count, ...},
@@ -107,8 +119,6 @@ foreach my $screen ( @screen_names ) {
 # screens belonging to that group)
 #
 # This weight is calculated in a separate step.
-
-my $max_screens_per_dataset = 5;
 
 my %cluster_lists_by_start_screen;
 
@@ -211,11 +221,27 @@ foreach my $start_screen ( @screen_names ) {
 }
 
 #print Dumper( \%cluster_lists_by_start_screen );
+
+# sort the starting screens by the clustering descending weight
 my @sorted = sort { 
     $cluster_lists_by_start_screen{ $b }{'weight'}	# reverse order
     <=> 
     $cluster_lists_by_start_screen{ $a }{'weight'}
 } keys %cluster_lists_by_start_screen;
 
-printf "Most efficient clustering starts with screen '%s', and shares %d btiles\n",
-    $sorted[0], $cluster_lists_by_start_screen{ $sorted[0] }{'weight'};
+if ( $patch_requested ) {
+    my @cluster_list = @{ $cluster_lists_by_start_screen{ $sorted[0] }{'clusters'} };
+    my $dataset = 0;
+    foreach my $cluster ( @cluster_list ) {
+        foreach my $screen ( @$cluster ) {
+            printf "PATCH_SCREEN NAME=%s\n", $screen;
+            printf "\tDATASET %d\n", $dataset;
+            print "END_SCREEN\n\n";
+        }
+        $dataset++;
+    }
+} else {
+    printf "Total unique btiles: %d\n", scalar( keys %global_btiles );
+    printf "Most efficient clustering starts with screen '%s', and shares %d btiles\n",
+        $sorted[0], $cluster_lists_by_start_screen{ $sorted[0] }{'weight'};
+}
