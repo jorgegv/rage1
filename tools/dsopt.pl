@@ -79,7 +79,9 @@ foreach my $screen ( @screen_names ) {
 #   sharing_screens => [ screen_name1, screen_name2, ... ],
 # }
 
-print Dumper( \%all_screens );
+#print Dumper( \%all_screens ); exit;
+
+# create the screen clusters
 
 # For a given starting screen (screen A), create groups of N screens. Grouping algorithm:
 # 1) Add A to the current group and mark it as USED
@@ -98,3 +100,92 @@ print Dumper( \%all_screens );
 # value which we can use to sort them, and pick the one that maximizes btile sharing.  The weight
 # function can be the number of unique btiles in the screen group (union of the btiles of all
 # screens belonging to that group)
+
+my $max_screens_per_dataset = 5;
+
+my %cluster_lists_by_start_screen;
+
+foreach my $start_screen ( @screen_names ) {
+
+    my @current_cluster = ();
+    my %screen_is_used = ();
+    my $screen_a = $start_screen;
+    my $index;
+
+    my $exit_loop = 0;
+    do {
+        # step 1
+        # save current screen in current cluster
+        push @current_cluster, $screen_a;
+        $screen_is_used{ $screen_a }++;
+#        printf "step 1: screen_a='%s'\n",$screen_a;
+#        printf "cluster: [ %s ]\n", join( ", ", @current_cluster );
+#        printf "used_screens: %d\n", scalar( keys %screen_is_used );
+#        printf "number of clusters: %d\n", scalar( @{ $cluster_lists_by_start_screen{ $start_screen } } );
+
+        # step 2
+        # if cluster has max elements, save cluster and start a new one
+        if ( scalar( @current_cluster ) == $max_screens_per_dataset ) {
+            push @{ $cluster_lists_by_start_screen{ $start_screen } }, [ @current_cluster ];
+            @current_cluster = ();
+        }
+
+        # step 3
+        # find the first unused screen B or undef if index is end of list
+        my $screen_b;
+        $index = 0;
+        while ( ( $index < scalar( @{ $all_screens{ $screen_a }{'sharing_screens'} } ) )
+            and defined( $screen_is_used{ $all_screens{ $screen_a }{'sharing_screens'}[ $index ] } ) ) {
+            $index++;
+        }
+#        printf "step 3: screen_a='%s', size=%d, index=%d\n", $screen_a, scalar( @{$all_screens{ $screen_a }{'sharing_screens'}}), $index;
+        $screen_b = (
+            $index < scalar( @{ $all_screens{ $screen_a }{'sharing_screens'} } ) ?
+            $all_screens{ $screen_a }{'sharing_screens'}[ $index ] :
+            undef
+        );
+#        printf "step 3: screen_b='%s'\n", $screen_b || 'undef';
+
+        # step 4
+        # find the first unused screen C or undef if index is end of list
+        my $screen_c;
+        if ( defined( $screen_b ) ) {
+            $index = 0;
+            while ( ( $index < scalar( @{ $all_screens{ $screen_b }{'sharing_screens'} } ) )
+                and defined( $screen_is_used{ $all_screens{ $screen_b }{'sharing_screens'}[ $index ] } ) ) {
+                $index++;
+            }
+#            printf "step 4: screen_b='%s', size=%d, index=%d\n", $screen_b, scalar( @{$all_screens{ $screen_b }{'sharing_screens'}}), $index;
+            $screen_c = (
+                $index < scalar( @{ $all_screens{ $screen_b }{'sharing_screens'} } ) ?
+                $all_screens{ $screen_b }{'sharing_screens'}[ $index ] :
+                undef
+            );
+        }
+#        printf "step 4: screen_c='%s'\n", $screen_c || 'undef';
+
+        # step 6
+        # pick the screen B or C that has the most common btiles with A
+        # we reach here either with B and C defined, or only B defined
+        if ( defined( $screen_c ) ) {
+            if ( $all_screens{ $screen_a }{'shared_btile_count'}{ $screen_b } >
+                $all_screens{ $screen_a }{'shared_btile_count'}{ $screen_c } ) {
+                $screen_a = $screen_b;
+            } else {
+                $screen_a = $screen_c;
+            }
+        } elsif ( defined( $screen_b ) ) {
+            $screen_a = $screen_b;
+        } else {
+            # step 5: end if no more screens found
+            # don't forget to push the last (possibly incomplete) cluster!
+            push @{ $cluster_lists_by_start_screen{ $start_screen } }, [ @current_cluster ];
+            $exit_loop++;
+        }
+
+    } while ( not $exit_loop );
+
+}
+
+#print Dumper( \%cluster_lists_by_start_screen );
+
