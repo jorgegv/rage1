@@ -24,6 +24,7 @@ use Data::Dumper;
 use File::Basename qw( basename );
 use Getopt::Long;
 use GD;
+use List::Util qw( uniq );
 
 # arguments: 2 or more PNG files, plus some required switches (screen
 # dimensions, output directory, etc.)
@@ -40,6 +41,7 @@ my $generate_check_map;
 my $auto_tileset_btiles;
 my $auto_tileset_max_rows = 16;
 my $auto_tileset_max_cols = 16;
+my $generate_btile_report;
 
 # global variables
 my %map_crumb_types;
@@ -60,6 +62,7 @@ my %map_crumb_types;
         "hero-sprite-width=i"		=> \$hero_sprite_width,
         "hero-sprite-height=i"		=> \$hero_sprite_height,
         "auto-tileset-btiles"		=> \$auto_tileset_btiles,	# optional, default false
+        "generate-btile-report:s"	=> \$generate_btile_report	# optional
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -91,6 +94,7 @@ Optional:
     --hotzone-color			When --auto-hotzones is disabled, specifies HOTZONE color to match (default: 000000)
     --generate-check-map		Generates a check-map with outlines for the matched objects (PNG)
     --auto-tileset-btiles		Automatically creates BTILE definitions for all possible BTILEs in tilesets
+    --generate-btile-report <file>	Writes a report of BTILEs used on each screen to the file given as parameter
 
 Colors are specified as RRGGBB (RGB components in hex notation)
 
@@ -1731,6 +1735,23 @@ EOF_CRUMBS_DETECTED
         print "-- All needed CRUMB_TYPE definitions are present in GAME_CONFIG\n";
     }
 
+}
+
+if ( $generate_btile_report ) {
+    # gather info
+    my %screen_report;
+    foreach my $screen_name ( sort keys %screen_data ) {
+        foreach my $btile ( @{ $screen_data{ $screen_name }{'btiles'} } ) {
+            $screen_report{ $screen_name }{'btile_count'}{ $all_btiles[ $btile->{'btile_index'} ]{'name'} }++;
+            $screen_report{ $screen_name }{'mapgen_dataset'} = $screen_data{ $screen_name }{'metadata'}{'dataset'};
+        }
+    }
+    # write report in Data::Dumper format
+    open REPORT, ">$generate_btile_report" or
+        die "** Could not open file $generate_btile_report for writing\n";
+    print REPORT Dumper( \%screen_report );
+    close REPORT;
+    print "-- Screen BTILE report written to file $generate_btile_report\n";
 }
 
 print "MAPGEN Execution successful!\n";
