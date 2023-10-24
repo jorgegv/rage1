@@ -589,18 +589,26 @@ print "-- Screen metadata loaded from MAPDEF file\n";
 #
 #   - Check it the status is not "matched" (it may habe been marked as such
 #     by previous identified BTILEs). Skip if it is already "matched"
+#
 #   - Calculate the hash for the map cell
+#
 #   - Search for the hash in the BTILE index (it should exist, error if
 #     it doesn't)
+#
 #   - If there is only one match, it means that there is only one tile with
 #     that cell, so verify that the remaining cells also match, and mark the
 #     status for that cells as "matched" in the status array
+#
 #   - If there is more than one match, we should verify all the BTILEs,
 #     starting by the bigger ones.  Hopefully one of them will match.  We
 #     will stop the search and mark the relevant cell status as "matched" in
 #     the status array
+#
 #   - When we have fully identified the BTILE, we save the name, position
-#     and current screen number in the global BTILE instances list
+#     and current screen number in the global BTILE instances list, but only
+#     if the size of the identified BTILE is greater than 1x1.  1x1 cell
+#     BTILEs will be handled in a separate step later on, and are saved in a
+#     separate list.
 #
 # Repeat this process for all map screens
 #
@@ -619,11 +627,13 @@ print "-- Screen metadata loaded from MAPDEF file\n";
 # re-check the cells corresponding to an already matched btile.  At the end
 # of matching, this bidimensional array should have the same size as the
 # main map (in cells), and all values should be defined and == 1
+
 my $checked_cells;
 my $matched_cells;
 
-# this list will hold the matched btiles, with all associated metadata
+# this lists will hold the matched btiles, with all associated metadata
 my @matched_btiles;
+my @matched_btiles_1x1;
 
 # returns true if a given btile matches the cells in the map at position
 # (row,col), restricted to a given screen.  Btile must be completely inside
@@ -710,8 +720,8 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                             $btile_data,
                             $global_cell_row, $global_cell_col ) ) {
 
-                            # if a match was found, add it to the list of matched btiles
-                            push @matched_btiles, {
+                            # if a match was found, add it to the proper list of matched btiles
+                            my $data = {
                                 screen_row	=> $screen_row,
                                 screen_col	=> $screen_col,
                                 cell_row	=> $cell_row,
@@ -719,6 +729,11 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                                 global_cell_row	=> $global_cell_row,
                                 global_cell_col	=> $global_cell_col,
                                 btile_index	=> $btile_index,
+                            };
+                            if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
+                                push @matched_btiles_1x1, $data;
+                            } else {
+                                push @matched_btiles, $data;
                             };
 
                             # mark it as used in the global BTILE list
@@ -795,7 +810,7 @@ if ( scalar( @non_checked_cells ) ) {
 # now count the number of btiles identified by screen, we will need it when
 # identifying hotzones
 my $btile_count_by_screen;
-foreach my $bt ( @matched_btiles ) {
+foreach my $bt ( @matched_btiles, @matched_btiles_1x1 ) {
     $btile_count_by_screen->[ $bt->{'screen_row'} ][ $bt->{'screen_col'} ]++;
 }
 
@@ -1316,7 +1331,7 @@ if ( $generate_check_map ) {
     }
 
     # draw tile and item outlines
-    foreach my $btile ( @matched_btiles ) {
+    foreach my $btile ( @matched_btiles, @matched_btiles_1x1 ) {
         my $btile_height = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'} } ) * 8;
         my $btile_width = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'}[0] } ) * 8;
 
@@ -1372,7 +1387,7 @@ if ( $generate_check_map ) {
 # screens with matched btiles generate output
 my %screen_data;
 
-foreach my $match ( @matched_btiles ) {
+foreach my $match ( @matched_btiles, @matched_btiles_1x1 ) {
     my $screen_name = $screen_metadata->[ $match->{'screen_row'} ][ $match->{'screen_col'} ]{'name'} ||
         sprintf( "AutoScreen_%03d_%03d", $match->{'screen_row'}, $match->{'screen_col'} );
     push @{ $screen_data{ $screen_name }{'btiles'} }, $match;
