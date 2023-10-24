@@ -779,9 +779,40 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
 ###########################################################################
 ###########################################################################
 
+# We will try to coalesce 1x1 tiles from @matched_btiles_1x1 in bigger
+# rectangular tiles, and then add the coalesced tiles to the main btile list
+# @matched_btiles, so that it can be processed later all together
+#
 # Steps:
+#
+# - Create an MxN array with all 1x1 matched btiles, with undef in positions
+#   where no btile is found, and the btile index in @matched_btiles_1x1
+#   where a btile is found
+#
+# - Create an MxN state array with all 0's
+#
+# - Walk the RxC screens one by one, and try to find rectangles of adjacent
+#   1x1 cells
+#
+# - When a rectangle is found: 
+#   - Create an ad-hoc btile definition and add it to the @all_btiles list
+#   - Add the new btile definition and position to the @matched_btiles list
+#   - Mark all the 1x1 btiles which have been coalesced {'coalesced'} = 1
+#
+# - Repeat until all the map has been walked
+#
+# - Walk all the @matched_btiles_1x1 list again, searching for 1x1 btiles
+#   that have _not_ been coalesced.  For those that haven't, add them as 1x1
+#   btiles to the main @matched_btiles list (these are the only 1x1 btiles
+#   that will be finally output as such in the map definitions
+#
+# - Hopefully, lots of 1x1 btiles will be coalesced into bigger ones.  As
+#   long as 3 or more 1x1 btiles are coalesced as a single, there will be
+#   memory savings
 
 print "Coalescing 1x1 BTILEs...";
+
+# WORK IN PROGRESS...
 
 # check btile count for all screens and report BTILE count for those with some identified
 my $screens_with_too_many_btiles = 0;
