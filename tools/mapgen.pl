@@ -814,6 +814,46 @@ print "Coalescing 1x1 BTILEs...";
 
 # WORK IN PROGRESS...
 
+# setup state arrays...
+my @coalesced_cells;
+my @coalesced_cells_checked;
+
+# reset state
+foreach my $r ( 0 .. $map_rows - 1 ) {
+    foreach my $c ( 0 .. $map_cols - 1 ) {
+        $coalesced_cells[ $r ][ $c ] = undef;
+        $coalesced_cells_checked[ $r ][ $c ] = 0;
+    }
+}
+
+# note all btiles to coalesce
+foreach my $i ( 0 .. scalar( @matched_btiles_1x1 ) - 1 ) {
+    my $btile = $matched_btiles_1x1[ $i ];
+    $coalesced_cells[ $btile->{'global_cell_row'} ][ $btile->{'global_cell_col'} ] = $i;
+}
+
+# walk the whole map, screen by screen
+# for each screen, walk from left to right, top to bottom
+# search for a cell with a 1x1 btile, ignoring the ones marked as checked in @coalesced_cells_checked array
+# keep going to the right while more btiles found until hole (undef) found or screen width
+# note the max width
+# start going down one row at at a time, doing the same up to the max width
+# if on each row the max width is less than the previous one, set it as the new max width
+# repeat until on the start of the row we find a hole (undef)
+# we have found a rectangle of 1x1 btiles, so define the big one and send to main list
+# mark all its cells as checked in @coalesced_cells_checked array
+# mark all its cells as {'coalesced'} = 1 in @matched_btiles_1x1
+# continue from the next cell to the first matched cell and repeat until all the map has been walked
+
+# end security check: all elements in @coalesced_cells_checked are set to 1
+
+# Walk all the @matched_btiles_1x1 list again, searching for 1x1 btiles that
+# have _not_ been coalesced.  For those that haven't, add them as 1x1 btiles
+# to the main @matched_btiles list (these are the only 1x1 btiles that will
+# be finally output as such in the map definitions
+
+# END WIP
+
 # check btile count for all screens and report BTILE count for those with some identified
 my $screens_with_too_many_btiles = 0;
 foreach my $r ( 0 .. ( $map_screen_rows - 1 ) ) {
