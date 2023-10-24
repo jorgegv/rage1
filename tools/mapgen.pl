@@ -672,7 +672,7 @@ sub match_btile_in_map {
 print "Identifying BTILEs in Main Map...\n";
 
 # walk the screen array
-my $screens_with_too_many_btiles = 0;
+my @btile_count_by_screen;
 foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
     foreach my $screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
 
@@ -766,20 +766,42 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
             }
         } # end of cell-walk inside a screen
 
-        # only report BTILE count for screens with some identified
-        if ( $btile_count ) {
-            if ( $btile_count > 255 ) {
-                warn sprintf( "** WARNING: Screen (%d,%d): matched %d BTILEs (more than 255)\n",
-                    $screen_row, $screen_col, $btile_count );
-                $screens_with_too_many_btiles++;
-            } else {
-                printf "-- Screen (%d,%d): matched %d BTILEs\n",
-                    $screen_row, $screen_col, $btile_count;
-            }
-        }
+        # update btile counter for this screen
+        $btile_count_by_screen[ $screen_row ][ $screen_col ] = $btile_count;
     }
 } # end of screen-walk
 
+###########################################################################
+###########################################################################
+##
+## 4.1. Try to coalesce 1x1 BTILEs into bigger ones generated on the fly
+##
+###########################################################################
+###########################################################################
+
+# Steps:
+
+print "Coalescing 1x1 BTILEs...";
+
+# check btile count for all screens and report BTILE count for those with some identified
+my $screens_with_too_many_btiles = 0;
+foreach my $r ( 0 .. ( $map_screen_rows - 1 ) ) {
+    foreach my $c ( 0 .. ( $map_screen_cols - 1 ) ) {
+        my $btile_count = $btile_count_by_screen[ $r ][ $c ];
+        if ( $btile_count ) {
+            if ( $btile_count > 255 ) {
+                warn sprintf( "** WARNING: Screen (%d,%d): matched %d BTILEs (more than 255)\n",
+                    $r, $c, $btile_count );
+                $screens_with_too_many_btiles++;
+            } else {
+                printf "-- Screen (%d,%d): matched %d BTILEs\n",
+                    $r, $c, $btile_count;
+            }
+        }
+    }
+}
+
+# die if errors found
 if ( $screens_with_too_many_btiles ) {
     die "** Error: screens were found with more than 255 BTILEs\n";
 }
