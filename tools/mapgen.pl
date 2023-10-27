@@ -811,9 +811,9 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
 #   long as 3 or more 1x1 btiles are coalesced as a single, there will be
 #   memory savings
 
-print "Coalescing tiny BTILEs...";
+print "Coalescing tiny BTILEs...\n";
 
-# setup state arrays...
+# setup state array...
 my @map_cell;
 
 # reset state
