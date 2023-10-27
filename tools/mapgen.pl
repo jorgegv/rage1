@@ -813,8 +813,6 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
 
 print "Coalescing tiny BTILEs...";
 
-# WORK IN PROGRESS...
-
 # setup state arrays...
 my @map_cell;
 
@@ -840,12 +838,12 @@ my $num_synthetic_btiles = 0;
 foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
     foreach my $map_col_index ( 0 .. $map_cols - 1 ) {
 
-        # search for cells with a 1x1 btile, ignoring the ones marked as
-        # checked in @coalesced_cells_checked array.  Skip this cell quickly
-        # if it has already been checked or it does not have a coalesceable
-        # 1x1 tile
-        next if ( $map_cell[ $map_row_index ][ $map_col_index ]{'checked'}
-            or not defined( $map_cell[ $map_row_index ][ $map_col_index ]{'cell_id'} ) );
+        # Skip this cell quickly if it has already been checked or it does
+        # not have a coalesceable 1x1 tile
+        next if $map_cell[ $map_row_index ][ $map_col_index ]{'checked'};
+        $map_cell[ $map_row_index ][ $map_col_index ]{'checked'}++;
+
+        next if not defined( $map_cell[ $map_row_index ][ $map_col_index ]{'cell_id'} );
 
         # keep checking to the right while more btiles found until hole
         # (undef) found or screen width is reached
@@ -918,11 +916,18 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
         push @matched_btiles, $synthetic_btile_data;
 
         # mark all its cells as checked in @map_cell array
-        # mark all its cells as {'coalesced'} = 1 in @matched_btiles_1x1
         foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
             foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
                 $map_cell[ $r ][ $c ]{'checked'}++;
-                $matched_btiles_1x1[ $map_cell[ $r ][ $c ]{'cell_id'} ]{'coalesced'}++;
+            }
+        }
+
+        # mark all its cells as {'coalesced'} = 1 in @matched_btiles_1x1 if height or width > 1
+        if ( ( $width > 1 ) or ( $height > 1 ) ) {
+            foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
+                foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
+                    $matched_btiles_1x1[ $map_cell[ $r ][ $c ]{'cell_id'} ]{'coalesced'}++;
+                }
             }
         }
 
@@ -935,7 +940,7 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
 foreach my $r ( 0 .. $map_rows - 1 ) {
     foreach my $c ( 0 .. $map_cols - 1 ) {
         $map_cell[ $r ][ $c ]{'checked'} or
-            die "** Error: security check failed while coalescing 1x1 btiles!\n";
+            die sprintf("** Error: security check (%d,%d) failed while coalescing 1x1 btiles!\n", $r, $c);
     }
 }
 
@@ -1007,7 +1012,7 @@ if ( scalar( @non_checked_cells ) ) {
 # now count the number of btiles identified by screen, we will need it when
 # identifying hotzones
 my $btile_count_by_screen;
-foreach my $bt ( @matched_btiles, @matched_btiles_1x1 ) {
+foreach my $bt ( @matched_btiles ) {
     $btile_count_by_screen->[ $bt->{'screen_row'} ][ $bt->{'screen_col'} ]++;
 }
 
@@ -1528,7 +1533,7 @@ if ( $generate_check_map ) {
     }
 
     # draw tile and item outlines
-    foreach my $btile ( @matched_btiles, @matched_btiles_1x1 ) {
+    foreach my $btile ( @matched_btiles ) {
         my $btile_height = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'} } ) * 8;
         my $btile_width = scalar( @{ $all_btiles[ $btile->{'btile_index'} ]{'cell_data'}[0] } ) * 8;
 
@@ -1584,7 +1589,7 @@ if ( $generate_check_map ) {
 # screens with matched btiles generate output
 my %screen_data;
 
-foreach my $match ( @matched_btiles, @matched_btiles_1x1 ) {
+foreach my $match ( @matched_btiles ) {
     my $screen_name = $screen_metadata->[ $match->{'screen_row'} ][ $match->{'screen_col'} ]{'name'} ||
         sprintf( "AutoScreen_%03d_%03d", $match->{'screen_row'}, $match->{'screen_col'} );
     push @{ $screen_data{ $screen_name }{'btiles'} }, $match;
