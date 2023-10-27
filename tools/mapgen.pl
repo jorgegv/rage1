@@ -1760,19 +1760,28 @@ EOF_MAP_GDATA_END
 # generation.  If only the TILEDEF definitions are used, only those tiles will be output.  This
 # replaces functionality previously in btilegen.pl script
 
+# converts an 8-bit value into "##..####.." representation (BTILEs)
+sub byte_to_pixels {
+    my $value = shift;
+    ( $value <= 255 ) or
+        die "** Error: byte_to_pixels called with value > 255!\n";
+    my $bin = sprintf( "%08b", $value );
+    $bin =~ s/1/##/g;
+    $bin =~ s/0/../g;
+    return $bin;
+}
+
 print "Generating BTile GDATA files...\n";
 
-my $btile_format = <<"END_FORMAT";
+my $btile_format = <<END_FORMAT
 // tiledef line: '%s %d %d %d %d %s'
 BEGIN_BTILE
         NAME    %s
         ROWS    %d
         COLS    %d
 
-        PNG_DATA        FILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d %s %s %s
-END_BTILE
-
 END_FORMAT
+;
 
 # create the btiles directory if it does not exist
 mkdir( "$game_data_dir/btiles" )
@@ -1783,15 +1792,43 @@ foreach my $btile_data ( grep { $_->{'used_in_screen'} } @all_btiles ) {
     open GDATA,">$output_file" or
         die "** Error: could not open file $output_file for writing\n";
 
+    # print header
     printf GDATA $btile_format,
         ( map { $btile_data->{$_} } qw( name cell_row cell_col cell_width cell_height default_type ) ),
-        ( map { $btile_data->{$_} } qw( name cell_height cell_width png_file ) ),
-        ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) ),
-        ( defined( $btile_data->{'png_rotate'} ) ? sprintf('PNG_ROTATE=%d',$btile_data->{'png_rotate'}) : '' ),
-        ( defined( $btile_data->{'png_hmirror'} ) ? sprintf('PNG_HMIRROR=%d',$btile_data->{'png_hmirror'}) : '' ),
-        ( defined( $btile_data->{'png_vmirror'} ) ? sprintf('PNG_VMIRROR=%d',$btile_data->{'png_vmirror'}) : '' ),
+        ( map { $btile_data->{$_} } qw( name cell_height cell_width ) )
     ;
 
+    # print pixel and attr data
+    if ( defined( $btile_data->{'png_file'} ) ) {
+        # it may come from a PNG file
+        printf GDATA "\tPNG_DATA\tFILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d %s %s %s\n",
+            $btile_data->{'png_file'},
+            ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) ),
+            ( defined( $btile_data->{'png_rotate'} ) ? sprintf('PNG_ROTATE=%d',$btile_data->{'png_rotate'}) : '' ),
+            ( defined( $btile_data->{'png_hmirror'} ) ? sprintf('PNG_HMIRROR=%d',$btile_data->{'png_hmirror'}) : '' ),
+            ( defined( $btile_data->{'png_vmirror'} ) ? sprintf('PNG_VMIRROR=%d',$btile_data->{'png_vmirror'}) : '' ),
+        ;
+    } else {
+        # or be a synthetic btile
+        # print pixel data
+        foreach my $r ( 0 .. $btile_data->{'cell_height'} - 1 ) {
+            foreach my $l ( 0 .. 7 ) {
+                my $pixel_line;
+                foreach my $c ( 0 .. $btile_data->{'cell_width'} - 1 ) {
+                    $pixel_line .= byte_to_pixels( $btile_data->{'cell_data'}[ $r ][ $c ]{'bytes'}[ $l ] );
+                }
+                printf GDATA "\tPIXELS\t%s\n", $pixel_line;
+            }
+        }
+        # print attr data
+        foreach my $r ( 0 .. $btile_data->{'cell_height'} - 1 ) {
+            foreach my $c ( 0 .. $btile_data->{'cell_width'} - 1 ) {
+                printf GDATA "\tATTR\t%s\n", $btile_data->{'cell_data'}[ $r ][ $c ]{'attr'};
+            }
+        }
+    }
+
+    print GDATA "END_BTILE\n";
     close GDATA;
 
     printf "-- File %s for BTILE '%s' was created\n", $output_file, $btile_data->{'name'};
