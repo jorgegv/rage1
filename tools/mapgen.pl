@@ -845,6 +845,7 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
 
         next if not defined( $map_cell[ $map_row_index ][ $map_col_index ]{'cell_id'} );
 
+        # Algo 1:
         # keep checking to the right while more btiles found until hole
         # (undef) found or screen width is reached
         # note the max width
@@ -859,9 +860,12 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
                     defined( $map_cell[ $map_row_index ][ $map_col_index + $current_row_width ]{'cell_id'} ) ) {
                 $current_row_width++;
             }
-            # if on each row the max width is less than the previous one, set it as the new max width
-            if ( $current_row_width < $width ) {
+            # if this is the first row, use its width as the coalesced btile width
+            if ( $height == 1 ) {
                 $width = $current_row_width;
+            } else {
+                # if we are on second row or later, exit loop if its width is less than the first row
+                last if ( $current_row_width < $width );
             }
             $height++;
         }
