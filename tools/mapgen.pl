@@ -845,7 +845,9 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
 
         next if not defined( $map_cell[ $map_row_index ][ $map_col_index ]{'cell_id'} );
 
-        # Algo 1:
+        my $current_screen_row = int( $map_row_index / $screen_rows );
+        my $current_screen_col = int( $map_col_index / $screen_cols );
+
         # keep checking to the right while more btiles found until hole
         # (undef) found or screen width is reached
         # note the max width
@@ -853,10 +855,10 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
         # repeat until on the start of the row we find a hole (undef)
         my $width = 1;
         my $height = 1;
-        while ( ( $map_row_index + $height < $map_rows ) and
+        while ( ( $map_row_index + $height < ( $current_screen_row + 1 ) * $screen_rows ) and
                 defined( $map_cell[ $map_row_index + $height ][ $map_col_index ]{'cell_id'} ) ) {
             my $current_row_width = 1;
-            while ( ( $map_col_index + $current_row_width < $map_cols ) and
+            while ( ( $map_col_index + $current_row_width < ( $current_screen_col + 1 ) * $screen_cols ) and
                     defined( $map_cell[ $map_row_index ][ $map_col_index + $current_row_width ]{'cell_id'} ) ) {
                 $current_row_width++;
             }
