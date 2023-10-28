@@ -27,6 +27,9 @@ use GD;
 use List::Util qw( uniq );
 use Digest::SHA1 qw( sha1_hex );
 
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
 # arguments: 2 or more PNG files, plus some required switches (screen
 # dimensions, output directory, etc.)
 
@@ -817,11 +820,12 @@ print "Coalescing tiny BTILEs...\n";
 my @map_cell;
 
 # reset state
-# { cell_id => <index in @matched_btiles_1x1>, checked => <state 0|1> }
+# { cell_id => <index in @matched_btiles_1x1>, checked => <state 0|1>, coalesced => <0|1> }
 foreach my $r ( 0 .. $map_rows - 1 ) {
     foreach my $c ( 0 .. $map_cols - 1 ) {
         $map_cell[ $r ][ $c ]{'cell_id'} = undef;
         $map_cell[ $r ][ $c ]{'checked'} = 0;
+        $map_cell[ $r ][ $c ]{'coalesced'} = 0;
     }
 }
 
@@ -838,13 +842,17 @@ my $num_synthetic_btiles = 0;
 foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
     foreach my $map_col_index ( 0 .. $map_cols - 1 ) {
 
-        # Skip this cell quickly if it has already been checked or it does
-        # not have a coalesceable 1x1 tile
+        # skip this cell quickly if it has already been checked
         next if $map_cell[ $map_row_index ][ $map_col_index ]{'checked'};
         $map_cell[ $map_row_index ][ $map_col_index ]{'checked'}++;
 
+        # skip if it does not have a coalesceable tile
         next if not defined( $map_cell[ $map_row_index ][ $map_col_index ]{'cell_id'} );
 
+        # skip it if it has already been coalesced with some others
+        next if $map_cell[ $map_row_index ][ $map_col_index ]{'coalesced'};
+
+        # precalculate screen row and col
         my $current_screen_row = int( $map_row_index / $screen_rows );
         my $current_screen_col = int( $map_col_index / $screen_cols );
 
@@ -853,24 +861,29 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
         # note the max width
         # start going down one row at at a time, doing the same up to the max width
         # repeat until on the start of the row we find a hole (undef)
-        my $width = 1;
-        my $height = 1;
-        while ( ( $map_row_index + $height < ( $current_screen_row + 1 ) * $screen_rows ) and
-                defined( $map_cell[ $map_row_index + $height ][ $map_col_index ]{'cell_id'} ) ) {
-            my $current_row_width = 1;
-            while ( ( $map_col_index + $current_row_width < ( $current_screen_col + 1 ) * $screen_cols ) and
-                    defined( $map_cell[ $map_row_index ][ $map_col_index + $current_row_width ]{'cell_id'} ) ) {
-                $current_row_width++;
+        my $cell_check_row = $map_row_index;
+        my $width = 0;
+        while( ( $cell_check_row < ( $current_screen_row + 1 ) * $screen_rows ) and
+                not $map_cell[ $cell_check_row ][ $map_col_index ]{'coalesced'} and
+                defined( $map_cell[ $cell_check_row ][ $map_col_index ]{'cell_id'} ) ) {
+            my $cell_check_col = $map_col_index;
+            while ( ( $cell_check_col < ( $current_screen_col + 1 ) * $screen_cols ) and
+                    not $map_cell[ $cell_check_row ][ $cell_check_col ]{'coalesced'} and
+                    defined( $map_cell[ $cell_check_row ][ $cell_check_col ]{'cell_id'} ) ) {
+                $cell_check_col++;
             }
+            # at the end of this loop $cell_check_col contains the first col that does NOT match
             # if this is the first row, use its width as the coalesced btile width
-            if ( $height == 1 ) {
-                $width = $current_row_width;
+            my $current_width = $cell_check_col - $map_col_index;
+            if ( $cell_check_row == $map_row_index ) {
+                $width = $current_width;
             } else {
-                # if we are on second row or later, exit loop if its width is less than the first row
-                last if ( $current_row_width < $width );
+                last if ( $current_width < $width );
             }
-            $height++;
+            $cell_check_row++;
         }
+        # at the end of this loop $cell_check_row contains the first row that does NOT match
+        my $height = $cell_check_row - $map_row_index;
 
         # We have found a rectangle of 1x1 btiles, so define the big one and
         # send to main list.  At this point $width and $height have the
@@ -883,7 +896,7 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
         foreach my $r ( 0 .. $height - 1 ) {
             foreach my $c ( 0 .. $width - 1 ) {
                 # index in @matched_btiles_1x1
-                my $i1 = $map_cell[ $map_row_index + $r ][ $map_col_index + $c]{'cell_id'};
+                my $i1 = $map_cell[ $map_row_index + $r ][ $map_col_index + $c ]{'cell_id'};
                 # global index in @all_btiles
                 my $i2 = $matched_btiles_1x1[ $i1 ]{'btile_index'};
                 # btile_data of first and only cell (it's a 1x1 btile!)
@@ -933,6 +946,7 @@ foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
             foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
                 foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
                     $matched_btiles_1x1[ $map_cell[ $r ][ $c ]{'cell_id'} ]{'coalesced'}++;
+                    $map_cell[ $r ][ $c ]{'coalesced'}++;
                 }
             }
         }
