@@ -47,6 +47,8 @@ my $auto_tileset_max_rows = 16;
 my $auto_tileset_max_cols = 16;
 my $generate_btile_report;
 my $coalesce_tiny_btiles;
+# after analysis, this is the correct value
+my $minimum_coalesceable_tiny_btiles = 6;
 
 # global variables
 my %map_crumb_types;
@@ -898,69 +900,79 @@ if ( $coalesce_tiny_btiles ) {
             # dimensions of the coalesced btile and $map_row_index and
             # $map_col_index have its position in the global map
 
-            # first we must create a new synthetic btile and add it to the general btile list
-            # build the cell data array
-            my $btile_data;
-            foreach my $r ( 0 .. $height - 1 ) {
-                foreach my $c ( 0 .. $width - 1 ) {
-                    # index in @matched_btiles_1x1
-                    my $i1 = $map_cell[ $map_row_index + $r ][ $map_col_index + $c ]{'cell_id'};
-                    # global index in @all_btiles
-                    my $i2 = $matched_btiles_1x1[ $i1 ]{'btile_index'};
-                    # btile_data of first and only cell (it's a 1x1 btile!)
-                    $btile_data->[ $r ][ $c ] = $all_btiles[ $i2 ]{'cell_data'}[0][0];
-                }
-            }
-            # create a unique name
-            my $unique_name = sha1_hex( sprintf( "%d%d%d", time, int(rand(2000000000)), $$ ) );
-            my $synthetic_btile = {
-                name		=> $unique_name,
-                default_type	=> 'obstacle',
-                metadata		=> '',
-                cell_row		=> $map_row_index,	# ignored if no PNG
-                cell_col		=> $map_col_index,	# ignored ig no PNG
-                cell_width		=> $width,
-                cell_height		=> $height,
-                cell_data		=> $btile_data,
-                # no PNG file!
-                png_file		=> undef,
-                # mark it as used in the global BTILE list
-                used_in_screen	=> 1,
-            };
-            my $synthetic_btile_index = scalar( @all_btiles );
-            push @all_btiles, $synthetic_btile;
+            # WARNING!  After analysis I found that we only save memory if
+            # we coalesce btiles with 6 or more cells, so if height x width
+            # is less than that, do not create the coalesced btile.  The
+            # tiny btiles other than the first will be checked later and try
+            # again to be coalesced with others.  If in the end they are not
+            # coalesced, they will be pushed with the remaining ones to the
+            # general list as 1x1 btiles
+            if ( $width * $height >= $minimum_coalesceable_tiny_btiles ) {
 
-            # then create the matched btile entry and push to @matched_btiles
-            my $synthetic_btile_data = {
-                screen_row		=> int( $map_row_index / $screen_rows ),
-                screen_col		=> int( $map_col_index / $screen_cols ),
-                cell_row		=> $map_row_index % $screen_rows,
-                cell_col		=> $map_col_index % $screen_cols,
-                global_cell_row	=> $map_row_index,
-                global_cell_col	=> $map_col_index,
-                btile_index		=> $synthetic_btile_index,
-            };
-            push @matched_btiles, $synthetic_btile_data;
-
-            # mark all its cells as checked in @map_cell array
-            foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
-                foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
-                    $map_cell[ $r ][ $c ]{'checked'}++;
-                }
-            }
-
-            # mark all its cells as {'coalesced'} = 1 in @matched_btiles_1x1 if height or width > 1
-            if ( ( $width > 1 ) or ( $height > 1 ) ) {
-                foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
-                    foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
-                        $matched_btiles_1x1[ $map_cell[ $r ][ $c ]{'cell_id'} ]{'coalesced'}++;
-                        $map_cell[ $r ][ $c ]{'coalesced'}++;
+                # first we must create a new synthetic btile and add it to the general btile list
+                # build the cell data array
+                my $btile_data;
+                foreach my $r ( 0 .. $height - 1 ) {
+                    foreach my $c ( 0 .. $width - 1 ) {
+                        # index in @matched_btiles_1x1
+                        my $i1 = $map_cell[ $map_row_index + $r ][ $map_col_index + $c ]{'cell_id'};
+                        # global index in @all_btiles
+                        my $i2 = $matched_btiles_1x1[ $i1 ]{'btile_index'};
+                        # btile_data of first and only cell (it's a 1x1 btile!)
+                        $btile_data->[ $r ][ $c ] = $all_btiles[ $i2 ]{'cell_data'}[0][0];
                     }
                 }
-            }
+                # create a unique name
+                my $unique_name = sha1_hex( sprintf( "%d%d%d", time, int(rand(2000000000)), $$ ) );
+                my $synthetic_btile = {
+                    name		=> $unique_name,
+                    default_type	=> 'obstacle',
+                    metadata		=> '',
+                    cell_row		=> $map_row_index,	# ignored if no PNG
+                    cell_col		=> $map_col_index,	# ignored ig no PNG
+                    cell_width		=> $width,
+                    cell_height		=> $height,
+                    cell_data		=> $btile_data,
+                    # no PNG file!
+                    png_file		=> undef,
+                    # mark it as used in the global BTILE list
+                    used_in_screen	=> 1,
+                };
+                my $synthetic_btile_index = scalar( @all_btiles );
+                push @all_btiles, $synthetic_btile;
 
-            # continue and repeat until all the map has been walked
-            $num_synthetic_btiles++;
+                # then create the matched btile entry and push to @matched_btiles
+                my $synthetic_btile_data = {
+                    screen_row		=> int( $map_row_index / $screen_rows ),
+                    screen_col		=> int( $map_col_index / $screen_cols ),
+                    cell_row		=> $map_row_index % $screen_rows,
+                    cell_col		=> $map_col_index % $screen_cols,
+                    global_cell_row	=> $map_row_index,
+                    global_cell_col	=> $map_col_index,
+                    btile_index		=> $synthetic_btile_index,
+                };
+                push @matched_btiles, $synthetic_btile_data;
+
+                # mark all its cells as checked in @map_cell array
+                foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
+                    foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
+                        $map_cell[ $r ][ $c ]{'checked'}++;
+                    }
+                }
+
+                # mark all its cells as {'coalesced'} = 1 in @matched_btiles_1x1 if height or width > 1
+                if ( ( $width > 1 ) or ( $height > 1 ) ) {
+                    foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
+                        foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
+                            $matched_btiles_1x1[ $map_cell[ $r ][ $c ]{'cell_id'} ]{'coalesced'}++;
+                            $map_cell[ $r ][ $c ]{'coalesced'}++;
+                        }
+                    }
+                }
+
+                # continue and repeat until all the map has been walked
+                $num_synthetic_btiles++;
+            }
         }
     }
 
