@@ -233,6 +233,7 @@ sub generate_btiles {
                 cell_col	=> $c,
                 cell_width	=> 1,
                 cell_height	=> 1,
+                num_cells	=> 1,	# precalculated for later
                 cell_data	=> $btile_data,
                 png_file	=> $png_file,
             };
@@ -244,6 +245,11 @@ sub generate_btiles {
 
     # then generate the btiles for the tiledef definitions
     foreach my $tiledef ( @$tiledefs ) {
+
+        # We do not generate btiles that are smaller than 6 cells.  They
+        # will be identified as 1x1 tiny btiles (generated in the previous
+        # step) and try to be coalesced later
+        next if ( $tiledef->{'cell_width'} * $tiledef->{'cell_height'} < $minimum_coalesceable_tiny_btiles );
 
         # get all cell data for the btile
         my $btile_data = png_get_all_cell_data(
@@ -263,6 +269,7 @@ sub generate_btiles {
             cell_col		=> $tiledef->{'cell_col'},
             cell_width		=> $tiledef->{'cell_width'},
             cell_height		=> $tiledef->{'cell_height'},
+            num_cells		=> $tiledef->{'cell_width'} * $tiledef->{'cell_height'},	# precalculated for later
             cell_data		=> $btile_data,
             png_file		=> $png_file,
         };
@@ -273,11 +280,15 @@ sub generate_btiles {
         # if automatic generation of btiles in tilesets has been requested,
         # create the list of all possible subtiles of all sizes (up to the
         # current btile size), except those that are full background
+        # again, we do not create btiles smaller than 6 cells
         if ( $auto_tileset_btiles ) {
             my $height = $tiledef->{'cell_height'};
             my $width = $tiledef->{'cell_width'};
             foreach my $cur_height ( 1 .. $height ) {
                 foreach my $cur_width ( 1 .. $width ) {
+
+                    next if ( $cur_width * $cur_height < $minimum_coalesceable_tiny_btiles );
+
                     foreach my $cur_row ( $tiledef->{'cell_row'} .. ( $tiledef->{'cell_row'} + $height - $cur_height ) ) {
                         foreach my $cur_col ( $tiledef->{'cell_col'} .. ( $tiledef->{'cell_col'} + $width - $cur_width ) ) {
                             my $btile_name = sprintf("%s_r%03dc%03dw%03dh%03d",$file_prefix,$cur_row,$cur_col,$cur_width,$cur_height);
@@ -291,6 +302,7 @@ sub generate_btiles {
                                     cell_col		=> $cur_col,
                                     cell_width		=> $cur_width,
                                     cell_height		=> $cur_height,
+                                    num_cells		=> $cur_width * $cur_height,	# precalculated for later
                                     cell_data		=> $btile_data,
                                     png_file		=> $png_file,
                                 };
@@ -457,16 +469,14 @@ foreach my $png_file ( @btile_files ) {
 # when searching.  Most of the time the lists will have only one element,
 # but we need to account for all cases.
 
-sub btile_cell_size {
-    my $btile_data = shift;
-    return scalar( @$btile_data ) * scalar( @{ $btile_data->[0] } );
-}
+#sub btile_cell_size {
+#    my $btile_data = shift;
+#    return scalar( @$btile_data ) * scalar( @{ $btile_data->[0] } );
+#}
 
 foreach my $hash ( keys %btile_index ) {
     my @sorted = sort {
-        btile_cell_size( $all_btiles[ $b ]{'cell_data'} )
-        <=>
-        btile_cell_size( $all_btiles[ $a ]{'cell_data'} ) 
+        $all_btiles[ $b ]{'num_cells'} <=> $all_btiles[ $a ]{'num_cells'}
     } @{ $btile_index{ $hash } };
     $btile_index{ $hash } = \@sorted;
 }
