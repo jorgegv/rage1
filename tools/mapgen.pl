@@ -770,7 +770,7 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
     foreach my $screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
 
         # check
-        my $debug = ( $screen_row == 9 ) and ( $screen_col == 6 ) ? 1 : 0;
+#        my $debug = ( $screen_row == 9 ) and ( $screen_col == 6 ) ? 1 : 0;
 
         # temporary values
         my $global_screen_top = $screen_row * $screen_rows;
@@ -785,14 +785,14 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
         foreach my $cell_row ( 0 .. ( $screen_rows - 1 ) ) {
             foreach my $cell_col ( 0 .. ( $screen_cols - 1 ) ) {
 
-                $debug and printf( "++ CELL_ROW:%d CELL_COL:%d\n", $cell_row, $cell_col );
+#                $debug and printf( "++ CELL_ROW:%d CELL_COL:%d\n", $cell_row, $cell_col );
 
                 my $global_cell_row = $global_screen_top + $cell_row;
                 my $global_cell_col = $global_screen_left + $cell_col;
 
                 # skip if the cell is already owned by a previously matched
                 # btile
-                $debug and printf( "++   MATCHED:%d\n", $matched_cells->[ $global_cell_row ][ $global_cell_col ] || 0 );
+#                $debug and printf( "++   MATCHED:%d\n", $matched_cells->[ $global_cell_row ][ $global_cell_col ] || 0 );
                 next if $matched_cells->[ $global_cell_row ][ $global_cell_col ];
 
                 # ...otherwise mark the cell as checked and continue
@@ -802,18 +802,18 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                 my $top_left_cell_hash = $main_map_cell_data->[ $global_cell_row ][ $global_cell_col ]{'hexdump'};
 
                 # skip if it is a background tile
-                $debug and printf( "++   TOP_LEFT_HASH:%s\n", $top_left_cell_hash );
+#                $debug and printf( "++   TOP_LEFT_HASH:%s\n", $top_left_cell_hash );
                 next if ( $top_left_cell_hash eq '000000000000000000' );
 
                 # if there are one or more btiles with that cell hash as its
                 # top-left, try to match all btiles from the list.
-                $debug and printf( "++   DEF(BTINDEX):%s\n", defined( $btile_index{ $top_left_cell_hash } )?1:0 );
+#                $debug and printf( "++   DEF(BTINDEX):%s\n", defined( $btile_index{ $top_left_cell_hash } )?1:0 );
                 if ( defined( $btile_index{ $top_left_cell_hash } ) ) {
 
                     #  The list is ordered from bigger to smaller btile, so
                     # the biggest btile will be matched first.  First match
                     # wins
-                    $debug and printf( "++   LIST(BTINDEX):%d\n", scalar( @{ $btile_index{ $top_left_cell_hash } } ) );
+#                    $debug and printf( "++   LIST(BTINDEX):%d\n", scalar( @{ $btile_index{ $top_left_cell_hash } } ) );
                     foreach my $btile_index ( @{ $btile_index{ $top_left_cell_hash } } ) {
                         my $btile_data = $all_btiles[ $btile_index ]{'cell_data'};
                         my $btile_rows = scalar( @$btile_data );
@@ -826,7 +826,7 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
 
                             # if a match was found, add it to the proper list of matched btiles, but only if it is above the threshold
                             if ( $btile_rows * $btile_cols >= $minimum_coalesceable_tiny_btiles ) {
-                                $debug and printf( "++   MATCH! SCREEN_ROW:%d SCREEN_COL:%d CELL_ROW:%d CELL_COL:%d WIDTH:%d HEIGHT:%d\n",
+#                                $debug and printf( "++   MATCH! SCREEN_ROW:%d SCREEN_COL:%d CELL_ROW:%d CELL_COL:%d WIDTH:%d HEIGHT:%d\n",
                                     $screen_row,$screen_col,$cell_row,$cell_col,$btile_cols, $btile_rows );
                                 my $data = {
                                     screen_row	=> $screen_row,
@@ -839,16 +839,16 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                                 };
                                 if ( $coalesce_tiny_btiles ) {
                                     if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
-                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
+#                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
                                         push @matched_btiles_1x1, $data;
                                     } else {
-                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
+#                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
                                         push @matched_btiles, $data;
                                         # mark it as used in the global BTILE list
                                         $all_btiles[ $btile_index ]{'used_in_screen'}++;
                                     }
                                 } else {
-                                    $debug and print "++   PUSHED TO \@matched_btiles\n";
+#                                    $debug and print "++   PUSHED TO \@matched_btiles\n";
                                     push @matched_btiles, $data;
                                     # mark it as used in the global BTILE list
                                     $all_btiles[ $btile_index ]{'used_in_screen'}++;
@@ -888,10 +888,10 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                                         btile_index	=> $btile_index,
                                     };
                                     if ( $coalesce_tiny_btiles ) {
-                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
+#                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
                                         push @matched_btiles_1x1, $data;
                                     } else {
-                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
+#                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
                                         push @matched_btiles, $data;
                                         # mark it as used in the global BTILE list
                                         $all_btiles[ $btile_index ]{'used_in_screen'}++;
