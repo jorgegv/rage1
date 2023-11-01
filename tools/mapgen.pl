@@ -827,7 +827,7 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                             # if a match was found, add it to the proper list of matched btiles, but only if it is above the threshold
                             if ( $btile_rows * $btile_cols >= $minimum_coalesceable_tiny_btiles ) {
 #                                $debug and printf( "++   MATCH! SCREEN_ROW:%d SCREEN_COL:%d CELL_ROW:%d CELL_COL:%d WIDTH:%d HEIGHT:%d\n",
-                                    $screen_row,$screen_col,$cell_row,$cell_col,$btile_cols, $btile_rows );
+#                                    $screen_row,$screen_col,$cell_row,$cell_col,$btile_cols, $btile_rows );
                                 my $data = {
                                     screen_row	=> $screen_row,
                                     screen_col	=> $screen_col,
