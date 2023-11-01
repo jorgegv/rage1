@@ -49,6 +49,9 @@ my $generate_btile_report;
 my $coalesce_tiny_btiles;
 # after analysis, this is the correct value
 my $minimum_coalesceable_tiny_btiles = 6;
+my $use_tileset_cache;
+my $update_tileset_cache;
+my $tileset_cache_file = 'tileset.cache.gz';
 
 # global variables
 my %map_crumb_types;
@@ -71,6 +74,9 @@ my %map_crumb_types;
         "auto-tileset-btiles"		=> \$auto_tileset_btiles,	# optional, default false
         "generate-btile-report:s"	=> \$generate_btile_report,	# optional
         "coalesce-tiny-btiles"		=> \$coalesce_tiny_btiles,	# optional
+        "use-tileset-cache"		=> \$use_tileset_cache,		# optional
+        "update-tileset-cache"		=> \$update_tileset_cache,	# optional
+        "tileset-cache-file:s"		=> \$tileset_cache_file,	# optional
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -80,7 +86,7 @@ my %map_crumb_types;
     and defined( $game_area_left )
     and defined( $hero_sprite_width )
     and defined( $hero_sprite_height )
-) or die "usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
+) or die "Usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
 
 Where <options> can be the following:
 
@@ -104,6 +110,9 @@ Optional:
     --auto-tileset-btiles		Automatically creates BTILE definitions for all possible BTILEs in tilesets
     --generate-btile-report <file>	Writes a report of BTILEs used on each screen to the file given as parameter
     --coalesce-tiny-btiles		Coalesces tiny 1x1 BTILEs into bigger synthetic rectangular ones
+    --use-tileset-cache			Use a previously built tileset cache file if present
+    --update-tileset-cache		Force an update of the tileset cache file after creating the BTILE lists
+    --tileset-cache-file		Specify an alternate tileset cache (default: tileset.cache)
 
 Colors are specified as RRGGBB (RGB components in hex notation)
 
@@ -192,9 +201,6 @@ print "Loading BTILEs...\n";
 #     top-left cell, so this should be handled with a listref
 #   - The hash of the cell is the 'hexdump' field, which is just the
 #     concatenation of the 8 bytes plus the attr byte, all in hex form
-
-my @all_btiles;			# list of all found btiles
-my %btile_index;		# map of cell->hexdump => btile index
 
 sub is_background_btile {
     my $btile_data = shift;
@@ -317,150 +323,205 @@ sub generate_btiles {
     return @generated_btiles;
 }
 
-# process all PNG Btile files
-foreach my $png_file ( @btile_files ) {
+my @all_btiles;			# list of all found btiles
+my %btile_index;		# map of cell->hexdump => btile index
+my $tilesets_were_preloaded = 0;
 
-    # load the PNG and convert it to the ZX Spectrum color palette
-    my $png = load_png_file( $png_file ) or
-        die "** Error: could not load PNG file $png_file\n";
-    map_png_colors_to_zx_colors( $png );
+# if we were asked to use the cache, try to use it. If there are errors, warn but continue without it
+if ( $use_tileset_cache ) {
 
-    # get all the tiledefs for the file
-    my $tiledefs = btile_read_png_tiledefs( $png_file );
-
-    btile_validate_png_tiledefs( $png, $tiledefs ) or
-        die sprintf( "** Error: errors found in TILEDEF file for %s\n", $png_file );
-
-    # initialize tile counter
-    my $tile_count = 0;
-
-    # process the PNG's cells and extract the btiles in all posible positions.
-    #
-    # There are 8 possible combinations of rotation and mirror):
-    #
-    #   R0  : 0 deg rotation, no mirror (the PNG file as-is)
-    #   R0MV: 0 deg rotation, vert mirror
-    #   R1  : 90 deg rotation, no mirror
-    #   R1MH: 90 deg rotation, horiz mirror
-    #   R2  : 180 rotation, no mirror
-    #   R2MV: 180 rotation, vert mirror
-    #   R3  : 270 rotation, no mirror
-    #   R3MH: 270 rotation, horiz mirror
-
-    my $prefix;
-    my $n_png;
-    my $n_tiledefs;
-
-    # config: r0
-    $prefix = 'r0';
-    foreach my $btile ( generate_btiles( $png, $tiledefs, $png_file, $prefix ) ) {
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+    print "-- Loading BTILE definitions from tileset cache file...\n";
+    my $error = 0;
+    if ( open CACHE, "gzip -dc $tileset_cache_file |" ) {
+        my $line_count = 1;
+        while ( not $error and my $line = <CACHE> ) {
+            my $VAR1;
+            if ( defined( $line ) and eval $line ) {
+                my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+                push @all_btiles, $VAR1;
+                push @{ $btile_index{ $VAR1->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            } else {
+                warn "** Warning: data format invalid in $tileset_cache_file line $line_count\n";
+                $error++;
+            }
+            $line_count++;
+        }
+        close CACHE;
+    } else {
+        warn "** Warning: could not open $tileset_cache_file for reading\n";
+        $error++;
     }
 
-    # config: r0mv
-    $prefix = 'r0mv';
-    $n_png = png_vmirror( $png );
-    $n_tiledefs = btile_vmirror_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ) );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_vmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+    # signal success if no errors and some btiles were read
+    if ( not $error and scalar( @all_btiles ) ) {
+        $tilesets_were_preloaded++;
+    }
+}
+
+# if tilesets are not loaded, do it
+if ( not $tilesets_were_preloaded ) {
+
+    print "-- Generating BTILE data...\n";
+
+    # process all PNG Btile files
+    foreach my $png_file ( @btile_files ) {
+
+        # load the PNG and convert it to the ZX Spectrum color palette
+        my $png = load_png_file( $png_file ) or
+            die "** Error: could not load PNG file $png_file\n";
+        map_png_colors_to_zx_colors( $png );
+
+        # get all the tiledefs for the file
+        my $tiledefs = btile_read_png_tiledefs( $png_file );
+
+        btile_validate_png_tiledefs( $png, $tiledefs ) or
+            die sprintf( "** Error: errors found in TILEDEF file for %s\n", $png_file );
+
+        # initialize tile counter
+        my $tile_count = 0;
+
+        # process the PNG's cells and extract the btiles in all posible positions.
+        #
+        # There are 8 possible combinations of rotation and mirror):
+        #
+        #   R0  : 0 deg rotation, no mirror (the PNG file as-is)
+        #   R0MV: 0 deg rotation, vert mirror
+        #   R1  : 90 deg rotation, no mirror
+        #   R1MH: 90 deg rotation, horiz mirror
+        #   R2  : 180 rotation, no mirror
+        #   R2MV: 180 rotation, vert mirror
+        #   R3  : 270 rotation, no mirror
+        #   R3MH: 270 rotation, horiz mirror
+
+        my $prefix;
+        my $n_png;
+        my $n_tiledefs;
+
+        # config: r0
+        $prefix = 'r0';
+        foreach my $btile ( generate_btiles( $png, $tiledefs, $png_file, $prefix ) ) {
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # config: r0mv
+        $prefix = 'r0mv';
+        $n_png = png_vmirror( $png );
+        $n_tiledefs = btile_vmirror_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ) );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_vmirror'} = 1;
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # config: r1
+        $prefix = 'r1';
+        $n_png = png_rotate( $png, 1 );
+        $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 1;
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # config: r1mh
+        $prefix = 'r1mh';
+        $n_png = png_hmirror( png_rotate( $png, 1 ) );
+        $n_tiledefs = btile_hmirror_tiledefs(
+            btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 ),
+            png_get_height_cells( $png ),	# width and height are swapped after rotation in R1 config
+            png_get_width_cells( $png ),
+        );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 1;
+            $btile->{'png_hmirror'} = 1;
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # config: r2
+        $prefix = 'r2';
+        $n_png = png_rotate( $png, 2 );
+        $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 2;
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # config: r2mv
+        $prefix = 'r2mv';
+        $n_png = png_vmirror( png_rotate( $png, 2 ) );
+        $n_tiledefs = btile_vmirror_tiledefs(
+            btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 ),
+            png_get_width_cells( $png ),	# width and height are kept when in R2 rotation
+            png_get_height_cells( $png ),
+        );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 2;
+            $btile->{'png_vmirror'} = 1;
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # config: r3
+        $prefix = 'r3';
+        $n_png = png_rotate( $png, 3 );
+        $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 3;
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # config: r3mh
+        $prefix = 'r3mh';
+        $n_png = png_hmirror( png_rotate( $png, 3 ) );
+        $n_tiledefs = btile_hmirror_tiledefs(
+            btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 ),
+            png_get_height_cells( $png ),	# width and height are swapped after rotation in R3 config
+            png_get_width_cells( $png ),
+        );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 3;
+            $btile->{'png_hmirror'} = 1;
+            my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+            push @all_btiles, $btile;
+            push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+            $tile_count++;
+        }
+
+        # report
+        printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
     }
 
-    # config: r1
-    $prefix = 'r1';
-    $n_png = png_rotate( $png, 1 );
-    $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
+}
 
-    # config: r1mh
-    $prefix = 'r1mh';
-    $n_png = png_hmirror( png_rotate( $png, 1 ) );
-    $n_tiledefs = btile_hmirror_tiledefs(
-        btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 ),
-        png_get_height_cells( $png ),	# width and height are swapped after rotation in R1 config
-        png_get_width_cells( $png ),
-    );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 1;
-        $btile->{'png_hmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+# if cache was asked to be rebuilt, do it but skip if it will be the same as the original
+if ( $update_tileset_cache and not $tilesets_were_preloaded ) {
+    print "-- Updating tileset cache file...\n";
+    open CACHE, "| gzip > $tileset_cache_file" or
+        die "** Error: could not open $tileset_cache_file for writing\n";
+    foreach my $btile ( @all_btiles ) {
+        my $btile_dump = Dumper( $btile );
+        $btile_dump =~ s/\n/ /g;
+        print CACHE $btile_dump, "\n";
     }
-
-    # config: r2
-    $prefix = 'r2';
-    $n_png = png_rotate( $png, 2 );
-    $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 2;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
-
-    # config: r2mv
-    $prefix = 'r2mv';
-    $n_png = png_vmirror( png_rotate( $png, 2 ) );
-    $n_tiledefs = btile_vmirror_tiledefs(
-        btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 ),
-        png_get_width_cells( $png ),	# width and height are kept when in R2 rotation
-        png_get_height_cells( $png ),
-    );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 2;
-        $btile->{'png_vmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
-
-    # config: r3
-    $prefix = 'r3';
-    $n_png = png_rotate( $png, 3 );
-    $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 3;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
-
-    # config: r3mh
-    $prefix = 'r3mh';
-    $n_png = png_hmirror( png_rotate( $png, 3 ) );
-    $n_tiledefs = btile_hmirror_tiledefs(
-        btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 ),
-        png_get_height_cells( $png ),	# width and height are swapped after rotation in R3 config
-        png_get_width_cells( $png ),
-    );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 3;
-        $btile->{'png_hmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
-
-    # report
-    printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
+    close CACHE;
 }
 
 # Since there may be more than one BTILE with the same top-left cell, we now
@@ -469,11 +530,7 @@ foreach my $png_file ( @btile_files ) {
 # when searching.  Most of the time the lists will have only one element,
 # but we need to account for all cases.
 
-#sub btile_cell_size {
-#    my $btile_data = shift;
-#    return scalar( @$btile_data ) * scalar( @{ $btile_data->[0] } );
-#}
-
+print "-- Sorting BTILEs...\n";
 foreach my $hash ( keys %btile_index ) {
     my @sorted = sort {
         $all_btiles[ $b ]{'num_cells'} <=> $all_btiles[ $a ]{'num_cells'}
