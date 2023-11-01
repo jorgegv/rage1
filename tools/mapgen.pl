@@ -769,6 +769,9 @@ my @tiny_btile_count_by_screen;
 foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
     foreach my $screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
 
+        # check
+        my $debug = ( $screen_row == 9 ) and ( $screen_col == 6 ) ? 1 : 0;
+
         # temporary values
         my $global_screen_top = $screen_row * $screen_rows;
         my $global_screen_left = $screen_col * $screen_cols;
@@ -782,12 +785,15 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
         foreach my $cell_row ( 0 .. ( $screen_rows - 1 ) ) {
             foreach my $cell_col ( 0 .. ( $screen_cols - 1 ) ) {
 
-                my $global_cell_row = $screen_row * $screen_rows + $cell_row;
-                my $global_cell_col = $screen_col * $screen_cols + $cell_col;
+                $debug and printf( "++ CELL_ROW:%d CELL_COL:%d\n", $cell_row, $cell_col );
 
-                # skip if the cell has already been checked by a previously
-                # matched btile
-                next if $checked_cells->[ $global_cell_row ][ $global_cell_col ];
+                my $global_cell_row = $global_screen_top + $cell_row;
+                my $global_cell_col = $global_screen_left + $cell_col;
+
+                # skip if the cell is already owned by a previously matched
+                # btile
+                $debug and printf( "++   MATCHED:%d\n", $matched_cells->[ $global_cell_row ][ $global_cell_col ] || 0 );
+                next if $matched_cells->[ $global_cell_row ][ $global_cell_col ];
 
                 # ...otherwise mark the cell as checked and continue
                 $checked_cells->[ $global_cell_row ][ $global_cell_col ]++;
@@ -796,69 +802,116 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                 my $top_left_cell_hash = $main_map_cell_data->[ $global_cell_row ][ $global_cell_col ]{'hexdump'};
 
                 # skip if it is a background tile
+                $debug and printf( "++   TOP_LEFT_HASH:%s\n", $top_left_cell_hash );
                 next if ( $top_left_cell_hash eq '000000000000000000' );
 
                 # if there are one or more btiles with that cell hash as its
                 # top-left, try to match all btiles from the list.
+                $debug and printf( "++   DEF(BTINDEX):%s\n", defined( $btile_index{ $top_left_cell_hash } )?1:0 );
                 if ( defined( $btile_index{ $top_left_cell_hash } ) ) {
 
                     #  The list is ordered from bigger to smaller btile, so
                     # the biggest btile will be matched first.  First match
                     # wins
+                    $debug and printf( "++   LIST(BTINDEX):%d\n", scalar( @{ $btile_index{ $top_left_cell_hash } } ) );
                     foreach my $btile_index ( @{ $btile_index{ $top_left_cell_hash } } ) {
                         my $btile_data = $all_btiles[ $btile_index ]{'cell_data'};
                         my $btile_rows = scalar( @$btile_data );
                         my $btile_cols = scalar( @{ $btile_data->[0] } );
+
                         if ( match_btile_in_map( $main_map_cell_data,
                             $global_screen_top, $global_screen_left, $global_screen_bottom, $global_screen_right,
                             $btile_data,
                             $global_cell_row, $global_cell_col ) ) {
 
-                            # if a match was found, add it to the proper list of matched btiles
-                            my $data = {
-                                screen_row	=> $screen_row,
-                                screen_col	=> $screen_col,
-                                cell_row	=> $cell_row,
-                                cell_col	=> $cell_col,
-                                global_cell_row	=> $global_cell_row,
-                                global_cell_col	=> $global_cell_col,
-                                btile_index	=> $btile_index,
-                            };
-                            if ( $coalesce_tiny_btiles ) {
-                                if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
-                                    push @matched_btiles_1x1, $data;
+                            # if a match was found, add it to the proper list of matched btiles, but only if it is above the threshold
+                            if ( $btile_rows * $btile_cols >= $minimum_coalesceable_tiny_btiles ) {
+                                $debug and printf( "++   MATCH! SCREEN_ROW:%d SCREEN_COL:%d CELL_ROW:%d CELL_COL:%d WIDTH:%d HEIGHT:%d\n",
+                                    $screen_row,$screen_col,$cell_row,$cell_col,$btile_cols, $btile_rows );
+                                my $data = {
+                                    screen_row	=> $screen_row,
+                                    screen_col	=> $screen_col,
+                                    cell_row	=> $cell_row,
+                                    cell_col	=> $cell_col,
+                                    global_cell_row	=> $global_cell_row,
+                                    global_cell_col	=> $global_cell_col,
+                                    btile_index	=> $btile_index,
+                                };
+                                if ( $coalesce_tiny_btiles ) {
+                                    if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
+                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
+                                        push @matched_btiles_1x1, $data;
+                                    } else {
+                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
+                                        push @matched_btiles, $data;
+                                        # mark it as used in the global BTILE list
+                                        $all_btiles[ $btile_index ]{'used_in_screen'}++;
+                                    }
                                 } else {
+                                    $debug and print "++   PUSHED TO \@matched_btiles\n";
                                     push @matched_btiles, $data;
                                     # mark it as used in the global BTILE list
                                     $all_btiles[ $btile_index ]{'used_in_screen'}++;
                                 }
-                            } else {
-                                push @matched_btiles, $data;
-                                # mark it as used in the global BTILE list
-                                $all_btiles[ $btile_index ]{'used_in_screen'}++;
-                            }
 
-                            # we also mark all of its cells as checked and matched
-                            foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
-                                foreach my $c ( 0 .. ( $btile_cols - 1 ) ) {
-                                    $checked_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
-                                    $matched_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
+                                # we also mark all of its cells as checked and matched
+                                foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
+                                    foreach my $c ( 0 .. ( $btile_cols - 1 ) ) {
+                                        $checked_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
+                                        $matched_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
+                                    }
+                                } # end of mark-as-checked-and-matched
+
+                                # take note if the detected btile is a crumb
+                                if ( $all_btiles[ $btile_index ]{'default_type'} eq 'crumb' ) {
+                                    $map_crumb_types{ $all_btiles[ $btile_index ]{'metadata'}{'type'} } = {
+                                        btile_name	=> $all_btiles[ $btile_index ]{'name'},
+                                    };
                                 }
-                            } # end of mark-as-checked-and-matched
 
-                            # take note if the detected btile is a crumb
-                            if ( $all_btiles[ $btile_index ]{'default_type'} eq 'crumb' ) {
-                                $map_crumb_types{ $all_btiles[ $btile_index ]{'metadata'}{'type'} } = {
-                                    btile_name	=> $all_btiles[ $btile_index ]{'name'},
-                                };
-                            }
+                                # whenever we find a match, skip the rest of btiles
+                                $btile_count++;
+                                if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
+                                    $tiny_btile_count++;
+                                }
+                                last;
+                            } else {
+                                # size is <= $minimum_coalesceable_tiny_btiles, so we skip it unless it is a 1x1 btile
+                                if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
+                                    my $data = {
+                                        screen_row	=> $screen_row,
+                                        screen_col	=> $screen_col,
+                                        cell_row	=> $cell_row,
+                                        cell_col	=> $cell_col,
+                                        global_cell_row	=> $global_cell_row,
+                                        global_cell_col	=> $global_cell_col,
+                                        btile_index	=> $btile_index,
+                                    };
+                                    if ( $coalesce_tiny_btiles ) {
+                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
+                                        push @matched_btiles_1x1, $data;
+                                    } else {
+                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
+                                        push @matched_btiles, $data;
+                                        # mark it as used in the global BTILE list
+                                        $all_btiles[ $btile_index ]{'used_in_screen'}++;
+                                    }
 
-                            # whenever we find a match, skip the rest of btiles
-                            $btile_count++;
-                            if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
-                                $tiny_btile_count++;
+                                    # we also mark all of its cells as checked and matched
+                                    $checked_cells->[ $global_cell_row ][ $global_cell_col ]++;
+                                    $matched_cells->[ $global_cell_row ][ $global_cell_col ]++;
+
+                                    # take note if the detected btile is a crumb
+                                    if ( $all_btiles[ $btile_index ]{'default_type'} eq 'crumb' ) {
+                                        $map_crumb_types{ $all_btiles[ $btile_index ]{'metadata'}{'type'} } = {
+                                            btile_name	=> $all_btiles[ $btile_index ]{'name'},
+                                        };
+                                    }
+
+                                    # whenever we find a match, skip the rest of btiles
+                                    $tiny_btile_count++;
+                                }
                             }
-                            last;
                         }
 
                     } # end of btile-list-walk-for-matches
@@ -871,8 +924,11 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
         # update btile counter for this screen
         $btile_count_by_screen[ $screen_row ][ $screen_col ] = $btile_count;
         $tiny_btile_count_by_screen[ $screen_row ][ $screen_col ] = $tiny_btile_count;
+
     }
 } # end of screen-walk
+
+
 
 ###########################################################################
 ###########################################################################
