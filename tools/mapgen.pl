@@ -1108,7 +1108,7 @@ foreach my $r ( 0 .. ( $map_screen_rows - 1 ) ) {
                     $r, $c, $btile_count );
                 $screens_with_too_many_btiles++;
             } else {
-                printf "-- Screen (%d,%d): matched %d BTILEs ( %d were tiny 1x1 BTILEs)\n",
+                printf "-- Screen (%d,%d): matched %d BTILEs (of which %d were tiny 1x1 BTILEs)\n",
                     $r, $c, $btile_count, $tiny_btile_count;
             }
         }
