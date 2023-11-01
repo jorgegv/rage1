@@ -51,7 +51,7 @@ my $coalesce_tiny_btiles;
 my $minimum_coalesceable_tiny_btiles = 6;
 my $use_tileset_cache;
 my $update_tileset_cache;
-my $tileset_cache_file = 'tileset.cache.gz';
+my $tileset_cache_file = 'mapgen-tileset-cache.gz';
 
 # global variables
 my %map_crumb_types;
