@@ -1,0 +1,12 @@
+Dataset  0:  7268b (C: 5039b) - Arena: 2334b - BTtab: 179(1074b) BTptrs: 1041(3123b) - BTpos: 347(1735b) - Screens:   4( 116b) - Rest: -1114b
+Dataset  1:  7886b (C: 5254b) - Arena: 1891b - BTtab: 197(1182b) BTptrs: 1213(3639b) - BTpos: 466(2330b) - Screens:   5( 145b) - Rest: -1301b
+Dataset  2:  6826b (C: 4374b) - Arena: 1308b - BTtab: 172(1032b) BTptrs: 1268(3804b) - BTpos: 356(1780b) - Screens:   5( 145b) - Rest: -1243b
+Dataset  3:  5800b (C: 3811b) - Arena: 1505b - BTtab: 120( 720b) BTptrs: 1173(3519b) - BTpos: 191( 955b) - Screens:   5( 145b) - Rest: -1044b
+Dataset  4:  5760b (C: 3783b) - Arena: 1466b - BTtab: 121( 726b) BTptrs: 1159(3477b) - BTpos: 204(1020b) - Screens:   5( 145b) - Rest: -1074b
+Dataset  5:  5037b (C: 2888b) - Arena:  931b - BTtab:  97( 582b) BTptrs: 1280(3840b) - BTpos: 133( 665b) - Screens:   5( 145b) - Rest: -1126b
+Dataset  6:  7040b (C: 4224b) - Arena: 2052b - BTtab: 103( 618b) BTptrs: 971(2913b) - BTpos: 169( 845b) - Screens:   5( 145b) - Rest:  467b
+Dataset  7:  5151b (C: 3161b) - Arena: 1552b - BTtab:  91( 546b) BTptrs: 980(2940b) - BTpos: 169( 845b) - Screens:   5( 145b) - Rest: -877b
+Dataset  8:  5589b (C: 3847b) - Arena: 2172b - BTtab: 116( 696b) BTptrs: 824(2472b) - BTpos: 175( 875b) - Screens:   5( 145b) - Rest: -771b
+Dataset  9:  7028b (C: 4840b) - Arena: 3045b - BTtab: 135( 810b) BTptrs: 810(2430b) - BTpos: 266(1330b) - Screens:   5( 145b) - Rest: -732b
+Dataset 10:  4578b (C: 2593b) - Arena: 1349b - BTtab:  69( 414b) BTptrs: 983(2949b) - BTpos: 103( 515b) - Screens:   5( 145b) - Rest: -794b
+Dataset 11:  4489b (C: 2958b) - Arena: 1493b - BTtab:  56( 336b) BTptrs: 472(1416b) - BTpos:  65( 325b) - Screens:   2(  58b) - Rest:  861b
