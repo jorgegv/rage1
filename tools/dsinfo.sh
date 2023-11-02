@@ -1,11 +1,13 @@
 #!/bin/bash
 
-DATASETS=$( cd build/generated/datasets; ls -1 dataset*.bin* | cut -f2 -d_ | cut -f1 -d. | sort -n | uniq )
+BASEDIR="$( realpath "$( dirname "$0" )" )/.."
+
+DATASETS=$( cd "$BASEDIR/build/generated/datasets" && ls -1 dataset*.bin* | cut -f2 -d_ | cut -f1 -d. | sort -n | uniq )
 
 for i in $DATASETS; do
-	dir="build/generated/datasets/dataset_$i.src"
-	DS_SIZE=$( ls -l "build/generated/datasets/dataset_$i.bin.save" | awk '{print $5}' )
-	DS_CSIZE=$( ls -l "build/generated/datasets/dataset_$i.zx0" | awk '{print $5}' )
+	dir="$BASEDIR/build/generated/datasets/dataset_$i.src"
+	DS_SIZE=$( ls -l "$BASEDIR/build/generated/datasets/dataset_$i.bin.save" | awk '{print $5}' )
+	DS_CSIZE=$( ls -l "$BASEDIR/build/generated/datasets/dataset_$i.zx0" | awk '{print $5}' )
 	ARENA_SIZE=$( grep -E "^uint8_t all_dataset_btile_data" "$dir/main.c" | awk '{print $3}' )
 	TILEPTR_COUNT=$( grep -E '^uint8_t \*btile.*tiles' "$dir/main.c" | awk '{print $3}' | perl -ne '$a+=$_; END { print $a,"\n"; }' )
 	TILEPTR_SIZE=$(( TILEPTR_COUNT * 3 ))
