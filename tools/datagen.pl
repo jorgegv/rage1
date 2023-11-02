@@ -31,6 +31,9 @@ use File::Path qw( make_path );
 use File::Copy;
 use File::Basename;
 
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
+
 # final destination address for compilation of datasets and codesets
 my $dataset_base_address = 0x5B00;
 my $codeset_base_address = 0xC000;
@@ -3707,9 +3710,9 @@ sub generate_game_events_rule_table {
 sub generate_game_data {
 
     # generate header lines for all output files
-    generate_c_home_header;
-    generate_c_banked_data_128_header;
-    generate_h_header;
+    generate_c_home_header and print ".";
+    generate_c_banked_data_128_header and print ".";
+    generate_h_header and print ".";
 
     # generate data - each function is free to add lines to the .c or .h
     # files
@@ -3717,47 +3720,48 @@ sub generate_game_data {
     # dataset items. All dataset are generated, including 'home'
     # 'home' dataset will be treated specially at output
     for my $dataset ( keys %dataset_dependency ) {
-        generate_c_banked_header( $dataset );
-        generate_btiles( $dataset );
-        generate_sprites( $dataset );
-        generate_flow_rules( $dataset );
-        generate_screens( $dataset );
-        generate_map( $dataset );
+        generate_c_banked_header( $dataset ) and print ".";
+        generate_btiles( $dataset ) and print ".";
+        generate_sprites( $dataset ) and print ".";
+        generate_flow_rules( $dataset ) and print ".";
+        generate_screens( $dataset ) and print ".";
+        generate_map( $dataset ) and print ".";
     }
 
     # home bank items
-    generate_hero;
-    generate_bullets;
-    generate_items;
-    generate_crumb_types;
-    generate_global_screen_data;
-    generate_game_areas;
-    generate_game_config;
-    generate_misc_data;
-    generate_game_events_rule_table;
+    generate_hero and print ".";
+    generate_bullets and print ".";
+    generate_items and print ".";
+    generate_crumb_types and print ".";
+    generate_global_screen_data and print ".";
+    generate_game_areas and print ".";
+    generate_game_config and print ".";
+    generate_misc_data and print ".";
+    generate_game_events_rule_table and print ".";
 
     # tracker items
-    generate_tracker_data;
+    generate_tracker_data and print ".";
 
     # codeset items
-    generate_codeset_headers;
-    generate_codeset_functions;
-    generate_global_codeset_data;
+    generate_codeset_headers and print ".";
+    generate_codeset_functions and print ".";
+    generate_global_codeset_data and print ".";
     # binary data items, may be stored in codesets
-    generate_binary_data_items;
+    generate_binary_data_items and print ".";
 
     # this must be generated after codesets, it needs the codeset function
     # call macros
-    generate_game_functions;
+    generate_game_functions and print ".";
 
     # generate custom function tables
-    generate_custom_function_tables;
+    generate_custom_function_tables and print ".";
 
     # generate conditional build features
-    generate_conditional_build_features;
+    generate_conditional_build_features and print ".";
 
     # generate ending lines if needed
-    generate_h_ending;
+    generate_h_ending and print ".";
+    print "\n";
 }
 
 sub output_game_data {
@@ -4062,6 +4066,7 @@ sub dump_internal_data {
 #########################
 
 # get tool configuration
+print "Reading configuration...\n";
 my $cfg = rage1_get_config();
 
 our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
@@ -4080,20 +4085,26 @@ $game_src_dir = $opt_s || 'build/game_src';
 $forced_build_target = $opt_t || 0;
 
 # add default build features - these will be updated/modified later
+print "Adding default build features...\n";
 add_default_build_features;
 
 # read, validate and compile input
+print "Reading input data files...\n";
 read_input_data;
 
 # run consistency checks
+print "Running consistency checks...\n";
 run_consistency_checks;
 
 # process data dependencies
+print "Computing dataset dependencies...\n";
 create_dataset_dependencies;
 fix_feature_dependencies;
 
 # generate output
+print "Generating game data...\n";
 generate_game_data;
+print "Writing output files...\n";
 output_game_data;
 
 # dump internal data if required to do so
