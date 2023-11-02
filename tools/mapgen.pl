@@ -25,6 +25,10 @@ use File::Basename qw( basename );
 use Getopt::Long;
 use GD;
 use List::Util qw( uniq );
+use Digest::SHA1 qw( sha1_hex );
+
+STDOUT->autoflush(1);
+STDERR->autoflush(1);
 
 # arguments: 2 or more PNG files, plus some required switches (screen
 # dimensions, output directory, etc.)
@@ -42,6 +46,12 @@ my $auto_tileset_btiles;
 my $auto_tileset_max_rows = 16;
 my $auto_tileset_max_cols = 16;
 my $generate_btile_report;
+my $coalesce_tiny_btiles;
+# after analysis, this is the correct value
+my $minimum_coalesceable_tiny_btiles = 6;
+my $use_tileset_cache;
+my $update_tileset_cache;
+my $tileset_cache_file = 'mapgen-tileset-cache.gz';
 
 # global variables
 my %map_crumb_types;
@@ -62,7 +72,11 @@ my %map_crumb_types;
         "hero-sprite-width=i"		=> \$hero_sprite_width,
         "hero-sprite-height=i"		=> \$hero_sprite_height,
         "auto-tileset-btiles"		=> \$auto_tileset_btiles,	# optional, default false
-        "generate-btile-report:s"	=> \$generate_btile_report	# optional
+        "generate-btile-report:s"	=> \$generate_btile_report,	# optional
+        "coalesce-tiny-btiles"		=> \$coalesce_tiny_btiles,	# optional
+        "use-tileset-cache"		=> \$use_tileset_cache,		# optional
+        "update-tileset-cache"		=> \$update_tileset_cache,	# optional
+        "tileset-cache-file:s"		=> \$tileset_cache_file,	# optional
     )
     and ( scalar( @ARGV ) >= 2 )
     and defined( $screen_cols )
@@ -72,7 +86,7 @@ my %map_crumb_types;
     and defined( $game_area_left )
     and defined( $hero_sprite_width )
     and defined( $hero_sprite_height )
-) or die "usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
+) or die "Usage: " . basename( $0 ) . " <options> <map_png> <btile_png> [<btile_png>]...\n" . <<EOF_HELP
 
 Where <options> can be the following:
 
@@ -95,6 +109,10 @@ Optional:
     --generate-check-map		Generates a check-map with outlines for the matched objects (PNG)
     --auto-tileset-btiles		Automatically creates BTILE definitions for all possible BTILEs in tilesets
     --generate-btile-report <file>	Writes a report of BTILEs used on each screen to the file given as parameter
+    --coalesce-tiny-btiles		Coalesces tiny 1x1 BTILEs into bigger synthetic rectangular ones
+    --use-tileset-cache			Use a previously built tileset cache file if present
+    --update-tileset-cache		Force an update of the tileset cache file after creating the BTILE lists
+    --tileset-cache-file		Specify an alternate tileset cache (default: tileset.cache)
 
 Colors are specified as RRGGBB (RGB components in hex notation)
 
@@ -184,9 +202,6 @@ print "Loading BTILEs...\n";
 #   - The hash of the cell is the 'hexdump' field, which is just the
 #     concatenation of the 8 bytes plus the attr byte, all in hex form
 
-my @all_btiles;			# list of all found btiles
-my %btile_index;		# map of cell->hexdump => btile index
-
 sub is_background_btile {
     my $btile_data = shift;
     foreach my $rows ( @$btile_data ) {
@@ -209,11 +224,16 @@ sub generate_btiles {
 
     my @generated_btiles;
 
+    my %cell_seen;
+
     # first generate btiles for the individual 8x8 cells, as a fallback
     foreach my $r ( 0 .. png_get_height_cells( $png ) - 1 ) {
         foreach my $c ( 0 .. png_get_width_cells( $png ) - 1 ) {
             # get all cell data for the btile
             my $btile_data = png_get_all_cell_data( $png, $r, $c, 1, 1 );
+
+            next if ( $cell_seen{ $btile_data->[0][0]{'hexdump'} } || 0 );
+            $cell_seen{ $btile_data->[0][0]{'hexdump'} }++;
 
             # prepare btile cell data struct
             my $btile = {
@@ -224,6 +244,7 @@ sub generate_btiles {
                 cell_col	=> $c,
                 cell_width	=> 1,
                 cell_height	=> 1,
+                num_cells	=> 1,	# precalculated for later
                 cell_data	=> $btile_data,
                 png_file	=> $png_file,
             };
@@ -235,6 +256,11 @@ sub generate_btiles {
 
     # then generate the btiles for the tiledef definitions
     foreach my $tiledef ( @$tiledefs ) {
+
+        # We do not generate btiles that are smaller than 6 cells.  They
+        # will be identified as 1x1 tiny btiles (generated in the previous
+        # step) and try to be coalesced later
+        next if ( $tiledef->{'cell_width'} * $tiledef->{'cell_height'} < $minimum_coalesceable_tiny_btiles );
 
         # get all cell data for the btile
         my $btile_data = png_get_all_cell_data(
@@ -254,6 +280,7 @@ sub generate_btiles {
             cell_col		=> $tiledef->{'cell_col'},
             cell_width		=> $tiledef->{'cell_width'},
             cell_height		=> $tiledef->{'cell_height'},
+            num_cells		=> $tiledef->{'cell_width'} * $tiledef->{'cell_height'},	# precalculated for later
             cell_data		=> $btile_data,
             png_file		=> $png_file,
         };
@@ -264,11 +291,15 @@ sub generate_btiles {
         # if automatic generation of btiles in tilesets has been requested,
         # create the list of all possible subtiles of all sizes (up to the
         # current btile size), except those that are full background
+        # again, we do not create btiles smaller than 6 cells
         if ( $auto_tileset_btiles ) {
             my $height = $tiledef->{'cell_height'};
             my $width = $tiledef->{'cell_width'};
             foreach my $cur_height ( 1 .. $height ) {
                 foreach my $cur_width ( 1 .. $width ) {
+
+                    next if ( $cur_width * $cur_height < $minimum_coalesceable_tiny_btiles );
+
                     foreach my $cur_row ( $tiledef->{'cell_row'} .. ( $tiledef->{'cell_row'} + $height - $cur_height ) ) {
                         foreach my $cur_col ( $tiledef->{'cell_col'} .. ( $tiledef->{'cell_col'} + $width - $cur_width ) ) {
                             my $btile_name = sprintf("%s_r%03dc%03dw%03dh%03d",$file_prefix,$cur_row,$cur_col,$cur_width,$cur_height);
@@ -282,6 +313,7 @@ sub generate_btiles {
                                     cell_col		=> $cur_col,
                                     cell_width		=> $cur_width,
                                     cell_height		=> $cur_height,
+                                    num_cells		=> $cur_width * $cur_height,	# precalculated for later
                                     cell_data		=> $btile_data,
                                     png_file		=> $png_file,
                                 };
@@ -296,150 +328,207 @@ sub generate_btiles {
     return @generated_btiles;
 }
 
-# process all PNG Btile files
-foreach my $png_file ( @btile_files ) {
+my @all_btiles;			# list of all found btiles
+my %btile_index;		# map of cell->hexdump => btile index
+my %all_btiles_seen;
+my $tilesets_were_preloaded = 0;
 
-    # load the PNG and convert it to the ZX Spectrum color palette
-    my $png = load_png_file( $png_file ) or
-        die "** Error: could not load PNG file $png_file\n";
-    map_png_colors_to_zx_colors( $png );
-
-    # get all the tiledefs for the file
-    my $tiledefs = btile_read_png_tiledefs( $png_file );
-
-    btile_validate_png_tiledefs( $png, $tiledefs ) or
-        die sprintf( "** Error: errors found in TILEDEF file for %s\n", $png_file );
-
-    # initialize tile counter
-    my $tile_count = 0;
-
-    # process the PNG's cells and extract the btiles in all posible positions.
-    #
-    # There are 8 possible combinations of rotation and mirror):
-    #
-    #   R0  : 0 deg rotation, no mirror (the PNG file as-is)
-    #   R0MV: 0 deg rotation, vert mirror
-    #   R1  : 90 deg rotation, no mirror
-    #   R1MH: 90 deg rotation, horiz mirror
-    #   R2  : 180 rotation, no mirror
-    #   R2MV: 180 rotation, vert mirror
-    #   R3  : 270 rotation, no mirror
-    #   R3MH: 270 rotation, horiz mirror
-
-    my $prefix;
-    my $n_png;
-    my $n_tiledefs;
-
-    # config: r0
-    $prefix = 'r0';
-    foreach my $btile ( generate_btiles( $png, $tiledefs, $png_file, $prefix ) ) {
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+# adds to @all_btiles and %btile_index
+sub add_btile_to_all_btiles_list {
+    my $btile = shift;
+    my $btile_hash;
+    foreach my $row ( @{ $btile->{'cell_data'} } ) {
+        foreach my $cell ( @$row ) {
+            $btile_hash .= $cell->{'hexdump'};
+        }
     }
 
-    # config: r0mv
-    $prefix = 'r0mv';
-    $n_png = png_vmirror( $png );
-    $n_tiledefs = btile_vmirror_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ) );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_vmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+    # ignore if it has already been added previously
+    return if $all_btiles_seen{ $btile_hash };
+    $all_btiles_seen{ $btile_hash }++;
+
+    my $current_btile_index = scalar( @all_btiles );	# pos of new list element
+    push @all_btiles, $btile;
+    push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
+}
+
+# if we were asked to use the cache, try to use it. If there are errors, warn but continue without it
+if ( $use_tileset_cache ) {
+
+    print "-- Loading BTILE definitions from tileset cache file...\n";
+    my $error = 0;
+    if ( open CACHE, "gzip -dc $tileset_cache_file |" ) {
+        my $line_count = 1;
+        while ( not $error and my $line = <CACHE> ) {
+            my $VAR1;
+            if ( defined( $line ) and eval $line ) {
+                add_btile_to_all_btiles_list( $VAR1 );
+            } else {
+                warn "** Warning: data format invalid in $tileset_cache_file line $line_count\n";
+                $error++;
+            }
+            $line_count++;
+        }
+        close CACHE;
+    } else {
+        warn "** Warning: could not open $tileset_cache_file for reading\n";
+        $error++;
     }
 
-    # config: r1
-    $prefix = 'r1';
-    $n_png = png_rotate( $png, 1 );
-    $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+    # signal success if no errors and some btiles were read
+    if ( not $error and scalar( @all_btiles ) ) {
+        $tilesets_were_preloaded++;
+    }
+}
+
+# if tilesets are not loaded, do it
+if ( not $tilesets_were_preloaded ) {
+
+    print "-- Generating BTILE data...\n";
+
+    # process all PNG Btile files
+    foreach my $png_file ( @btile_files ) {
+
+        # load the PNG and convert it to the ZX Spectrum color palette
+        my $png = load_png_file( $png_file ) or
+            die "** Error: could not load PNG file $png_file\n";
+        map_png_colors_to_zx_colors( $png );
+
+        # get all the tiledefs for the file
+        my $tiledefs = btile_read_png_tiledefs( $png_file );
+
+        btile_validate_png_tiledefs( $png, $tiledefs ) or
+            die sprintf( "** Error: errors found in TILEDEF file for %s\n", $png_file );
+
+        # initialize tile counter
+        my $tile_count = 0;
+
+        # process the PNG's cells and extract the btiles in all posible positions.
+        #
+        # There are 8 possible combinations of rotation and mirror):
+        #
+        #   R0  : 0 deg rotation, no mirror (the PNG file as-is)
+        #   R0MV: 0 deg rotation, vert mirror
+        #   R1  : 90 deg rotation, no mirror
+        #   R1MH: 90 deg rotation, horiz mirror
+        #   R2  : 180 rotation, no mirror
+        #   R2MV: 180 rotation, vert mirror
+        #   R3  : 270 rotation, no mirror
+        #   R3MH: 270 rotation, horiz mirror
+
+        my $prefix;
+        my $n_png;
+        my $n_tiledefs;
+
+        # config: r0
+        $prefix = 'r0';
+        foreach my $btile ( generate_btiles( $png, $tiledefs, $png_file, $prefix ) ) {
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # config: r0mv
+        $prefix = 'r0mv';
+        $n_png = png_vmirror( $png );
+        $n_tiledefs = btile_vmirror_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ) );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_vmirror'} = 1;
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # config: r1
+        $prefix = 'r1';
+        $n_png = png_rotate( $png, 1 );
+        $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 1;
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # config: r1mh
+        $prefix = 'r1mh';
+        $n_png = png_hmirror( png_rotate( $png, 1 ) );
+        $n_tiledefs = btile_hmirror_tiledefs(
+            btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 ),
+            png_get_height_cells( $png ),	# width and height are swapped after rotation in R1 config
+            png_get_width_cells( $png ),
+        );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 1;
+            $btile->{'png_hmirror'} = 1;
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # config: r2
+        $prefix = 'r2';
+        $n_png = png_rotate( $png, 2 );
+        $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 2;
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # config: r2mv
+        $prefix = 'r2mv';
+        $n_png = png_vmirror( png_rotate( $png, 2 ) );
+        $n_tiledefs = btile_vmirror_tiledefs(
+            btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 ),
+            png_get_width_cells( $png ),	# width and height are kept when in R2 rotation
+            png_get_height_cells( $png ),
+        );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 2;
+            $btile->{'png_vmirror'} = 1;
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # config: r3
+        $prefix = 'r3';
+        $n_png = png_rotate( $png, 3 );
+        $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 3;
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # config: r3mh
+        $prefix = 'r3mh';
+        $n_png = png_hmirror( png_rotate( $png, 3 ) );
+        $n_tiledefs = btile_hmirror_tiledefs(
+            btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 ),
+            png_get_height_cells( $png ),	# width and height are swapped after rotation in R3 config
+            png_get_width_cells( $png ),
+        );
+        foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
+            $btile->{'png_rotate'} = 3;
+            $btile->{'png_hmirror'} = 1;
+            add_btile_to_all_btiles_list( $btile );
+            $tile_count++;
+        }
+
+        # report
+        printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
     }
 
-    # config: r1mh
-    $prefix = 'r1mh';
-    $n_png = png_hmirror( png_rotate( $png, 1 ) );
-    $n_tiledefs = btile_hmirror_tiledefs(
-        btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 1 ),
-        png_get_height_cells( $png ),	# width and height are swapped after rotation in R1 config
-        png_get_width_cells( $png ),
-    );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 1;
-        $btile->{'png_hmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
+}
 
-    # config: r2
-    $prefix = 'r2';
-    $n_png = png_rotate( $png, 2 );
-    $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 2;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
+# if cache was asked to be rebuilt, do it but skip if it will be the same as the original
+if ( $update_tileset_cache and not $tilesets_were_preloaded ) {
+    print "-- Updating tileset cache file...\n";
+    open CACHE, "| gzip > $tileset_cache_file" or
+        die "** Error: could not open $tileset_cache_file for writing\n";
+    foreach my $btile ( @all_btiles ) {
+        my $btile_dump = Dumper( $btile );
+        $btile_dump =~ s/\n/ /g;
+        print CACHE $btile_dump, "\n";
     }
-
-    # config: r2mv
-    $prefix = 'r2mv';
-    $n_png = png_vmirror( png_rotate( $png, 2 ) );
-    $n_tiledefs = btile_vmirror_tiledefs(
-        btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 2 ),
-        png_get_width_cells( $png ),	# width and height are kept when in R2 rotation
-        png_get_height_cells( $png ),
-    );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 2;
-        $btile->{'png_vmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
-
-    # config: r3
-    $prefix = 'r3';
-    $n_png = png_rotate( $png, 3 );
-    $n_tiledefs = btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 3;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
-
-    # config: r3mh
-    $prefix = 'r3mh';
-    $n_png = png_hmirror( png_rotate( $png, 3 ) );
-    $n_tiledefs = btile_hmirror_tiledefs(
-        btile_rotate_tiledefs( $tiledefs, png_get_width_cells( $png ), png_get_height_cells( $png ), 3 ),
-        png_get_height_cells( $png ),	# width and height are swapped after rotation in R3 config
-        png_get_width_cells( $png ),
-    );
-    foreach my $btile ( generate_btiles( $n_png, $n_tiledefs, $png_file, $prefix ) ) {
-        $btile->{'png_rotate'} = 3;
-        $btile->{'png_hmirror'} = 1;
-        my $current_btile_index = scalar( @all_btiles );	# pos of new list element
-        push @all_btiles, $btile;
-        push @{ $btile_index{ $btile->{'cell_data'}[0][0]{'hexdump'} } }, $current_btile_index;
-        $tile_count++;
-    }
-
-    # report
-    printf "-- File %s: read %d BTILEs\n", $png_file, $tile_count;
+    close CACHE;
 }
 
 # Since there may be more than one BTILE with the same top-left cell, we now
@@ -448,23 +537,26 @@ foreach my $png_file ( @btile_files ) {
 # when searching.  Most of the time the lists will have only one element,
 # but we need to account for all cases.
 
-sub btile_cell_size {
-    my $btile_data = shift;
-    return scalar( @$btile_data ) * scalar( @{ $btile_data->[0] } );
-}
-
+print "-- Sorting BTILEs...\n";
 foreach my $hash ( keys %btile_index ) {
     my @sorted = sort {
-        btile_cell_size( $all_btiles[ $b ]{'cell_data'} )
-        <=>
-        btile_cell_size( $all_btiles[ $a ]{'cell_data'} ) 
+        $all_btiles[ $b ]{'num_cells'} <=> $all_btiles[ $a ]{'num_cells'}
     } @{ $btile_index{ $hash } };
     $btile_index{ $hash } = \@sorted;
 }
+#foreach my $hash ( sort keys  %btile_index ) {
+#    printf "%s: %s\n", $hash, join( ", ", map { sprintf "i:%d(n:%d)", $_, $all_btiles[ $_ ]{'num_cells'} } @{ $btile_index{ $hash } } );
+#}
+#exit;
 
 # At this point, we have a global list of BTILEs ( @all_btiles ) and a index
 # of hashes for the top-left cell of each one of them ( %btile_index ), so
 # that we can quickly search for all the tiles that have that cell
+
+printf "-- Total candidate BTILEs defined: %d\n", scalar( @all_btiles );
+if ( scalar( keys %all_btiles_seen ) != scalar( @all_btiles ) ) {
+    die sprintf( "** Error: not all BTILEs (%d) found in index (%d)\n", scalar( @all_btiles ), scalar( keys %all_btiles_seen ) );
+}
 
 ###########################################################################
 ###########################################################################
@@ -589,18 +681,26 @@ print "-- Screen metadata loaded from MAPDEF file\n";
 #
 #   - Check it the status is not "matched" (it may habe been marked as such
 #     by previous identified BTILEs). Skip if it is already "matched"
+#
 #   - Calculate the hash for the map cell
+#
 #   - Search for the hash in the BTILE index (it should exist, error if
 #     it doesn't)
+#
 #   - If there is only one match, it means that there is only one tile with
 #     that cell, so verify that the remaining cells also match, and mark the
 #     status for that cells as "matched" in the status array
+#
 #   - If there is more than one match, we should verify all the BTILEs,
 #     starting by the bigger ones.  Hopefully one of them will match.  We
 #     will stop the search and mark the relevant cell status as "matched" in
 #     the status array
+#
 #   - When we have fully identified the BTILE, we save the name, position
-#     and current screen number in the global BTILE instances list
+#     and current screen number in the global BTILE instances list, but only
+#     if the size of the identified BTILE is greater than 1x1.  1x1 cell
+#     BTILEs will be handled in a separate step later on, and are saved in a
+#     separate list.
 #
 # Repeat this process for all map screens
 #
@@ -619,11 +719,13 @@ print "-- Screen metadata loaded from MAPDEF file\n";
 # re-check the cells corresponding to an already matched btile.  At the end
 # of matching, this bidimensional array should have the same size as the
 # main map (in cells), and all values should be defined and == 1
+
 my $checked_cells;
 my $matched_cells;
 
-# this list will hold the matched btiles, with all associated metadata
+# this lists will hold the matched btiles, with all associated metadata
 my @matched_btiles;
+my @matched_btiles_1x1;
 
 # returns true if a given btile matches the cells in the map at position
 # (row,col), restricted to a given screen.  Btile must be completely inside
@@ -662,9 +764,13 @@ sub match_btile_in_map {
 print "Identifying BTILEs in Main Map...\n";
 
 # walk the screen array
-my $screens_with_too_many_btiles = 0;
+my @btile_count_by_screen;
+my @tiny_btile_count_by_screen;
 foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
     foreach my $screen_col ( 0 .. ( $map_screen_cols - 1 ) ) {
+
+        # check
+#        my $debug = ( $screen_row == 9 ) and ( $screen_col == 6 ) ? 1 : 0;
 
         # temporary values
         my $global_screen_top = $screen_row * $screen_rows;
@@ -673,17 +779,21 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
         my $global_screen_right = $global_screen_left + $screen_cols - 1;
 
         my $btile_count = 0;
+        my $tiny_btile_count = 0;
 
         # walk the cell array on each screen
         foreach my $cell_row ( 0 .. ( $screen_rows - 1 ) ) {
             foreach my $cell_col ( 0 .. ( $screen_cols - 1 ) ) {
 
-                my $global_cell_row = $screen_row * $screen_rows + $cell_row;
-                my $global_cell_col = $screen_col * $screen_cols + $cell_col;
+#                $debug and printf( "++ CELL_ROW:%d CELL_COL:%d\n", $cell_row, $cell_col );
 
-                # skip if the cell has already been checked by a previously
-                # matched btile
-                next if $checked_cells->[ $global_cell_row ][ $global_cell_col ];
+                my $global_cell_row = $global_screen_top + $cell_row;
+                my $global_cell_col = $global_screen_left + $cell_col;
+
+                # skip if the cell is already owned by a previously matched
+                # btile
+#                $debug and printf( "++   MATCHED:%d\n", $matched_cells->[ $global_cell_row ][ $global_cell_col ] || 0 );
+                next if $matched_cells->[ $global_cell_row ][ $global_cell_col ];
 
                 # ...otherwise mark the cell as checked and continue
                 $checked_cells->[ $global_cell_row ][ $global_cell_col ]++;
@@ -692,56 +802,116 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
                 my $top_left_cell_hash = $main_map_cell_data->[ $global_cell_row ][ $global_cell_col ]{'hexdump'};
 
                 # skip if it is a background tile
+#                $debug and printf( "++   TOP_LEFT_HASH:%s\n", $top_left_cell_hash );
                 next if ( $top_left_cell_hash eq '000000000000000000' );
 
                 # if there are one or more btiles with that cell hash as its
                 # top-left, try to match all btiles from the list.
+#                $debug and printf( "++   DEF(BTINDEX):%s\n", defined( $btile_index{ $top_left_cell_hash } )?1:0 );
                 if ( defined( $btile_index{ $top_left_cell_hash } ) ) {
 
                     #  The list is ordered from bigger to smaller btile, so
                     # the biggest btile will be matched first.  First match
                     # wins
+#                    $debug and printf( "++   LIST(BTINDEX):%d\n", scalar( @{ $btile_index{ $top_left_cell_hash } } ) );
                     foreach my $btile_index ( @{ $btile_index{ $top_left_cell_hash } } ) {
                         my $btile_data = $all_btiles[ $btile_index ]{'cell_data'};
                         my $btile_rows = scalar( @$btile_data );
                         my $btile_cols = scalar( @{ $btile_data->[0] } );
+
                         if ( match_btile_in_map( $main_map_cell_data,
                             $global_screen_top, $global_screen_left, $global_screen_bottom, $global_screen_right,
                             $btile_data,
                             $global_cell_row, $global_cell_col ) ) {
 
-                            # if a match was found, add it to the list of matched btiles
-                            push @matched_btiles, {
-                                screen_row	=> $screen_row,
-                                screen_col	=> $screen_col,
-                                cell_row	=> $cell_row,
-                                cell_col	=> $cell_col,
-                                global_cell_row	=> $global_cell_row,
-                                global_cell_col	=> $global_cell_col,
-                                btile_index	=> $btile_index,
-                            };
-
-                            # mark it as used in the global BTILE list
-                            $all_btiles[ $btile_index ]{'used_in_screen'}++;
-
-                            # we also mark all of its cells as checked and matched
-                            foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
-                                foreach my $c ( 0 .. ( $btile_cols - 1 ) ) {
-                                    $checked_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
-                                    $matched_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
-                                }
-                            } # end of mark-as-checked-and-matched
-
-                            # take note if the detected btile is a crumb
-                            if ( $all_btiles[ $btile_index ]{'default_type'} eq 'crumb' ) {
-                                $map_crumb_types{ $all_btiles[ $btile_index ]{'metadata'}{'type'} } = {
-                                    btile_name	=> $all_btiles[ $btile_index ]{'name'},
+                            # if a match was found, add it to the proper list of matched btiles, but only if it is above the threshold
+                            if ( $btile_rows * $btile_cols >= $minimum_coalesceable_tiny_btiles ) {
+#                                $debug and printf( "++   MATCH! SCREEN_ROW:%d SCREEN_COL:%d CELL_ROW:%d CELL_COL:%d WIDTH:%d HEIGHT:%d\n",
+#                                    $screen_row,$screen_col,$cell_row,$cell_col,$btile_cols, $btile_rows );
+                                my $data = {
+                                    screen_row	=> $screen_row,
+                                    screen_col	=> $screen_col,
+                                    cell_row	=> $cell_row,
+                                    cell_col	=> $cell_col,
+                                    global_cell_row	=> $global_cell_row,
+                                    global_cell_col	=> $global_cell_col,
+                                    btile_index	=> $btile_index,
                                 };
-                            }
+                                if ( $coalesce_tiny_btiles ) {
+                                    if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
+#                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
+                                        push @matched_btiles_1x1, $data;
+                                    } else {
+#                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
+                                        push @matched_btiles, $data;
+                                        # mark it as used in the global BTILE list
+                                        $all_btiles[ $btile_index ]{'used_in_screen'}++;
+                                    }
+                                } else {
+#                                    $debug and print "++   PUSHED TO \@matched_btiles\n";
+                                    push @matched_btiles, $data;
+                                    # mark it as used in the global BTILE list
+                                    $all_btiles[ $btile_index ]{'used_in_screen'}++;
+                                }
 
-                            # whenever we find a match, skip the rest of btiles
-                            $btile_count++;
-                            last;
+                                # we also mark all of its cells as checked and matched
+                                foreach my $r ( 0 .. ( $btile_rows - 1 ) ) {
+                                    foreach my $c ( 0 .. ( $btile_cols - 1 ) ) {
+                                        $checked_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
+                                        $matched_cells->[ $global_cell_row + $r ][ $global_cell_col + $c ]++;
+                                    }
+                                } # end of mark-as-checked-and-matched
+
+                                # take note if the detected btile is a crumb
+                                if ( $all_btiles[ $btile_index ]{'default_type'} eq 'crumb' ) {
+                                    $map_crumb_types{ $all_btiles[ $btile_index ]{'metadata'}{'type'} } = {
+                                        btile_name	=> $all_btiles[ $btile_index ]{'name'},
+                                    };
+                                }
+
+                                # whenever we find a match, skip the rest of btiles
+                                $btile_count++;
+                                if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
+                                    $tiny_btile_count++;
+                                }
+                                last;
+                            } else {
+                                # size is <= $minimum_coalesceable_tiny_btiles, so we skip it unless it is a 1x1 btile
+                                if ( ( $btile_rows == 1 ) and ( $btile_cols == 1 ) ) {
+                                    my $data = {
+                                        screen_row	=> $screen_row,
+                                        screen_col	=> $screen_col,
+                                        cell_row	=> $cell_row,
+                                        cell_col	=> $cell_col,
+                                        global_cell_row	=> $global_cell_row,
+                                        global_cell_col	=> $global_cell_col,
+                                        btile_index	=> $btile_index,
+                                    };
+                                    if ( $coalesce_tiny_btiles ) {
+#                                        $debug and print "++   PUSHED TO \@matched_btiles_1x1\n";
+                                        push @matched_btiles_1x1, $data;
+                                    } else {
+#                                        $debug and print "++   PUSHED TO \@matched_btiles\n";
+                                        push @matched_btiles, $data;
+                                        # mark it as used in the global BTILE list
+                                        $all_btiles[ $btile_index ]{'used_in_screen'}++;
+                                    }
+
+                                    # we also mark all of its cells as checked and matched
+                                    $checked_cells->[ $global_cell_row ][ $global_cell_col ]++;
+                                    $matched_cells->[ $global_cell_row ][ $global_cell_col ]++;
+
+                                    # take note if the detected btile is a crumb
+                                    if ( $all_btiles[ $btile_index ]{'default_type'} eq 'crumb' ) {
+                                        $map_crumb_types{ $all_btiles[ $btile_index ]{'metadata'}{'type'} } = {
+                                            btile_name	=> $all_btiles[ $btile_index ]{'name'},
+                                        };
+                                    }
+
+                                    # whenever we find a match, skip the rest of btiles
+                                    $tiny_btile_count++;
+                                }
+                            }
                         }
 
                     } # end of btile-list-walk-for-matches
@@ -751,20 +921,257 @@ foreach my $screen_row ( 0 .. ( $map_screen_rows - 1 ) ) {
             }
         } # end of cell-walk inside a screen
 
-        # only report BTILE count for screens with some identified
-        if ( $btile_count ) {
-            if ( $btile_count > 255 ) {
-                warn sprintf( "** WARNING: Screen (%d,%d): matched %d BTILEs (more than 255)\n",
-                    $screen_row, $screen_col, $btile_count );
-                $screens_with_too_many_btiles++;
-            } else {
-                printf "-- Screen (%d,%d): matched %d BTILEs\n",
-                    $screen_row, $screen_col, $btile_count;
-            }
-        }
+        # update btile counter for this screen
+        $btile_count_by_screen[ $screen_row ][ $screen_col ] = $btile_count;
+        $tiny_btile_count_by_screen[ $screen_row ][ $screen_col ] = $tiny_btile_count;
+
     }
 } # end of screen-walk
 
+
+
+###########################################################################
+###########################################################################
+##
+## 4.1. Try to coalesce 1x1 BTILEs into bigger ones generated on the fly
+##
+###########################################################################
+###########################################################################
+
+# We will try to coalesce 1x1 tiles from @matched_btiles_1x1 in bigger
+# rectangular tiles, and then add the coalesced tiles to the main btile list
+# @matched_btiles, so that it can be processed later all together
+#
+# Steps:
+#
+# - Create an MxN array with all 1x1 matched btiles, with undef in positions
+#   where no btile is found, and the btile index in @matched_btiles_1x1
+#   where a btile is found
+#
+# - Create an MxN state array with all 0's
+#
+# - Walk the RxC screens one by one, and try to find rectangles of adjacent
+#   1x1 cells
+#
+# - When a rectangle is found: 
+#   - Create an ad-hoc btile definition and add it to the @all_btiles list
+#   - Add the new btile definition and position to the @matched_btiles list
+#   - Mark all the 1x1 btiles which have been coalesced {'coalesced'} = 1
+#
+# - Repeat until all the map has been walked
+#
+# - Walk all the @matched_btiles_1x1 list again, searching for 1x1 btiles
+#   that have _not_ been coalesced.  For those that haven't, add them as 1x1
+#   btiles to the main @matched_btiles list (these are the only 1x1 btiles
+#   that will be finally output as such in the map definitions
+#
+# - Hopefully, lots of 1x1 btiles will be coalesced into bigger ones.  As
+#   long as 6 or more 1x1 btiles are coalesced as a single, there will be
+#   memory savings
+
+if ( $coalesce_tiny_btiles ) {
+    print "Coalescing tiny BTILEs...\n";
+
+    # setup state array...
+    my @map_cell;
+
+    # reset state
+    # { cell_id => <index in @matched_btiles_1x1>, checked => <state 0|1>, coalesced => <0|1> }
+    foreach my $r ( 0 .. $map_rows - 1 ) {
+        foreach my $c ( 0 .. $map_cols - 1 ) {
+            $map_cell[ $r ][ $c ]{'cell_id'} = undef;
+            $map_cell[ $r ][ $c ]{'checked'} = 0;
+            $map_cell[ $r ][ $c ]{'coalesced'} = 0;
+        }
+    }
+
+    # note all cells that have 1x1 btiles to coalesce
+    foreach my $i ( 0 .. scalar( @matched_btiles_1x1 ) - 1 ) {
+        my $btile = $matched_btiles_1x1[ $i ];
+        $map_cell[ $btile->{'global_cell_row'} ][ $btile->{'global_cell_col'} ]{'cell_id'} = $i;
+    }
+
+    my $num_synthetic_btiles = 0;
+
+    # walk the whole map, screen by screen
+    # for each screen, walk from left to right, top to bottom
+    foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
+        foreach my $map_col_index ( 0 .. $map_cols - 1 ) {
+
+            # skip this cell quickly if it has already been checked
+            next if $map_cell[ $map_row_index ][ $map_col_index ]{'checked'};
+            $map_cell[ $map_row_index ][ $map_col_index ]{'checked'}++;
+
+            # skip if it does not have a coalesceable tile
+            next if not defined( $map_cell[ $map_row_index ][ $map_col_index ]{'cell_id'} );
+
+            # skip it if it has already been coalesced with some others
+            next if $map_cell[ $map_row_index ][ $map_col_index ]{'coalesced'};
+
+            # precalculate screen row and col
+            my $current_screen_row = int( $map_row_index / $screen_rows );
+            my $current_screen_col = int( $map_col_index / $screen_cols );
+
+            # keep checking to the right while more btiles found until hole
+            # (undef) found or screen width is reached
+            # note the max width
+            # start going down one row at at a time, doing the same up to the max width
+            # repeat until on the start of the row we find a hole (undef)
+            my $cell_check_row = $map_row_index;
+            my $width = 0;
+            while( ( $cell_check_row < ( $current_screen_row + 1 ) * $screen_rows ) and
+                    not $map_cell[ $cell_check_row ][ $map_col_index ]{'coalesced'} and
+                    defined( $map_cell[ $cell_check_row ][ $map_col_index ]{'cell_id'} ) ) {
+                my $cell_check_col = $map_col_index;
+                while ( ( $cell_check_col < ( $current_screen_col + 1 ) * $screen_cols ) and
+                        not $map_cell[ $cell_check_row ][ $cell_check_col ]{'coalesced'} and
+                        defined( $map_cell[ $cell_check_row ][ $cell_check_col ]{'cell_id'} ) ) {
+                    $cell_check_col++;
+                }
+                # at the end of this loop $cell_check_col contains the first col that does NOT match
+                # if this is the first row, use its width as the coalesced btile width
+                my $current_width = $cell_check_col - $map_col_index;
+                if ( $cell_check_row == $map_row_index ) {
+                    $width = $current_width;
+                } else {
+                    last if ( $current_width < $width );
+                }
+                $cell_check_row++;
+            }
+            # at the end of this loop $cell_check_row contains the first row that does NOT match
+            my $height = $cell_check_row - $map_row_index;
+
+            # We have found a rectangle of 1x1 btiles, so define the big one and
+            # send to main list.  At this point $width and $height have the
+            # dimensions of the coalesced btile and $map_row_index and
+            # $map_col_index have its position in the global map
+
+            # WARNING!  After analysis I found that we only save memory if
+            # we coalesce btiles with 6 or more cells, so if height x width
+            # is less than that, do not create the coalesced btile.  The
+            # tiny btiles other than the first will be checked later and try
+            # again to be coalesced with others.  If in the end they are not
+            # coalesced, they will be pushed with the remaining ones to the
+            # general list as 1x1 btiles
+            if ( $width * $height >= $minimum_coalesceable_tiny_btiles ) {
+
+                # first we must create a new synthetic btile and add it to the general btile list
+                # build the cell data array
+                my $btile_data;
+                foreach my $r ( 0 .. $height - 1 ) {
+                    foreach my $c ( 0 .. $width - 1 ) {
+                        # index in @matched_btiles_1x1
+                        my $i1 = $map_cell[ $map_row_index + $r ][ $map_col_index + $c ]{'cell_id'};
+                        # global index in @all_btiles
+                        my $i2 = $matched_btiles_1x1[ $i1 ]{'btile_index'};
+                        # btile_data of first and only cell (it's a 1x1 btile!)
+                        $btile_data->[ $r ][ $c ] = $all_btiles[ $i2 ]{'cell_data'}[0][0];
+                    }
+                }
+                # create a unique name
+                my $unique_name = sha1_hex( sprintf( "%d%d%d", time, int(rand(2000000000)), $$ ) );
+                my $synthetic_btile = {
+                    name		=> $unique_name,
+                    default_type	=> 'obstacle',
+                    metadata		=> '',
+                    cell_row		=> $map_row_index,	# ignored if no PNG
+                    cell_col		=> $map_col_index,	# ignored ig no PNG
+                    cell_width		=> $width,
+                    cell_height		=> $height,
+                    cell_data		=> $btile_data,
+                    # no PNG file!
+                    png_file		=> undef,
+                    # mark it as used in the global BTILE list
+                    used_in_screen	=> 1,
+                };
+                my $synthetic_btile_index = scalar( @all_btiles );
+                push @all_btiles, $synthetic_btile;
+
+                # then create the matched btile entry and push to @matched_btiles
+                my $synthetic_btile_data = {
+                    screen_row		=> int( $map_row_index / $screen_rows ),
+                    screen_col		=> int( $map_col_index / $screen_cols ),
+                    cell_row		=> $map_row_index % $screen_rows,
+                    cell_col		=> $map_col_index % $screen_cols,
+                    global_cell_row	=> $map_row_index,
+                    global_cell_col	=> $map_col_index,
+                    btile_index		=> $synthetic_btile_index,
+                };
+                push @matched_btiles, $synthetic_btile_data;
+
+                # mark all its cells as checked in @map_cell array
+                foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
+                    foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
+                        $map_cell[ $r ][ $c ]{'checked'}++;
+                    }
+                }
+
+                # mark all its cells as {'coalesced'} = 1 in @matched_btiles_1x1 if height or width > 1
+                if ( ( $width > 1 ) or ( $height > 1 ) ) {
+                    foreach my $r ( $map_row_index .. $map_row_index + $height - 1 ) {
+                        foreach my $c ( $map_col_index .. $map_col_index + $width - 1 ) {
+                            $matched_btiles_1x1[ $map_cell[ $r ][ $c ]{'cell_id'} ]{'coalesced'}++;
+                            $map_cell[ $r ][ $c ]{'coalesced'}++;
+                        }
+                    }
+                }
+
+                # continue and repeat until all the map has been walked
+                $num_synthetic_btiles++;
+            }
+        }
+    }
+
+    # end security check: all cells have been checked
+    foreach my $r ( 0 .. $map_rows - 1 ) {
+        foreach my $c ( 0 .. $map_cols - 1 ) {
+            $map_cell[ $r ][ $c ]{'checked'} or
+                die sprintf("** Error: security check (%d,%d) failed while coalescing 1x1 btiles!\n", $r, $c);
+        }
+    }
+
+    # Walk all the @matched_btiles_1x1 list again, searching for 1x1 btiles that
+    # have _not_ been coalesced.  For those that haven't, add them as 1x1 btiles
+    # to the main @matched_btiles list (these are the only 1x1 btiles that will
+    # be finally output as such in the map definitions)
+
+    my $num_coalesced_btiles = 0;
+    my $num_non_coalesced_btiles = 0;
+    foreach my $b ( @matched_btiles_1x1 ) {
+        if ( $b->{'coalesced'} ) {
+            $num_coalesced_btiles++;
+        } else {
+            $num_non_coalesced_btiles++;
+            push @matched_btiles, $b;
+            $all_btiles[ $b->{'btile_index'} ]{'used_in_screen'}++;
+        }
+    }
+
+    printf "-- %d tiny BTILEs coalesced into %d synthethic BTILEs\n", $num_coalesced_btiles, $num_synthetic_btiles;
+    printf "-- %d tiny BTILEs not coalesced\n", $num_non_coalesced_btiles;
+
+}	# end (if $coalesce_tiny_btiles)
+
+# check btile count for all screens and report BTILE count for those with some identified
+my $screens_with_too_many_btiles = 0;
+foreach my $r ( 0 .. ( $map_screen_rows - 1 ) ) {
+    foreach my $c ( 0 .. ( $map_screen_cols - 1 ) ) {
+        my $btile_count = $btile_count_by_screen[ $r ][ $c ];
+        my $tiny_btile_count = $tiny_btile_count_by_screen[ $r ][ $c ];
+        if ( $btile_count ) {
+            if ( $btile_count > 255 ) {
+                warn sprintf( "** WARNING: Screen (%d,%d): matched %d BTILEs (more than 255)\n",
+                    $r, $c, $btile_count );
+                $screens_with_too_many_btiles++;
+            } else {
+                printf "-- Screen (%d,%d): matched %d BTILEs (of which %d were tiny 1x1 BTILEs)\n",
+                    $r, $c, $btile_count, $tiny_btile_count;
+            }
+        }
+    }
+}
+
+# die if errors found
 if ( $screens_with_too_many_btiles ) {
     die "** Error: screens were found with more than 255 BTILEs\n";
 }
@@ -1539,19 +1946,28 @@ EOF_MAP_GDATA_END
 # generation.  If only the TILEDEF definitions are used, only those tiles will be output.  This
 # replaces functionality previously in btilegen.pl script
 
+# converts an 8-bit value into "##..####.." representation (BTILEs)
+sub byte_to_pixels {
+    my $value = shift;
+    ( $value <= 255 ) or
+        die "** Error: byte_to_pixels called with value > 255!\n";
+    my $bin = sprintf( "%08b", $value );
+    $bin =~ s/1/##/g;
+    $bin =~ s/0/../g;
+    return $bin;
+}
+
 print "Generating BTile GDATA files...\n";
 
-my $btile_format = <<"END_FORMAT";
+my $btile_format = <<END_FORMAT
 // tiledef line: '%s %d %d %d %d %s'
 BEGIN_BTILE
         NAME    %s
         ROWS    %d
         COLS    %d
 
-        PNG_DATA        FILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d %s %s %s
-END_BTILE
-
 END_FORMAT
+;
 
 # create the btiles directory if it does not exist
 mkdir( "$game_data_dir/btiles" )
@@ -1562,15 +1978,43 @@ foreach my $btile_data ( grep { $_->{'used_in_screen'} } @all_btiles ) {
     open GDATA,">$output_file" or
         die "** Error: could not open file $output_file for writing\n";
 
+    # print header
     printf GDATA $btile_format,
         ( map { $btile_data->{$_} } qw( name cell_row cell_col cell_width cell_height default_type ) ),
-        ( map { $btile_data->{$_} } qw( name cell_height cell_width png_file ) ),
-        ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) ),
-        ( defined( $btile_data->{'png_rotate'} ) ? sprintf('PNG_ROTATE=%d',$btile_data->{'png_rotate'}) : '' ),
-        ( defined( $btile_data->{'png_hmirror'} ) ? sprintf('PNG_HMIRROR=%d',$btile_data->{'png_hmirror'}) : '' ),
-        ( defined( $btile_data->{'png_vmirror'} ) ? sprintf('PNG_VMIRROR=%d',$btile_data->{'png_vmirror'}) : '' ),
+        ( map { $btile_data->{$_} } qw( name cell_height cell_width ) )
     ;
 
+    # print pixel and attr data
+    if ( defined( $btile_data->{'png_file'} ) ) {
+        # it may come from a PNG file
+        printf GDATA "\tPNG_DATA\tFILE=%s XPOS=%d YPOS=%d WIDTH=%d HEIGHT=%d %s %s %s\n",
+            $btile_data->{'png_file'},
+            ( map { $btile_data->{$_} * 8 } qw( cell_col cell_row cell_width cell_height ) ),
+            ( defined( $btile_data->{'png_rotate'} ) ? sprintf('PNG_ROTATE=%d',$btile_data->{'png_rotate'}) : '' ),
+            ( defined( $btile_data->{'png_hmirror'} ) ? sprintf('PNG_HMIRROR=%d',$btile_data->{'png_hmirror'}) : '' ),
+            ( defined( $btile_data->{'png_vmirror'} ) ? sprintf('PNG_VMIRROR=%d',$btile_data->{'png_vmirror'}) : '' ),
+        ;
+    } else {
+        # or be a synthetic btile
+        # print pixel data
+        foreach my $r ( 0 .. $btile_data->{'cell_height'} - 1 ) {
+            foreach my $l ( 0 .. 7 ) {
+                my $pixel_line;
+                foreach my $c ( 0 .. $btile_data->{'cell_width'} - 1 ) {
+                    $pixel_line .= byte_to_pixels( $btile_data->{'cell_data'}[ $r ][ $c ]{'bytes'}[ $l ] );
+                }
+                printf GDATA "\tPIXELS\t%s\n", $pixel_line;
+            }
+        }
+        # print attr data
+        foreach my $r ( 0 .. $btile_data->{'cell_height'} - 1 ) {
+            foreach my $c ( 0 .. $btile_data->{'cell_width'} - 1 ) {
+                printf GDATA "\tATTR\t%s\n", $btile_data->{'cell_data'}[ $r ][ $c ]{'attr'};
+            }
+        }
+    }
+
+    print GDATA "END_BTILE\n";
     close GDATA;
 
     printf "-- File %s for BTILE '%s' was created\n", $output_file, $btile_data->{'name'};
