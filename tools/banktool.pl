@@ -81,7 +81,9 @@ sub layout_dataset_binaries {
     # more binaries left
 
     my $current_bank_index = 0;
-    foreach my $bk ( sort { $a <=> $b } keys %$bins ) {
+
+    # instead of getting the binaries in name order, sort them by size to implement a Sorted First-Fit algorithm
+    foreach my $bk ( sort { $bins->{ $a }{'size'} <=> $bins->{ $b }{'size'} } keys %$bins ) {
         my $bin = $bins->{ $bk };
         # just error if any dataset is too big
         if ( $bin->{'size'} > $max_bank_size ) {
