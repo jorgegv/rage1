@@ -169,930 +169,952 @@ sub read_input_data {
     my $num_line = 0;
     my $screen_patching = 0;
     my $pending_split_lines;
-    while (my $line = <>) {
 
-        $num_line++;
+    # after option processing, the remaining ags are the files to process
+    my @files = @ARGV;
+    my $num_files = scalar( @files );
+    my $num_files_read = 0;
 
-        # cleanup the line
-        chomp $line;
-        $line =~ s/^\s*//g;		# remove leading blanks
-        $line =~ s/\s*$//g;		# remove trailing blanks
-        $line =~ s/\/\/.*$//g;		# remove comments (//...)
-        next if $line eq '';		# ignore blank lines
+    foreach my $file ( @files ) {
 
-        # if there were previous pending split lines (ending in '\'), add
-        # them to the beginning of the current line
-        if ( defined( $pending_split_lines ) ) {
-            $line = $pending_split_lines . $line;
-            $pending_split_lines = undef;
-        }
+        open GDATA, $file or
+            die "** Error: could not open $file for reading\n";
 
-        # if the current line ends in '\', save it for next iteration
-        if ( $line =~ /\\$/ ) {
-            $line =~ s/\\$//g;	# remove trailing '\' char
-            $pending_split_lines = $line;
-            next;
-        }
+        while (my $line = <GDATA>) {
 
-        # process the line
-        if ( $state eq 'NONE' ) {
-            if ( $line =~ /^BEGIN_BTILE$/ ) {
-                $state = 'BTILE';
-                $cur_btile = undef;
+            $num_line++;
+
+            # cleanup the line
+            chomp $line;
+            $line =~ s/^\s*//g;		# remove leading blanks
+            $line =~ s/\s*$//g;		# remove trailing blanks
+            $line =~ s/\/\/.*$//g;		# remove comments (//...)
+            next if $line eq '';		# ignore blank lines
+
+            # if there were previous pending split lines (ending in '\'), add
+            # them to the beginning of the current line
+            if ( defined( $pending_split_lines ) ) {
+                $line = $pending_split_lines . $line;
+                $pending_split_lines = undef;
+            }
+
+            # if the current line ends in '\', save it for next iteration
+            if ( $line =~ /\\$/ ) {
+                $line =~ s/\\$//g;	# remove trailing '\' char
+                $pending_split_lines = $line;
                 next;
             }
-            if ( $line =~ /^BEGIN_SCREEN$/ ) {
-                $state = 'SCREEN';
-                # we start with empty lists, and with one reserved
-                # asset_state: the first one (0) for this screen, with all
-                # flags reset
-                $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_states => [ { value => 0, comment => 'Screen state' } ] };
-                next;
-            }
-            if ( $line =~ /^PATCH_SCREEN\s+NAME=(.+)$/ ) {
-                my $name = $1;
-                if ( not defined( $screen_name_to_index{ $name } ) ) {
-                    die "PATCH_SCREEN: '$name' is not the name of an existing screen\n";
+
+            # process the line
+            if ( $state eq 'NONE' ) {
+                if ( $line =~ /^BEGIN_BTILE$/ ) {
+                    $state = 'BTILE';
+                    $cur_btile = undef;
+                    next;
                 }
-                $state = 'SCREEN';
-                $screen_patching = 1;
-                $cur_screen = $all_screens[ $screen_name_to_index{ $name } ];
-                next;
-            }
-            if ( $line =~ /^BEGIN_SPRITE$/ ) {
-                $state = 'SPRITE';
-                $cur_sprite = undef;
-                next;
-            }
-            if ( $line =~ /^BEGIN_HERO$/ ) {
-                if ( defined( $hero ) ) {
-                    die "A HERO is already defined, there can be only one\n";
+                if ( $line =~ /^BEGIN_SCREEN$/ ) {
+                    $state = 'SCREEN';
+                    # we start with empty lists, and with one reserved
+                    # asset_state: the first one (0) for this screen, with all
+                    # flags reset
+                    $cur_screen = { btiles => [ ], items => [ ], hotzones => [ ], sprites => [ ], asset_states => [ { value => 0, comment => 'Screen state' } ] };
+                    next;
                 }
-                $state = 'HERO';
-                $cur_sprite = undef;
-                next;
-            }
-            if ( $line =~ /^BEGIN_GAME_CONFIG$/ ) {
-                if ( defined( $game_config ) ) {
-                    die "A GAME_CONFIG is already defined, there can be only one\n";
-                }
-                $state = 'GAME_CONFIG';
-                next;
-            }
-            if ( $line =~ /^BEGIN_RULE$/ ) {
-                $state = 'RULE';
-                $cur_rule = undef;
-                next;
-            }
-            die "Syntax error:line $num_line: '$line' not recognized (global section)\n";
-
-        } elsif ( $state eq 'BTILE' ) {
-
-            if ( $line =~ /^NAME\s+(\w+)$/ ) {
-                $cur_btile->{'name'} = $1;
-                next;
-            }
-            if ( $line =~ /^DATASET\s+(\w+)$/ ) {
-                $cur_btile->{'dataset'} = $1;
-                next;
-            }
-            if ( $line =~ /^ROWS\s+(\d+)$/ ) {
-                $cur_btile->{'rows'} = $1;
-                next;
-            }
-            if ( $line =~ /^COLS\s+(\d+)$/ ) {
-                $cur_btile->{'cols'} = $1;
-                next;
-            }
-            if ( $line =~ /^PIXELS\s+([\.#]+)$/ ) {
-                push @{$cur_btile->{'pixels'}}, $1;
-                next;
-            }
-            if ( $line =~ /^ATTR\s+(.+)$/ ) {
-                push @{$cur_btile->{'attr'}}, $1;
-                next;
-            }
-            if ( $line =~ /^PNG_DATA\s+(.*)$/ ) {
-                my $args = $1;
-                my $vars = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
-
-                if ( $vars->{'png_rotate'} || 0 ) {
-                    $png = png_rotate( $png, $vars->{'png_rotate'} );
-                }
-                if ( $vars->{'png_hmirror'} || 0 ) {
-                    $png = png_hmirror( $png );
-                }
-                if ( $vars->{'png_vmirror'} || 0 ) {
-                    $png = png_vmirror( $png );
-                }
-
-                map_png_colors_to_zx_colors( $png );
-
-                my $data = png_to_pixels_and_attrs(
-                    $png,
-                    $vars->{'xpos'}, $vars->{'ypos'},
-                    $vars->{'width'}, $vars->{'height'},
-                );
-                $cur_btile->{'pixels'} = $data->{'pixels'};
-                $cur_btile->{'png_attr'} = $data->{'attrs'};
-                next;
-            }
-            if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
-                $cur_btile->{'frames'} = $1;
-                next;
-            }
-            if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
-                my $args = $1;
-                my $vars = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                my $index = defined( $cur_btile->{'sequences'} ) ? scalar( @{ $cur_btile->{'sequences'} } ) : 0 ;
-                push @{ $cur_btile->{'sequences'} }, $vars;
-                $cur_btile->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
-                next;
-            }
-            if ( $line =~ /^END_BTILE$/ ) {
-                validate_and_compile_btile( $cur_btile );
-                my $index = scalar( @all_btiles );
-                push @all_btiles, $cur_btile;
-                $btile_name_to_index{ $cur_btile->{'name'} } = $index;
-                $state = 'NONE';
-                next;
-            }
-            die "Syntax error:line $num_line: '$line' not recognized (BTILE section)\n";
-
-        } elsif ( $state eq 'SPRITE' ) {
-
-            if ( $line =~ /^NAME\s+(\w+)$/ ) {
-                $cur_sprite->{'name'} = $1;
-                next;
-            }
-            if ( $line =~ /^ROWS\s+(\d+)$/ ) {
-                $cur_sprite->{'rows'} = $1;
-                next;
-            }
-            if ( $line =~ /^COLS\s+(\d+)$/ ) {
-                $cur_sprite->{'cols'} = $1;
-                next;
-            }
-            if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
-                $cur_sprite->{'frames'} = $1;
-                next;
-            }
-            if ( $line =~ /^REAL_PIXEL_WIDTH\s+(\d+)$/ ) {
-                $cur_sprite->{'real_pixel_width'} = $1;
-                next;
-            }
-            if ( $line =~ /^REAL_PIXEL_HEIGHT\s+(\d+)$/ ) {
-                $cur_sprite->{'real_pixel_height'} = $1;
-                next;
-            }
-            if ( $line =~ /^PIXELS\s+([\.#]+)$/ ) {
-                push @{$cur_sprite->{'pixels'}}, $1;
-                next;
-            }
-            if ( $line =~ /^MASK\s+(.+)$/ ) {
-                push @{$cur_sprite->{'mask'}}, $1;
-                next;
-            }
-            if ( $line =~ /^PNG_DATA\s+(.*)$/ ) {
-                my $args = $1;
-                my $vars = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                my $fgcolor = uc( $vars->{'fgcolor'} );
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
-
-                map_png_colors_to_zx_colors( $png );
-
-                push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
-                    $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
-                    ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
-                    ) };
-                next;
-            }
-            if ( $line =~ /^PNG_MASK\s+(.*)$/ ) {
-                my $args = $1;
-                my $vars = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                my $maskcolor = uc( $vars->{'maskcolor'} );
-                my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                    die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
-
-                map_png_colors_to_zx_colors( $png );
-
-                push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
-                    $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
-                    ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
-                    ) };
-                next;
-            }
-            if ( $line =~ /^ATTR\s+(.+)$/ ) {
-                push @{$cur_sprite->{'attr'}}, $1;
-                next;
-            }
-            if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
-                my $args = $1;
-                my $vars = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                my $index = defined( $cur_sprite->{'sequences'} ) ? scalar( @{ $cur_sprite->{'sequences'} } ) : 0 ;
-                push @{ $cur_sprite->{'sequences'} }, $vars;
-                $cur_sprite->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
-                next;
-            }
-            if ( $line =~ /^END_SPRITE$/ ) {
-                validate_and_compile_sprite( $cur_sprite );
-                $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @all_sprites );
-                push @all_sprites, $cur_sprite;
-                $state = 'NONE';
-                next;
-            }
-            die "Syntax error:line $num_line: '$line' not recognized (SPRITE section)\n";
-
-        } elsif ( $state eq 'SCREEN' ) {
-
-            if ( $line =~ /^NAME\s+(\w+)$/ ) {
-                $cur_screen->{'name'} = $1;
-                next;
-            }
-            if ( $line =~ /^DATASET\s+(\w+)$/ ) {
-                $cur_screen->{'dataset'} = $1;
-                next;
-            }
-            if ( $line =~ /^TITLE\s+"(.+)"$/ ) {
-                $cur_screen->{'title'} = $1;
-                add_build_feature( 'SCREEN_TITLES' );
-                next;
-            }
-            if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = "$1 TYPE=DECORATION";
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                # check if it can change state during the game, and assign a
-                # state slot if it can
-                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
-                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Decoration '$item->{name}'" } ;
-                } else {
-                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
-                }
-
-                my $index = scalar( @{ $cur_screen->{'btiles'} } );
-                push @{ $cur_screen->{'btiles'} }, $item;
-                $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
-                next;
-            }
-            if ( $line =~ /^HARMFUL\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = "$1 TYPE=HARMFUL";
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                # check if it can change state during the game, and assign a
-                # state slot if it can
-                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
-                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Harmful '$item->{name}'" } ;
-                } else {
-                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
-                }
-
-                my $index = scalar( @{ $cur_screen->{'btiles'} } );
-                push @{ $cur_screen->{'btiles'} }, $item;
-                $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
-                next;
-            }
-            if ( $line =~ /^OBSTACLE\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = "$1 TYPE=OBSTACLE";
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                # check if it can change state during the game, and assign a
-                # state slot if it can
-                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
-                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Obstacle '$item->{name}'" };
-                } else {
-                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
-                }
-
-                my $index = scalar( @{ $cur_screen->{'btiles'} } );
-                push @{ $cur_screen->{'btiles'} }, $item;
-                $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
-                next;
-            }
-            if ( $line =~ /^ENEMY\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                # enemies can always change state (=killed), so assign a state slot
-                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
-
-                push @{ $cur_screen->{'enemies'} }, $item;
-                next;
-            }
-            if ( $line =~ /^HERO\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $cur_screen->{'hero'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                next;
-            }
-            if ( $line =~ /^ITEM\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                $item->{'screen'} = $cur_screen->{'name'};
-                my $item_index = scalar( @all_items );
-                push @all_items, $item;
-                push @{ $cur_screen->{'items'} }, $item_index;
-                $item_name_to_index{ $item->{'name'} } = $item_index;
-                add_build_feature( 'HERO_CHECK_TILES_BELOW' );
-                add_build_feature( 'INVENTORY' );
-                next;
-            }
-            if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                if ( not defined( $crumb_type_name_to_index{ $item->{'type'} } ) ) {
-                    die "CRUMB: undefined crumb TYPE '$item->{type}'\n";
-                }
-
-                # crumbs can change state (=grabbed), so assign a state slot
-                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                push @{ $cur_screen->{'asset_states'} }, { value => 'F_CRUMB_ACTIVE', comment => "Crumb '$item->{name}'" };
-
-                push @{ $cur_screen->{'crumbs'} }, $item;
-
-                add_build_feature( 'HERO_CHECK_TILES_BELOW' );
-                add_build_feature( 'CRUMBS' );
-                next;
-            }
-            if ( $line =~ /^HOTZONE\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                # check if it can change state during the game, and assign a
-                # state slot if it can
-                if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
-                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Hotzone '$item->{name}'" };
-                } else {
-                    $item->{'asset_state_index'} = 'ASSET_NO_STATE';
-                }
-
-                my $index = scalar( @{ $cur_screen->{'hotzones'} } );
-                push @{ $cur_screen->{'hotzones'} }, $item;
-                $cur_screen->{'hotzone_name_to_index'}{ $item->{'name'} } = $index;
-                next;
-            }
-            if ( $line =~ /^BACKGROUND\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $cur_screen->{'background'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                next;
-            }
-            if ( $line =~ /^DEFINE\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                $cur_screen->{'digraphs'}{ $item->{'digraph'} } = $item;
-                next;
-            }
-            if ( $line =~ /^SCREEN_DATA\s+"(.*)"$/ ) {
-                push @{ $cur_screen->{'screen_data'} }, $1;
-                next;
-            }
-            if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                # enemies can always change state (=killed), so assign a state slot
-                $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
-
-                push @{ $cur_screen->{'enemies'} }, $item;
-                next;
-            }
-            if ( $line =~ /^END_SCREEN$/ ) {
-                validate_screen( $cur_screen );
-                if ( not $screen_patching ) {
-                    compile_screen( $cur_screen );
-                    $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
-                    push @all_screens, $cur_screen;
-                } else {
-                    $screen_patching = 0;
-                }
-                $state = 'NONE';
-                next;
-            }
-            die "Syntax error:line $num_line: '$line' not recognized (SCREEN section)\n";
-
-        } elsif ( $state eq 'HERO' ) {
-
-            if ( $line =~ /^NAME\s+(\w+)$/ ) {
-                $hero->{'name'} = $1;
-                next;
-            }
-            if ( $line =~ /^LIVES\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $hero->{'lives'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                next;
-            }
-            if ( $line =~ /^DAMAGE_MODE\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $hero->{'damage_mode'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE' );
-                if ( defined( $hero->{'damage_mode'}{'health_display_function'} ) ) {
-                    add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION' );
-                }
-                next;
-            }
-            if ( $line =~ /^HSTEP\s+(\d+)$/ ) {
-                $hero->{'hstep'} = $1;
-                next;
-            }
-            if ( $line =~ /^VSTEP\s+(\d+)$/ ) {
-                $hero->{'vstep'} = $1;
-                next;
-            }
-            if ( $line =~ /^ANIMATION_DELAY\s+(\d+)$/ ) {
-                $hero->{'animation_delay'} = $1;
-                next;
-            }
-            if ( $line =~ /^SPRITE\s+(\w+)$/ ) {
-                $hero->{'sprite'} = $1;
-                next;
-            }
-            if ( $line =~ /^SEQUENCE_UP\s+(\w+)$/ ) {
-                $hero->{'sequence_up'} = $1;
-                next;
-            }
-            if ( $line =~ /^SEQUENCE_DOWN\s+(\w+)$/ ) {
-                $hero->{'sequence_down'} = $1;
-                next;
-            }
-            if ( $line =~ /^SEQUENCE_LEFT\s+(\w+)$/ ) {
-                $hero->{'sequence_left'} = $1;
-                next;
-            }
-            if ( $line =~ /^SEQUENCE_RIGHT\s+(\w+)$/ ) {
-                $hero->{'sequence_right'} = $1;
-                next;
-            }
-            if ( $line =~ /^STEADY_FRAMES\s+(.*)$/ ) {
-                my $args = $1;
-                my $vars = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                $hero->{'steady_frames'} = $vars;
-                next;
-            }
-            if ( $line =~ /^BULLET\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $hero->{'bullet'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                next;
-            }
-            if ( $line =~ /^END_HERO$/ ) {
-                validate_and_compile_hero( $hero );
-                $state = 'NONE';
-                next;
-            }
-            die "Syntax error:line $num_line: '$line' not recognized (HERO section)\n";
-
-        } elsif ( $state eq 'GAME_CONFIG' ) {
-
-            if ( $line =~ /^NAME\s+(\w+)$/ ) {
-                $game_config->{'name'} = $1;
-                next;
-            }
-            if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
-                if ( $forced_build_target ) {
-                    $game_config->{'zx_target'} = $forced_build_target;
-                } else {
-                    $game_config->{'zx_target'} = $1;
-                }
-                if ( ( $game_config->{'zx_target'} ne '48' ) and
-                    ( $game_config->{'zx_target'} ne '128' ) ) {
-                        die "ZX_TARGET must be either 48 or 128\n";
+                if ( $line =~ /^PATCH_SCREEN\s+NAME=(.+)$/ ) {
+                    my $name = $1;
+                    if ( not defined( $screen_name_to_index{ $name } ) ) {
+                        die "PATCH_SCREEN: '$name' is not the name of an existing screen\n";
                     }
-                add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
-                next;
-            }
-            if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
-                $game_config->{'default_bg_attr'} = $1;
-                next;
-            }
-            if ( $line =~ /^HERO\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $game_config->{'hero'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                next;
-            }
-            if ( $line =~ /^SCREEN\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $game_config->{'screen'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                next;
-            }
-            if ( $line =~ /^GAME_FUNCTION\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                # check that codeset is a valid value
-                if ( defined( $item->{'codeset'} ) ) {
-                    if ( $item->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
-                        die sprintf( "CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                    $state = 'SCREEN';
+                    $screen_patching = 1;
+                    $cur_screen = $all_screens[ $screen_name_to_index{ $name } ];
+                    next;
+                }
+                if ( $line =~ /^BEGIN_SPRITE$/ ) {
+                    $state = 'SPRITE';
+                    $cur_sprite = undef;
+                    next;
+                }
+                if ( $line =~ /^BEGIN_HERO$/ ) {
+                    if ( defined( $hero ) ) {
+                        die "A HERO is already defined, there can be only one\n";
                     }
-                } else {
-                    $item->{'codeset'} = 'home';
+                    $state = 'HERO';
+                    $cur_sprite = undef;
+                    next;
                 }
-
-                # add the needed codeset-related fields.  if a function has
-                # no codeset directive, it goes to the 'home' codeset
-                my $codeset = $item->{'codeset'};
-                if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
-                    $codeset_functions_by_codeset{ $codeset } = [];
-                }
-                $item->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
-
-                # add the function to the codeset lists
-                push @all_codeset_functions, $item;
-                push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
-
-                # check that the type is a valid function type
-                if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
-                    die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
-                }
-
-                # if a filename was not provided, assign a default one
-                if ( not defined( $item->{'file'} ) ) {
-                    $item->{'file'} = $item->{'name'} . '.c';
-                }
-
-                # add the function to the game config
-                $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
-
-                # adjust build feature
-                if ( $codeset ne 'home' ) {
-                    add_build_feature( 'CODESETS' );
-                }
-                next;
-            }
-            if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $vars = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                foreach my $k ( keys %$vars ) {
-                    $game_config->{'sounds'}{ $k } = $vars->{ $k };
-                }
-                next;
-            }
-            if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA|TITLE_AREA)\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my ( $directive, $args ) = ( $1, $2 );
-                $game_config->{ lc( $directive ) } = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                add_build_feature( 'SCREEN_AREA_' . $directive );
-                next;
-            }
-            if ( $line =~ /^LOADING_SCREEN\s+(.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $game_config->{'loading_screen'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                if ( scalar( grep { defined } map { $game_config->{'loading_screen'}{ $_ } } qw( png scr ) ) != 1 ) {
-                    die "LOADING_SCREEN: exactly one of PNG or SCR options (but not both) must be specified\n";
-                }
-                add_build_feature( "LOADING_SCREEN" );
-                if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
-                    add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
-                }
-                next;
-            }
-            if ( $line =~ /^CUSTOM_CHARSET\s+(.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                $game_config->{'custom_charset'} = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                if ( not defined( $game_config->{'custom_charset'}{'file'} ) ) {
-                    die "CUSTOM_CHARSET: FILE must be specified\n";
-                }
-                if ( defined( $game_config->{'custom_charset'}{'range'} ) ) {
-                    if ( $game_config->{'custom_charset'}{'range'} !~ m/^\d+\-\d+$/ ) {
-                        die "CUSTOM_CHARSET: RANGE option must be integers MM-NN\n";
+                if ( $line =~ /^BEGIN_GAME_CONFIG$/ ) {
+                    if ( defined( $game_config ) ) {
+                        die "A GAME_CONFIG is already defined, there can be only one\n";
                     }
+                    $state = 'GAME_CONFIG';
+                    next;
                 }
-                add_build_feature( "CUSTOM_CHARSET" );
-                next;
-            }
-            if ( $line =~ /^BINARY_DATA\s+(.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $blob_info = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                if ( not defined( $blob_info->{'file'} ) ) {
-                    die "BINARY_DATA: FILE must be specified\n";
+                if ( $line =~ /^BEGIN_RULE$/ ) {
+                    $state = 'RULE';
+                    $cur_rule = undef;
+                    next;
                 }
-                if ( not defined( $blob_info->{'symbol'} ) ) {
-                    die "BINARY_DATA: SYMBOL must be specified\n";
+                die "Syntax error:line $num_line: '$line' not recognized (global section)\n";
+
+            } elsif ( $state eq 'BTILE' ) {
+
+                if ( $line =~ /^NAME\s+(\w+)$/ ) {
+                    $cur_btile->{'name'} = $1;
+                    next;
                 }
-                if ( defined( $blob_info->{'compress'} ) ) {
-                    if ( $blob_info->{'compress'} !~ m/^[01]$/ ) {
-                        die "BINARY_DATA: COMPRESS option must be 0 or 1\n";
+                if ( $line =~ /^DATASET\s+(\w+)$/ ) {
+                    $cur_btile->{'dataset'} = $1;
+                    next;
+                }
+                if ( $line =~ /^ROWS\s+(\d+)$/ ) {
+                    $cur_btile->{'rows'} = $1;
+                    next;
+                }
+                if ( $line =~ /^COLS\s+(\d+)$/ ) {
+                    $cur_btile->{'cols'} = $1;
+                    next;
+                }
+                if ( $line =~ /^PIXELS\s+([\.#]+)$/ ) {
+                    push @{$cur_btile->{'pixels'}}, $1;
+                    next;
+                }
+                if ( $line =~ /^ATTR\s+(.+)$/ ) {
+                    push @{$cur_btile->{'attr'}}, $1;
+                    next;
+                }
+                if ( $line =~ /^PNG_DATA\s+(.*)$/ ) {
+                    my $args = $1;
+                    my $vars = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                        die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+
+                    if ( $vars->{'png_rotate'} || 0 ) {
+                        $png = png_rotate( $png, $vars->{'png_rotate'} );
                     }
-                }
-                if ( not defined( $blob_info->{'codeset'} ) ) {
-                    $blob_info->{'codeset'} = 'home';
-                }
-                # there can be more than one instance of BINARY_DATA for
-                # different pieces of data
-                push @{ $game_config->{'binary_data'} }, $blob_info;
-                next;
-            }
-            if ( $line =~ /^CRUMB_TYPE\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
+                    if ( $vars->{'png_hmirror'} || 0 ) {
+                        $png = png_hmirror( $png );
+                    }
+                    if ( $vars->{'png_vmirror'} || 0 ) {
+                        $png = png_vmirror( $png );
+                    }
 
-                # check mandatory fields
-                if ( not defined( $item->{'name'} ) ) {
-                    die "CRUMB_TYPE: NAME field is mandatory\n";
+                    map_png_colors_to_zx_colors( $png );
+
+                    my $data = png_to_pixels_and_attrs(
+                        $png,
+                        $vars->{'xpos'}, $vars->{'ypos'},
+                        $vars->{'width'}, $vars->{'height'},
+                    );
+                    $cur_btile->{'pixels'} = $data->{'pixels'};
+                    $cur_btile->{'png_attr'} = $data->{'attrs'};
+                    next;
                 }
-
-                if ( not defined( $item->{'btile'} ) ) {
-                    die "CRUMB_TYPE: BTILE field is mandatory\n";
+                if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
+                    $cur_btile->{'frames'} = $1;
+                    next;
                 }
+                if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
+                    my $args = $1;
+                    my $vars = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    my $index = defined( $cur_btile->{'sequences'} ) ? scalar( @{ $cur_btile->{'sequences'} } ) : 0 ;
+                    push @{ $cur_btile->{'sequences'} }, $vars;
+                    $cur_btile->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
+                    next;
+                }
+                if ( $line =~ /^END_BTILE$/ ) {
+                    validate_and_compile_btile( $cur_btile );
+                    my $index = scalar( @all_btiles );
+                    push @all_btiles, $cur_btile;
+                    $btile_name_to_index{ $cur_btile->{'name'} } = $index;
+                    $state = 'NONE';
+                    next;
+                }
+                die "Syntax error:line $num_line: '$line' not recognized (BTILE section)\n";
 
-                # if an action_function is defined, do some checks
-                if ( defined( $item->{'action_function' } ) ) {
+            } elsif ( $state eq 'SPRITE' ) {
 
-                    my $action_function = {
-                        name	=> $item->{'action_function' },
-                        codeset	=> ( $item->{'codeset'} || 'home' ),
-                        type	=> 'crumb_action',
+                if ( $line =~ /^NAME\s+(\w+)$/ ) {
+                    $cur_sprite->{'name'} = $1;
+                    next;
+                }
+                if ( $line =~ /^ROWS\s+(\d+)$/ ) {
+                    $cur_sprite->{'rows'} = $1;
+                    next;
+                }
+                if ( $line =~ /^COLS\s+(\d+)$/ ) {
+                    $cur_sprite->{'cols'} = $1;
+                    next;
+                }
+                if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
+                    $cur_sprite->{'frames'} = $1;
+                    next;
+                }
+                if ( $line =~ /^REAL_PIXEL_WIDTH\s+(\d+)$/ ) {
+                    $cur_sprite->{'real_pixel_width'} = $1;
+                    next;
+                }
+                if ( $line =~ /^REAL_PIXEL_HEIGHT\s+(\d+)$/ ) {
+                    $cur_sprite->{'real_pixel_height'} = $1;
+                    next;
+                }
+                if ( $line =~ /^PIXELS\s+([\.#]+)$/ ) {
+                    push @{$cur_sprite->{'pixels'}}, $1;
+                    next;
+                }
+                if ( $line =~ /^MASK\s+(.+)$/ ) {
+                    push @{$cur_sprite->{'mask'}}, $1;
+                    next;
+                }
+                if ( $line =~ /^PNG_DATA\s+(.*)$/ ) {
+                    my $args = $1;
+                    my $vars = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    my $fgcolor = uc( $vars->{'fgcolor'} );
+                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                        die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+
+                    map_png_colors_to_zx_colors( $png );
+
+                    push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
+                        $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
+                        ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
+                        ) };
+                    next;
+                }
+                if ( $line =~ /^PNG_MASK\s+(.*)$/ ) {
+                    my $args = $1;
+                    my $vars = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    my $maskcolor = uc( $vars->{'maskcolor'} );
+                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                        die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+
+                    map_png_colors_to_zx_colors( $png );
+
+                    push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
+                        $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
+                        ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
+                        ) };
+                    next;
+                }
+                if ( $line =~ /^ATTR\s+(.+)$/ ) {
+                    push @{$cur_sprite->{'attr'}}, $1;
+                    next;
+                }
+                if ( $line =~ /^SEQUENCE\s+(.*)$/ ) {
+                    my $args = $1;
+                    my $vars = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    my $index = defined( $cur_sprite->{'sequences'} ) ? scalar( @{ $cur_sprite->{'sequences'} } ) : 0 ;
+                    push @{ $cur_sprite->{'sequences'} }, $vars;
+                    $cur_sprite->{'sequence_name_to_index'}{ $vars->{'name'} } = $index;
+                    next;
+                }
+                if ( $line =~ /^END_SPRITE$/ ) {
+                    validate_and_compile_sprite( $cur_sprite );
+                    $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @all_sprites );
+                    push @all_sprites, $cur_sprite;
+                    $state = 'NONE';
+                    next;
+                }
+                die "Syntax error:line $num_line: '$line' not recognized (SPRITE section)\n";
+
+            } elsif ( $state eq 'SCREEN' ) {
+
+                if ( $line =~ /^NAME\s+(\w+)$/ ) {
+                    $cur_screen->{'name'} = $1;
+                    next;
+                }
+                if ( $line =~ /^DATASET\s+(\w+)$/ ) {
+                    $cur_screen->{'dataset'} = $1;
+                    next;
+                }
+                if ( $line =~ /^TITLE\s+"(.+)"$/ ) {
+                    $cur_screen->{'title'} = $1;
+                    add_build_feature( 'SCREEN_TITLES' );
+                    next;
+                }
+                if ( $line =~ /^DECORATION\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = "$1 TYPE=DECORATION";
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+
+                    # check if it can change state during the game, and assign a
+                    # state slot if it can
+                    if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                        $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                        push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Decoration '$item->{name}'" } ;
+                    } else {
+                        $item->{'asset_state_index'} = 'ASSET_NO_STATE';
+                    }
+
+                    my $index = scalar( @{ $cur_screen->{'btiles'} } );
+                    push @{ $cur_screen->{'btiles'} }, $item;
+                    $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
+                    next;
+                }
+                if ( $line =~ /^HARMFUL\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = "$1 TYPE=HARMFUL";
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+
+                    # check if it can change state during the game, and assign a
+                    # state slot if it can
+                    if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                        $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                        push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Harmful '$item->{name}'" } ;
+                    } else {
+                        $item->{'asset_state_index'} = 'ASSET_NO_STATE';
+                    }
+
+                    my $index = scalar( @{ $cur_screen->{'btiles'} } );
+                    push @{ $cur_screen->{'btiles'} }, $item;
+                    $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
+                    next;
+                }
+                if ( $line =~ /^OBSTACLE\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = "$1 TYPE=OBSTACLE";
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+
+                    # check if it can change state during the game, and assign a
+                    # state slot if it can
+                    if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                        $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                        push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Obstacle '$item->{name}'" };
+                    } else {
+                        $item->{'asset_state_index'} = 'ASSET_NO_STATE';
+                    }
+
+                    my $index = scalar( @{ $cur_screen->{'btiles'} } );
+                    push @{ $cur_screen->{'btiles'} }, $item;
+                    $cur_screen->{'btile_name_to_index'}{ $item->{'name'} } = $index;
+                    next;
+                }
+                if ( $line =~ /^ENEMY\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+
+                    # enemies can always change state (=killed), so assign a state slot
+                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                    push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
+
+                    push @{ $cur_screen->{'enemies'} }, $item;
+                    next;
+                }
+                if ( $line =~ /^HERO\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $cur_screen->{'hero'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    next;
+                }
+                if ( $line =~ /^ITEM\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    $item->{'screen'} = $cur_screen->{'name'};
+                    my $item_index = scalar( @all_items );
+                    push @all_items, $item;
+                    push @{ $cur_screen->{'items'} }, $item_index;
+                    $item_name_to_index{ $item->{'name'} } = $item_index;
+                    add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+                    add_build_feature( 'INVENTORY' );
+                    next;
+                }
+                if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+
+                    if ( not defined( $crumb_type_name_to_index{ $item->{'type'} } ) ) {
+                        die "CRUMB: undefined crumb TYPE '$item->{type}'\n";
+                    }
+
+                    # crumbs can change state (=grabbed), so assign a state slot
+                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                    push @{ $cur_screen->{'asset_states'} }, { value => 'F_CRUMB_ACTIVE', comment => "Crumb '$item->{name}'" };
+
+                    push @{ $cur_screen->{'crumbs'} }, $item;
+
+                    add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+                    add_build_feature( 'CRUMBS' );
+                    next;
+                }
+                if ( $line =~ /^HOTZONE\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+
+                    # check if it can change state during the game, and assign a
+                    # state slot if it can
+                    if ( defined( $item->{'active'} ) and ( $item->{'can_change_state'} || 0 ) ) {
+                        $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                        push @{ $cur_screen->{'asset_states'} }, { value => $item->{'active'}, comment => "Hotzone '$item->{name}'" };
+                    } else {
+                        $item->{'asset_state_index'} = 'ASSET_NO_STATE';
+                    }
+
+                    my $index = scalar( @{ $cur_screen->{'hotzones'} } );
+                    push @{ $cur_screen->{'hotzones'} }, $item;
+                    $cur_screen->{'hotzone_name_to_index'}{ $item->{'name'} } = $index;
+                    next;
+                }
+                if ( $line =~ /^BACKGROUND\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $cur_screen->{'background'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    next;
+                }
+                if ( $line =~ /^DEFINE\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    $cur_screen->{'digraphs'}{ $item->{'digraph'} } = $item;
+                    next;
+                }
+                if ( $line =~ /^SCREEN_DATA\s+"(.*)"$/ ) {
+                    push @{ $cur_screen->{'screen_data'} }, $1;
+                    next;
+                }
+                if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+
+                    # enemies can always change state (=killed), so assign a state slot
+                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
+                    push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
+
+                    push @{ $cur_screen->{'enemies'} }, $item;
+                    next;
+                }
+                if ( $line =~ /^END_SCREEN$/ ) {
+                    validate_screen( $cur_screen );
+                    if ( not $screen_patching ) {
+                        compile_screen( $cur_screen );
+                        $screen_name_to_index{ $cur_screen->{'name'}} = scalar( @all_screens );
+                        push @all_screens, $cur_screen;
+                    } else {
+                        $screen_patching = 0;
+                    }
+                    $state = 'NONE';
+                    next;
+                }
+                die "Syntax error:line $num_line: '$line' not recognized (SCREEN section)\n";
+
+            } elsif ( $state eq 'HERO' ) {
+
+                if ( $line =~ /^NAME\s+(\w+)$/ ) {
+                    $hero->{'name'} = $1;
+                    next;
+                }
+                if ( $line =~ /^LIVES\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $hero->{'lives'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    next;
+                }
+                if ( $line =~ /^DAMAGE_MODE\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $hero->{'damage_mode'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE' );
+                    if ( defined( $hero->{'damage_mode'}{'health_display_function'} ) ) {
+                        add_build_feature( 'HERO_ADVANCED_DAMAGE_MODE_USE_HEALTH_DISPLAY_FUNCTION' );
+                    }
+                    next;
+                }
+                if ( $line =~ /^HSTEP\s+(\d+)$/ ) {
+                    $hero->{'hstep'} = $1;
+                    next;
+                }
+                if ( $line =~ /^VSTEP\s+(\d+)$/ ) {
+                    $hero->{'vstep'} = $1;
+                    next;
+                }
+                if ( $line =~ /^ANIMATION_DELAY\s+(\d+)$/ ) {
+                    $hero->{'animation_delay'} = $1;
+                    next;
+                }
+                if ( $line =~ /^SPRITE\s+(\w+)$/ ) {
+                    $hero->{'sprite'} = $1;
+                    next;
+                }
+                if ( $line =~ /^SEQUENCE_UP\s+(\w+)$/ ) {
+                    $hero->{'sequence_up'} = $1;
+                    next;
+                }
+                if ( $line =~ /^SEQUENCE_DOWN\s+(\w+)$/ ) {
+                    $hero->{'sequence_down'} = $1;
+                    next;
+                }
+                if ( $line =~ /^SEQUENCE_LEFT\s+(\w+)$/ ) {
+                    $hero->{'sequence_left'} = $1;
+                    next;
+                }
+                if ( $line =~ /^SEQUENCE_RIGHT\s+(\w+)$/ ) {
+                    $hero->{'sequence_right'} = $1;
+                    next;
+                }
+                if ( $line =~ /^STEADY_FRAMES\s+(.*)$/ ) {
+                    my $args = $1;
+                    my $vars = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    $hero->{'steady_frames'} = $vars;
+                    next;
+                }
+                if ( $line =~ /^BULLET\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $hero->{'bullet'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    next;
+                }
+                if ( $line =~ /^END_HERO$/ ) {
+                    validate_and_compile_hero( $hero );
+                    $state = 'NONE';
+                    next;
+                }
+                die "Syntax error:line $num_line: '$line' not recognized (HERO section)\n";
+
+            } elsif ( $state eq 'GAME_CONFIG' ) {
+
+                if ( $line =~ /^NAME\s+(\w+)$/ ) {
+                    $game_config->{'name'} = $1;
+                    next;
+                }
+                if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
+                    if ( $forced_build_target ) {
+                        $game_config->{'zx_target'} = $forced_build_target;
+                    } else {
+                        $game_config->{'zx_target'} = $1;
+                    }
+                    if ( ( $game_config->{'zx_target'} ne '48' ) and
+                        ( $game_config->{'zx_target'} ne '128' ) ) {
+                            die "ZX_TARGET must be either 48 or 128\n";
+                        }
+                    add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
+                    next;
+                }
+                if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
+                    $game_config->{'default_bg_attr'} = $1;
+                    next;
+                }
+                if ( $line =~ /^HERO\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $game_config->{'hero'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    next;
+                }
+                if ( $line =~ /^SCREEN\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $game_config->{'screen'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    next;
+                }
+                if ( $line =~ /^GAME_FUNCTION\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
                     };
 
                     # check that codeset is a valid value
-                    if ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
-                        die sprintf( "CRUMB_TYPE: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                    if ( defined( $item->{'codeset'} ) ) {
+                        if ( $item->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
+                            die sprintf( "CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                        }
+                    } else {
+                        $item->{'codeset'} = 'home';
                     }
 
                     # add the needed codeset-related fields.  if a function has
                     # no codeset directive, it goes to the 'home' codeset
-                    my $codeset = $action_function->{'codeset'};
+                    my $codeset = $item->{'codeset'};
                     if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
                         $codeset_functions_by_codeset{ $codeset } = [];
                     }
-                    $action_function->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+                    $item->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
 
                     # add the function to the codeset lists
-                    push @all_codeset_functions, $action_function;
-                    push @{ $codeset_functions_by_codeset{ $codeset } }, $action_function;
+                    push @all_codeset_functions, $item;
+                    push @{ $codeset_functions_by_codeset{ $codeset } }, $item;
 
                     # check that the type is a valid function type
                     if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
                         die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
                     }
-                }
 
-                # add the crumb type to the global list
-                my $index = scalar( @all_crumb_types );
-                push @all_crumb_types, $item;
-                $crumb_type_name_to_index{ $item->{'name'} } = $index;
-                next;	# $line
-            }
-            if ( $line =~ /^TRACKER\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-
-                if ( not defined( $game_config->{'tracker'} ) ) {
-                    $game_config->{'tracker'} = $item;
-                } else {
-                    $game_config->{'tracker'} = { %{ $game_config->{'tracker'} }, %$item };
-                }
-
-                add_build_feature( 'TRACKER' );
-                add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
-
-                if ( defined( $item->{'fx_channel'} ) ) {
-                    if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
-                        die "TRACKER: FX_CHANNEL can only be 0, 1 or 2\n";
+                    # if a filename was not provided, assign a default one
+                    if ( not defined( $item->{'file'} ) ) {
+                        $item->{'file'} = $item->{'name'} . '.c';
                     }
-                    add_build_feature( 'TRACKER_SOUNDFX' );
-                    if ( defined( $item->{'fx_volume'} ) ) {
-                        if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 16 ) ) {
-                            die "TRACKER: FX_VOLUME must be in range 0-16\n";
+
+                    # add the function to the game config
+                    $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
+
+                    # adjust build feature
+                    if ( $codeset ne 'home' ) {
+                        add_build_feature( 'CODESETS' );
+                    }
+                    next;
+                }
+                if ( $line =~ /^SOUND\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $vars = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    foreach my $k ( keys %$vars ) {
+                        $game_config->{'sounds'}{ $k } = $vars->{ $k };
+                    }
+                    next;
+                }
+                if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA|TITLE_AREA)\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my ( $directive, $args ) = ( $1, $2 );
+                    $game_config->{ lc( $directive ) } = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    add_build_feature( 'SCREEN_AREA_' . $directive );
+                    next;
+                }
+                if ( $line =~ /^LOADING_SCREEN\s+(.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $game_config->{'loading_screen'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( scalar( grep { defined } map { $game_config->{'loading_screen'}{ $_ } } qw( png scr ) ) != 1 ) {
+                        die "LOADING_SCREEN: exactly one of PNG or SCR options (but not both) must be specified\n";
+                    }
+                    add_build_feature( "LOADING_SCREEN" );
+                    if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
+                        add_build_feature( "LOADING_SCREEN_WAIT_ANY_KEY" );
+                    }
+                    next;
+                }
+                if ( $line =~ /^CUSTOM_CHARSET\s+(.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    $game_config->{'custom_charset'} = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $game_config->{'custom_charset'}{'file'} ) ) {
+                        die "CUSTOM_CHARSET: FILE must be specified\n";
+                    }
+                    if ( defined( $game_config->{'custom_charset'}{'range'} ) ) {
+                        if ( $game_config->{'custom_charset'}{'range'} !~ m/^\d+\-\d+$/ ) {
+                            die "CUSTOM_CHARSET: RANGE option must be integers MM-NN\n";
                         }
-                    } else {
-                        # fx_volume is always defined
-                        $item->{'fx_volume'} = 16;	# default value
                     }
+                    add_build_feature( "CUSTOM_CHARSET" );
+                    next;
                 }
-                next;
-            }
-            if ( $line =~ /^TRACKER_SONG\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                if ( not defined( $item->{'name'} ) ) {
-                    die "TRACKER_SONG: missing NAME argument\n";
+                if ( $line =~ /^BINARY_DATA\s+(.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $blob_info = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $blob_info->{'file'} ) ) {
+                        die "BINARY_DATA: FILE must be specified\n";
+                    }
+                    if ( not defined( $blob_info->{'symbol'} ) ) {
+                        die "BINARY_DATA: SYMBOL must be specified\n";
+                    }
+                    if ( defined( $blob_info->{'compress'} ) ) {
+                        if ( $blob_info->{'compress'} !~ m/^[01]$/ ) {
+                            die "BINARY_DATA: COMPRESS option must be 0 or 1\n";
+                        }
+                    }
+                    if ( not defined( $blob_info->{'codeset'} ) ) {
+                        $blob_info->{'codeset'} = 'home';
+                    }
+                    # there can be more than one instance of BINARY_DATA for
+                    # different pieces of data
+                    push @{ $game_config->{'binary_data'} }, $blob_info;
+                    next;
                 }
-                if ( not defined( $item->{'file'} ) ) {
-                    die "TRACKER_SONG: missing FILE argument\n";
-                }
-                my $index = defined( $game_config->{'tracker'}{'songs'} ) ?
-                    scalar( @{ $game_config->{'tracker'}{'songs'} } ) : 0;
-                $item->{'song_index'} = $index;
-                push @{ $game_config->{'tracker'}{'songs'} }, $item;
-                $game_config->{'tracker'}{'song_index'}{ $item->{'name'} } = $index;
-                next;
-            }
-            if ( $line =~ /^TRACKER_FXTABLE\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                if ( not defined( $item->{'file'} ) ) {
-                    die "TRACKER_FXTABLE: missing FILE argument\n";
-                }
-                $game_config->{'tracker'}{'fxtable'} = $item;
-                next;
-            }
-            if ( $line =~ /^COLOR\s+(\w.*)$/ ) {
-                # ARG1=val1 ARG2=va2 ARG3=val3...
-                my $args = $1;
-                my $item = {
-                    map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                    split( /\s+/, $args )
-                };
-                if ( not defined( $item->{'mode'} ) ) {
-                    die "COLOR: missing MODE argument\n";
-                }
-                $game_config->{'color'} = $item;
-                next;
-            }
-            if ( $line =~ /^END_GAME_CONFIG$/ ) {
-                $state = 'NONE';
-                next;
-            }
-            die "Syntax error:line $num_line: '$line' not recognized (GAME_CONFIG section)\n";
+                if ( $line =~ /^CRUMB_TYPE\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
 
-        } elsif ( $state eq 'RULE' ) {
-            if ( $line =~ /^SCREEN\s+(\w+)$/ ) {
-                # if screen is __EVENTS__ then this rule goes into the game events rule table
-                $cur_rule->{'screen'} = $1;
-                next;
-            }
-            if ( $line =~ /^WHEN\s+(\w+)$/ ) {
-                # the WHEN clause is ignored if screen is __EVENTS__
-                $cur_rule->{'when'} = lc( $1 );
-                next;
-            }
-            if ( $line =~ /^CHECK\s+(.+)$/ ) {
-                push @{$cur_rule->{'check'}}, $1;
-                next;
-            }
-            if ( $line =~ /^DO\s+(.+)$/ ) {
-                push @{$cur_rule->{'do'}}, $1;
-                next;
-            }
-            if ( $line =~ /^END_RULE$/ ) {
-                # validate rule before deduplicating it
-                validate_and_compile_rule( $cur_rule );
+                    # check mandatory fields
+                    if ( not defined( $item->{'name'} ) ) {
+                        die "CRUMB_TYPE: NAME field is mandatory\n";
+                    }
 
-                # we must delete WHEN and SCREEN for deduplicating rules,
-                # but we must keep them for properly storing the rule
-                my $when = $cur_rule->{'when'} || '<undefined>';
-                delete $cur_rule->{'when'};
-                my $screen = $cur_rule->{'screen'};
-                delete $cur_rule->{'screen'};
+                    if ( not defined( $item->{'btile'} ) ) {
+                        die "CRUMB_TYPE: BTILE field is mandatory\n";
+                    }
 
-                # find an identical rule if it exists
-                my $found = find_existing_rule_index( $cur_rule );
-                my $index;
-                # use it if found, otherwise add the new one to the global rule list
-                if ( defined( $found ) ) {
-                    $index = $found;
-                } else {
-                    $index = scalar( @all_rules );
-                    push @all_rules, $cur_rule;
+                    # if an action_function is defined, do some checks
+                    if ( defined( $item->{'action_function' } ) ) {
+
+                        my $action_function = {
+                            name	=> $item->{'action_function' },
+                            codeset	=> ( $item->{'codeset'} || 'home' ),
+                            type	=> 'crumb_action',
+                        };
+
+                        # check that codeset is a valid value
+                        if ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
+                            die sprintf( "CRUMB_TYPE: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                        }
+
+                        # add the needed codeset-related fields.  if a function has
+                        # no codeset directive, it goes to the 'home' codeset
+                        my $codeset = $action_function->{'codeset'};
+                        if ( not defined( $codeset_functions_by_codeset{ $codeset } ) ) {
+                            $codeset_functions_by_codeset{ $codeset } = [];
+                        }
+                        $action_function->{'local_index'} = scalar( @{ $codeset_functions_by_codeset{ $codeset } } );
+
+                        # add the function to the codeset lists
+                        push @all_codeset_functions, $action_function;
+                        push @{ $codeset_functions_by_codeset{ $codeset } }, $action_function;
+
+                        # check that the type is a valid function type
+                        if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
+                            die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                        }
+                    }
+
+                    # add the crumb type to the global list
+                    my $index = scalar( @all_crumb_types );
+                    push @all_crumb_types, $item;
+                    $crumb_type_name_to_index{ $item->{'name'} } = $index;
+                    next;	# $line
                 }
+                if ( $line =~ /^TRACKER\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
 
-                # add the rule index to the proper screen rule table, or the events rule table
-                if ( $screen eq '__EVENTS__' ) {
-                    push @game_events_rule_table, $index;
-                } else {
-                    push @{ $all_screens[ $screen_name_to_index{ $screen } ]{'rules'}{ $when } }, $index;
+                    if ( not defined( $game_config->{'tracker'} ) ) {
+                        $game_config->{'tracker'} = $item;
+                    } else {
+                        $game_config->{'tracker'} = { %{ $game_config->{'tracker'} }, %$item };
+                    }
+
+                    add_build_feature( 'TRACKER' );
+                    add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
+
+                    if ( defined( $item->{'fx_channel'} ) ) {
+                        if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
+                            die "TRACKER: FX_CHANNEL can only be 0, 1 or 2\n";
+                        }
+                        add_build_feature( 'TRACKER_SOUNDFX' );
+                        if ( defined( $item->{'fx_volume'} ) ) {
+                            if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 16 ) ) {
+                                die "TRACKER: FX_VOLUME must be in range 0-16\n";
+                            }
+                        } else {
+                            # fx_volume is always defined
+                            $item->{'fx_volume'} = 16;	# default value
+                        }
+                    }
+                    next;
                 }
+                if ( $line =~ /^TRACKER_SONG\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $item->{'name'} ) ) {
+                        die "TRACKER_SONG: missing NAME argument\n";
+                    }
+                    if ( not defined( $item->{'file'} ) ) {
+                        die "TRACKER_SONG: missing FILE argument\n";
+                    }
+                    my $index = defined( $game_config->{'tracker'}{'songs'} ) ?
+                        scalar( @{ $game_config->{'tracker'}{'songs'} } ) : 0;
+                    $item->{'song_index'} = $index;
+                    push @{ $game_config->{'tracker'}{'songs'} }, $item;
+                    $game_config->{'tracker'}{'song_index'}{ $item->{'name'} } = $index;
+                    next;
+                }
+                if ( $line =~ /^TRACKER_FXTABLE\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $item->{'file'} ) ) {
+                        die "TRACKER_FXTABLE: missing FILE argument\n";
+                    }
+                    $game_config->{'tracker'}{'fxtable'} = $item;
+                    next;
+                }
+                if ( $line =~ /^COLOR\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $item->{'mode'} ) ) {
+                        die "COLOR: missing MODE argument\n";
+                    }
+                    $game_config->{'color'} = $item;
+                    next;
+                }
+                if ( $line =~ /^END_GAME_CONFIG$/ ) {
+                    $state = 'NONE';
+                    next;
+                }
+                die "Syntax error:line $num_line: '$line' not recognized (GAME_CONFIG section)\n";
 
-                # clean up for next rule
-                $cur_rule = undef;
-                $state = 'NONE';
-                next;
+            } elsif ( $state eq 'RULE' ) {
+                if ( $line =~ /^SCREEN\s+(\w+)$/ ) {
+                    # if screen is __EVENTS__ then this rule goes into the game events rule table
+                    $cur_rule->{'screen'} = $1;
+                    next;
+                }
+                if ( $line =~ /^WHEN\s+(\w+)$/ ) {
+                    # the WHEN clause is ignored if screen is __EVENTS__
+                    $cur_rule->{'when'} = lc( $1 );
+                    next;
+                }
+                if ( $line =~ /^CHECK\s+(.+)$/ ) {
+                    push @{$cur_rule->{'check'}}, $1;
+                    next;
+                }
+                if ( $line =~ /^DO\s+(.+)$/ ) {
+                    push @{$cur_rule->{'do'}}, $1;
+                    next;
+                }
+                if ( $line =~ /^END_RULE$/ ) {
+                    # validate rule before deduplicating it
+                    validate_and_compile_rule( $cur_rule );
+
+                    # we must delete WHEN and SCREEN for deduplicating rules,
+                    # but we must keep them for properly storing the rule
+                    my $when = $cur_rule->{'when'} || '<undefined>';
+                    delete $cur_rule->{'when'};
+                    my $screen = $cur_rule->{'screen'};
+                    delete $cur_rule->{'screen'};
+
+                    # find an identical rule if it exists
+                    my $found = find_existing_rule_index( $cur_rule );
+                    my $index;
+                    # use it if found, otherwise add the new one to the global rule list
+                    if ( defined( $found ) ) {
+                        $index = $found;
+                    } else {
+                        $index = scalar( @all_rules );
+                        push @all_rules, $cur_rule;
+                    }
+
+                    # add the rule index to the proper screen rule table, or the events rule table
+                    if ( $screen eq '__EVENTS__' ) {
+                        push @game_events_rule_table, $index;
+                    } else {
+                        push @{ $all_screens[ $screen_name_to_index{ $screen } ]{'rules'}{ $when } }, $index;
+                    }
+
+                    # clean up for next rule
+                    $cur_rule = undef;
+                    $state = 'NONE';
+                    next;
+                }
+                die "Syntax error:line $num_line: '$line' not recognized (RULE section)\n";
+
+            } else {
+                die "Unknown state '$state'\n";
             }
-            die "Syntax error:line $num_line: '$line' not recognized (RULE section)\n";
-
-        } else {
-            die "Unknown state '$state'\n";
         }
-    }
+
+        # close input file
+        close GDATA;
+
+        # do accounting and show progress
+        $num_files_read++;
+        if ( not ( $num_files_read % 159 ) ) {
+            printf "\rGDATA files read: %d/%d", $num_files_read, $num_files;
+        }
+    }	# end foreach my $file
+    printf "\rGDATA files read: %d/%d\n", $num_files_read, $num_files;
 }
 
 ######################################
@@ -3720,12 +3742,13 @@ sub generate_game_data {
     # dataset items. All dataset are generated, including 'home'
     # 'home' dataset will be treated specially at output
     for my $dataset ( keys %dataset_dependency ) {
-        generate_c_banked_header( $dataset ) and print ".";
-        generate_btiles( $dataset ) and print ".";
-        generate_sprites( $dataset ) and print ".";
-        generate_flow_rules( $dataset ) and print ".";
-        generate_screens( $dataset ) and print ".";
-        generate_map( $dataset ) and print ".";
+        generate_c_banked_header( $dataset );
+        generate_btiles( $dataset );
+        generate_sprites( $dataset );
+        generate_flow_rules( $dataset );
+        generate_screens( $dataset );
+        generate_map( $dataset );
+        print ".";
     }
 
     # home bank items
@@ -4102,7 +4125,7 @@ create_dataset_dependencies;
 fix_feature_dependencies;
 
 # generate output
-print "Generating game data...\n";
+print "Generating game data...";
 generate_game_data;
 print "Writing output files...\n";
 output_game_data;

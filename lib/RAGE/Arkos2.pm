@@ -27,15 +27,15 @@ sub arkos2_convert_song_to_asm {
 
     my $tmp_file = "/tmp/song-$$.asm";
 
-    my @command = (
+    my $command = sprintf( '"%s" "%s" "%s" "%s" "%s" >/dev/null 2>&1',
         $cfg->{'tools'}{'arkos'}{'dir'} ."/tools/SongToAkg",
         '-sppostlbl',
         ':',
         $song_file,
         $tmp_file,
     );
-    if ( system( @command ) != 0 ) {
-        die sprintf( "Error running command: %s\n", join( ' ', @command ) );
+    if ( system( $command ) != 0 ) {
+        die "Error running command: $command\n";
     }
     open TMPIN, $tmp_file or
         die "Could not open file $tmp_file for reading\n";
@@ -73,15 +73,15 @@ sub arkos2_convert_effects_to_asm {
 
     my $tmp_file = "/tmp/song-$$.asm";
 
-    my @command = (
+    my $command = sprintf( '"%s" "%s" "%s" "%s" "%s" >/dev/null 2>&1',
         $cfg->{'tools'}{'arkos'}{'dir'} ."/tools/SongToSoundEffects",
         '-sppostlbl',
         ':',
         $song_file,
         $tmp_file,
     );
-    if ( system( @command ) != 0 ) {
-        die sprintf( "Error running command: %s\n", join( ' ', @command ) );
+    if ( system( $command ) != 0 ) {
+        die "Error running command: $command\n";
     }
     open TMPIN, $tmp_file or
         die "Could not open file $tmp_file for reading\n";
