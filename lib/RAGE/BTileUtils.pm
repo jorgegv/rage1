@@ -248,10 +248,11 @@ sub btile_vmirror_tiledefs {
 ############################################################
 
 # Utility functions
-
+my @digits = ( 0,1,2,3,4,5,6,7,8,9,'A','B','C','D','E','F' );
 sub cell_hash {
     my $cell_bytes = shift;
-    return join( '', map { sprintf( "%02x", $_ ) } @$cell_bytes );
+    return join( '', map { use integer; $digits[ $_ / 16 ].$digits[ $_ % 16 ] } @$cell_bytes );
+#    return join( '', map { sprintf( "%02x", $_ ) } @$cell_bytes );
 }
 
 sub lists_match {
@@ -734,8 +735,8 @@ sub btile_deduplicate_arena_best {
     my ( $algo2_offsets, $algo2_arena ) = btile_deduplicate_arena_algo2( $offsets, $arena );
     push @results, { 'offsets' => $algo2_offsets, 'arena' => $algo2_arena };
 
-    my ( $algo4_offsets, $algo4_arena ) = btile_deduplicate_arena_algo4( $offsets, $arena );
-    push @results, { 'offsets' => $algo4_offsets, 'arena' => $algo4_arena };
+#    my ( $algo4_offsets, $algo4_arena ) = btile_deduplicate_arena_algo4( $offsets, $arena );
+#    push @results, { 'offsets' => $algo4_offsets, 'arena' => $algo4_arena };
 
     my ( $algo5_offsets, $algo5_arena ) = btile_deduplicate_arena_jigsaw( $offsets, $arena );
     push @results, { 'offsets' => $algo5_offsets, 'arena' => $algo5_arena };
