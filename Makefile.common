@@ -99,6 +99,7 @@ ZCC			= zcc
 ZX0			= z88dk-zx0
 NM			= z88dk-z80nm
 ZCC_TARGET		= +zx
+DATAGEN			= ./tools/datagen.pl
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
@@ -150,7 +151,7 @@ GDATA_FILES =	$(wildcard $(GAME_DATA_DIR)/game_config/*.gdata) \
 GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata) $(wildcard $(GAME_DATA_DIR)/patches/flow/*.gdata)
 
 data:
-	@./tools/datagen.pl -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
+	@$(DATAGEN) -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
 	@./tools/generate_banked_function_defs.pl
 
 data_depend:
