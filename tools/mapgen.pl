@@ -993,6 +993,8 @@ if ( $coalesce_tiny_btiles ) {
 
     my $num_synthetic_btiles = 0;
 
+    my $synthetic_btile_id = 1;		# initial
+
     # walk the whole map, screen by screen
     # for each screen, walk from left to right, top to bottom
     foreach my $map_row_index ( 0 .. $map_rows - 1 ) {
@@ -1069,7 +1071,7 @@ if ( $coalesce_tiny_btiles ) {
                     }
                 }
                 # create a unique name
-                my $unique_name = sha1_hex( sprintf( "%d%d%d", time, int(rand(2000000000)), $$ ) );
+                my $unique_name = sprintf( "synth_%s_%05d", basename( $map_png_file, '.png', '.PNG' ), $synthetic_btile_id++ );
                 my $synthetic_btile = {
                     name		=> $unique_name,
                     default_type	=> 'obstacle',
@@ -1116,8 +1118,11 @@ if ( $coalesce_tiny_btiles ) {
                     }
                 }
 
-                # continue and repeat until all the map has been walked
+                # update counters
+                $btile_count_by_screen[ $current_screen_row ][ $current_screen_col ]++;
                 $num_synthetic_btiles++;
+
+                # continue and repeat until all the map has been walked
             }
         }
     }
@@ -1164,7 +1169,7 @@ foreach my $r ( 0 .. ( $map_screen_rows - 1 ) ) {
                     $r, $c, $btile_count );
                 $screens_with_too_many_btiles++;
             } else {
-                printf "-- Screen (%d,%d): matched %d BTILEs (of which %d were tiny 1x1 BTILEs)\n",
+                printf "-- Screen (%d,%d): matched %d BTILEs, %d tiny 1x1 BTILEs\n",
                     $r, $c, $btile_count, $tiny_btile_count;
             }
         }
