@@ -10,6 +10,8 @@
 ## 
 ################################################################################
 
+use File::Temp qw( tempfile );
+
 # reads a file and returns its bytes as a list of values 0-255.  Optionally,
 # an offset and size can be specified and the data extarcted from the file
 # will only be in that range
@@ -44,20 +46,21 @@ sub file_to_compressed_bytes {
 
     # get the bytes and write them to a temporary file
     my @bytes = file_to_bytes( $f, $offset, $size );
-    open( DATA, ">/tmp/bytes.dat" ) or
-        die "Error: could not open temporary /tmp/bytes.dat for writing\n";
+    my ( undef, $filename ) = tempfile();
+    open( DATA, ">$filename" ) or
+        die "Error: could not open temporary $filename for writing\n";
     binmode DATA;
     print DATA pack( "C*", @bytes );
     close DATA;
 
     # compress the temporary, then return the compressed bytes
-    system( "z88dk-zx0 -f /tmp/bytes.dat" );
+    system( "z88dk-zx0 -f '$filename' >/dev/null 2>&1" );
     if ( $? == -1 ) {
         die "Could not execute z88dk-zx0\n";
     } elsif ( $? & 127 ) {
-        die "Error executing z88dk-zx0\n";
+        die "Error executing z88dk-zx0 -f '$filename'\n";
     }
-    return file_to_bytes( '/tmp/bytes.dat.zx0' );
+    return file_to_bytes( "$filename.zx0" );
 }
 
 # reads a full file and returns a C data declaration of a byte array
