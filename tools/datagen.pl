@@ -166,7 +166,6 @@ sub read_input_data {
     my $cur_rule = undef;
 
     # read and process input
-    my $num_line = 0;
     my $screen_patching = 0;
     my $pending_split_lines;
 
@@ -177,12 +176,14 @@ sub read_input_data {
 
     foreach my $file ( @files ) {
 
+        my $current_line = 0;
+
         open GDATA, $file or
             die "** Error: could not open $file for reading\n";
 
         while (my $line = <GDATA>) {
 
-            $num_line++;
+            $current_line++;
 
             # cleanup the line
             chomp $line;
@@ -223,7 +224,7 @@ sub read_input_data {
                 if ( $line =~ /^PATCH_SCREEN\s+NAME=(.+)$/ ) {
                     my $name = $1;
                     if ( not defined( $screen_name_to_index{ $name } ) ) {
-                        die "PATCH_SCREEN: '$name' is not the name of an existing screen\n";
+                        die "PATCH_SCREEN: $file, line $current_line: '$name' is not the name of an existing screen\n";
                     }
                     $state = 'SCREEN';
                     $screen_patching = 1;
@@ -237,7 +238,7 @@ sub read_input_data {
                 }
                 if ( $line =~ /^BEGIN_HERO$/ ) {
                     if ( defined( $hero ) ) {
-                        die "A HERO is already defined, there can be only one\n";
+                        die "HERO: $file, line $current_line: a HERO is already defined, there can be only one\n";
                     }
                     $state = 'HERO';
                     $cur_sprite = undef;
@@ -245,7 +246,7 @@ sub read_input_data {
                 }
                 if ( $line =~ /^BEGIN_GAME_CONFIG$/ ) {
                     if ( defined( $game_config ) ) {
-                        die "A GAME_CONFIG is already defined, there can be only one\n";
+                        die "GAME_CONFIG: $file, line $current_line: a GAME_CONFIG is already defined, there can be only one\n";
                     }
                     $state = 'GAME_CONFIG';
                     next;
@@ -255,7 +256,7 @@ sub read_input_data {
                     $cur_rule = undef;
                     next;
                 }
-                die "Syntax error:line $num_line: '$line' not recognized (global section)\n";
+                die "Syntax error: $file, line $current_line: '$line' not recognized (global section)\n";
 
             } elsif ( $state eq 'BTILE' ) {
 
@@ -290,7 +291,7 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
                     my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                        die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+                        die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                     if ( $vars->{'png_rotate'} || 0 ) {
                         $png = png_rotate( $png, $vars->{'png_rotate'} );
@@ -336,7 +337,7 @@ sub read_input_data {
                     $state = 'NONE';
                     next;
                 }
-                die "Syntax error:line $num_line: '$line' not recognized (BTILE section)\n";
+                die "Syntax error: $file, line $current_line: '$line' not recognized (BTILE section)\n";
 
             } elsif ( $state eq 'SPRITE' ) {
 
@@ -380,7 +381,7 @@ sub read_input_data {
                     };
                     my $fgcolor = uc( $vars->{'fgcolor'} );
                     my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                        die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+                        die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                     map_png_colors_to_zx_colors( $png );
 
@@ -398,7 +399,7 @@ sub read_input_data {
                     };
                     my $maskcolor = uc( $vars->{'maskcolor'} );
                     my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
-                        die "** Error: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
+                        die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                     map_png_colors_to_zx_colors( $png );
 
@@ -430,7 +431,7 @@ sub read_input_data {
                     $state = 'NONE';
                     next;
                 }
-                die "Syntax error:line $num_line: '$line' not recognized (SPRITE section)\n";
+                die "Syntax error: $file, line $current_line: '$line' not recognized (SPRITE section)\n";
 
             } elsif ( $state eq 'SCREEN' ) {
 
@@ -562,7 +563,7 @@ sub read_input_data {
                     };
 
                     if ( not defined( $crumb_type_name_to_index{ $item->{'type'} } ) ) {
-                        die "CRUMB: undefined crumb TYPE '$item->{type}'\n";
+                        die "CRUMB: $file, line $current_line: undefined crumb TYPE '$item->{type}'\n";
                     }
 
                     # crumbs can change state (=grabbed), so assign a state slot
@@ -647,7 +648,7 @@ sub read_input_data {
                     $state = 'NONE';
                     next;
                 }
-                die "Syntax error:line $num_line: '$line' not recognized (SCREEN section)\n";
+                die "Syntax error: $file, line $current_line: '$line' not recognized (SCREEN section)\n";
 
             } elsif ( $state eq 'HERO' ) {
 
@@ -732,7 +733,7 @@ sub read_input_data {
                     $state = 'NONE';
                     next;
                 }
-                die "Syntax error:line $num_line: '$line' not recognized (HERO section)\n";
+                die "Syntax error: $file, line $current_line: '$line' not recognized (HERO section)\n";
 
             } elsif ( $state eq 'GAME_CONFIG' ) {
 
@@ -748,7 +749,7 @@ sub read_input_data {
                     }
                     if ( ( $game_config->{'zx_target'} ne '48' ) and
                         ( $game_config->{'zx_target'} ne '128' ) ) {
-                            die "ZX_TARGET must be either 48 or 128\n";
+                            die "ZX_TARGET: $file, line $current_line: ZX_TARGET must be either 48 or 128\n";
                         }
                     add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
                     next;
@@ -786,7 +787,7 @@ sub read_input_data {
                     # check that codeset is a valid value
                     if ( defined( $item->{'codeset'} ) ) {
                         if ( $item->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
-                            die sprintf( "CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                            die sprintf( "CODESET: $file, line $current_line: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
                         }
                     } else {
                         $item->{'codeset'} = 'home';
@@ -806,7 +807,7 @@ sub read_input_data {
 
                     # check that the type is a valid function type
                     if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
-                        die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                        die sprintf( "GAME_FUNCTION:  $file, line $current_line: Invalid game function type: %s\n", lc( $item->{'type'} ) );
                     }
 
                     # if a filename was not provided, assign a default one
@@ -853,7 +854,7 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
                     if ( scalar( grep { defined } map { $game_config->{'loading_screen'}{ $_ } } qw( png scr ) ) != 1 ) {
-                        die "LOADING_SCREEN: exactly one of PNG or SCR options (but not both) must be specified\n";
+                        die "LOADING_SCREEN: $file, line $current_line: exactly one of PNG or SCR options (but not both) must be specified\n";
                     }
                     add_build_feature( "LOADING_SCREEN" );
                     if ( $game_config->{'loading_screen'}{'wait_any_key'} ) {
@@ -869,11 +870,11 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
                     if ( not defined( $game_config->{'custom_charset'}{'file'} ) ) {
-                        die "CUSTOM_CHARSET: FILE must be specified\n";
+                        die "CUSTOM_CHARSET: $file, line $current_line: FILE must be specified\n";
                     }
                     if ( defined( $game_config->{'custom_charset'}{'range'} ) ) {
                         if ( $game_config->{'custom_charset'}{'range'} !~ m/^\d+\-\d+$/ ) {
-                            die "CUSTOM_CHARSET: RANGE option must be integers MM-NN\n";
+                            die "CUSTOM_CHARSET: $file, line $current_line: RANGE option must be integers MM-NN\n";
                         }
                     }
                     add_build_feature( "CUSTOM_CHARSET" );
@@ -887,14 +888,14 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
                     if ( not defined( $blob_info->{'file'} ) ) {
-                        die "BINARY_DATA: FILE must be specified\n";
+                        die "BINARY_DATA: $file, line $current_line: FILE must be specified\n";
                     }
                     if ( not defined( $blob_info->{'symbol'} ) ) {
-                        die "BINARY_DATA: SYMBOL must be specified\n";
+                        die "BINARY_DATA: $file, line $current_line: SYMBOL must be specified\n";
                     }
                     if ( defined( $blob_info->{'compress'} ) ) {
                         if ( $blob_info->{'compress'} !~ m/^[01]$/ ) {
-                            die "BINARY_DATA: COMPRESS option must be 0 or 1\n";
+                            die "BINARY_DATA: $file, line $current_line: COMPRESS option must be 0 or 1\n";
                         }
                     }
                     if ( not defined( $blob_info->{'codeset'} ) ) {
@@ -915,11 +916,11 @@ sub read_input_data {
 
                     # check mandatory fields
                     if ( not defined( $item->{'name'} ) ) {
-                        die "CRUMB_TYPE: NAME field is mandatory\n";
+                        die "CRUMB_TYPE: $file, line $current_line: NAME field is mandatory\n";
                     }
 
                     if ( not defined( $item->{'btile'} ) ) {
-                        die "CRUMB_TYPE: BTILE field is mandatory\n";
+                        die "CRUMB_TYPE:  $file, line $current_line: BTILE field is mandatory\n";
                     }
 
                     # if an action_function is defined, do some checks
@@ -933,7 +934,7 @@ sub read_input_data {
 
                         # check that codeset is a valid value
                         if ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
-                            die sprintf( "CRUMB_TYPE: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
+                            die sprintf( "CRUMB_TYPE: $file, line $current_line: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
                         }
 
                         # add the needed codeset-related fields.  if a function has
@@ -950,7 +951,7 @@ sub read_input_data {
 
                         # check that the type is a valid function type
                         if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
-                            die sprintf( "Invalid game function type: %s\n", lc( $item->{'type'} ) );
+                            die sprintf( "GAME_FUNCTION: $file, line $current_line: invalid game function type: %s\n", lc( $item->{'type'} ) );
                         }
                     }
 
@@ -979,12 +980,12 @@ sub read_input_data {
 
                     if ( defined( $item->{'fx_channel'} ) ) {
                         if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
-                            die "TRACKER: FX_CHANNEL can only be 0, 1 or 2\n";
+                            die "TRACKER: $file, line $current_line: FX_CHANNEL can only be 0, 1 or 2\n";
                         }
                         add_build_feature( 'TRACKER_SOUNDFX' );
                         if ( defined( $item->{'fx_volume'} ) ) {
                             if ( not grep { $_ == $item->{'fx_volume'} } ( 0 .. 16 ) ) {
-                                die "TRACKER: FX_VOLUME must be in range 0-16\n";
+                                die "TRACKER: $file, line $current_line: FX_VOLUME must be in range 0-16\n";
                             }
                         } else {
                             # fx_volume is always defined
@@ -1001,10 +1002,10 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
                     if ( not defined( $item->{'name'} ) ) {
-                        die "TRACKER_SONG: missing NAME argument\n";
+                        die "TRACKER_SONG: $file, line $current_line: missing NAME argument\n";
                     }
                     if ( not defined( $item->{'file'} ) ) {
-                        die "TRACKER_SONG: missing FILE argument\n";
+                        die "TRACKER_SONG: $file, line $current_line: missing FILE argument\n";
                     }
                     my $index = defined( $game_config->{'tracker'}{'songs'} ) ?
                         scalar( @{ $game_config->{'tracker'}{'songs'} } ) : 0;
@@ -1021,7 +1022,7 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
                     if ( not defined( $item->{'file'} ) ) {
-                        die "TRACKER_FXTABLE: missing FILE argument\n";
+                        die "TRACKER_FXTABLE: $file, line $current_line: missing FILE argument\n";
                     }
                     $game_config->{'tracker'}{'fxtable'} = $item;
                     next;
@@ -1034,7 +1035,7 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
                     if ( not defined( $item->{'mode'} ) ) {
-                        die "COLOR: missing MODE argument\n";
+                        die "COLOR: $file, line $current_line: missing MODE argument\n";
                     }
                     $game_config->{'color'} = $item;
                     next;
@@ -1043,7 +1044,7 @@ sub read_input_data {
                     $state = 'NONE';
                     next;
                 }
-                die "Syntax error:line $num_line: '$line' not recognized (GAME_CONFIG section)\n";
+                die "Syntax error: $file, line $current_line: '$line' not recognized (GAME_CONFIG section)\n";
 
             } elsif ( $state eq 'RULE' ) {
                 if ( $line =~ /^SCREEN\s+(\w+)$/ ) {
@@ -1098,7 +1099,7 @@ sub read_input_data {
                     $state = 'NONE';
                     next;
                 }
-                die "Syntax error:line $num_line: '$line' not recognized (RULE section)\n";
+                die "Syntax error: $file, line $current_line: '$line' not recognized (RULE section)\n";
 
             } else {
                 die "Unknown state '$state'\n";
