@@ -16,12 +16,17 @@ use utf8;
 use Data::Dumper;
 use Getopt::Std;
 
-# list of valid banks and size for 128K Speccy
-my @dataset_valid_banks = ( 1, 3, 7 );	# contended banks reserved for data
 # banks reserved for codesets. Bank 4 is reserved for engine code
 my @codeset_valid_banks = ( 6, );       # non-contended
 
+# list of valid banks and size for 128K Speccy
+my @dataset_valid_banks = ( 1, 3, 7 );	# contended banks reserved for data
 my $max_bank_size = 16384;
+
+# add the codeset banks at the end of the list of dataset banks, so that if
+# all the dataset banks are full we can continue filling the codeset bank
+# with more datasets
+push @dataset_valid_banks, @codeset_valid_banks;
 
 # config vars
 my $bank_binaries_name_format = 'bank_%d.bin';
@@ -46,6 +51,7 @@ sub gather_datasets {
                 'name'		=> $bin,
                 'size'		=> ( stat( "$dir/$bin" ) )[7],
                 'dir'		=> $dir,
+                'type'		=> 'dataset',
         };
     }
     close BINDIR;
@@ -66,6 +72,7 @@ sub gather_codesets {
                 'name'		=> $bin,
                 'size'		=> ( stat( "$dir/$bin" ) )[7],
                 'dir'		=> $dir,
+                'type'		=> 'codeset',
         };
     }
     close BINDIR;
@@ -74,7 +81,6 @@ sub gather_codesets {
 
 sub layout_dataset_binaries {
     my ( $layout, $bins ) = @_;
-
 
     # start with the first bank, place the binaries on the current bank
     # until it is full, then continue with the next until no more banks o no
@@ -97,9 +103,16 @@ sub layout_dataset_binaries {
             if ( $current_bank_index >= scalar( @dataset_valid_banks ) ) {
                 die "** Error: no more banks to fill, datasets are too big\n";
             }
+            # if the bank already has a 'type' field, it is a codeset bank, so set the type to 'mixed'
+            if ( defined( $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'type'} ) ) {
+                $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'type'} = 'mixed';
+            }
         }
 
-        # add the bank and offset info to the dataset. Offset is the curent pos in the bank
+        # add the bank and offset info to the dataset.  Offset is the curent
+        # pos in the bank if this is the first dataset inserted into a
+        # codeset bank ('mixed' type), 'size' will already be defined from
+        # the codeset layout stage and can be used as usual
         $bin->{'bank'} = $dataset_valid_banks[ $current_bank_index ];
         $bin->{'offset'} = $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} || 0;
 
@@ -181,14 +194,14 @@ sub generate_bank_config {
 
     foreach my $bank ( sort { $a <=> $b } keys %$layout ) {
         my $ids;
-        if ( $layout->{ $bank }{'type'} eq 'dataset' ) {
-            $ids = join( " ", map { $_->{'dataset_num' } } @{ $layout->{ $bank }{'binaries'} } );
-        } elsif ( $layout->{ $bank }{'type'} eq 'codeset' ) {
-            $ids = join( " ", map { $_->{'codeset_num' } } @{ $layout->{ $bank }{'binaries'} } );
-        } else {
-            die "BANK $bank: unknown type $layout->{ $bank }{'type'}\n";
+        if ( ( $layout->{ $bank }{'type'} eq 'dataset' )  or ( $layout->{ $bank }{'type'} eq 'mixed' ) ) {
+            $ids = join( " ", map { $_->{'dataset_num' } } grep { $_->{'type'} eq 'dataset' } @{ $layout->{ $bank }{'binaries'} } );
+            printf $bankcfg_h "%s %d %s %s\n", $layout->{ $bank }{'type'}, $bank, $layout->{ $bank }{'binary'}, $ids;
         }
-        printf $bankcfg_h "%s %d %s %s\n", $layout->{ $bank }{'type'}, $bank, $layout->{ $bank }{'binary'}, $ids;
+        if ( ( $layout->{ $bank }{'type'} eq 'codeset' ) or ( $layout->{ $bank }{'type'} eq 'mixed' ) ) {
+            $ids = join( " ", map { $_->{'codeset_num' } } grep { $_->{'type'} eq 'codeset' } @{ $layout->{ $bank }{'binaries'} } );
+            printf $bankcfg_h "%s %d %s %s\n", $layout->{ $bank }{'type'}, $bank, $layout->{ $bank }{'binary'}, $ids;
+        }
     }
     print $bankcfg_h "\n";
     close $bankcfg_h;
@@ -259,8 +272,11 @@ my $codesets = gather_codesets( $input_dir_cs, '.bin' );
 # there may be _no_ codesets after all, so no error in that case
 
 my $bank_layout = { };
-layout_dataset_binaries( $bank_layout, $datasets );
+
+# we must first layout the codesets, so that if datasets later fill their
+# banks,they can spill at the end of the codeset bank
 layout_codeset_binaries( $bank_layout, $codesets );
+layout_dataset_binaries( $bank_layout, $datasets );
 
 generate_bank_binaries( $bank_layout, $output_dir );
 
