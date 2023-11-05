@@ -119,7 +119,6 @@ sub layout_dataset_binaries {
         # then update the bank layout
         push @{ $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
         $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
-        $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'type'} = 'dataset';
     }
 }
 
@@ -145,7 +144,6 @@ sub layout_codeset_binaries {
         $bin->{'bank'} = $codeset_valid_banks[ $current_bank_index ];
         push @{ $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
         $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
-        $layout->{ $codeset_valid_banks[ $current_bank_index ] }{'type'} = 'codeset';
 
         # update used bank index
         $current_bank_index++;
@@ -193,14 +191,16 @@ sub generate_bank_config {
     print $bankcfg_h "# <type> <bank_num> <path> <codesets/datasets>\n";
 
     foreach my $bank ( sort { $a <=> $b } keys %$layout ) {
-        my $ids;
-        if ( ( $layout->{ $bank }{'type'} eq 'dataset' )  or ( $layout->{ $bank }{'type'} eq 'mixed' ) ) {
-            $ids = join( " ", map { $_->{'dataset_num' } } grep { $_->{'type'} eq 'dataset' } @{ $layout->{ $bank }{'binaries'} } );
-            printf $bankcfg_h "%s %d %s %s\n", $layout->{ $bank }{'type'}, $bank, $layout->{ $bank }{'binary'}, $ids;
+        my @ids;
+        # report dataset mappings
+        @ids = map { $_->{'dataset_num' } } grep { $_->{'type'} eq 'dataset' } @{ $layout->{ $bank }{'binaries'} };
+        if ( scalar( @ids ) ) {
+            printf $bankcfg_h "dataset %d %s %s\n", $bank, $layout->{ $bank }{'binary'}, join( ' ', @ids );
         }
-        if ( ( $layout->{ $bank }{'type'} eq 'codeset' ) or ( $layout->{ $bank }{'type'} eq 'mixed' ) ) {
-            $ids = join( " ", map { $_->{'codeset_num' } } grep { $_->{'type'} eq 'codeset' } @{ $layout->{ $bank }{'binaries'} } );
-            printf $bankcfg_h "%s %d %s %s\n", $layout->{ $bank }{'type'}, $bank, $layout->{ $bank }{'binary'}, $ids;
+        # report codeset mappings
+        @ids = map { $_->{'codeset_num' } } grep { $_->{'type'} eq 'codeset' } @{ $layout->{ $bank }{'binaries'} };
+        if ( scalar( @ids ) ) {
+            printf $bankcfg_h "codeset %d %s %s\n", $bank, $layout->{ $bank }{'binary'}, join( ' ', @ids );
         }
     }
     print $bankcfg_h "\n";
