@@ -42,7 +42,7 @@ echo "BANKS 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
 echo
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
-printf "  %-12s  \$%04x  \$%04x  %5d\n" screen 16384 22575 6192
+printf "  %-12s  \$%04x  \$%04x  %5d\n" screen 16384 22575 6912
 printf "  %-12s  \$%04x  \$%04x  %5d\n" databuf 22576 $(( 22576 + DATASET_MAX_SIZE - 1 )) $DATASET_MAX_SIZE
 printf "  %-12s  \$%04x  \$%04x  %5d\n" heap $(( 22576 + DATASET_MAX_SIZE )) 32767 $(( 32768 - 22576 - DATASET_MAX_SIZE ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
