@@ -775,7 +775,7 @@ check is successful. Options:
   - [x] ENEMIES_KILLED_EQUAL <value>
   - [x] ENEMIES_KILLED_MORE_THAN <value>
   - [x] ENEMIES_KILLED_LESS_THAN <value>
-  - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `uint8_t my_custom_check(void)`
+  - [x] CALL_CUSTOM_FUNCTION NAME=<function_name> PARAM=<byte_param> - function prototype: `uint8_t my_custom_check(uint8_t param)`
   - [x] HERO_OVER_HOTZONE <hotzone_name>
   - [x] SCREEN_FLAG_IS_SET <flag>
   - [x] SCREEN_FLAG_IS_RESET <flag>
@@ -795,7 +795,7 @@ check is successful. Options:
   - [x] DISABLE_TILE <tile_name>
   - [x] ENABLE_HOTZONE <hotzone_name>
   - [x] DISABLE_HOTZONE <hotzone_name>
-  - [x] CALL_CUSTOM_FUNCTION <function_name> - function prototype: `void my_custom_action(void)`
+  - [x] CALL_CUSTOM_FUNCTION NAME=<function_name> PARAM=<byte_param> - function prototype: `void my_custom_action(uint8_t param)`
   - [x] END_OF_GAME
   - [x] WARP_TO_SCREEN DEST_SCREEN=<screen_name> [DEST_HERO_X=<xxx>] [DEST_HERO_Y=<yyy>]
   - [x] ADD_TO_INVENTORY <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
