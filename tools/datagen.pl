@@ -2185,11 +2185,15 @@ sub validate_and_compile_rule {
         # check custom function filtering
         if ( $check =~ /^CALL_CUSTOM_FUNCTION/ ) {
             my $index = scalar( @check_custom_functions );
+            my $vars = {
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $check_data )
+            };
             push @check_custom_functions, {
                 index => $index,
-                function => $check_data,
+                function => $vars->{'name'},
             };
-            $check_data = $index;
+            $check_data = sprintf( "{ .function_id = %d, .param = %s }", $index, $vars->{'param'} || 0 );
         }
 
         # flow_vars specifics
@@ -2266,11 +2270,15 @@ sub validate_and_compile_rule {
         # custom action function filtering
         if ( $action =~ /^CALL_CUSTOM_FUNCTION/ ) {
             my $index = scalar( @action_custom_functions );
+            my $vars = {
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $action_data )
+            };
             push @action_custom_functions, {
                 index => $index,
-                function => $action_data,
+                function => $vars->{'name'},
             };
-            $action_data = $index;
+            $action_data = sprintf( "{ .function_id = %d, .param = %s }", $index, $vars->{'param'} || 0 );
         }
 
         # flow_vars specifics
@@ -2333,7 +2341,7 @@ my $check_data_output_format = {
     ENEMIES_KILLED_EQUAL	=> ".data.enemies.count = %d",
     ENEMIES_KILLED_MORE_THAN	=> ".data.enemies.count = %d",
     ENEMIES_KILLED_LESS_THAN	=> ".data.enemies.count = %d",
-    CALL_CUSTOM_FUNCTION	=> ".data.custom.function_id = %d",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom = %s",
     ITEM_IS_OWNED		=> ".data.item.item_id = %s",
     HERO_OVER_HOTZONE		=> ".data.hotzone.num_hotzone = %s",
     SCREEN_FLAG_IS_SET		=> ".data.flag_state.flag = %s",
@@ -2352,7 +2360,7 @@ my $action_data_output_format = {
     RESET_USER_FLAG		=> ".data.user_flag.flag = %s",
     INC_LIVES			=> ".data.lives.count = %s",
     PLAY_SOUND			=> ".data.play_sound.sound_id = %s",
-    CALL_CUSTOM_FUNCTION	=> ".data.custom.function_id = %d",
+    CALL_CUSTOM_FUNCTION	=> ".data.custom = %s",
     END_OF_GAME			=> ".data.unused = %d",
     WARP_TO_SCREEN		=> ".data.warp_to_screen = %s",
     ENABLE_HOTZONE		=> ".data.hotzone.num_hotzone = %d",
