@@ -810,11 +810,6 @@ sub read_input_data {
                         die sprintf( "GAME_FUNCTION:  $file, line $current_line: Invalid game function type: %s\n", lc( $item->{'type'} ) );
                     }
 
-                    # if a filename was not provided, assign a default one
-                    if ( not defined( $item->{'file'} ) ) {
-                        $item->{'file'} = $item->{'name'} . '.c';
-                    }
-
                     # add the function to the game config
                     $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
 
@@ -3837,7 +3832,7 @@ sub output_game_data {
     }
 
     # output banked codesets
-    my %files_to_copy;
+    my @files_to_copy;
     foreach my $codeset ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
 
         # create the destination directory
@@ -3848,14 +3843,23 @@ sub output_game_data {
         }
 
         # note the files to be moved to the codeset source dir
-        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
-            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
-                $files_to_copy{ $function->{'file'} } = {
-                    src => $game_src_dir . '/' . $function->{'file'},
-                    dst => $dst_dir . '/' . $function->{'file'},
-                };
-            }
+        my $src_codeset_dir = sprintf( "%s/codeset_%d", $game_src_dir, $codeset );
+        foreach my $src_file ( glob( "$src_codeset_dir/*" ) ) {
+            my $basename = basename( $src_file );
+            push @files_to_copy, {
+                src => $src_file,
+                dst => $dst_dir . '/' . $basename,
+            };
         }
+
+#        foreach my $function ( @{ $codeset_functions_by_codeset{ $codeset } } ) {
+#            if ( not defined( $files_to_copy{ $function->{'file'} } ) ) {
+#                $files_to_copy{ $function->{'file'} } = {
+#                    src => $game_src_dir . '/' . $function->{'file'},
+#                    dst => $dst_dir . '/' . $function->{'file'},
+#                };
+#            }
+#        }
 
         # output .c file for the codeset
         my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $codeset );
@@ -3875,9 +3879,9 @@ sub output_game_data {
     # move the source files for functions associated to this codeset to the dest dir
     # only if compiling for 128K
     if ( $game_config->{'zx_target'} eq '128' ) {
-        foreach my $file ( keys %files_to_copy ) {
-            my $src_file = $files_to_copy{ $file }{'src'};
-            my $dst_file = $files_to_copy{ $file }{'dst'};
+        foreach my $file ( @files_to_copy ) {
+            my $src_file = $file->{'src'};
+            my $dst_file = $file->{'dst'};
             move( $src_file, $dst_file ) or
                 die "** Could not move $src_file to $dst_file\n";
         }
