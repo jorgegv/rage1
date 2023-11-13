@@ -549,6 +549,7 @@ BEGIN_GAME_CONFIG
         TRACKER_SONG    NAME=menu_song FILE=game_data/music/music1.aks
         TRACKER_SONG    NAME=in_game_song FILE=game_data/music/music2.aks
 	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
+	CUSTOM_STATE_DATA	SIZE=8
 END_GAME_CONFIG
 ```
 
@@ -686,6 +687,14 @@ including different data pieces.  Arguments:
   the game, in Arkos 2 format (`.aks`). Again, make sure you configure
   correctly your Arkos Tracker 2 directory. Arguments:
   * `FILE`: the path of the sound FX file
+
+* `CUSTOM_STATE_DATA`: reserves some data in the `game_state` structure for
+  use by custom functions created by the user.  This is useful for passing
+  information between code in lowmem and code in codesets, for example.  The
+  size of the area to be reserved must be indicated with the mandatory SIZE
+  parameter. The reserved area can be accessed via the
+  `game_state.custom_data` byte array, and will have a maximum size of
+  `CUSTOM_STATE_DATA_SIZE` bytes.
 
 # FLOWGEN
 

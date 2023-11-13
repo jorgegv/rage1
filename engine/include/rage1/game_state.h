@@ -109,6 +109,11 @@ struct game_state_s {
    // game_time: seconds elapsed since start of game
    uint16_t game_time;
 #endif
+
+#ifdef BUILD_FEATURE_CUSTOM_STATE_DATA
+   // custom state data
+   uint8_t custom_data[ CUSTOM_STATE_DATA_SIZE ];
+#endif
 };
 
 extern struct game_state_s game_state;

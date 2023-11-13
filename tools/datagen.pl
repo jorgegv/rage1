@@ -1036,6 +1036,20 @@ sub read_input_data {
                     $game_config->{'color'} = $item;
                     next;
                 }
+                if ( $line =~ /^CUSTOM_STATE_DATA\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $item->{'size'} ) ) {
+                        die "CUSTOM_STATE_DATA: $file, line $current_line: missing SIZE argument\n";
+                    }
+                    $game_config->{'custom_state_data'} = $item;
+                    add_build_feature( 'CUSTOM_STATE_DATA' );
+                    next;
+                }
                 if ( $line =~ /^END_GAME_CONFIG$/ ) {
                     $state = 'NONE';
                     next;
@@ -3232,7 +3246,13 @@ EOF_BLDCFG1
     # add gamearea default attribute if monochrome mode is used
     if ( defined( $game_config->{'color'}{'gamearea_attr'} ) ) {
         push @h_game_data_lines, "\n// gamearea default attr for monochrome mode\n";
-        push @h_game_data_lines, sprintf( "#define GAMEAREA_COLOR_MONO_ATTR (%s)\n", $game_config->{'color'}{'gamearea_attr'} );
+        push @h_game_data_lines, sprintf( "#define GAMEAREA_COLOR_MONO_ATTR (%s)\n\n", $game_config->{'color'}{'gamearea_attr'} );
+    }
+
+    # add custom_state_data config
+    if ( defined( $game_config->{'custom_state_data'} ) ) {
+        push @h_game_data_lines, "\n// custom state data size\n";
+        push @h_game_data_lines, sprintf( "#define CUSTOM_STATE_DATA_SIZE %d\n\n", $game_config->{'custom_state_data'}{'size'} );
     }
 
 }
