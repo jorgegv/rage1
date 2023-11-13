@@ -812,7 +812,11 @@ sub read_input_data {
                     }
 
                     # add the function to the game config
-                    $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
+                    if ( lc( $item->{'type'} ) eq 'custom' ) {
+                        push @{ $game_config->{'game_functions'}{'custom'} }, $item;
+                    } else {
+                        $game_config->{'game_functions'}{ lc( $item->{'type'} ) } = $item;
+                    }
 
                     # adjust build feature
                     if ( $codeset ne 'home' ) {
@@ -2075,10 +2079,12 @@ sub generate_game_functions {
     # generate extern declarations, only for functions in 'home' codeset
     push @h_game_data_lines, join( "\n", 
         map {
-            sprintf( "void %s(void);", $game_config->{'game_functions'}{ $_ }{'name'} )
+            sprintf( "void %s( void );", $game_config->{'game_functions'}{ $_ }{'name'} )
         } grep {
             ( $game_config->{'zx_target'} eq '48' ) or
             ( $game_config->{'game_functions'}{ $_ }{'codeset'} eq 'home' )
+        } grep {
+            $_ ne 'custom'
         } sort keys %{ $game_config->{'game_functions'} } );
     push @h_game_data_lines, "\n\n";
 
@@ -2091,6 +2097,8 @@ sub generate_game_functions {
                   $game_config->{'game_functions'}{ $_ }{'codeset_function_call_macro'} :
                   '' ),
             )
+        } grep {
+            $_ ne 'custom'
         } sort @valid_game_functions
     );
 
@@ -2199,9 +2207,12 @@ sub validate_and_compile_rule {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $check_data )
             };
+            defined( $vars->{'name'} ) or
+                die "CALL_CUSTOM_FUNCTION: NAME parameter is mandatory\n";
             push @check_custom_functions, {
-                index => $index,
-                function => $vars->{'name'},
+                index		=> $index,
+                function	=> $vars->{'name'},
+                param		=> ( defined( $vars->{'param'} ) ? $vars->{'param'} : undef ),
             };
             $check_data = sprintf( "{ .function_id = %d, .param = %s }", $index, $vars->{'param'} || 0 );
         }
@@ -2284,9 +2295,12 @@ sub validate_and_compile_rule {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $action_data )
             };
+            defined( $vars->{'name'} ) or
+                die "CALL_CUSTOM_FUNCTION: NAME parameter is mandatory\n";
             push @action_custom_functions, {
-                index => $index,
-                function => $vars->{'name'},
+                index		=> $index,
+                function	=> $vars->{'name'},
+                param		=> ( defined( $vars->{'param'} ) ? $vars->{'param'} : undef ),
             };
             $action_data = sprintf( "{ .function_id = %d, .param = %s }", $index, $vars->{'param'} || 0 );
         }
@@ -3550,7 +3564,7 @@ sub generate_custom_function_tables {
             scalar( @check_custom_functions )
         );
         foreach my $f ( @check_custom_functions ) {
-            push @h_game_data_lines, sprintf( "uint8_t %s( void );\n", $f->{'function'} );
+            push @h_game_data_lines, sprintf( "uint8_t %s( %s );\n", $f->{'function'}, ( defined( $f->{'param'} ) ? 'uint8_t param' : 'void' ) );
             push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
         }
         push @h_game_data_lines, "\n";
@@ -3567,7 +3581,7 @@ sub generate_custom_function_tables {
             scalar( @action_custom_functions )
         );
         foreach my $f ( @action_custom_functions ) {
-            push @h_game_data_lines, sprintf( "void %s( void );\n", $f->{'function'} );
+            push @h_game_data_lines, sprintf( "void %s( %s );\n", $f->{'function'}, ( defined( $f->{'param'} ) ? 'uint8_t param' : 'void' ) );
             push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
         }
         push @h_game_data_lines, "\n";
