@@ -134,6 +134,7 @@ my @valid_game_functions = qw( menu intro game_end game_over user_init user_game
 # build features that always selected no matter what
 my @default_build_features = qw(
     BTILE_2BIT_TYPE_MAP
+    GAME_TIME
 );
 
 sub add_build_feature {
