@@ -3131,7 +3131,6 @@ sub generate_h_header {
 #include <games/sp1.h>
 
 #include "rage1/dataset.h"
-#include "rage1/codeset.h"
 
 extern struct dataset_assets_s all_assets_dataset_home;
 
@@ -3470,9 +3469,6 @@ sub all_codesets_except_home {
 }
 
 sub generate_codeset_headers {
-
-    push @h_game_data_lines, "// codeset assets struct - only valid in codesets\n";
-    push @h_game_data_lines, "extern struct codeset_assets_s all_codeset_assets;\n";
 
     foreach my $codeset ( all_codesets_except_home ) {
 
