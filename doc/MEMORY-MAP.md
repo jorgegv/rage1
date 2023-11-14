@@ -31,7 +31,8 @@ In 128K mode, the additional banks are mapped into $C000 address range in
 the usual way.  Also, the ROM page mapped at address $0000 is the 48K ROM,
 since this is required for correct SP1 library initialization.
 
-Please refer to the [BANKING-DESIGN.md](BANKING-DESIGN.md) document for a
+The memory layout for 128K mode may be changed in the RAGE1 config file,
+please refer to the [BANKING-DESIGN.md](BANKING-DESIGN.md) document for a
 full reference on the memory banking implementation in RAGE1.
 
 ## Distribution of memory banks in 128K mode
