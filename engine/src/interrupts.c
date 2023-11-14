@@ -94,15 +94,29 @@ IM2_DEFINE_ISR(service_interrupt)
 // code to patch at ISR_ADDR: jp xxxx
 #define Z80_OPCODE_JP	( 0xc3 )
 
+// This is the only function where barebones intrinsic_ei() and
+// intrinsic_di() calls are allowed.  In the rest of RAGE1 code
+// intrinsic_di_if_needed() and intrinsic_ei_if_needed() should be used,
+// which take into account the interrupt nesting level and only
+// disable/enable ints if needed
+
 void init_interrupts(void) {
-   // ensure periodic tasks do not run yet
-   periodic_tasks_enabled = 0;
+
+   // do not disturb :-)
+   intrinsic_di();
 
    // configure ISR
-   intrinsic_di();
    memset( IV_ADDR, IV_BYTE, 257);
    z80_bpoke( ISR_ADDR, Z80_OPCODE_JP );
    z80_wpoke( ISR_ADDR + 1, (uint16_t) service_interrupt );
    im2_init( IV_ADDR );
+
+   // reset interrupt nesting level
+   interrupt_nesting_level = 0;
+
+   // ensure periodic tasks do not run yet
+   periodic_tasks_enabled = 0;
+
+   // everything is setup, allow everything now
    intrinsic_ei();
 }

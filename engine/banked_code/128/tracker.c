@@ -9,12 +9,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
-#include <intrinsic.h>
 
 #include "features.h"
 
 #include "rage1/tracker.h"
 #include "rage1/banked.h"
+#include "rage1/interrupts.h"
 
 #include "game_data.h"
 
@@ -87,9 +87,9 @@ void tracker_do_periodic_tasks( void ) {
 #ifdef BUILD_FEATURE_TRACKER_ARKOS2
     // must be called with ints disabled!
     // if called from ISR, no need for EI/DI pair below!
-    //intrinsic_di();
+    //intrinsic_di_if_needed();
     ply_akg_play();
-    //intrinsic_ei();
+    //intrinsic_ei_if_needed();
 #endif
 }
 
