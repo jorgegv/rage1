@@ -15,6 +15,19 @@ tools:
     dir: '/home/jorgegv/src/spectrum/arkos/Arkos Tracker 2'
 
 ##
+## IM2 interrupt configuration for 128K mode
+## Int config is fixed for 48K mode
+##
+## 257 bytes with value ISR_VECTOR_BYTE are stored at address IV_TABLE_ADDR
+## ISR address is built as 2 consecutive bytes of value ISR_VECTOR_BYTE, e.g. 0x8181
+## At that address there is a JP <ISR> 3-byte jump instruction to the real ISR routine.
+##
+interrupts_128:
+  iv_table_addr: 0x8000
+  isr_vector_byte: 0x81
+  base_code_address: 0x8184
+
+##
 ## banked functions database
 ##
 ## Fields:

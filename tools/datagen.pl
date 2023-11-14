@@ -34,6 +34,9 @@ use File::Basename;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
+# configuration read from etc/rage1-config.yaml file
+my $cfg;
+
 # final destination address for compilation of datasets and codesets
 my $dataset_base_address = 0x5B00;
 my $codeset_base_address = 0xC000;
@@ -3763,6 +3766,26 @@ sub generate_game_events_rule_table {
     }
 }
 
+sub generate_configuration_values {
+
+    # interrupt configuration values
+    push @h_game_data_lines, "// Interrupt configuration\n";
+    foreach my $k ( qw( iv_table_addr isr_vector_byte base_code_address ) ) {
+        my $value = $cfg->{'interrupts_128'}{ $k };
+        if ( $value =~ /^0x/ ) {
+            $value = hex( $value );
+        }
+        push @h_game_data_lines, sprintf( "#define RAGE1_CONFIG_INT128_%-29s 0x%x\n", uc($k), $value );
+        if ( $k eq 'isr_vector_byte' ) {
+            push @h_game_data_lines, sprintf( "#define RAGE1_CONFIG_INT128_ISR_ADDRESS                   0x%02x%02x\n",
+                $value, $value
+            );
+        }
+    }
+    push @h_game_data_lines, "\n";
+
+}
+
 # this function is called from main
 sub generate_game_data {
 
@@ -3816,6 +3839,9 @@ sub generate_game_data {
 
     # generate conditional build features
     generate_conditional_build_features and print ".";
+
+    # generate configuration values that need to be carried over to the game_data.h file
+    generate_configuration_values and print ".";
 
     # generate ending lines if needed
     generate_h_ending and print ".";
@@ -4134,7 +4160,7 @@ sub dump_internal_data {
 
 # get tool configuration
 print "Reading configuration...\n";
-my $cfg = rage1_get_config();
+$cfg = rage1_get_config();
 
 our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
 getopts("b:d:ct:s:");

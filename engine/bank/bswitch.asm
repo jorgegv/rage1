@@ -10,6 +10,10 @@
 
 ;; minimal bank switching routine for use in program loader
 
+;; org address is not relevant, the whole routine just needs to be below
+;; 0xC000.  When the last bank is loaded, this loader will be overwritten by
+;; the main load (banks 5,2,0)
+
 		org	0x8000
 
 ; BASIC will put here the bank number to activate
