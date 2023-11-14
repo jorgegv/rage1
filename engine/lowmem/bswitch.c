@@ -10,9 +10,10 @@
 
 #include <stdint.h>
 #include <arch/zx.h>
-#include <intrinsic.h>
 
 #include "features.h"
+
+#include "rage1/interrupts.h"
 
 // Memory Banking configuration for port $7FFD:
 //
@@ -56,10 +57,10 @@ void memory_switch_bank( uint8_t bank ) {
     // doc/BANKED-FUNCTIONS.md, section "Interrupts" for a detailed
     // explanation
 
-    intrinsic_di();	// enter critical section
+    intrinsic_di_if_needed();	// enter critical section
     IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
     memory_current_memory_bank = bank;
-    intrinsic_ei();	// exit critical section
+    intrinsic_ei_if_needed();	// exit critical section
 
 }
 #endif
