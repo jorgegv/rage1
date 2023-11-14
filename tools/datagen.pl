@@ -3211,7 +3211,11 @@ sub generate_game_config {
     my $max_heap_usage = 20 + $max_sprites * (20 + 6) + $max_spritechars * (24 + 6);
 
     # max dataset size: memory from $5B00->$7FFF minus the heap
-    my $max_dataset_size = ( 0x8000 - 0x5B00 ) - $max_heap_usage;
+    my $max_dataset_size = (
+        ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
+            hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
+            $cfg->{'interrupts_128'}{'base_code_address'} )
+         - 0x5B00 ) - $max_heap_usage;
 
     push @h_game_data_lines, <<EOF_BLDCFG1
 

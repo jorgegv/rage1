@@ -11,8 +11,11 @@
 // COMPILE TIME CRT CONFIGURATION FOR 128K MODE BUILD
 
 // don't change these values!!
-#pragma output CRT_ORG_CODE           = 0x8184	// org of compile
-#pragma output REGISTER_SP            = 0x8181	// just below ISR
+// these values are defined now in Makefile-128 as command line pragmas
+// and are taken from file etc/rage1-config.yml
+//#pragma output CRT_ORG_CODE           = 0x8184	// org of compile
+//#pragma output REGISTER_SP            = 0x8181	// just below ISR
+
 #pragma output CRT_STACK_SIZE         = 128	// just enough
 
 #pragma output CRT_ENABLE_CLOSE       = 0	// don't bother closing files on exit

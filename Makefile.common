@@ -78,6 +78,8 @@ BAS_LOADER_TAP		= $(BAS_LOADER:.bas=.tap)
 # Main binary and tap
 MAIN_BIN		= main.bin
 MAIN_TAP		= $(MAIN_BIN:.bin=.tap)
+BASE_CODE_ADDRESS_128	= $(shell grep base_code_address etc/rage1-config.yml | awk '{print $$2}')
+ISR_VECTOR_ADDRESS_128	= $(shell grep isr_vector_address etc/rage1-config.yml | awk '{print $$2}')
 
 # Final game TAP
 FINAL_TAP		= game.tap
@@ -104,6 +106,7 @@ DATAGEN			= ./tools/datagen.pl
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
 CFLAGS			= -vn -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
+#CFLAGS			= -v -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
 CFLAGS_TO_ASM		= -a
 CFLAGS_LIST		= --list -s -m --c-code-in-asm
 ifeq ($(RAGE1_DEBUG),1)

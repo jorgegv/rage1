@@ -35,8 +35,8 @@ SP1_START=$( echo D1ED | hex2dec )
 SP1_END=$( echo FFFF | hex2dec )
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
 STARTUP_END=$MAIN_DATA_START
-INT_START=$( echo 8000 | hex2dec )
-INT_END=$( echo 8183 | hex2dec )
+INT_START=$( grep iv_table_addr etc/rage1-config.yml | awk '{print $2}' | sed 's/^0x//g' | hex2dec )
+INT_END=$( echo "$(( $( grep base_code_address etc/rage1-config.yml | awk '{print $2}' | sed 's/^0x//g' ) - 1 ))" | hex2dec )
 
 echo "BANKS 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
 echo
