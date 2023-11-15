@@ -23,11 +23,22 @@ tools:
 ## At that address there is a JP <ISR> 3-byte jump instruction to the real ISR routine.
 ## So the real code starts at ISR address + 3.
 ##
+
+# standard RAGE1 map
 interrupts_128:
   iv_table_addr: 0x8000
   isr_vector_byte: 0x81
   isr_vector_address: 0x8181
   base_code_address: 0x8184
+
+#
+# alternative map with IV at 0x8400, ISR at 0x8585 and code starting at 0x8588
+#
+#interrupts_128:
+#  iv_table_addr: 0x8400
+#  isr_vector_byte: 0x85
+#  isr_vector_address: 0x8585
+#  base_code_address: 0x8588
 
 ##
 ## banked functions database

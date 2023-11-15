@@ -24,7 +24,7 @@ echo
 
 DATASET_MAX_SIZE=$( grep BUILD_MAX_DATASET_SIZE build/generated/game_data.h | awk '{print $3'} )
 
-# main.map
+# main.map (banks 5,2,0, 49152 bytes)
 MAIN_DATA_START=$( map_data $MAIN_MAP | grep -E '^__data_compiler_head' | awk '{print $3}' | hex2dec )
 MAIN_DATA_END=$( map_data $MAIN_MAP | grep -E '^__data_stdlib_tail' | awk '{print $3}' | hex2dec )
 MAIN_BSS_START=$( map_data $MAIN_MAP | grep -E '^__bss_compiler_head' | awk '{print $3}' | hex2dec )
@@ -34,9 +34,11 @@ MAIN_CODE_END=$( map_data $MAIN_MAP | grep -E '^__code_user_tail' | awk '{print 
 SP1_START=$( echo D1ED | hex2dec )
 SP1_END=$( echo FFFF | hex2dec )
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
-STARTUP_END=$MAIN_DATA_START
+STARTUP_END=$(( MAIN_DATA_START - 1 ))
 INT_START=$( grep iv_table_addr etc/rage1-config.yml | awk '{print $2}' | sed 's/^0x//g' | hex2dec )
 INT_END=$( echo "$(( $( grep base_code_address etc/rage1-config.yml | awk '{print $2}' | sed 's/^0x//g' ) - 1 ))" | hex2dec )
+HEAP_START=$(( 22576 + DATASET_MAX_SIZE ))
+HEAP_END=$(( INT_START - 1 ))
 
 echo "BANKS 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
 echo
@@ -44,7 +46,7 @@ printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
 printf "  %-12s  \$%04x  \$%04x  %5d\n" screen 16384 22575 6912
 printf "  %-12s  \$%04x  \$%04x  %5d\n" databuf 22576 $(( 22576 + DATASET_MAX_SIZE - 1 )) $DATASET_MAX_SIZE
-printf "  %-12s  \$%04x  \$%04x  %5d\n" heap $(( 22576 + DATASET_MAX_SIZE )) 32767 $(( 32768 - 22576 - DATASET_MAX_SIZE ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" heap $HEAP_START $HEAP_END $(( HEAP_END - HEAP_START + 1 ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" startup $STARTUP_START $STARTUP_END $(( STARTUP_END - STARTUP_START + 1 ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" data $MAIN_DATA_START $MAIN_DATA_END $(( MAIN_DATA_END - MAIN_DATA_START ))
@@ -53,9 +55,10 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" code $MAIN_CODE_START $MAIN_CODE_END $((
 printf "  %-12s  \$%04x  \$%04x  %5d\n" sp1data $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
 echo
 
-TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
+TOTAL=$(( MAIN_CODE_END - 16384 + 1 + SP1_END - SP1_START + 1))
+#TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
-printf "$RED  FREE                       %6d  $RESET\n" $(( 32768 - TOTAL ))
+printf "$RED  FREE                       %6d  $RESET\n" $(( 49152 - TOTAL ))
 echo
 
 # banked.map
