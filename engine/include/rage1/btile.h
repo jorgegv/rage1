@@ -50,13 +50,13 @@ struct btile_s {
 struct btile_pos_s {
     uint8_t type;
     uint8_t row, col;
-    uint8_t btile_id;			// index into the dataset btile table
+    uint16_t btile_id;			// index into the dataset btile table
     uint8_t state_index;		// index into screen asset state table
 };
 
 // data structure for an animated btile
 struct animated_btile_s {
-    uint8_t btile_id;			// for efficiency
+    uint16_t btile_id;			// for efficiency
     uint8_t btile_pos_id;
     struct animation_data_s anim;
 };

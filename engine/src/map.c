@@ -34,6 +34,7 @@ struct sp1_pss title_ctx = {
 // draw a given screen
 void map_draw_screen(struct map_screen_s *s) {
     uint8_t i,r,c, maxr, maxc, btwidth, btheight;
+    uint16_t ti;
     struct btile_pos_s *t;
     struct btile_s *bt;
 
@@ -66,9 +67,9 @@ void map_draw_screen(struct map_screen_s *s) {
     }
 
     // draw tiles
-    i = s->btile_data.num_btiles;
-    while ( i-- ) {
-        t = &s->btile_data.btiles_pos[i];
+    ti = s->btile_data.num_btiles;
+    while ( ti-- ) {
+        t = &s->btile_data.btiles_pos[ti];
         // we draw if there is no state ( no state = always active ), or if the btile is active
         if ( ( t->state_index == ASSET_NO_STATE ) ||
             IS_BTILE_ACTIVE( all_screen_asset_state_tables[ s->global_screen_num ].states[ t->state_index ].asset_state ) )
@@ -77,9 +78,9 @@ void map_draw_screen(struct map_screen_s *s) {
 
 #ifdef BUILD_FEATURE_ANIMATED_BTILES
     // reset animation sequence counters in animated btiles
-    i = s->animated_btile_data.num_btiles;
+    ti = s->animated_btile_data.num_btiles;
     while ( i-- )
-        animation_reset_state( &s->animated_btile_data.btiles[ i ].anim );
+        animation_reset_state( &s->animated_btile_data.btiles[ ti ].anim );
 #endif // BUILD_FEATURE_ANIMATED_BTILES
 
 #ifdef BUILD_FEATURE_INVENTORY

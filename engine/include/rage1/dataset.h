@@ -33,7 +33,7 @@
 
 struct dataset_assets_s {
     // BTiles
-    uint8_t				num_btiles;
+    uint16_t				num_btiles;
     struct btile_s			*all_btiles;
     // Sprites
     uint8_t				num_sprite_graphics;
@@ -73,8 +73,8 @@ void init_datasets( void );
 void dataset_activate( uint8_t d );
 
 // acceleration functions
-struct btile_s *dataset_get_banked_btile_ptr( uint8_t t ) __z88dk_fastcall;
-struct sprite_graphic_data_s *dataset_get_banked_sprite_ptr( uint8_t t ) __z88dk_fastcall;
+struct btile_s *dataset_get_banked_btile_ptr( uint16_t btile_id ) __z88dk_fastcall;
+struct sprite_graphic_data_s *dataset_get_banked_sprite_ptr( uint8_t sprite_id ) __z88dk_fastcall;
 
 
 #endif // _DATASET_H

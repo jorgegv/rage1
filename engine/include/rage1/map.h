@@ -39,12 +39,12 @@ struct map_screen_s {
 
     // data
     struct {
-        uint8_t num_btiles;
+        uint16_t num_btiles;
         struct btile_pos_s *btiles_pos;
     } btile_data;
 #ifdef BUILD_FEATURE_ANIMATED_BTILES
     struct {
-        uint8_t num_btiles;
+        uint16_t num_btiles;
         struct animated_btile_s *btiles;
     } animated_btile_data;
 #endif

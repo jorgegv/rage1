@@ -2745,7 +2745,7 @@ extern	_all_screens
 public	_all_assets_dataset_$dataset
 
 _all_assets_dataset_$dataset:
-    db	$num_btiles		;; .num_btiles
+    dw	$num_btiles		;; .num_btiles
     dw	$all_btiles_ptr		;; .all_btiles
     db	$num_sprites		;; .num_sprite_graphics
     dw	$all_sprites_ptr	;; .all_sprite_graphics

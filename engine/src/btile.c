@@ -84,13 +84,14 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, stru
 // interesting to do it, but may be it is in the future
 
 void btile_animate_all( void ) {
-    uint8_t btile_pos_id, btile_id;
+    uint8_t btile_pos_id;
+    uint16_t btile_id;
     uint8_t max_frames,num_frame;
     struct btile_pos_s *btile_pos;
     struct btile_s *btile;
     struct animation_data_s *anim;
 
-    uint8_t i = game_state.current_screen_ptr->animated_btile_data.num_btiles;
+    uint16_t i = game_state.current_screen_ptr->animated_btile_data.num_btiles;
     while ( i-- ) {
         btile_pos_id = game_state.current_screen_ptr->animated_btile_data.btiles[ i ].btile_pos_id;
         btile_id = game_state.current_screen_ptr->animated_btile_data.btiles[ i ].btile_id;
