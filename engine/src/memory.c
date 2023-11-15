@@ -31,9 +31,9 @@
 
 // memory init depends on the target
 
-// in 128K mode, heap is at the top of the 0x5B00-0x7FFF area
+// in 128K mode, heap is at the top of the 0x5B00-0x7FFF area, just below the interrupt table
 #ifdef BUILD_FEATURE_ZX_TARGET_128
-    #define MALLOC_HEAP_START       ((unsigned char *)(0x8000 - MALLOC_HEAP_SIZE))
+    #define MALLOC_HEAP_START       ((unsigned char *)(RAGE1_CONFIG_INT128_IV_TABLE_ADDR - MALLOC_HEAP_SIZE))
 #endif
 
 // in 48K mode, we define a heap in the BSS segment

@@ -76,12 +76,12 @@ IM2_DEFINE_ISR(service_interrupt)
 // ISR_ADDR and IV_BYTE must match: if IV_BYTE is 0x81, ISR_ADDR must be
 // 0x8181
 
-// In 128 mode, IV is at 0x8000-0x8100, ISR at 0x8181
+// In 128 mode, IV is at 0x8000-0x8100, ISR at 0x8181, but can be changed in config file
 #ifdef BUILD_FEATURE_ZX_TARGET_128
-   #define IV_ADDR	( ( unsigned char * ) 0x8000 )
+   #define IV_ADDR	( ( unsigned char * ) RAGE1_CONFIG_INT128_IV_TABLE_ADDR )
 
-   #define ISR_ADDR	( ( unsigned char * ) 0x8181 )
-   #define IV_BYTE	( 0x81 )
+   #define ISR_ADDR	( ( unsigned char * ) RAGE1_CONFIG_INT128_ISR_ADDRESS )
+   #define IV_BYTE	( RAGE1_CONFIG_INT128_ISR_VECTOR_BYTE )
 #endif
 
 // In 48 mode, IV is at 0xD000-0xD100, ISR at 0xD1D1

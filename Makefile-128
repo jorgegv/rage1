@@ -16,6 +16,9 @@ TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(M
 
 -include Makefile.common
 
+CFLAGS			+= -pragma-define:CRT_ORG_CODE=$(BASE_CODE_ADDRESS_128)
+CFLAGS			+= -pragma-define:REGISTER_SP=$(ISR_VECTOR_ADDRESS_128)
+
 .PHONY: datasets codesets taps
 
 build:
@@ -149,10 +152,10 @@ bank_%.tap: bank_%.bin
 	@echo "Creating TAP $@..."
 	@z88dk-appmake +zx --noloader --org 0xC000 -b $<
 
-# we set org at 0x8184 for 128 mode, 0x5F00 for 48 mode
+# we set org at base code address for 128 mode, 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
 	@echo "Creating TAP $@..."
-	@z88dk-appmake +zx --noloader --org 0x8184 -b $<
+	@z88dk-appmake +zx --noloader --org $(BASE_CODE_ADDRESS_128) -b $<
 
 # we set org at 0x8000 for bank switcher
 $(BSWITCH_TAP): $(BSWITCH_BIN)

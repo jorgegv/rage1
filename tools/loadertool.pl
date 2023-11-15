@@ -16,7 +16,14 @@ use utf8;
 use Data::Dumper;
 use Getopt::Std;
 
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+require RAGE::Config;
+
 my $basic_loader_name = 'loader.bas';
+
+my $cfg = rage1_get_config();
 
 # auxiliary functions
 
@@ -67,8 +74,11 @@ sub generate_basic_loader {
     # switch back to bank 0
     push @lines, sprintf( 'POKE VAL "%d", VAL "%d" : RANDOMIZE USR VAL "%d"', 0x8000, 0, 0x8001 );
 
-    # load main program code at 0x8184 and start execution
-    my $main_code_start = 0x8184;
+    # load main program code at base code address and start execution
+    my $main_code_start = ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
+        hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
+        $cfg->{'interrupts_128'}{'base_code_address'}
+    );
     push @lines, sprintf( 'LOAD "" CODE : RANDOMIZE USR VAL "%d"', $main_code_start );
 
     # that's it, output the BASIC program
