@@ -156,66 +156,82 @@ sub do_dataset_layout {
 }
 
 my @dataset_indexes;
-my $dataset_layout;
+my $bank_layout;
 my @indexes = ( 0 .. scalar( @all_datasets ) - 1 );
+#my $count = 0;
 permute {
     if ( not scalar( @dataset_indexes ) ) {
         my $layout = do_dataset_layout( \@indexes );
         if ( scalar( @$layout ) <= $num_available_banks ) {
+#        if ( ( scalar( @$layout ) <= $num_available_banks ) and ( $count++ == 1234 ) ) {
             @dataset_indexes = @indexes;	# found
-            $dataset_layout = $layout;
+            $bank_layout = $layout;
         }
     }
 } @indexes;
 
 scalar( @dataset_indexes ) or
-    die "There is no dataset layout possible within the available memory banks\n";
+    die "There is no dataset layout possible with the available memory banks\n";
 
-printf "Selected dataset permutation: [ %s ]\n", join( ', ', @dataset_indexes );
-foreach my $i ( 0 .. scalar( @$dataset_layout ) - 1 ) {
-    printf "Bank %d: ", $i;
+printf "Selected dataset layout: [ %s ]\n", join( ', ', @dataset_indexes );
+foreach my $i ( 0 .. scalar( @$bank_layout ) - 1 ) {
     if ( $initial_bank_sizes[ $i ] ) {
-        printf "CS-%d(%db), ", $i, $initial_bank_sizes[ $i ];
+        push @{ $bank_layout->[ $i ]{'codesets'} }, $i;
     }
-    print join( ", ", map { sprintf( "DS-%s(%db)", $_, $all_datasets[ $_ ]{'size'} ) } @{ $dataset_layout->[ $i ]{'datasets'} } );
-    printf " - FINAL SIZE: %db\n", $dataset_layout->[ $i ]{'size'};
 }
+
+## at this point we have all codesets and datasets fitted in banks
+## now we must assign a physical bank to each bank of the layout
+
+my %used_banks;
+
+# first we must assign the banks that have codesets, so that non-contended
+# banks are assigned first
+foreach my $b ( 
+    grep { defined( $bank_layout->[ $_ ]{'codesets'} ) } 
+    ( 0 .. scalar( @$bank_layout ) - 1 ) ) {
+    my $next_phys_bank = shift @codeset_valid_banks;
+    if ( $used_banks{ $next_phys_bank }++ ) {
+        die "** Error: codeset bank $next_phys_bank was already used, should not happen!\n"
+    }
+    $bank_layout->[ $b ]{'physical_bank'} = $next_phys_bank;
+#    printf "-- Physical bank %d assigned to logical bank %d\n", $next_phys_bank, $b;
+}
+
+# now we assign the banks that do not have codesets
+foreach my $b ( 
+    grep { not defined( $bank_layout->[ $_ ]{'codesets'} ) } 
+    ( 0 .. scalar( @$bank_layout ) - 1 ) ) {
+    my $next_phys_bank = shift @dataset_valid_banks;
+    if ( $used_banks{ $next_phys_bank }++ ) {
+        die "** Error: dataset bank $next_phys_bank was already used, should not happen!\n"
+    }
+    $bank_layout->[ $b ]{'physical_bank'} = $next_phys_bank;
+#    printf "-- Physical bank %d assigned to logical bank %d\n", $next_phys_bank, $b;
+}
+
+# sanity checks
+%used_banks = ();
+foreach my $lbi ( 0 .. scalar( @$bank_layout ) - 1 ) {
+    if ( not defined( $bank_layout->[ $lbi ]{'physical_bank'} ) ) {
+        die "** Error: logical bank $lbi is not assigned to any physical bank\n";
+    }
+    if ( $used_banks{ $bank_layout->[ $lbi ]{'physical_bank'} }++ ) {
+        die "** Error: physical bank $bank_layout->[$lbi]{'physical_bank'} is used more than once\n";
+    }
+}
+
+foreach my $i ( 0 .. scalar( @$bank_layout ) - 1 ) {
+    printf "Logical Bank %d (physical:%d): ", $i, $bank_layout->[ $i ]{'physical_bank'};
+    if ( defined( $bank_layout->[ $i ]{'codesets'} ) ) {
+        printf "CS-%d(%db), ", $bank_layout->[ $i ]{'codesets'}[0], $all_codesets[ $bank_layout->[ $i ]{'codesets'}[0] ]{'size'};
+    }
+    print join( ", ", map { sprintf( "DS-%s(%db)", $_, $all_datasets[ $_ ]{'size'} ) } @{ $bank_layout->[ $i ]{'datasets'} } );
+    printf " - FINAL SIZE: %db\n", $bank_layout->[ $i ]{'size'};
+}
+
 exit;
 __END__
-
-my $current_bank_index = 0;
-
-foreach my $bk ( sort { $bins->{ $a }{'size'} <=> $bins->{ $b }{'size'} } keys %$bins ) {
-    my $bin = $bins->{ $bk };
-    # just error if any dataset is too big
-    if ( $bin->{'size'} > $max_bank_size ) {
-        die "** Error: dataset $bin->{name} is too big ($bin->{size}), it does not fit in a bank ($max_bank_size)\n";
-    }
-
-    # check if we need to spill to the next bank
-    my $current_size = $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} || 0;
-    if ( $current_size + $bin->{'size'} > $max_bank_size ) {
-        $current_bank_index++;
-        if ( $current_bank_index >= scalar( @dataset_valid_banks ) ) {
-            die "** Error: no more banks to fill, datasets are too big\n";
-        }
-        # if the bank already has a 'type' field, it is a codeset bank, so set the type to 'mixed'
-        if ( defined( $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'type'} ) ) {
-            $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'type'} = 'mixed';
-        }
-    }
-
-    # add the bank and offset info to the dataset.  Offset is the current
-    # pos in the bank if this is the first dataset inserted into a
-    # codeset bank ('mixed' type), 'size' will already be defined from
-    # the codeset layout stage and can be used as usual
-    $bin->{'bank'} = $dataset_valid_banks[ $current_bank_index ];
-    $bin->{'offset'} = $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} || 0;
-
-    # then update the bank layout
-    push @{ $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'binaries'} }, $bin;
-    $layout->{ $dataset_valid_banks[ $current_bank_index ] }{'size'} += $bin->{'size'};
-}
 
 sub generate_bank_binaries {
     my ( $layout, $outdir ) = @_;
