@@ -36,7 +36,7 @@ SP1_END=$( echo FFFF | hex2dec )
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
 STARTUP_END=$(( MAIN_DATA_START - 1 ))
 INT_START=$( grep -Ev '^#' etc/rage1-config.yml | grep iv_table_addr | awk '{print $2}' | sed 's/^0x//g' | hex2dec )
-INT_END=$( echo "$(( $( grep -Ev '^#' etc/rage1-config.yml | grep base_code_address | awk '{print $2}' | sed 's/^0x//g' ) - 1 ))" | hex2dec )
+INT_END=$(( "$( grep -Ev '^#' etc/rage1-config.yml | grep base_code_address | awk '{print $2}' | sed 's/^0x//g' | hex2dec )" - 1 ))
 HEAP_START=$(( 22576 + DATASET_MAX_SIZE ))
 HEAP_END=$(( INT_START - 1 ))
 
