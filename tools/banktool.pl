@@ -128,8 +128,7 @@ my @dataset_sizes = map { $_->{'size'} } @all_datasets;
 # definitely within the capabilities of current hosts.
 
 # aux function: receives a listref to a permutation of the dataset indexes
-# it returns ok if the permutation makes the dataset fit in the number of
-# available banks
+# it returns the bank layout for the permutation
 sub do_dataset_layout {
     my $list = shift;
     my @list = @{$list};
@@ -143,10 +142,12 @@ sub do_dataset_layout {
     foreach my $ds ( @list ) {
         if ( $dataset_sizes[ $ds ] <= $max_bank_size - $buckets[ $current_bucket ]{'size'} ) {
             push @{ $buckets[ $current_bucket ]{'datasets'} }, $ds;
+            push @{ $buckets[ $current_bucket ]{'offsets'} }, $buckets[ $current_bucket ]{'size'};
             $buckets[ $current_bucket ]{'size'} += $dataset_sizes[ $ds ];
         } else {
             $current_bucket++;
             push @{ $buckets[ $current_bucket ]{'datasets'} }, $ds;
+            push @{ $buckets[ $current_bucket ]{'offsets'} }, 0;
             $buckets[ $current_bucket ]{'size'} = $dataset_sizes[ $ds ];
         }
     }
@@ -221,86 +222,98 @@ foreach my $lbi ( 0 .. scalar( @$bank_layout ) - 1 ) {
     }
 }
 
+# prepare the binaries for all the data in banks and report
 foreach my $i ( 0 .. scalar( @$bank_layout ) - 1 ) {
+
+    # first, push codesets, if any, and note the assigned bank in the codeset
+    foreach my $cs ( @{ $bank_layout->[ $i ]{'codesets'} } ) {
+        push @{ $bank_layout->[ $i ]{'binaries'} }, $all_codesets[ $cs ];
+        $all_codesets[ $cs ]{'physical_bank'} = $bank_layout->[ $i ]{'physical_bank'};
+        $all_codesets[ $cs ]{'bank'} = $i;
+    }
+
+    # then push datasets
+    foreach my $dsi ( 0 .. scalar( @{ $bank_layout->[ $i ]{'datasets'} } ) - 1 ) {
+        my $ds = $bank_layout->[ $i ]{'datasets'}[ $dsi ];
+        push @{ $bank_layout->[ $i ]{'binaries'} }, $all_datasets[ $ds ];
+        $all_datasets[ $ds ]{'physical_bank'} = $bank_layout->[ $i ]{'physical_bank'};
+        $all_datasets[ $ds ]{'bank'} = $i;
+        $all_datasets[ $ds ]{'offset'} = $bank_layout->[ $i ]{'offsets'}[ $dsi ];
+    }
+
+    # report
     printf "Logical Bank %d (physical:%d): ", $i, $bank_layout->[ $i ]{'physical_bank'};
-    if ( defined( $bank_layout->[ $i ]{'codesets'} ) ) {
-        printf "CS-%d(%db), ", $bank_layout->[ $i ]{'codesets'}[0], $all_codesets[ $bank_layout->[ $i ]{'codesets'}[0] ]{'size'};
+    if ( scalar( @{ $bank_layout->[ $i ]{'codesets'} } ) ) {
+        print join( ", ", map { sprintf( "CS-%s(%db)", $_, $all_codesets[ $_ ]{'size'} ) } @{ $bank_layout->[ $i ]{'codesets'} } );
+        print ", ";
     }
     print join( ", ", map { sprintf( "DS-%s(%db)", $_, $all_datasets[ $_ ]{'size'} ) } @{ $bank_layout->[ $i ]{'datasets'} } );
-    printf " - FINAL SIZE: %db\n", $bank_layout->[ $i ]{'size'};
+    printf " - Final size: %db\n", $bank_layout->[ $i ]{'size'};
 }
 
-exit;
-__END__
+# generate bank binaries
+print "Generating bank binaries...\n";
 
-sub generate_bank_binaries {
-    my ( $layout, $outdir ) = @_;
+foreach my $logical_bank ( 0 .. scalar( @$bank_layout ) - 1 ) {
 
-    foreach my $bank ( sort { $a <=> $b } keys %$layout ) {
-        my $bank_binary = $outdir . '/' . sprintf( $bank_binaries_name_format, $bank );
+    my $bank = $bank_layout->[ $logical_bank ]{'physical_bank'};
+    my $bank_binary = $output_dir . '/' . sprintf( $bank_binaries_name_format, $bank );
 
-        open my $bank_out, '>', $bank_binary or
-            die "\n** Error: could not open $bank_binary for writing\n";
-        binmode $bank_out;
+    open my $bank_out, '>', $bank_binary or
+        die "\n** Error: could not open $bank_binary for writing\n";
+    binmode $bank_out;
 
-        print "  Writing " . sprintf( $bank_binaries_name_format, $bank ) . "...";
-        foreach my $bin ( @{ $layout->{ $bank }{'binaries'} } ) {
-            my $in = "$bin->{'dir'}/$bin->{'name'}";
-            open my $bin_in, "<", $in or
-                die "\n** Error: could not open $in for reading\n";
-            binmode $bin_in;
-            my $data;
-            while ( read( $bin_in, $data, 1024 ) ) {
-                print $bank_out $data;
-            }
-            close $bin_in;
+    print "  Writing " . sprintf( $bank_binaries_name_format, $bank ) . "...";
+    foreach my $bin ( @{ $bank_layout->[ $logical_bank ]{'binaries'} } ) {
+        my $in = "$bin->{'dir'}/$bin->{'name'}";
+        open my $bin_in, "<", $in or
+            die "\n** Error: could not open $in for reading\n";
+        binmode $bin_in;
+        my $data;
+        while ( read( $bin_in, $data, 1024 ) ) {
+            print $bank_out $data;
         }
-        close $bank_out;
-        my $bytes = (stat( $bank_binary ))[7];
-        print "OK [$bytes bytes]\n";
-        $layout->{ $bank }{'binary'} = $bank_binary;
+        close $bin_in;
+    }
+    close $bank_out;
+    my $bytes = (stat( $bank_binary ))[7];
+    print "OK [$bytes bytes]\n";
+    $bank_layout->[ $logical_bank ]{'binary'} = $bank_binary;
+}
+
+# generate bank config
+print "Generating $bank_config_name...";
+
+my $bankcfg = $output_dir . '/' . $bank_config_name;
+open my $bankcfg_h, ">", $bankcfg
+    or die "\n** Error: could not open $bankcfg for writing\n";
+print $bankcfg_h "# <type> <bank_num> <path> <codesets/datasets>\n";
+foreach my $logical_bank ( 0 .. scalar( @$bank_layout ) - 1 ) {
+    my $bank = $bank_layout->[ $logical_bank ]{'physical_bank'};
+    # report codeset mappings
+    my $codesets = $bank_layout->[ $logical_bank ]{'codesets'} || undef;
+    if ( defined( $codesets ) and scalar( @$codesets ) ) {
+        printf $bankcfg_h "codeset %d %s %s\n", $bank, $bank_layout->[ $logical_bank ]{'binary'},
+            join( ' ', @$codesets );
+    }
+    # report dataset mappings
+    my $datasets = $bank_layout->[ $logical_bank ]{'datasets'} || undef;
+    if ( defined( $datasets ) and scalar( @$datasets ) ) {
+        printf $bankcfg_h "dataset %d %s %s\n", $bank, $bank_layout->[ $logical_bank ]{'binary'},
+            join( ' ', @$datasets );
     }
 }
+close $bankcfg_h;
+print "OK\n";
 
-sub generate_bank_config {
-    my ( $layout, $outdir ) = @_;
-    my $bankcfg = $outdir . '/' . $bank_config_name;
+# generate ASM stub with bank layout for datasets
+print "Generating $dataset_info_name...";
 
-    print "  Generating $bank_config_name...";
-
-    open my $bankcfg_h, ">", $bankcfg
-        or die "\n** Error: could not open $bankcfg for writing\n";
-
-    print $bankcfg_h "# <type> <bank_num> <path> <codesets/datasets>\n";
-
-    foreach my $bank ( sort { $a <=> $b } keys %$layout ) {
-        my @ids;
-        # report dataset mappings
-        @ids = map { $_->{'dataset_num' } } grep { $_->{'type'} eq 'dataset' } @{ $layout->{ $bank }{'binaries'} };
-        if ( scalar( @ids ) ) {
-            printf $bankcfg_h "dataset %d %s %s\n", $bank, $layout->{ $bank }{'binary'}, join( ' ', @ids );
-        }
-        # report codeset mappings
-        @ids = map { $_->{'codeset_num' } } grep { $_->{'type'} eq 'codeset' } @{ $layout->{ $bank }{'binaries'} };
-        if ( scalar( @ids ) ) {
-            printf $bankcfg_h "codeset %d %s %s\n", $bank, $layout->{ $bank }{'binary'}, join( ' ', @ids );
-        }
-    }
-    print $bankcfg_h "\n";
-    close $bankcfg_h;
-    print "OK\n";
-}
-
-sub generate_dataset_info_code_asm {
-    my ( $layout, $datasets, $outdir ) = @_;
-    my $dsmap = $outdir . '/' . $dataset_info_name;
-
-    print "  Generating $dataset_info_name...";
-
-    open my $dsmap_h, ">", $dsmap
-        or die "\n** Error: could not open $dsmap for writing\n";
-    my $num_datasets = scalar( keys %$datasets );
-    print $dsmap_h <<EOF_DSMAP_3
+my $dsmap = $output_dir . '/' . $dataset_info_name;
+open my $dsmap_h, ">", $dsmap
+    or die "\n** Error: could not open $dsmap for writing\n";
+my $num_datasets = scalar( @all_datasets );
+print $dsmap_h <<EOF_DSMAP_3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Dataset Map: for a given dataset ID, maps the memory bank where it is
 ;; stored, and the start address on that bank
@@ -317,37 +330,13 @@ _dataset_info:
 EOF_DSMAP_3
 ;
 
-    print $dsmap_h join( "\n",
-        map {
-            sprintf( "\t\t;; dataset %d\n\t\tdb\t%d\t;; bank number\n\t\tdw\t%d\t;; size\n\t\tdw\t%d\t;; offset into bank\n",
-                $_,
-                $datasets->{ $_ }{'bank'},
-                $datasets->{ $_ }{'size'},
-                $datasets->{ $_ }{'offset'} );
-        } sort { $a <=> $b } keys %$datasets
-    );
-
-    close $dsmap_h;
-    print "OK\n";
+foreach my $ds ( 0 .. scalar( @all_datasets ) - 1 ) {
+    printf $dsmap_h "\t\t;; dataset %d\n\t\tdb\t%d\t;; bank number\n\t\tdw\t%d\t;; size\n\t\tdw\t%d\t;; offset into bank\n",
+                $ds,
+                $all_datasets[ $ds ]{'physical_bank'},
+                $all_datasets[ $ds ]{'size'},
+                $all_datasets[ $ds ]{'offset'};
 }
 
-my $datasets = gather_datasets( $input_dir_ds, '.zx0' );
-if ( not scalar( keys %$datasets ) ) {
-    die "** Error: no dataset binaries found in $input_dir_ds\n";
-}
-
-my $codesets = gather_codesets( $input_dir_cs, '.bin' );
-# there may be _no_ codesets after all, so no error in that case
-
-my $bank_layout = { };
-
-# We must first layout the codesets, they always go at the beginning of a
-# bank, if they exist.  Datasets are stored after codesets
-layout_codeset_binaries( $bank_layout, $codesets );
-layout_dataset_binaries( $bank_layout, $datasets );
-
-generate_bank_binaries( $bank_layout, $output_dir );
-
-generate_bank_config( $bank_layout, $output_dir );
-
-generate_dataset_info_code_asm( $bank_layout, $datasets, $lowmem_output_dir );
+close $dsmap_h;
+print "OK\n";
