@@ -755,6 +755,15 @@ function which is part of the main game loop.
 
 * FLOW VAR IDs are 0-255. VAR values can also be 0-255.
 
+* A special 8-bit Screen Flags state can be checked and set/reset in flow
+  rules (see below SCREEN_FLAG_IS_SET/RESET checks and
+  SET/RESET_SCREEN_FLAGS actions).  The value to be checked/set/reset is the
+  flags mask with the proper bit set to 1.  E.g.  if we are using bit 3 of
+  the screen flags to signal something, the value we should use in the rule
+  checks/actions would always be 0x08.  Don't think about it being 1 or 0
+  for setting or resetting; the state of the bit is checked/set/reset by the
+  specific functions themselves.
+
 ## Rule design
 
 All rules follow the pattern:
