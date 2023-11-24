@@ -69,7 +69,9 @@ my @all_crumb_types;
 my %crumb_type_name_to_index;
 
 # lists of custom function checks and actions
+my %check_custom_function_id;
 my @check_custom_functions;
+my %action_custom_function_id;
 my @action_custom_functions;
 
 my @all_codeset_functions;
@@ -2205,18 +2207,24 @@ sub validate_and_compile_rule {
 
         # check custom function filtering
         if ( $check =~ /^CALL_CUSTOM_FUNCTION/ ) {
-            my $index = scalar( @check_custom_functions );
             my $vars = {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $check_data )
             };
             defined( $vars->{'name'} ) or
                 die "CALL_CUSTOM_FUNCTION: NAME parameter is mandatory\n";
-            push @check_custom_functions, {
-                index		=> $index,
-                function	=> $vars->{'name'},
-                param		=> ( defined( $vars->{'param'} ) ? $vars->{'param'} : undef ),
-            };
+            my $index;
+            if ( defined( $check_custom_function_id{ $vars->{'name'} } ) ) {
+                $index = $check_custom_function_id{ $vars->{'name'} };
+            } else {
+                $index = scalar( @check_custom_functions );
+                $check_custom_function_id{ $vars->{'name'} } = $index;
+                push @check_custom_functions, {
+                    index		=> $index,
+                    function		=> $vars->{'name'},
+                    uses_param		=> ( defined( $vars->{'param'} ) ? 1 : 0 ),
+                };
+            }
             $check_data = sprintf( "{ .function_id = %d, .param = %s }", $index, $vars->{'param'} || 0 );
         }
 
@@ -2293,18 +2301,24 @@ sub validate_and_compile_rule {
 
         # custom action function filtering
         if ( $action =~ /^CALL_CUSTOM_FUNCTION/ ) {
-            my $index = scalar( @action_custom_functions );
             my $vars = {
                 map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                 split( /\s+/, $action_data )
             };
             defined( $vars->{'name'} ) or
                 die "CALL_CUSTOM_FUNCTION: NAME parameter is mandatory\n";
-            push @action_custom_functions, {
-                index		=> $index,
-                function	=> $vars->{'name'},
-                param		=> ( defined( $vars->{'param'} ) ? $vars->{'param'} : undef ),
-            };
+            my $index;
+            if ( defined( $action_custom_function_id{ $vars->{'name'} } ) ) {
+                $index = $action_custom_function_id{ $vars->{'name'} };
+            } else {
+                $index = scalar( @action_custom_functions );
+                $action_custom_function_id{ $vars->{'name'} } = $index;
+                push @action_custom_functions, {
+                    index		=> $index,
+                    function		=> $vars->{'name'},
+                    uses_param		=> ( defined( $vars->{'param'} ) ? 1 : 0 ),
+                };
+            }
             $action_data = sprintf( "{ .function_id = %d, .param = %s }", $index, $vars->{'param'} || 0 );
         }
 
@@ -3571,7 +3585,7 @@ sub generate_custom_function_tables {
             scalar( @check_custom_functions )
         );
         foreach my $f ( @check_custom_functions ) {
-            push @h_game_data_lines, sprintf( "uint8_t %s( %s );\n", $f->{'function'}, ( defined( $f->{'param'} ) ? 'uint8_t param' : 'void' ) );
+            push @h_game_data_lines, sprintf( "uint8_t %s( %s );\n", $f->{'function'}, ( $f->{'uses_param'} ? 'uint8_t param' : 'void' ) );
             push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
         }
         push @h_game_data_lines, "\n";
@@ -3588,7 +3602,7 @@ sub generate_custom_function_tables {
             scalar( @action_custom_functions )
         );
         foreach my $f ( @action_custom_functions ) {
-            push @h_game_data_lines, sprintf( "void %s( %s );\n", $f->{'function'}, ( defined( $f->{'param'} ) ? 'uint8_t param' : 'void' ) );
+            push @h_game_data_lines, sprintf( "void %s( %s );\n", $f->{'function'}, ( $f->{'uses_param'} ? 'uint8_t param' : 'void' ) );
             push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
         }
         push @h_game_data_lines, "\n";
