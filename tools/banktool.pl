@@ -226,28 +226,34 @@ foreach my $lbi ( 0 .. scalar( @$bank_layout ) - 1 ) {
 foreach my $i ( 0 .. scalar( @$bank_layout ) - 1 ) {
 
     # first, push codesets, if any, and note the assigned bank in the codeset
-    foreach my $cs ( @{ $bank_layout->[ $i ]{'codesets'} } ) {
-        push @{ $bank_layout->[ $i ]{'binaries'} }, $all_codesets[ $cs ];
-        $all_codesets[ $cs ]{'physical_bank'} = $bank_layout->[ $i ]{'physical_bank'};
-        $all_codesets[ $cs ]{'bank'} = $i;
+    if ( defined( $bank_layout->[ $i ]{'codesets'} ) and scalar( @{ $bank_layout->[ $i ]{'codesets'} } ) ) {
+        foreach my $cs ( @{ $bank_layout->[ $i ]{'codesets'} } ) {
+            push @{ $bank_layout->[ $i ]{'binaries'} }, $all_codesets[ $cs ];
+            $all_codesets[ $cs ]{'physical_bank'} = $bank_layout->[ $i ]{'physical_bank'};
+            $all_codesets[ $cs ]{'bank'} = $i;
+        }
     }
 
     # then push datasets
-    foreach my $dsi ( 0 .. scalar( @{ $bank_layout->[ $i ]{'datasets'} } ) - 1 ) {
-        my $ds = $bank_layout->[ $i ]{'datasets'}[ $dsi ];
-        push @{ $bank_layout->[ $i ]{'binaries'} }, $all_datasets[ $ds ];
-        $all_datasets[ $ds ]{'physical_bank'} = $bank_layout->[ $i ]{'physical_bank'};
-        $all_datasets[ $ds ]{'bank'} = $i;
-        $all_datasets[ $ds ]{'offset'} = $bank_layout->[ $i ]{'offsets'}[ $dsi ];
+    if ( defined( $bank_layout->[ $i ]{'datasets'} ) and scalar( @{ $bank_layout->[ $i ]{'datasets'} } ) ) {
+        foreach my $dsi ( 0 .. scalar( @{ $bank_layout->[ $i ]{'datasets'} } ) - 1 ) {
+            my $ds = $bank_layout->[ $i ]{'datasets'}[ $dsi ];
+            push @{ $bank_layout->[ $i ]{'binaries'} }, $all_datasets[ $ds ];
+            $all_datasets[ $ds ]{'physical_bank'} = $bank_layout->[ $i ]{'physical_bank'};
+            $all_datasets[ $ds ]{'bank'} = $i;
+            $all_datasets[ $ds ]{'offset'} = $bank_layout->[ $i ]{'offsets'}[ $dsi ];
+        }
     }
 
     # report
     printf "Logical Bank %d (physical:%d): ", $i, $bank_layout->[ $i ]{'physical_bank'};
-    if ( scalar( @{ $bank_layout->[ $i ]{'codesets'} } ) ) {
+    if ( defined( $bank_layout->[ $i ]{'codesets'} ) and scalar( @{ $bank_layout->[ $i ]{'codesets'} } ) ) {
         print join( ", ", map { sprintf( "CS-%s(%db)", $_, $all_codesets[ $_ ]{'size'} ) } @{ $bank_layout->[ $i ]{'codesets'} } );
         print ", ";
     }
-    print join( ", ", map { sprintf( "DS-%s(%db)", $_, $all_datasets[ $_ ]{'size'} ) } @{ $bank_layout->[ $i ]{'datasets'} } );
+    if ( defined( $bank_layout->[ $i ]{'datasets'} ) and scalar( @{ $bank_layout->[ $i ]{'datasets'} } ) ) {
+        print join( ", ", map { sprintf( "DS-%s(%db)", $_, $all_datasets[ $_ ]{'size'} ) } @{ $bank_layout->[ $i ]{'datasets'} } );
+    }
     printf " - Final size: %db\n", $bank_layout->[ $i ]{'size'};
 }
 
@@ -255,6 +261,8 @@ foreach my $i ( 0 .. scalar( @$bank_layout ) - 1 ) {
 print "Generating bank binaries...\n";
 
 foreach my $logical_bank ( 0 .. scalar( @$bank_layout ) - 1 ) {
+
+    next if not ( $bank_layout->[ $logical_bank ]{'size'} );
 
     my $bank = $bank_layout->[ $logical_bank ]{'physical_bank'};
     my $bank_binary = $output_dir . '/' . sprintf( $bank_binaries_name_format, $bank );
