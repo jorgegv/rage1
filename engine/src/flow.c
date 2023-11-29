@@ -465,7 +465,10 @@ void do_rule_action_tracker_music_start( struct flow_rule_action_s *action ) __z
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
 void do_rule_action_tracker_play_fx( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    // ignored if we do not have a tracker that supports sound fx
+#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
     tracker_request_fx( action->data.tracker_fx.num_effect );
+#endif
 }
 #endif
 

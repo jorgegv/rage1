@@ -108,6 +108,9 @@ my $asm_file_dataset_format	= 'datasets/dataset_%s.src/dataset_data.asm';
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
 
+# valid values for Tracker type
+my @valid_trackers = qw( arkos2 vortex2 );
+
 # output lines for each of the files
 my @c_game_data_lines;
 my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
@@ -981,7 +984,14 @@ sub read_input_data {
                     }
 
                     add_build_feature( 'TRACKER' );
-                    add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
+                    ( defined( $item->{'type'} ) and grep { $item->{'type'} eq $_ } @valid_trackers ) or
+                        die "TRACKER: TYPE is mandatory, must be one of ".join(",",@valid_trackers)."\n";
+                    add_build_feature( 'TRACKER_'.uc( $item->{'type'} ) );
+
+                    if ( ( lc( $item->{'type'} ) eq 'vortex2' ) and
+                        ( defined( $item->{'fx_channel'} ) or defined( $item->{'fx_volume'} ) ) ) {
+                        die "TRACKER: tracker type vortex2 does not support Sound FX\n";
+                    }
 
                     if ( defined( $item->{'fx_channel'} ) ) {
                         if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
@@ -2607,10 +2617,7 @@ sub check_game_config_is_valid {
     # tracker configuration
     if ( defined( $game_config->{'tracker'} ) ) {
         if ( not defined( $game_config->{'tracker'}{'type'} ) ) {
-            $game_config->{'tracker'}{'type'} = 'arkos2';
-        }
-        if ( $game_config->{'tracker'}{'type'} ne 'arkos2' ) {
-            warn "TRACKER: only 'arkos2' TYPE is supported\n";
+            warn "TRACKER: tracker TYPE must be specified\n";
             $errors++;
         }
         if ( not scalar( @{ $game_config->{'tracker'}{'songs'} } ) ) {
@@ -2626,6 +2633,20 @@ sub check_game_config_is_valid {
         if ( $game_config->{'zx_target'} ne '128' ) {
             warn "TRACKER: must be used together with ZX_TARGET = 128\n";
             $errors++;
+        }
+        if ( ( lc( $game_config->{'tracker'}{'type'} ) eq 'vortex2' ) ) {
+            if ( defined(  $game_config->{'tracker'}{'fxtable'} ) ) {
+                warn "TRACKER: vortex2 tracker does not support sound effects (TRACKER_FXTABLE directive)\n";
+                $errors++;
+            }
+            if ( defined(  $game_config->{'tracker'}{'fx_channel'} ) ) {
+                warn "TRACKER: vortex2 tracker does not support sound effects (FX_CHANNEL directive)\n";
+                $errors++;
+            }
+            if ( defined(  $game_config->{'tracker'}{'fx_volume'} ) ) {
+                warn "TRACKER: vortex2 tracker does not support sound effects (FX_VOLUME directive)\n";
+                $errors++;
+            }
         }
     }
 
@@ -3710,10 +3731,24 @@ sub generate_tracker_data {
             }
 
             # generate song ASM file and put it in place for compilation
-            my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
-            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
-            move( $asm_file, $dest_asm_file ) or
-                die "Could not rename $asm_file to $dest_asm_file\n";
+            if ( $game_config->{'tracker'}{'type'} eq 'arkos2' ) {
+                # for Arkos2, convert it into asm format with the official tool
+                my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+                my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+                move( $asm_file, $dest_asm_file ) or
+                    die "Could not rename $asm_file to $dest_asm_file\n";
+            }
+            if ( $game_config->{'tracker'}{'type'} eq 'vortex2' ) {
+                # for Vortex2, copy the binary .PT3 file and add an ASM shim to include the binary as-is
+                copy( "$build_dir/$song->{'file'}", "$build_dir/generated/banked/128" ) or
+                    die "Could not copy $build_dir/$song->{'file'} to $build_dir/generated/banked/128\n";
+                my $dest_asm_file = sprintf( "$build_dir/generated/banked/128/vortex2_song_%s.asm", $symbol_name );
+                my $bin_basename = basename( "$build_dir/$song->{'file'}" );
+                open ASM, ">$dest_asm_file" or
+                    die "Could not write to $dest_asm_file\n";
+                printf ASM "SECTION rodata_user\nPUBLIC _%s\n_%s:\nBINARY \"%s\"\n", $symbol_name, $symbol_name, $bin_basename;
+                close ASM;
+            }
         }
 
         # now output the songs table

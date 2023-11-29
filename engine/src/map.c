@@ -79,7 +79,7 @@ void map_draw_screen(struct map_screen_s *s) {
 #ifdef BUILD_FEATURE_ANIMATED_BTILES
     // reset animation sequence counters in animated btiles
     ti = s->animated_btile_data.num_btiles;
-    while ( i-- )
+    while ( ti-- )
         animation_reset_state( &s->animated_btile_data.btiles[ ti ].anim );
 #endif // BUILD_FEATURE_ANIMATED_BTILES
 
