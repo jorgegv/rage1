@@ -114,8 +114,8 @@ build-get_weapon:
 build-monochrome:
 	@$(MAKE) -s build target_game=$(TEST_GAMES_DIR)/monochrome
 
-build-vt2:
-	@$(MAKE) -s build target_game=$(TEST_GAMES_DIR)/vt2
+build-vortex2:
+	@$(MAKE) -s build target_game=$(TEST_GAMES_DIR)/vortex2
 
 # just a target for the default game for completeness
 build-default: build

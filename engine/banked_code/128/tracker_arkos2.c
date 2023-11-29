@@ -61,6 +61,10 @@ void tracker_specific_init_sound_effects( void ) {
 }
 
 void tracker_specific_play_fx( uint8_t effect_id ) {
+   // ignore if invalid effect id > TRACKER_SOUNDFX_NUM_EFFECTS
+    // NOT zero-based!
+    if ( ( ! effect_id ) || ( effect_id > TRACKER_SOUNDFX_NUM_EFFECTS ) )
+        return;
     // volume in arkos fx player is inverted: 0 -> max, 16 -> mute
     ply_akg_playsoundeffect( effect_id, TRACKER_SOUNDFX_CHANNEL, 16 - TRACKER_SOUNDFX_VOLUME );
 }

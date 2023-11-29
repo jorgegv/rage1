@@ -94,14 +94,14 @@ banked_functions:
   - name: tracker_do_periodic_tasks
     build_dependency: BUILD_FEATURE_TRACKER
   - name: init_tracker_sound_effects
-    build_dependency: BUILD_FEATURE_TRACKER
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX
   - name: tracker_play_fx
     signature: a16
-    build_dependency: BUILD_FEATURE_TRACKER
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX
   - name: tracker_rewind
     build_dependency: BUILD_FEATURE_TRACKER
   - name: tracker_play_pending_fx
-    build_dependency: BUILD_FEATURE_TRACKER
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX
   - name: tracker_request_fx
     signature: a16
-    build_dependency: BUILD_FEATURE_TRACKER
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX

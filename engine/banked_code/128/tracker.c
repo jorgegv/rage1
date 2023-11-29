@@ -100,10 +100,6 @@ void init_tracker_sound_effects( void ) {
 }
 
 void tracker_play_fx( uint8_t effect_id ) {
-    // ignore if invalid effect id > TRACKER_SOUNDFX_NUM_EFFECTS
-    // NOT zero-based!
-    if ( effect_id > TRACKER_SOUNDFX_NUM_EFFECTS )
-        return;
     tracker_specific_play_fx( effect_id );
 }
 

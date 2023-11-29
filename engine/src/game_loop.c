@@ -77,7 +77,7 @@ void check_loop_flags( void ) {
         // all loop flags are reset at the beginning of the game loop
     }
 
-#ifdef BUILD_FEATURE_TRACKER
+#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
     // check if tracker sound fx needs to be played
     if ( GET_LOOP_FLAG( F_LOOP_PLAY_TRACKER_FX ) ) {
         tracker_play_pending_fx();

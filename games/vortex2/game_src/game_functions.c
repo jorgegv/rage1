@@ -81,7 +81,7 @@ void my_menu_screen(void) {
 
    controller_reset_all();
 
-   tracker_select_song( TRACKER_SONG_GAME_SONG );
+   tracker_select_song( TRACKER_SONG_MENU_SONG );
    tracker_rewind();
    tracker_start();
 
