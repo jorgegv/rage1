@@ -981,7 +981,9 @@ sub read_input_data {
                     }
 
                     add_build_feature( 'TRACKER' );
-                    add_build_feature( 'TRACKER_ARKOS2' );	# default for the moment
+                    ( defined( $item->{'type'} ) and grep { $item->{'type'} eq $_ } qw( arkos2 vt2 ) ) or
+                        die "TRACKER: TYPE is mandatory, must be one of arkos2,vt2\n";
+                    add_build_feature( 'TRACKER_'.uc( $item->{'type'} ) );
 
                     if ( defined( $item->{'fx_channel'} ) ) {
                         if ( not grep { $_ == $item->{'fx_channel'} } ( 0, 1, 2 ) ) {
