@@ -66,7 +66,7 @@ void tracker_specific_play_fx( uint8_t effect_id ) {
 }
 
 // include the asm player
-void wrapper( void ) __naked {
+void arkos2_wrapper( void ) __naked {
 __asm
     include "engine/banked_code/128/arkos2-stubs_asm.inc"
     include "engine/banked_code/128/arkos2-player_asm.inc"
