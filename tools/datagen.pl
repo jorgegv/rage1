@@ -3746,7 +3746,7 @@ sub generate_tracker_data {
                 my $bin_basename = basename( "$build_dir/$song->{'file'}" );
                 open ASM, ">$dest_asm_file" or
                     die "Could not write to $dest_asm_file\n";
-                printf ASM "SECTION rodata_user\nPUBLIC _%s\n_%s:\nBINARY \"%s\"\n", $symbol_name, $symbol_name, $bin_basename;
+                printf ASM "SECTION data_compiler\nPUBLIC _%s\n_%s:\nBINARY \"%s\"\n", $symbol_name, $symbol_name, $bin_basename;
                 close ASM;
             }
         }
