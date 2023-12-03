@@ -100,7 +100,7 @@ void game_state_reset_initial(void) {
 
 // change to a new screen
 // can't be used on game start!
-// this function presumes a next sreen is in game_state.next_screen
+// this function presumes a next sreen is in game_state.warp_next_screen.num_screen
 void game_state_switch_to_next_screen(void) {
 
     // move all enemies and bullets off-screen
@@ -117,7 +117,10 @@ void game_state_switch_to_next_screen(void) {
     map_exit_screen( game_state.current_screen_ptr );
 
     // switch screen!
-    game_state.current_screen = game_state.next_screen;
+    // use the data in game_state.warp_next_screen to update everything: screen, hero pos, etc.
+    game_state.current_screen = game_state.warp_next_screen.num_screen;
+    hero_set_position_x( &game_state.hero, game_state.warp_next_screen.hero_x );
+    hero_set_position_y( &game_state.hero, game_state.warp_next_screen.hero_y );
 
     // run ENTER_SCREEN tasks for the new screen
     map_enter_screen( game_state.current_screen );
