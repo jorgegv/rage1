@@ -58,9 +58,13 @@ void game_state_flow_vars_reset_all(void);
 //  struct
 struct game_state_s {
 
-   // current, previous screen indexes in map table and some cached values
+   // current, next screen indexes in map table and some cached values
    uint8_t current_screen;
-   uint8_t next_screen;
+   struct {
+      uint8_t num_screen;
+      uint8_t hero_x;
+      uint8_t hero_y;
+   } warp_next_screen;
    struct map_screen_s *current_screen_ptr;
    struct asset_state_s *current_screen_asset_state_table_ptr;
 

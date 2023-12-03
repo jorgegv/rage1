@@ -338,12 +338,14 @@ void do_rule_action_end_of_game( struct flow_rule_action_s *action ) __z88dk_fas
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_WARP_TO_SCREEN
 void do_rule_action_warp_to_screen( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    // only change coords if directed to do it
-    if ( ! ( action->data.warp_to_screen.flags & ACTION_WARP_TO_SCREEN_KEEP_HERO_X ) )
-        hero_set_position_x( &game_state.hero, action->data.warp_to_screen.hero_x );
-    if ( ! ( action->data.warp_to_screen.flags & ACTION_WARP_TO_SCREEN_KEEP_HERO_Y ) )
-        hero_set_position_y( &game_state.hero, action->data.warp_to_screen.hero_y );
-    game_state.next_screen = action->data.warp_to_screen.num_screen;
+    // update game_state.warp_next_screen record with the needed changes
+    game_state.warp_next_screen.hero_x = ( action->data.warp_to_screen.flags & ACTION_WARP_TO_SCREEN_KEEP_HERO_X ?
+        game_state.hero.position.x :
+        action->data.warp_to_screen.hero_x );
+    game_state.warp_next_screen.hero_y = ( action->data.warp_to_screen.flags & ACTION_WARP_TO_SCREEN_KEEP_HERO_Y ?
+        game_state.hero.position.y :
+        action->data.warp_to_screen.hero_y );
+    game_state.warp_next_screen.num_screen = action->data.warp_to_screen.num_screen;
     SET_LOOP_FLAG( F_LOOP_WARP_TO_SCREEN );
 }
 #endif
