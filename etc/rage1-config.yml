@@ -55,6 +55,10 @@ interrupts_128:
 ## See doc/BANKED-FUNCTIONS.md for details
 ##
 banked_functions:
+  # init_main_shared_data
+  - name: init_main_shared_data
+    signature: a16
+
   # beeper
   - name: beeper_play_pending_fx
   - name: beeper_request_fx

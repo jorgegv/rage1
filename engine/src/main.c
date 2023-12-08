@@ -26,29 +26,42 @@
 #include "rage1/charset.h"
 #include "rage1/timer.h"
 
+#include "rage1/banked.h"
+
 #include "game_data.h"
 
 void init_program(void) {
+
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+   init_banked_code();
+#endif
+
    init_memory();
    init_sp1();
    init_interrupts();
    init_datasets();
+
 #ifdef	BUILD_FEATURE_CODESETS
    init_codesets();
-#endif	// BUILD_FEATURE_CODESETS
+#endif
+
    init_controllers();
    init_hero();
+
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
    init_bullets();
 #endif
+
 #ifdef BUILD_FEATURE_ZX_TARGET_128
    // this one is only needed when compiling for 128
    // for 48 mode the beepr gets initialized by regular BSS init code
    init_beeper();
 #endif
+
 #ifdef	BUILD_FEATURE_CUSTOM_CHARSET
    init_custom_charset();
-#endif	// BUILD_FEATURE_CUSTOM_CHARSET
+#endif
+
 #ifdef BUILD_FEATURE_GAME_TIME
    init_timer();
 #endif
@@ -59,7 +72,7 @@ void init_program(void) {
    init_tracker_sound_effects();
 #endif
 
-   // this must be called the last
+   // this must be called last
    interrupt_enable_periodic_isr_tasks();
 }
 
