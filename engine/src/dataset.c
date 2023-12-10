@@ -34,11 +34,9 @@ void dataset_activate( uint8_t d ) {
     if ( d == dataset_currently_active )
         return;
 
-    // save previous memory bank
-    previous_memory_bank = memory_current_memory_bank;
-
-    // switch the proper memory bank for the given dataset
-    memory_switch_bank( dataset_info[ d ].bank_num );
+    // save previous memory bank, switch the proper memory bank for the
+    // given dataset
+    previous_memory_bank = memory_switch_bank( dataset_info[ d ].bank_num );
 
     // copy dataset data into LOWMEM buffer
     // data is ZX0 compressed, so decompress to destination address

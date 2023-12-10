@@ -48,7 +48,7 @@
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 uint8_t memory_current_memory_bank;
 
-void memory_switch_bank( uint8_t bank ) {
+uint8_t memory_switch_bank( uint8_t bank ) {
 
     // Mask the 3 lowest bits of bank, then add it to the default value for
     // IO_7FDD.  Then save the bank that is currently mapped.
@@ -57,10 +57,17 @@ void memory_switch_bank( uint8_t bank ) {
     // doc/BANKED-FUNCTIONS.md, section "Interrupts" for a detailed
     // explanation
 
+    // Returns the previous bank to avoid race conditions between getting
+    // the current bank and setting the new one
+
+    uint8_t previous_memory_bank;
+
     intrinsic_di_if_needed();	// enter critical section
+    previous_memory_bank = memory_current_memory_bank;
     IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
     memory_current_memory_bank = bank;
     intrinsic_ei_if_needed();	// exit critical section
 
+    return previous_memory_bank;
 }
 #endif

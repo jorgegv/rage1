@@ -25,12 +25,9 @@ void memory_call_banked_function( uint8_t function_id ) {
 
     uint8_t previous_memory_bank;
 
-    // save current memory bank
-    previous_memory_bank = memory_current_memory_bank;
-
-    // get the bank number from the codeset info table and swicth to the
-    // proper bank
-    memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
+    // save current memory bank, get the bank number from the codeset info
+    // table and switch to the proper bank
+    previous_memory_bank = memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
 
     // call the function
     run_function[ function_id ]();
@@ -45,12 +42,9 @@ void memory_call_banked_function_a16( uint8_t function_id, uint16_t arg ) {
 
     uint8_t previous_memory_bank;
 
-    // save current memory bank
-    previous_memory_bank = memory_current_memory_bank;
-
-    // get the bank number from the codeset info table and swicth to the
-    // proper bank
-    memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
+    // save current memory bank, get the bank number from the codeset info
+    // table and switch to the proper bank
+    previous_memory_bank = memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
 
     // call the function
     run_function[ function_id ]( arg );
@@ -68,12 +62,9 @@ uint8_t memory_call_banked_function_a16_a8_r8( uint8_t function_id, uint16_t arg
     uint8_t previous_memory_bank;
     uint8_t retval;
 
-    // save current memory bank
-    previous_memory_bank = memory_current_memory_bank;
-
-    // get the bank number from the codeset info table and swicth to the
-    // proper bank
-    memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
+    // save current memory bank, get the bank number from the codeset info
+    // table and switch to the proper bank
+    previous_memory_bank = memory_switch_bank( ENGINE_CODE_MEMORY_BANK );
 
     // call the function
     retval = run_function[ function_id ]( arg1, arg2 );
