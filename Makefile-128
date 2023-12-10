@@ -28,7 +28,6 @@ build:
 	@$(MYMAKE) banks
 	@$(MYMAKE) bank_switcher
 	@$(MYMAKE) main
-	@$(MYMAKE) main_symbols
 	@$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
 	@$(MYMAKE) loader
 	@$(MYMAKE) taps
@@ -132,14 +131,6 @@ $(BSWITCH_BIN):
 loader:
 	@echo "Creating custom BASIC loader..."
 	@./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR) $(LOADING_SCREEN_FLAG)
-
-##
-## Create main.map C symbol definitions so that banked code can use them
-##
-
-main_symbols:
-	@echo "Creating main.map C symbol definitions..."
-	@./tools/map2cdef.pl < main.map > $(GENERATED_DIR)/mainsyms.h
 
 ##
 ## Taps

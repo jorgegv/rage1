@@ -36,10 +36,13 @@ game code, which varies from game to game).
 - All accesses from the BANKED functions to lowmem data must be done via the
   macro definitions in `banked.h`
 
-- The `banked.h` file will include a generated file called `mainsyms.h`
-  which is generated from the `main.map` file which is created whe compiling
-  the main program.  This file maps the symbols in `main` to their final
-  addresses in low memory, so that the banked functions can use them.
+- Main symbols in low memory can be accessed from banked code by means of a
+  `struct main_shared_data_s` which is populated at program start by
+  function `init_banked_code()`.  This structure contains pointers to useful
+  data in low memory, such as the `game_state` structure, the tile type data
+  structure and others (see `banked.h` file for the structure definition). 
+  Macros are defined in `banked.h` for accessing those data easily when
+  compiling banked code.
 
 - Initially, banked functions receive no parameters and return nothing, but
   this limitation is to be revisited, since it seems easy to have a
