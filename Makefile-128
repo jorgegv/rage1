@@ -25,10 +25,10 @@ build:
 	@$(MYMAKE) banked_definitions
 	@$(MYMAKE) datasets
 	@$(MYMAKE) codesets
-	@$(MYMAKE) banks
-	@$(MYMAKE) bank_switcher
-	@$(MYMAKE) main
 	@$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
+	@$(MYMAKE) banks
+	@$(MYMAKE) main
+	@$(MYMAKE) bank_switcher
 	@$(MYMAKE) loader
 	@$(MYMAKE) taps
 	@$(MYMAKE) final
