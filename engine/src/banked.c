@@ -13,12 +13,10 @@
 void init_banked_code( void ) {
     struct main_shared_data_s data = {
         .game_state			= &game_state,
-        .screen_pos_tile_type_data	= screen_pos_tile_type_data,
         .home_assets			= home_assets,
         .banked_assets			= banked_assets,
+        .screen_pos_tile_type_data	= screen_pos_tile_type_data,
         .bullet_state_data		= bullet_state_data,
-        .full_screen			= &full_screen,
-        .game_area			= &game_area,
     };
     init_main_shared_data( &data );
 }

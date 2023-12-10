@@ -31,11 +31,6 @@
 #include "game_data.h"
 
 void init_program(void) {
-
-#ifdef BUILD_FEATURE_ZX_TARGET_128
-   init_banked_code();
-#endif
-
    init_memory();
    init_sp1();
    init_interrupts();
@@ -43,6 +38,11 @@ void init_program(void) {
 
 #ifdef	BUILD_FEATURE_CODESETS
    init_codesets();
+#endif
+
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+   // this must be called after datasets have been initialized
+   init_banked_code();
 #endif
 
    init_controllers();
