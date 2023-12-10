@@ -23,7 +23,8 @@ void init_memory(void);
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 
     extern uint8_t memory_current_memory_bank;
-    void memory_switch_bank( uint8_t bank_num );
+    // returns previous memory bank
+    uint8_t memory_switch_bank( uint8_t bank_num );
 
     // reserved memory bank for banked functions in engine code
     #define ENGINE_CODE_MEMORY_BANK		4
