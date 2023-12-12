@@ -74,30 +74,33 @@ uint8_t memory_current_memory_bank;
 //     return previous_memory_bank;
 // }
 
+// disable "function must return value" warning
+#pragma disable_warning 59
+//dusable "unreferenced function argument" warning
+#pragma disable_warning 85
+
 uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall {
     __asm
-    ;; bank in L register
-    ld b,l
+    ;; bank comes in L register
+    ld d,l
     di
     ld hl,_interrupt_nesting_level
     inc (hl)
     ld hl,_memory_current_memory_bank
-    ld c, (hl)
-    ld a, b
+    ld e, (hl)
+    ld a, d
     and a,0x07
     or a,0x10
-    push bc
     ld bc,_IO_7FFD
     out (c),a
-    pop bc
-    ld (hl), b
+    ld (hl), d
     ld hl,_interrupt_nesting_level
     dec (hl)
     jr NZ,memory_switch_bank_no_ei
     ei
 memory_switch_bank_no_ei:
     ;; return value in L
-    ld      l, c
+    ld      l, e
     __endasm;
 }
 
