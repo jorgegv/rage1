@@ -138,6 +138,7 @@ foreach my $bk ( 0 .. scalar( @all_codesets ) - 1 ) {
         # add the bank info to the codeset and update the bank layout
         $bin->{'bank'} = $bank;
         push @{ $bank_layout->{ $bank }{'binaries'} }, $bin;
+        push @{ $bank_layout->{ $bank }{'codesets'} }, $bk;
         $bank_layout->{ $bank }{'size'} += $bin->{'size'};
         # update success counter
         $laid_out_codesets++;
