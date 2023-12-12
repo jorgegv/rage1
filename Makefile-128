@@ -107,8 +107,8 @@ banked_code: $(BIN_BANKED_CODE)
 $(BIN_BANKED_CODE): $(BANKED_CODE_OBJS_COMMON) $(BANKED_CODE_OBJS_128)
 	@echo "Building $@..."
 	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) -m $(BANKED_CFLAGS) --no-crt -o $@ $(BANKED_CODE_OBJS_128) $(BANKED_CODE_OBJS_COMMON)
-	@mv $(BANKED_CODE_DIR)/$(shell basename $@ .bin)_code_compiler.bin $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin
-	@if [ $$( stat -c%s $(GENERATED_DIR)/bank_$(BANKED_RESERVED_BANK).bin ) -gt $(BANK_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(BANK_MAXSIZE) bytes"; exit 1; fi
+	@mv $(BANKED_CODE_DIR)/$(shell basename $@ .bin)_code_compiler.bin $@
+	@if [ $$( stat -c%s $@ ) -gt $(BANK_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(BANK_MAXSIZE) bytes"; exit 1; fi
 
 ##
 ## Dataset/Codeset Banks
