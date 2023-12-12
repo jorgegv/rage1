@@ -69,7 +69,7 @@ BANKED_BSS_END=$( map_data $BANKED_MAP | grep -E '^__bss_compiler_tail' | awk '{
 BANKED_CODE_START=$( map_data $BANKED_MAP | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 BANKED_CODE_END=$( map_data $BANKED_MAP | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
 
-echo "BANK 4 [RAGE1 banked code + Tracker data]"
+echo "BANK 4 [RAGE1 code/dataset]"
 echo
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
@@ -77,13 +77,31 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" code $BANKED_CODE_START $BANKED_CODE_END
 printf "  %-12s  \$%04x  \$%04x  %5d\n" data $BANKED_DATA_START $BANKED_DATA_END $(( BANKED_DATA_END - BANKED_DATA_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $BANKED_BSS_START $BANKED_BSS_END $(( BANKED_BSS_END - BANKED_BSS_START ))
 echo
-TOTAL=$(( BANKED_DATA_END - BANKED_DATA_START + BANKED_BSS_END - BANKED_BSS_START + BANKED_CODE_END - BANKED_CODE_START ))
+
+DATASETS_TOTAL=0
+if ( grep -qE "^dataset 4" build/generated/bank_bins.cfg ) then
+	echo "  DATASETS:"
+	echo
+	echo "    SECTION            SIZE   CSIZE"
+	for dataset in $( grep -P "^dataset 4" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
+		comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
+		uncomp_size=$( stat "build/generated/datasets/dataset_$dataset.bin.save" -t|awk '{print $2}' )
+		printf "    %-10s       %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
+		DATASETS_TOTAL=$(( DATASETS_TOTAL + comp_size ))
+	done
+
+	echo
+	echo "  Max. allowed dataset size: $DATASET_MAX_SIZE"
+	echo
+fi
+
+TOTAL=$(( BANKED_DATA_END - BANKED_DATA_START + BANKED_BSS_END - BANKED_BSS_START + BANKED_CODE_END - BANKED_CODE_START + DATASETS_TOTAL ))
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
 printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - TOTAL ))
 echo
 
-# banks
-BANKS=$( grep -E '^\w' build/generated/bank_bins.cfg | awk '{print $2}' | sort | uniq )
+# banks, except bank 4
+BANKS=$( grep -E '^\w' build/generated/bank_bins.cfg | awk '{print $2}' | sort | grep -v 4 | uniq )
 
 # codeset/dataset banks
 for bank_num in $BANKS; do
