@@ -24,7 +24,7 @@ void init_memory(void);
 
     extern uint8_t memory_current_memory_bank;
     // returns previous memory bank
-    uint8_t memory_switch_bank( uint8_t bank_num );
+    uint8_t memory_switch_bank( uint8_t bank_num ) __z88dk_fastcall;
 
     // reserved memory bank for banked functions in engine code
     #define ENGINE_CODE_MEMORY_BANK		4

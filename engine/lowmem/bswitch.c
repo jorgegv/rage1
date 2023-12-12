@@ -48,26 +48,57 @@
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 uint8_t memory_current_memory_bank;
 
-uint8_t memory_switch_bank( uint8_t bank ) {
+// The following function implemented below in asm to minimize T-states with
+// interrupts disabled
+//
+// uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall {
+// 
+//     // Mask the 3 lowest bits of bank, then add it to the default value for
+//     // IO_7FDD.  Then save the bank that is currently mapped.
+// 
+//     // atomically update the bank port and the bank state variable.  See
+//     // doc/BANKED-FUNCTIONS.md, section "Interrupts" for a detailed
+//     // explanation
+// 
+//     // Returns the previous bank to avoid race conditions between getting
+//     // the current bank and setting the new one
+// 
+//     uint8_t previous_memory_bank;
+// 
+//     intrinsic_di_if_needed();	// enter critical section
+//     previous_memory_bank = memory_current_memory_bank;
+//     IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
+//     memory_current_memory_bank = bank;
+//     intrinsic_ei_if_needed();	// exit critical section
+// 
+//     return previous_memory_bank;
+// }
 
-    // Mask the 3 lowest bits of bank, then add it to the default value for
-    // IO_7FDD.  Then save the bank that is currently mapped.
-
-    // atomically update the bank port and the bank state variable.  See
-    // doc/BANKED-FUNCTIONS.md, section "Interrupts" for a detailed
-    // explanation
-
-    // Returns the previous bank to avoid race conditions between getting
-    // the current bank and setting the new one
-
-    uint8_t previous_memory_bank;
-
-    intrinsic_di_if_needed();	// enter critical section
-    previous_memory_bank = memory_current_memory_bank;
-    IO_7FFD = ( DEFAULT_IO_7FFD_BANK_CFG | ( bank & 0x07 ) );
-    memory_current_memory_bank = bank;
-    intrinsic_ei_if_needed();	// exit critical section
-
-    return previous_memory_bank;
+uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall {
+    __asm
+    ;; bank in L register
+    ld b,l
+    di
+    ld hl,_interrupt_nesting_level
+    inc (hl)
+    ld hl,_memory_current_memory_bank
+    ld c, (hl)
+    ld a, b
+    and a,0x07
+    or a,0x10
+    push bc
+    ld bc,_IO_7FFD
+    out (c),a
+    pop bc
+    ld (hl), b
+    ld hl,_interrupt_nesting_level
+    dec (hl)
+    jr NZ,memory_switch_bank_no_ei
+    ei
+memory_switch_bank_no_ei:
+    ;; return value in L
+    ld      l, c
+    __endasm;
 }
+
 #endif
