@@ -175,22 +175,19 @@ sub do_dataset_layout {
     my $list = shift;
     my @list = @{$list};
 
-    # setup buckets
+    # setup buckets with initial sizes
     my @buckets = ( map { { size => $bank_layout->{ $_ }{'size'} } } @sorted_banks );
 
     # now process all the datasets
     my $current_bucket = 0;
     foreach my $ds ( @list ) {
-        if ( $dataset_sizes[ $ds ] <= $max_bank_size - $buckets[ $current_bucket ]{'size'} ) {
-            push @{ $buckets[ $current_bucket ]{'datasets'} }, $ds;
-            push @{ $buckets[ $current_bucket ]{'offsets'} }, $buckets[ $current_bucket ]{'size'};
-            $buckets[ $current_bucket ]{'size'} += $dataset_sizes[ $ds ];
-        } else {
+        while ( defined( $buckets[ $current_bucket ]{'size'} ) and
+                ( $buckets[ $current_bucket ]{'size'} + $dataset_sizes[ $ds ] > $max_bank_size ) ) {
             $current_bucket++;
-            push @{ $buckets[ $current_bucket ]{'datasets'} }, $ds;
-            push @{ $buckets[ $current_bucket ]{'offsets'} }, 0;
-            $buckets[ $current_bucket ]{'size'} = $dataset_sizes[ $ds ];
         }
+        push @{ $buckets[ $current_bucket ]{'datasets'} }, $ds;
+        push @{ $buckets[ $current_bucket ]{'offsets'} }, $buckets[ $current_bucket ]{'size'};
+        $buckets[ $current_bucket ]{'size'} += $dataset_sizes[ $ds ];
     }
 
     # all processed, now check
