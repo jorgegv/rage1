@@ -80,13 +80,11 @@ echo
 
 DATASETS_TOTAL=0
 if ( grep -qE "^dataset 4" build/generated/bank_bins.cfg ) then
-	echo "  DATASETS:"
-	echo
-	echo "    SECTION            SIZE   CSIZE"
+	echo "  DATASET              SIZE   CSIZE"
 	for dataset in $( grep -P "^dataset 4" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
 		comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
 		uncomp_size=$( stat "build/generated/datasets/dataset_$dataset.bin.save" -t|awk '{print $2}' )
-		printf "    %-10s       %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
+		printf "  %-10s         %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
 		DATASETS_TOTAL=$(( DATASETS_TOTAL + comp_size ))
 	done
 
@@ -120,25 +118,21 @@ for bank_num in $BANKS; do
 		CODESET_CODE_START=$( map_data $codeset_map | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 		CODESET_CODE_END=$( map_data $codeset_map | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
 
-		echo "  CODESET:"
-		echo
-		printf "    %-10s  %-5s  %-5s  %5s\n" SECTION START END SIZE
-		printf "    %-10s  \$%04x  \$%04x  %5d\n" code $CODESET_CODE_START $CODESET_CODE_END $(( CODESET_CODE_END - CODESET_CODE_START ))
-		printf "    %-10s  \$%04x  \$%04x  %5d\n" bss $CODESET_BSS_START $CODESET_BSS_END $(( CODESET_BSS_END - CODESET_BSS_START ))
-		printf "    %-10s  \$%04x  \$%04x  %5d\n" data $CODESET_DATA_START $CODESET_DATA_END $(( CODESET_DATA_END - CODESET_DATA_START ))
+		printf "  %-10s    %-5s  %-5s  %5s\n" SECTION START END SIZE
+		printf "  %-10s    \$%04x  \$%04x  %5d\n" code $CODESET_CODE_START $CODESET_CODE_END $(( CODESET_CODE_END - CODESET_CODE_START ))
+		printf "  %-10s    \$%04x  \$%04x  %5d\n" bss $CODESET_BSS_START $CODESET_BSS_END $(( CODESET_BSS_END - CODESET_BSS_START ))
+		printf "  %-10s    \$%04x  \$%04x  %5d\n" data $CODESET_DATA_START $CODESET_DATA_END $(( CODESET_DATA_END - CODESET_DATA_START ))
 		TOTAL_CODESET=$(( CODESET_DATA_END - CODESET_DATA_START + CODESET_BSS_END - CODESET_BSS_START + CODESET_CODE_END - CODESET_CODE_START ))
 		BANK_TOTAL=$(( BANK_TOTAL + TOTAL_CODESET ))
 		echo
 	fi
 
 	if ( grep -qE "^dataset $bank_num" build/generated/bank_bins.cfg ) then
-		echo "  DATASETS:"
-		echo
-		echo "    SECTION            SIZE   CSIZE"
+		echo "  DATASET              SIZE   CSIZE"
 		for dataset in $( grep -P "^dataset $bank_num" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
 			comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
 			uncomp_size=$( stat "build/generated/datasets/dataset_$dataset.bin.save" -t|awk '{print $2}' )
-			printf "    %-10s       %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
+			printf "  %-10s         %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
 			BANK_TOTAL=$(( BANK_TOTAL + comp_size ))
 		done
 
@@ -156,7 +150,7 @@ exit
 # datasets
 for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{print $2}' ); do
 	echo "BANK $bank_num [datasets]"
-	echo "  SECTION              SIZE   CSIZE"
+	echo "  DATASET              SIZE   CSIZE"
 	BANK_TOTAL=0
 	for dataset in $( grep -P "^dataset $bank_num" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
 		comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
