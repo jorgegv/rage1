@@ -62,6 +62,9 @@ void game_state_reset_initial(void) {
    game_state.current_screen_ptr = get_current_screen_ptr();
    game_state.current_screen_asset_state_table_ptr = get_current_screen_asset_state_table_ptr();
 
+   // reset dataset_currently_active
+   game_state.dataset_currently_active = 255;
+
    // reset everything
    hero_reset_all();
 

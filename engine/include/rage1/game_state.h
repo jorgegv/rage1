@@ -68,6 +68,9 @@ struct game_state_s {
    struct map_screen_s *current_screen_ptr;
    struct asset_state_s *current_screen_asset_state_table_ptr;
 
+   // currently mapped dataset
+   uint8_t dataset_currently_active;
+
    // hero info and state
    struct hero_info_s hero;
 

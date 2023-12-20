@@ -46,9 +46,11 @@ void dataset_activate( uint8_t d ) {
     // switch back to previous memory bank
     memory_switch_bank( previous_memory_bank );
 
-    // Save the dataset that was activated - Beware!  This has to be done
-    // AFTER switching back to bank 0!
+    // Save the dataset that was activated here and in game_state - Beware!
+    // This has to be done AFTER switching back to bank 0!
     dataset_currently_active = d;
+    game_state.dataset_currently_active = d;
+
 }
 #endif
 
