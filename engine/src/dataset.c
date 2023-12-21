@@ -24,14 +24,12 @@
 // struct dataset_assets_s *banked_assets;
 // struct dataset_assets_s *home_assets;
 
-uint8_t dataset_currently_active = 255;
-
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 void dataset_activate( uint8_t d ) {
     uint8_t previous_memory_bank;
 
     // if the dataset is already active, do nothing
-    if ( d == dataset_currently_active )
+    if ( game_state.dataset_currently_active == d )
         return;
 
     // save previous memory bank, switch the proper memory bank for the
@@ -48,7 +46,6 @@ void dataset_activate( uint8_t d ) {
 
     // Save the dataset that was activated here and in game_state - Beware!
     // This has to be done AFTER switching back to bank 0!
-    dataset_currently_active = d;
     game_state.dataset_currently_active = d;
 
 }
@@ -56,7 +53,7 @@ void dataset_activate( uint8_t d ) {
 // Force the loading of a dataset, even it is the current one.  Useful when we have destroyed the
 // low mem buffer with some other data and we want to rebuild it
 void dataset_activate_force( uint8_t d ) {
-    dataset_currently_active = 255;
+    game_state.dataset_currently_active = NO_DATASET;
     dataset_activate( d );
 }
 #endif

@@ -51,6 +51,9 @@ struct asset_state_s *get_current_screen_asset_state_table_ptr( void ) {
 
 void game_state_reset_initial(void) {
 
+   // reset dataset_currently_active
+   game_state.dataset_currently_active = NO_DATASET;
+
    // set initial screen
    game_state.current_screen = MAP_INITIAL_SCREEN;
 
@@ -61,9 +64,6 @@ void game_state_reset_initial(void) {
    // map_enter_screen might have switched datasets!
    game_state.current_screen_ptr = get_current_screen_ptr();
    game_state.current_screen_asset_state_table_ptr = get_current_screen_asset_state_table_ptr();
-
-   // reset dataset_currently_active
-   game_state.dataset_currently_active = 255;
 
    // reset everything
    hero_reset_all();
