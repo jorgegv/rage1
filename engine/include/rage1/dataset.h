@@ -71,6 +71,7 @@ void init_datasets( void );
 
 // activate a given dataset
 void dataset_activate( uint8_t d );
+void dataset_activate_force( uint8_t d );
 
 // acceleration functions
 struct btile_s *dataset_get_banked_btile_ptr( uint16_t btile_id ) __z88dk_fastcall;

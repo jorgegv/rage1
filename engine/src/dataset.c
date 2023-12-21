@@ -52,6 +52,13 @@ void dataset_activate( uint8_t d ) {
     game_state.dataset_currently_active = d;
 
 }
+
+// Force the loading of a dataset, even it is the current one.  Useful when we have destroyed the
+// low mem buffer with some other data and we want to rebuild it
+void dataset_activate_force( uint8_t d ) {
+    dataset_currently_active = 255;
+    dataset_activate( d );
+}
 #endif
 
 void init_datasets(void) {
