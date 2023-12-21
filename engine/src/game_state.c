@@ -51,8 +51,8 @@ struct asset_state_s *get_current_screen_asset_state_table_ptr( void ) {
 
 void game_state_reset_initial(void) {
 
-   // reset dataset_currently_active
-   game_state.dataset_currently_active = NO_DATASET;
+   // reset active dataset
+   game_state.active_dataset = NO_DATASET;
 
    // set initial screen
    game_state.current_screen = MAP_INITIAL_SCREEN;

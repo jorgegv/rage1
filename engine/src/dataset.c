@@ -29,7 +29,7 @@ void dataset_activate( uint8_t d ) {
     uint8_t previous_memory_bank;
 
     // if the dataset is already active, do nothing
-    if ( game_state.dataset_currently_active == d )
+    if ( game_state.active_dataset == d )
         return;
 
     // save previous memory bank, switch the proper memory bank for the
@@ -46,14 +46,14 @@ void dataset_activate( uint8_t d ) {
 
     // Save the dataset that was activated here and in game_state - Beware!
     // This has to be done AFTER switching back to bank 0!
-    game_state.dataset_currently_active = d;
+    game_state.active_dataset = d;
 
 }
 
 // Force the loading of a dataset, even it is the current one.  Useful when we have destroyed the
 // low mem buffer with some other data and we want to rebuild it
 void dataset_activate_force( uint8_t d ) {
-    game_state.dataset_currently_active = NO_DATASET;
+    game_state.active_dataset = NO_DATASET;
     dataset_activate( d );
 }
 #endif
