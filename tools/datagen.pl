@@ -941,7 +941,7 @@ sub read_input_data {
                         };
 
                         # check that codeset is a valid value
-                        if ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) {
+                        if ( ( $action_function->{'codeset'} ne 'home' ) and ( $action_function->{'codeset'} > ( scalar( @codeset_valid_banks ) - 1 ) ) ) {
                             die sprintf( "CRUMB_TYPE: $file, line $current_line: CODESET must be in range 0..%d\n", scalar(@codeset_valid_banks ) - 1 );
                         }
 
@@ -957,10 +957,6 @@ sub read_input_data {
                         push @all_codeset_functions, $action_function;
                         push @{ $codeset_functions_by_codeset{ $codeset } }, $action_function;
 
-                        # check that the type is a valid function type
-                        if ( not scalar( grep { lc( $item->{'type'} ) eq $_ } @valid_game_functions ) ) {
-                            die sprintf( "GAME_FUNCTION: $file, line $current_line: invalid game function type: %s\n", lc( $item->{'type'} ) );
-                        }
                     }
 
                     # add the crumb type to the global list
