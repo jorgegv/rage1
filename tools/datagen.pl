@@ -3591,6 +3591,7 @@ sub generate_codeset_functions {
 }
 
 sub generate_custom_function_tables {
+    # generate 'custom' type check function prototypes ('home' codeset)
     if ( scalar( @check_custom_functions ) ) {
 
         push @h_game_data_lines, "// Check custom functions table\n";
@@ -3608,6 +3609,7 @@ sub generate_custom_function_tables {
         push @h_game_data_lines, "\n";
         push @c_game_data_lines, "};\n\n";
     }
+    # generate 'custom' type action function prototypes ('home' codeset)
     if ( scalar( @action_custom_functions ) ) {
 
         push @h_game_data_lines, "// Action custom functions table\n";
@@ -3624,6 +3626,11 @@ sub generate_custom_function_tables {
         }
         push @h_game_data_lines, "\n";
         push @c_game_data_lines, "};\n\n";
+    }
+    # generate 'crumb_action' type function prototypes ('home' codeset)
+    push @h_game_data_lines, "// Crumb actions functions table\n";
+    foreach my $function ( grep { lc( $_->{'type'} ) eq 'crumb_action' } @{ $codeset_functions_by_codeset{'home'} } ) {
+        push @h_game_data_lines, sprintf( "extern void %s(  struct crumb_info_s *c );\n", $function->{'name'} );
     }
 }
 
