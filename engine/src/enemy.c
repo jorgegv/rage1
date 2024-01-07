@@ -32,8 +32,9 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
     n = num_enemies;
     while( n-- ) {
         e = &enemies[n];		// eficiency matters ;-)
-//        if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )	// skip if not active
-//            continue;
+
+        // we reset coordinates for all enemies, even those that are not
+        // active (they may be activated later)
 
         g = dataset_get_banked_sprite_ptr( e->num_graphic );
 
@@ -51,8 +52,9 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
         e->movement.data.linear.dx = e->movement.data.linear.initdx;
         e->movement.data.linear.dy = e->movement.data.linear.initdy;
 
-        // move enemy to initial position
-        sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[0], e->position.x, e->position.y );
+        // move enemy to initial position, only if it is active
+        if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )
+            sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[0], e->position.x, e->position.y );
     }
 }
 
