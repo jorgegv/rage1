@@ -486,6 +486,21 @@ void do_rule_action_hero_disable_weapon( struct flow_rule_action_s *action ) __z
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ENABLE_ENEMY
+void do_rule_action_enable_enemy( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    struct enemy_info_s *e = &game_state.current_screen_ptr->enemy_data.enemies[ action->data.enemy.num_enemy ];
+    SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_ACTIVE | F_ENEMY_NEEDS_REDRAW );
+}
+#endif
+
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_DISABLE_ENEMY
+void do_rule_action_disable_enemy( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    struct enemy_info_s *e = &game_state.current_screen_ptr->enemy_data.enemies[ action->data.enemy.num_enemy ];
+    RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_ACTIVE );
+    sprite_move_offscreen( e->sprite );
+}
+#endif
+
 // dispatch tables for check and action functions
 
 // Table of check functions. The 'check' value from the rule is used to
@@ -758,6 +773,16 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_HERO_DISABLE_WEAPON
     do_rule_action_hero_disable_weapon,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_ENABLE_ENEMY
+    do_rule_action_enable_enemy,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_ACTION_DISABLE_ENEMY
+    do_rule_action_disable_enemy,
 #else
     NULL,
 #endif

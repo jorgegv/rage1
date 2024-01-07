@@ -535,7 +535,9 @@ sub read_input_data {
                     $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
                     push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
 
+                    my $index = scalar( @{ $cur_screen->{'enemies'} } );
                     push @{ $cur_screen->{'enemies'} }, $item;
+                    $cur_screen->{'enemy_name_to_index'}{ $item->{'name'} } = $index;
                     next;
                 }
                 if ( $line =~ /^HERO\s+(\w.*)$/ ) {
@@ -2293,6 +2295,11 @@ sub validate_and_compile_rule {
             $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'btile_name_to_index'}{ $action_data };
         }
 
+        # enemy filtering
+        if ( $action =~ /^(ENABLE|DISABLE)_ENEMY$/ ) {
+            $action_data = $all_screens[ $screen_name_to_index{ $rule->{'screen'} } ]{'enemy_name_to_index'}{ $action_data };
+        }
+
         # set/reset screen flag filtering
         if ( $action =~ /^(SET|RESET)_SCREEN_FLAG$/ ) {
             my $vars = { 
@@ -2427,6 +2434,8 @@ my $action_data_output_format = {
     TRACKER_MUSIC_STOP		=> ".data.unused = %d",
     TRACKER_MUSIC_START		=> ".data.unused = %d",
     TRACKER_PLAY_FX		=> ".data.tracker_fx.num_effect = %d",
+    ENABLE_ENEMY		=> ".data.enemy.num_enemy = %d",
+    DISABLE_ENEMY		=> ".data.enemy.num_enemy = %d",
 };
 
 sub generate_rule_checks {

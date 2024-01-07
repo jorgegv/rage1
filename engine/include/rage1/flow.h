@@ -103,8 +103,10 @@ struct flow_rule_check_s {
 #define RULE_ACTION_TRACKER_PLAY_FX		23
 #define RULE_ACTION_HERO_ENABLE_WEAPON		24
 #define RULE_ACTION_HERO_DISABLE_WEAPON		25
+#define RULE_ACTION_ENABLE_ENEMY		26
+#define RULE_ACTION_DISABLE_ENEMY		27
 
-#define RULE_ACTION_MAX				25
+#define RULE_ACTION_MAX				27
 
 struct flow_rule_action_s {
     uint8_t type;
@@ -117,6 +119,7 @@ struct flow_rule_action_s {
         struct { uint8_t	function_id, param; }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
         struct { uint8_t	num_btile; }		btile;		// ENABLE/DISABLE_BTILE
+        struct { uint8_t	num_enemy; }		enemy;		// ENABLE/DISABLE_ENEMY
         struct { 
             uint8_t	num_screen;
             uint8_t	hero_x;

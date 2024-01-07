@@ -32,8 +32,8 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
     n = num_enemies;
     while( n-- ) {
         e = &enemies[n];		// eficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )	// skip if not active
-            continue;
+//        if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )	// skip if not active
+//            continue;
 
         g = dataset_get_banked_sprite_ptr( e->num_graphic );
 
