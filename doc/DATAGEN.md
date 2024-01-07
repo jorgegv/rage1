@@ -333,6 +333,8 @@ animated (see below for details). Arguments:
   * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
     sprite name
   * `SPRITE`: the name of the sprite to be used for this enemy
+  * `ACTIVE`: (optional) defines the state for the enemy at game start
+  (0=disabled/1=enabled). If not specified, it is set to 1.
   * `MOVEMENT`: how the enemy moves. For the moment, this can be only
   `LINEAR`, and the following arguments refer to this movement type.
     * `XMIN`,`YMIN`,`XMAX`,`YMAX`: bounds for the enemy movement, in pixel

@@ -531,9 +531,14 @@ sub read_input_data {
                         split( /\s+/, $args )
                     };
 
-                    # enemies can always change state (=killed), so assign a state slot
+                    # enemies can always change state (=killed or disabled), so assign a state slot
                     $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
+                    # if 'active' is defined, respect its value. If it is not, assume active=1
+                    if ( defined( $item->{'active'} ) ) {
+                        push @{ $cur_screen->{'asset_states'} }, { value => ($item->{'active'} ? 'F_ENEMY_ACTIVE' : 0), comment => "Enemy '$item->{name}'" } ;
+                    } else {
+                        push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
+                    }
 
                     my $index = defined( $cur_screen->{'enemies'} ) ? scalar( @{ $cur_screen->{'enemies'} } ) : 0;
                     push @{ $cur_screen->{'enemies'} }, $item;
