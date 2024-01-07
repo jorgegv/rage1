@@ -26,10 +26,10 @@ tools:
 
 # standard RAGE1 map
 interrupts_128:
-  iv_table_addr: 0x8D00
-  isr_vector_byte: 0x8E
-  isr_vector_address: 0x8E8E
-  base_code_address: 0x8E91
+  iv_table_addr: 0x8000
+  isr_vector_byte: 0x81
+  isr_vector_address: 0x8181
+  base_code_address: 0x8184
 
 #
 # alternative map with IV at 0x8400, ISR at 0x8585 and code starting at 0x8588
