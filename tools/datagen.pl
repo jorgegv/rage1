@@ -632,21 +632,6 @@ sub read_input_data {
                     push @{ $cur_screen->{'screen_data'} }, $1;
                     next;
                 }
-                if ( $line =~ /^CRUMB\s+(\w.*)$/ ) {
-                    # ARG1=val1 ARG2=va2 ARG3=val3...
-                    my $args = $1;
-                    my $item = {
-                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
-                        split( /\s+/, $args )
-                    };
-
-                    # enemies can always change state (=killed), so assign a state slot
-                    $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
-                    push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
-
-                    push @{ $cur_screen->{'enemies'} }, $item;
-                    next;
-                }
                 if ( $line =~ /^END_SCREEN$/ ) {
                     validate_screen( $cur_screen );
                     if ( not $screen_patching ) {
