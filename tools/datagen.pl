@@ -535,7 +535,7 @@ sub read_input_data {
                     $item->{'asset_state_index'} = scalar( @{ $cur_screen->{'asset_states'} } );
                     push @{ $cur_screen->{'asset_states'} }, { value => 'F_ENEMY_ACTIVE', comment => "Enemy '$item->{name}'" };
 
-                    my $index = scalar( @{ $cur_screen->{'enemies'} } );
+                    my $index = defined( $cur_screen->{'enemies'} ) ? scalar( @{ $cur_screen->{'enemies'} } ) : 0;
                     push @{ $cur_screen->{'enemies'} }, $item;
                     $cur_screen->{'enemy_name_to_index'}{ $item->{'name'} } = $index;
                     next;
