@@ -558,8 +558,10 @@ END_GAME_CONFIG
 `GAME_CONFIG` attributes:
 
 * `NAME`: the name of the game (Imagine :-)
+
 * `ZX_TARGET`: set this to `48` or `128` to compile in those modes. `128`
   mode includes automatic memory banking of assets.
+
 * `LOADING_SCREEN`: allows to specify a 256x192 PNG/SCR image which will be used
   as a loading screen. One of `PNG` or `SCR` is mandatory, and only one can
   be specified. Arguments:
@@ -570,6 +572,15 @@ END_GAME_CONFIG
   * `WAIT_ANY_KEY`: (optional) if set to 1, the game will stop just after
   loading and wait for a keypress (so that the loading screen can be enjoyed
   :-) ). If not set or set to 0, game will start right after loading.
+
+* `COLOR`: (optional) specify is the game map is monochrome or has color
+  attributes (btiles in monochrome maps are drawn with a single attribute,
+  and ocuppy less memory).  If not specified, defaults to full color games. 
+  Accepts 2 parameters:
+  * `MODE`: can be either `FULL` or `MONO`
+  * `GAMEAREA_ATTR`: must be specified when `MODE` is `MONO` to set the
+  global attribute used for map tiles.
+
 * `CUSTOM_CHARSET`: allows to specify a custom character set for the game.
   Arguments:
   * `FILE`: the file with character data, 8 bytes per character.  It must be
@@ -579,10 +590,13 @@ END_GAME_CONFIG
   character set.  Only the data for the replaced chars will be included in
   the final game, so this is a way for reducing memory usage for the font if
   you are not using all characters in your game texts.
+
 * `SCREEN`: screen related settings. Arguments:
   * `INITIAL`: sets the initial screen for the game
+
 * `DEFAULT_BG_ATTR`: default background attributes, defined as OR'ed
   constantes defined in spectrum.h
+
 * `SOUND`: assigns a sound to a given game event. Sound IDs are indexes into
   the sound effects table (see beeper.asm). Arguments (events):
   * `ENEMY_KILLED`: hero kills an enemy
@@ -592,6 +606,7 @@ END_GAME_CONFIG
   * `CONTROLLER_SELECTED`: controller is selected in main menu
   * `GAME_WON`: game is ended successfully
   * `GAME_OVER`: game is over because lives=0
+
 * `GAME_FUNCTION`: defines a special game function. These
   functions must be included in sources under `game_src` directory. All
   these functions take and return no arguments, and must work over the
@@ -620,10 +635,12 @@ END_GAME_CONFIG
   * `CODESET`: (optional) the codeset where the function must reside. If not
     specified, or we are compiling for 48K model, all GAME_FUNCTIONs will go
     into lowmem area
-* `GAME_AREA`, `LIVES_ARES`, `INVENTORY_AREA`, `DEBUG_AREA`, `TITLE_AREA`:
+
+* `GAME_AREA`, `LIVES_AREA`, `INVENTORY_AREA`, `DEBUG_AREA`, `TITLE_AREA`:
 definitions for the different screen areas used by the game.  All of then
 accept the following aguments:
   * `TOP`, `LEFT`, `BOTTOM`, `RIGHT`: (values are obvious)
+
 * `BINARY_DATA`: allows to include pieces of binary data from a given file
 in your game.  Useful for embedding data that can be generated with external
 tools.  More than one instance of `BINARY_DATA` can be specified, for
@@ -664,9 +681,9 @@ including different data pieces.  Arguments:
     not specified, or we are compiling for 48K model, it will go into lowmem
     area
 
-* `TRACKER`: enables a music tracker in your game. Currently Arkos Tracker 2
-  is the supported player, but other trackers can be easily integrated (open
-  an issue if you need another one!). Arguments:
+* `TRACKER`: enables a music tracker in your game.  Currently Arkos 2 and
+  Vortex trackers are supported, but other trackers can be easily integrated
+  (open an issue if you need another one!).  Arguments:
   * `TYPE`: (optional) currently only `arkos2` value is supported, and
     specified by default
   * `IN_GAME_SONG`: (optional) the song that will be played during the game.
