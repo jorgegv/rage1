@@ -281,27 +281,34 @@ END_SCREEN
 
 * `NAME`: the name of the screen, used for referencing it from other
   elements
+
 * `DATASET`: the number of the dataset where the screen should go.  It can
 be an integer number starting at 0, or the special name `home`. If no
 dataset is defined for a screen, the default value `home` is used.
+
 * `TITLE`: an optional title for the screen that can be used in the game.
 The title must be enclosed between double quotes ("")
+
 * `OBSTACLE`: places an element on the screen. The Hero can not go through
 this element (=obstacle) but s/he must move around. An OBSTACLE can be
 animated (see below for details). Arguments:
-  * `NAME`: the Btile that will be used to draw this obstacle
+  * `NAME`: the name of this obstacle
+  * `BTILE`: the Btile that will be used to draw this obstacle
   * `ROW`, `COL`: position of the obstacle on the screen
-  * `ACTIVE`: 1 if this obstacle is active, 0 if not. Obstacles can be
-  activated and deactivated during the game, this setting defines the
-  initial state.
-  * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not. If it is ommited,
-  its state will not change during the game.
+  * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not.  If it is
+  ommited, its state will not change during the game.
+  * `ACTIVE`: 1 if this obstacle is active at game start, 0 if not. 
+  Obstacles can be activated and deactivated during the game, this setting
+  defines the initial state.
+
 * `DECORATION`: places a decoration on the screen. The hero can go over it.
   Arguments are the same as for OBSTACLEs. A DECORATION can be animated (see
   below for details).
+
 * `HARMFUL`: places a harmful decoration on the screen.  The hero gets
   killed/harmed if s/he goes over it.  Arguments are the same as for
   OBSTACLEs. A HARMFUL can be animated (see below for details).
+
 * `HOTZONE`: a zone on the screen where something happens when the hero goes
   over it.  HOTZONEs are only definitions, not graphic elements, i.e.  they
   only define coordinate checks and actions to be done when inside.  If you
@@ -318,17 +325,21 @@ animated (see below for details). Arguments:
   initial state.
   * `CAN_CHANGE_STATE`: 1 if it can change state, 0 if not. If it is ommited,
   its state will not change during the game.
+
 * `HERO`: defines hero properties in this screen. Arguments:
   * `STARTUP_XPOS`,`STARTUP_YPOS`: startup hero coordinates in this screen,
     of this is the initial screen.
+
 * `ITEM`: positions an inventory item on the screen. Arguments:
   * `NAME`: the name of the item
   * `BTILE`: the Btile that will be used to draw the item
   * `ROW`,`COL`: top left position of the item, in char cell coordinates
+
 * `CRUMB`: positions a crumb on the screen. Arguments:
   * `NAME`: the name of the crumb
   * `TYPE`: the crumb type, must have been defined in `GAME_CONFIG` section
   * `ROW`,`COL`: top left position of the crumb, in char cell coordinates
+
 * `ENEMY`: defines an enemy on the screen. Arguments:
   * `NAME`: a name for this enemy.  It is _not_ needed that it matches the
     sprite name
@@ -377,6 +388,7 @@ Arguments:
   * `PROBABILITY`: a value in 0-255 which maps to the probability [0..1]
   that each filling btile is generated. Useful for generating randomized
   backgrounds: stars, grass, water, etc.
+
 * `SCREEN_DATA`: optional lines of digraphs characters, enclosed by quotes (").
 A text representation of the screen map, with the different btiles
 (obstacles and decorations) drawn by 2-char sequences. See
@@ -385,6 +397,7 @@ DECORATIONs can be drawn with this method. The remaining elements (ITEMs,
 HOTZONEs, etc.) must be specified with the previous commands. There must be
 GAME_AREA.HEIGHT lines, and the strings must be GAME_AREA.WIDTH * 2
 characters long.
+
 * `DEFINE`: define a graph for using it in SCREEN_DATA lines. Arguments:
   * `GRAPH`: 2-char repsesentation of each character cell for the BTILE
   * `BTILE`: the btile name for this graph
