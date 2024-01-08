@@ -3602,7 +3602,8 @@ sub generate_custom_function_tables {
             scalar( @check_custom_functions )
         );
         foreach my $f ( @check_custom_functions ) {
-            push @h_game_data_lines, sprintf( "uint8_t %s( %s );\n", $f->{'function'}, ( $f->{'uses_param'} ? 'uint8_t param' : 'void' ) );
+            # all check functions must accept a single 1-byte param, even if they ignore it
+            push @h_game_data_lines, sprintf( "uint8_t %s( %s );\n", $f->{'function'}, 'uint8_t param' );
             push @c_game_data_lines, sprintf( "\t%s,\n", $f->{'function'} );
         }
         push @h_game_data_lines, "\n";
