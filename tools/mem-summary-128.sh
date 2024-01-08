@@ -62,20 +62,12 @@ printf "$RED  FREE                       %6d  $RESET\n" $(( 49152 - TOTAL ))
 echo
 
 # banked.map
-BANKED_DATA_START=$( map_data $BANKED_MAP | grep -E '^__data_compiler_head' | awk '{print $3}' | hex2dec )
-BANKED_DATA_END=$( map_data $BANKED_MAP | grep -E '^__data_compiler_tail' | awk '{print $3}' | hex2dec )
-BANKED_BSS_START=$( map_data $BANKED_MAP | grep -E '^__bss_compiler_head' | awk '{print $3}' | hex2dec )
-BANKED_BSS_END=$( map_data $BANKED_MAP | grep -E '^__bss_compiler_tail' | awk '{print $3}' | hex2dec)
-BANKED_CODE_START=$( map_data $BANKED_MAP | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
-BANKED_CODE_END=$( map_data $BANKED_MAP | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
+BANKED_SIZE=$( ls -l engine/banked_code/banked_code.bin | awk '{print $5}' )
 
 echo "BANK 4 [RAGE1 code/dataset]"
 echo
-printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
-
-printf "  %-12s  \$%04x  \$%04x  %5d\n" code $BANKED_CODE_START $BANKED_CODE_END $(( BANKED_CODE_END - BANKED_CODE_START ))
-printf "  %-12s  \$%04x  \$%04x  %5d\n" data $BANKED_DATA_START $BANKED_DATA_END $(( BANKED_DATA_END - BANKED_DATA_START ))
-printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $BANKED_BSS_START $BANKED_BSS_END $(( BANKED_BSS_END - BANKED_BSS_START ))
+echo "  SECTION                      SIZE"
+printf "  %-12s                %5d\n" rage1_code $BANKED_SIZE
 echo
 
 DATASETS_TOTAL=0
@@ -93,7 +85,7 @@ if ( grep -qE "^dataset 4" build/generated/bank_bins.cfg ) then
 	echo
 fi
 
-TOTAL=$(( BANKED_DATA_END - BANKED_DATA_START + BANKED_BSS_END - BANKED_BSS_START + BANKED_CODE_END - BANKED_CODE_START + DATASETS_TOTAL ))
+TOTAL=$(( BANKED_SIZE + DATASETS_TOTAL ))
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
 printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - TOTAL ))
 echo
@@ -118,12 +110,10 @@ for bank_num in $BANKS; do
 		CODESET_CODE_START=$( map_data $codeset_map | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 		CODESET_CODE_END=$( map_data $codeset_map | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
 
-		printf "  %-10s    %-5s  %-5s  %5s\n" SECTION START END SIZE
-		printf "  %-10s    \$%04x  \$%04x  %5d\n" code $CODESET_CODE_START $CODESET_CODE_END $(( CODESET_CODE_END - CODESET_CODE_START ))
-		printf "  %-10s    \$%04x  \$%04x  %5d\n" bss $CODESET_BSS_START $CODESET_BSS_END $(( CODESET_BSS_END - CODESET_BSS_START ))
-		printf "  %-10s    \$%04x  \$%04x  %5d\n" data $CODESET_DATA_START $CODESET_DATA_END $(( CODESET_DATA_END - CODESET_DATA_START ))
-		TOTAL_CODESET=$(( CODESET_DATA_END - CODESET_DATA_START + CODESET_BSS_END - CODESET_BSS_START + CODESET_CODE_END - CODESET_CODE_START ))
-		BANK_TOTAL=$(( BANK_TOTAL + TOTAL_CODESET ))
+		CODESET_SIZE=$( ls -l build/generated/codesets/codeset_$codeset_num.bin | awk '{print $5}' )
+		echo "  SECTION                      SIZE"
+		printf "  %-12s                %5d\n" codeset_$codeset_num $CODESET_SIZE
+		BANK_TOTAL=$(( BANK_TOTAL + CODESET_SIZE ))
 		echo
 	fi
 
@@ -145,26 +135,3 @@ for bank_num in $BANKS; do
 	printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - BANK_TOTAL ))
 	echo
 done
-exit
-
-# datasets
-for bank_num in $( grep -E '^dataset' build/generated/bank_bins.cfg | awk '{print $2}' ); do
-	echo "BANK $bank_num [datasets]"
-	echo "  DATASET              SIZE   CSIZE"
-	BANK_TOTAL=0
-	for dataset in $( grep -P "^dataset $bank_num" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
-		comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
-		uncomp_size=$( stat "build/generated/datasets/dataset_$dataset.bin.save" -t|awk '{print $2}' )
-		printf "  %-12s       %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
-		BANK_TOTAL=$(( BANK_TOTAL + comp_size ))
-	done
-
-	echo
-
-	echo
-	printf "$GREEN  TOTAL                      %6d  $RESET\n" $BANK_TOTAL
-	printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - BANK_TOTAL ))
-	echo
-done
-
-echo
