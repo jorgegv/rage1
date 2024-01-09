@@ -33,16 +33,19 @@
 
 struct dataset_assets_s {
     // BTiles
+    // max: 65536 BTILEs in a dataset
     uint16_t				num_btiles;
     struct btile_s			*all_btiles;
     // Sprites
     uint8_t				num_sprite_graphics;
+    // max: 256 sprites in a dataset
     struct sprite_graphic_data_s	*all_sprite_graphics;
     // Flow rules
-    // FIXME: this needs to be upgraded to a 16 bit number - we can easily have more than 255 rules in a game
+    // max: 256 rules in a dataset
     uint8_t				num_flow_rules;
     struct flow_rule_s			*all_flow_rules;
     // Map
+    // max: 256 screens in a dataset
     uint8_t				num_screens;
     struct map_screen_s			*all_screens;
 };
