@@ -52,8 +52,8 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
     uint8_t x,y,dx,dy,r,c;
 
     h = &game_state.hero;
-    x = h->position.x;
-    y = h->position.y;
+    x = h->position.coords.u8.x_int;
+    y = h->position.coords.u8.y_int;
     dx = h->movement.dx;
     dy = h->movement.dy;
 
@@ -146,8 +146,10 @@ void hero_animate_and_move( void ) {
     pos = &h->position;
 
     // initialize preconditions
-    oldx = x = pos->x;
-    oldy = y = pos->y;
+    oldx = x = pos->coords.u8.x_int;
+    oldy = y = pos->coords.u8.y_int;
+
+    // FIXME START: code to account for fracal coordinates goes below until FIXME END
 
     // operate on the hero following controller state
     if ( controller & MOVE_UP ) {
@@ -157,53 +159,56 @@ void hero_animate_and_move( void ) {
             anim->current_sequence = anim->sequence_up;
         }
         // check if can move to new coordinate
-        newy = pos->y - move->dy;
+        newy = pos->coords.u8.y_int - move->dy;
         if ( newy <= CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
-            pos->y = CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
+            pos->coords.u8.y_int = CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
         else
             if ( hero_can_move_in_direction( MOVE_UP ) )
-                pos->y = newy;
+                pos->coords.u8.y_int = newy;
     }
     if ( controller & MOVE_DOWN ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_down;
         }
-        newy = pos->y + move->dy;
+        newy = pos->coords.u8.y_int + move->dy;
         // coordinate of the bottommost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - HERO_SPRITE_HEIGHT;
         if ( newy >= allowed )
-            pos->y = allowed;
+            pos->coords.u8.y_int = allowed;
         else
             if ( hero_can_move_in_direction( MOVE_DOWN ) )
-                pos->y = newy;
+                pos->coords.u8.y_int = newy;
     }
     if ( controller & MOVE_LEFT ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_left;
         }
-        newx = pos->x - move->dx;
+        newx = pos->coords.u8.x_int - move->dx;
         if ( newx <= CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
-            pos->x = CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
+            pos->coords.u8.x_int = CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
         else
             if ( hero_can_move_in_direction( MOVE_LEFT ) )
-                pos->x = newx;
+                pos->coords.u8.x_int = newx;
     }
     if ( controller & MOVE_RIGHT ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_right;
         }
-        newx = pos->x + move->dx;
+        newx = pos->coords.u8.x_int + move->dx;
         // coordinate of the rightmost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - HERO_SPRITE_WIDTH;
         if ( newx >= allowed )
-            pos->x = allowed;
+            pos->coords.u8.x_int = allowed;
         else
             if ( hero_can_move_in_direction( MOVE_RIGHT ) )
-                pos->x = newx;
+                pos->coords.u8.x_int = newx;
     }
+
+    // FIXME END: fixes for fracal coordinates
+
 
     // update last movement direction
     move->last_direction = controller;
@@ -223,9 +228,9 @@ void hero_animate_and_move( void ) {
 
     // if position has changed, adjust xmax, ymax and move sprite to new
     // position
-    if ( ( oldx != pos->x ) || ( oldy != pos->y ) ) {
-        pos->xmax = pos->x + HERO_SPRITE_WIDTH - 1;
-        pos->ymax = pos->y + HERO_SPRITE_HEIGHT - 1;
+    if ( ( oldx != pos->coords.u8.x_int ) || ( oldy != pos->coords.u8.y_int ) ) {
+        pos->xmax = pos->coords.u8.x_int + HERO_SPRITE_WIDTH - 1;
+        pos->ymax = pos->coords.u8.y_int + HERO_SPRITE_HEIGHT - 1;
         anim->last_frame_ptr = animation_frame;
         SET_LOOP_FLAG( F_LOOP_REDRAW_HERO );
     }

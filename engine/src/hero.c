@@ -60,7 +60,7 @@ struct hero_info_s hero_startup_data = {
         HERO_SPRITE_STEADY_FRAME_LEFT,
         HERO_SPRITE_STEADY_FRAME_RIGHT,
     },
-    { 0,0,0,0 },	// position - will be reset when entering a screen, including the first one
+    { .coords.u16.x = 0, .coords.u16.y = 0, .xmax = 0, .ymax = 0 },	// position - will be reset when entering a screen, including the first one
     {	// movement
         MOVE_NONE,
         HERO_MOVE_HSTEP,
@@ -105,18 +105,18 @@ void hero_reset_position(void) {
     // set initial position and move it there
     hero_set_position_x( h, game_state.current_screen_ptr->hero_data.startup_x );
     hero_set_position_y( h, game_state.current_screen_ptr->hero_data.startup_y );
-    sp1_MoveSprPix( h->sprite, &game_area, animation_frame, h->position.x, h->position.y );
+    sp1_MoveSprPix( h->sprite, &game_area, animation_frame, h->position.coords.u8.x_int, h->position.coords.u8.y_int );
 }
 
 // X and Y setting functions - take care of setting XMAX and YMAX also
 void hero_set_position_x( struct hero_info_s *h, uint8_t x ) {
-    h->position.x = x;
-    h->position.xmax = h->position.x + HERO_SPRITE_WIDTH - 1;
+    h->position.coords.u8.x_int = x;
+    h->position.xmax = h->position.coords.u8.x_int + HERO_SPRITE_WIDTH - 1;
 }
 
 void hero_set_position_y( struct hero_info_s *h, uint8_t y ) {
-    h->position.y = y;
-    h->position.ymax = h->position.y + HERO_SPRITE_HEIGHT - 1;
+    h->position.coords.u8.y_int = y;
+    h->position.ymax = h->position.coords.u8.y_int + HERO_SPRITE_HEIGHT - 1;
 }
 
 // this is initialized on startup, it is used when resetting the hero state
@@ -145,8 +145,8 @@ void hero_draw( void ) {
         game_state.hero.sprite,
         &game_area,
         game_state.hero.animation.last_frame_ptr,
-        game_state.hero.position.x,
-        game_state.hero.position.y
+        game_state.hero.position.coords.u8.x_int,
+        game_state.hero.position.coords.u8.y_int
     );
 }
 

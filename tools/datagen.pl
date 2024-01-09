@@ -1626,7 +1626,7 @@ sub generate_screen {
                         "\t\t\t.delay_data = { .frame_delay = %d, .sequence_delay = %d },\n" .
                         "\t\t\t.sequence_data = { .initial_sequence = %d },\n" .
                         "\t\t\t.current =  { .sequence = %d, .sequence_counter = %d, .frame_delay_counter = %d, .sequence_delay_counter = %d } },\n" .
-                        "\t\t.position = { .x = %d, .y = %d, .xmax = %d, .ymax = %d },\n" .
+                        "\t\t.position = { .coords.u16.x = %d, .coords.u16.y = %d, .xmax = %d, .ymax = %d },\n" .
                         "\t\t.movement = { .type = %s, .delay = %d, .delay_counter = %d,\n" .
                         "\t\t\t.data = { .%s = { %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } },\n" .
                         "\t\t\t.flags = %s },\n" .
@@ -1710,7 +1710,7 @@ sub generate_screen {
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
                 my $ymax = $y + ( defined( $_->{'pix_height'} ) ? $_->{'pix_height'} : $_->{'height'} * 8 ) - 1;
-                sprintf( "\t{ .position = { %d, %d, %d, %d }, .state_index = %s }",
+                sprintf( "\t{ .position = { .coords.u16.x = %d * 256, .coords.u16.y = %d * 256, .xmax = %d, .ymax = %d }, .state_index = %s }",
                     $x, $y, $xmax, $ymax,
                     $_->{'asset_state_index'},
                 )
@@ -1934,7 +1934,7 @@ struct bullet_state_data_s bullet_state_data[ BULLET_MAX_BULLETS ] = {
 EOF_BULLET5
 ;
     foreach ( 1 .. $max_bullets ) {
-        push @c_game_data_lines, "\t{ NULL, { 0, 0, 0, 0 }, 0, 0, 0, NULL, 0 },\n";
+        push @c_game_data_lines, "\t{ NULL, { .coords.u16.x = 0, .coords.u16.y = 0, .xmax = 0, .ymax = 0 }, 0, 0, 0, NULL, 0 },\n";
     }
     push @c_game_data_lines, "};\n\n";
 

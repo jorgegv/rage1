@@ -44,17 +44,19 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
         // e->animation.current.sequence is already assigned at data definition
         animation_reset_state( &e->animation );
         // position - update also xmax and ymax
-        e->position.x = e->movement.data.linear.initx;
-        e->position.y = e->movement.data.linear.inity;
-        e->position.xmax = e->position.x + g->width - 1;
-        e->position.ymax = e->position.y + g->height - 1;
+        e->position.coords.u8.x_int = e->movement.data.linear.initx;
+        e->position.coords.u8.y_int = e->movement.data.linear.inity;
+        e->position.coords.u8.x_frac = 0;
+        e->position.coords.u8.y_frac = 0;
+        e->position.xmax = e->position.coords.u8.x_int + g->width - 1;
+        e->position.ymax = e->position.coords.u8.y_int + g->height - 1;
         // movement
         e->movement.data.linear.dx = e->movement.data.linear.initdx;
         e->movement.data.linear.dy = e->movement.data.linear.initdy;
 
         // move enemy to initial position, only if it is active
         if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )
-            sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[0], e->position.x, e->position.y );
+            sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[0], e->position.coords.u8.x_int, e->position.coords.u8.y_int );
     }
 }
 
@@ -84,7 +86,7 @@ void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
             // sprite may need update either because of animation, movement, or both
             sp1_MoveSprPix( e->sprite, &game_area,
                 g->frame_data.frames[ g->sequence_data.sequences[ anim->current.sequence ].frame_numbers[ anim->current.sequence_counter ] ],
-                pos->x, pos->y );
+                pos->coords.u8.x_int, pos->coords.u8.y_int );
             RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
         }
     }
