@@ -1710,7 +1710,7 @@ sub generate_screen {
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
                 my $ymax = $y + ( defined( $_->{'pix_height'} ) ? $_->{'pix_height'} : $_->{'height'} * 8 ) - 1;
-                sprintf( "\t{ .position = { .coords.u16.x = %d * 256, .coords.u16.y = %d * 256, .xmax = %d, .ymax = %d }, .state_index = %s }",
+                sprintf( "\t{ .position = { .coords.u8.x_int = %d, .coords.u8.y_int = %d, .xmax = %d, .ymax = %d }, .state_index = %s }",
                     $x, $y, $xmax, $ymax,
                     $_->{'asset_state_index'},
                 )
