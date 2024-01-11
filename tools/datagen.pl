@@ -197,8 +197,8 @@ sub read_input_data {
             # cleanup the line
             chomp $line;
             $line =~ s/^\s*//g;		# remove leading blanks
+            $line =~ s/\/\/.*$//g;	# remove comments (//...)
             $line =~ s/\s*$//g;		# remove trailing blanks
-            $line =~ s/\/\/.*$//g;		# remove comments (//...)
             next if $line eq '';		# ignore blank lines
 
             # if there were previous pending split lines (ending in '\'), add
