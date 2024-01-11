@@ -54,8 +54,8 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
     h = &game_state.hero;
     x = h->position.coords.u8.x_int;
     y = h->position.coords.u8.y_int;
-    dx = h->movement.dx;
-    dy = h->movement.dy;
+    dx = h->movement.dx / 256;
+    dy = h->movement.dy / 256;
 
     // hero can move in one direction if there are no obstacles in the new position
     switch (direction ) {
@@ -98,7 +98,8 @@ void hero_animate_and_move( void ) {
     struct position_data_s *pos;
     struct hero_movement_data_s *move;
     uint8_t controller;
-    uint8_t newx,newy,x,y,oldx,oldy;
+    uint16_t newx_ffp, newy_ffp;
+    uint8_t oldx,oldy;
     uint8_t *animation_frame;
     uint8_t allowed;
     uint8_t steady_frame;
@@ -146,10 +147,8 @@ void hero_animate_and_move( void ) {
     pos = &h->position;
 
     // initialize preconditions
-    oldx = x = pos->coords.u8.x_int;
-    oldy = y = pos->coords.u8.y_int;
-
-    // FIXME START: code to account for fracal coordinates goes below until FIXME END
+    oldx = pos->coords.u8.x_int;
+    oldy = pos->coords.u8.y_int;
 
     // operate on the hero following controller state
     if ( controller & MOVE_UP ) {
@@ -159,56 +158,53 @@ void hero_animate_and_move( void ) {
             anim->current_sequence = anim->sequence_up;
         }
         // check if can move to new coordinate
-        newy = pos->coords.u8.y_int - move->dy;
-        if ( newy <= CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
-            pos->coords.u8.y_int = CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
+        newy_ffp = pos->coords.u16.y - move->dy;
+        if ( newy_ffp <= 256 * CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
+            pos->coords.u16.y  = 256 * CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
         else
             if ( hero_can_move_in_direction( MOVE_UP ) )
-                pos->coords.u8.y_int = newy;
+                pos->coords.u16.y = newy_ffp;
     }
     if ( controller & MOVE_DOWN ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_down;
         }
-        newy = pos->coords.u8.y_int + move->dy;
+        newy_ffp = pos->coords.u16.y + move->dy;
         // coordinate of the bottommost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - HERO_SPRITE_HEIGHT;
-        if ( newy >= allowed )
-            pos->coords.u8.y_int = allowed;
+        if ( newy_ffp >= 256 * allowed )
+            pos->coords.u16.y = 256 * allowed;
         else
             if ( hero_can_move_in_direction( MOVE_DOWN ) )
-                pos->coords.u8.y_int = newy;
+                pos->coords.u16.y = newy_ffp;
     }
     if ( controller & MOVE_LEFT ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_left;
         }
-        newx = pos->coords.u8.x_int - move->dx;
-        if ( newx <= CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
-            pos->coords.u8.x_int = CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
+        newx_ffp = pos->coords.u16.x - move->dx;
+        if ( newx_ffp <= 256 * CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
+            pos->coords.u16.x = 256 * CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
         else
             if ( hero_can_move_in_direction( MOVE_LEFT ) )
-                pos->coords.u8.x_int = newx;
+                pos->coords.u16.x = newx_ffp;
     }
     if ( controller & MOVE_RIGHT ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_right;
         }
-        newx = pos->coords.u8.x_int + move->dx;
+        newx_ffp = pos->coords.u16.x + move->dx;
         // coordinate of the rightmost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - HERO_SPRITE_WIDTH;
-        if ( newx >= allowed )
-            pos->coords.u8.x_int = allowed;
+        if ( newx_ffp >= 256 * allowed )
+            pos->coords.u16.x = 256 * allowed;
         else
             if ( hero_can_move_in_direction( MOVE_RIGHT ) )
-                pos->coords.u8.x_int = newx;
+                pos->coords.u16.x = newx_ffp;
     }
-
-    // FIXME END: fixes for fracal coordinates
-
 
     // update last movement direction
     move->last_direction = controller;

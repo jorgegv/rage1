@@ -18,9 +18,9 @@
 struct position_data_s {
     union {
         struct {
-            uint8_t x_frac;	// x pos, with optional fracal part
+            uint8_t x_frac;	// x pos, with optional fractional part
             uint8_t x_int;
-            uint8_t y_frac;	// y pos, with optional fracal part
+            uint8_t y_frac;	// y pos, with optional fractional part
             uint8_t y_int;
         } u8;
         struct {

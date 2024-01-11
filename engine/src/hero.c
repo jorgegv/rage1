@@ -110,12 +110,12 @@ void hero_reset_position(void) {
 
 // X and Y setting functions - take care of setting XMAX and YMAX also
 void hero_set_position_x( struct hero_info_s *h, uint8_t x ) {
-    h->position.coords.u8.x_int = x;
+    h->position.coords.u16.x = 256 * x;
     h->position.xmax = h->position.coords.u8.x_int + HERO_SPRITE_WIDTH - 1;
 }
 
 void hero_set_position_y( struct hero_info_s *h, uint8_t y ) {
-    h->position.coords.u8.y_int = y;
+    h->position.coords.u16.y = 256 * y;
     h->position.ymax = h->position.coords.u8.y_int + HERO_SPRITE_HEIGHT - 1;
 }
 

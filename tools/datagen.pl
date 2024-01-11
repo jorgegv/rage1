@@ -679,11 +679,11 @@ sub read_input_data {
                     }
                     next;
                 }
-                if ( $line =~ /^HSTEP\s+(\d+)$/ ) {
+                if ( $line =~ /^HSTEP\s+([\d\.]+)$/ ) {
                     $hero->{'hstep'} = $1;
                     next;
                 }
-                if ( $line =~ /^VSTEP\s+(\d+)$/ ) {
+                if ( $line =~ /^VSTEP\s+([\d\.]+)$/ ) {
                     $hero->{'vstep'} = $1;
                     next;
                 }
@@ -1817,6 +1817,8 @@ sub generate_hero {
     my $delay			= $hero->{'animation_delay'};
     my $hstep			= $hero->{'hstep'};
     my $vstep			= $hero->{'vstep'};
+    my $hstep_ffp		= int( 256 * $hero->{'hstep'} );
+    my $vstep_ffp		= int( 256 * $hero->{'vstep'} );
     my $local_num_sprite	= $dataset_dependency{'home'}{'sprite_global_to_dataset_index'}{ $num_sprite };
     my $health_max		= $hero->{'damage_mode'}{'health_max'};
     my $enemy_damage		= $hero->{'damage_mode'}{'enemy_damage'};
@@ -1846,8 +1848,10 @@ sub generate_hero {
 #define	HERO_SPRITE_ANIMATION_DELAY	$delay
 #define HERO_SPRITE_WIDTH		$width
 #define HERO_SPRITE_HEIGHT		$height
-#define	HERO_MOVE_HSTEP			$hstep
-#define	HERO_MOVE_VSTEP			$vstep
+// FFP value: 256 * $hstep
+#define	HERO_MOVE_HSTEP			$hstep_ffp
+// FFP value: 256 * $vstep
+#define	HERO_MOVE_VSTEP			$vstep_ffp
 #define	HERO_MOVE_XMIN			$move_xmin
 #define	HERO_MOVE_XMAX			$move_xmax
 #define	HERO_MOVE_YMIN			$move_ymin
