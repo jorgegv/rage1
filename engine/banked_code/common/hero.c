@@ -48,43 +48,42 @@ uint8_t hero_can_move_horizontal( uint8_t y, uint8_t r, uint8_t c ) {
 }
 
 uint8_t hero_can_move_in_direction( uint8_t direction ) {
-    struct hero_info_s *h;
-    uint8_t x,y,dx,dy,r,c;
+    uint8_t r,c;
+    uint16_t x,y,dx,dy;
 
-    h = &game_state.hero;
-    x = h->position.coords.u8.x_int;
-    y = h->position.coords.u8.y_int;
-    dx = h->movement.dx / 256;
-    dy = h->movement.dy / 256;
+    x = game_state.hero.position.coords.u16.x;
+    y = game_state.hero.position.coords.u16.y;
+    dx = game_state.hero.movement.dx;
+    dy = game_state.hero.movement.dy;
 
     // hero can move in one direction if there are no obstacles in the new position
     switch (direction ) {
         case MOVE_UP:
-            if ( y <= HERO_MOVE_YMIN )
+            if ( y <= HERO_MOVE_YMIN * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y - dy );
-            c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
+            r = PIXEL_TO_CELL_COORD( ( y - dy ) / 256 );
+            c = PIXEL_TO_CELL_COORD( x / 256 + HERO_SPRITE_WIDTH - 1 );
             return hero_can_move_vertical( x, r, c );
             break;
         case MOVE_DOWN:
-            if ( y >= HERO_MOVE_YMAX )
+            if ( y >= HERO_MOVE_YMAX * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 + dy );
-            c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
+            r = PIXEL_TO_CELL_COORD( ( y + dy ) / 256 + HERO_SPRITE_HEIGHT - 1 );
+            c = PIXEL_TO_CELL_COORD( x / 256 + HERO_SPRITE_WIDTH - 1 );
             return hero_can_move_vertical( x, r, c );
             break;
         case MOVE_LEFT:
-            if ( x <= HERO_MOVE_XMIN )
+            if ( x <= HERO_MOVE_XMIN * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
-            c = PIXEL_TO_CELL_COORD( x - dx );
+            r = PIXEL_TO_CELL_COORD( y / 256 + HERO_SPRITE_HEIGHT - 1 );
+            c = PIXEL_TO_CELL_COORD( ( x - dx ) / 256 );
             return hero_can_move_horizontal( y, r, c );
             break;
         case MOVE_RIGHT:
-            if ( x >= HERO_MOVE_XMAX )
+            if ( x >= HERO_MOVE_XMAX * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
-            c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 + dx );
+            r = PIXEL_TO_CELL_COORD( y / 256 + HERO_SPRITE_HEIGHT - 1 );
+            c = PIXEL_TO_CELL_COORD( ( x + dx ) / 256 + HERO_SPRITE_WIDTH - 1 );
             return hero_can_move_horizontal( y, r, c );
             break;
     }
