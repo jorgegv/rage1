@@ -3728,10 +3728,6 @@ sub generate_tracker_data {
             # generate song ID in header file
             push @h_game_data_lines, sprintf( "#define TRACKER_SONG_%s\t%d\n",
                 uc( $song->{'name'} ), $song->{'song_index'} );
-            if ( defined( $game_config->{'tracker'}{'in_game_song'} ) ) {
-                push @h_game_data_lines, sprintf( "#define TRACKER_IN_GAME_SONG\tTRACKER_SONG_%s\n",
-                    uc( $game_config->{'tracker'}{'in_game_song'} ) );
-            }
 
             # generate song ASM file and put it in place for compilation
             if ( $game_config->{'tracker'}{'type'} eq 'arkos2' ) {
@@ -3752,6 +3748,10 @@ sub generate_tracker_data {
                 printf ASM "SECTION data_compiler\nPUBLIC _%s\n_%s:\nBINARY \"%s\"\n", $symbol_name, $symbol_name, $bin_basename;
                 close ASM;
             }
+        }
+        if ( defined( $game_config->{'tracker'}{'in_game_song'} ) ) {
+            push @h_game_data_lines, sprintf( "#define TRACKER_IN_GAME_SONG\tTRACKER_SONG_%s\n",
+                uc( $game_config->{'tracker'}{'in_game_song'} ) );
         }
 
         # now output the songs table
