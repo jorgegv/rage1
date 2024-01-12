@@ -679,11 +679,11 @@ sub read_input_data {
                     }
                     next;
                 }
-                if ( $line =~ /^HSTEP\s+(\d+)$/ ) {
+                if ( $line =~ /^HSTEP\s+([\d\.]+)$/ ) {
                     $hero->{'hstep'} = $1;
                     next;
                 }
-                if ( $line =~ /^VSTEP\s+(\d+)$/ ) {
+                if ( $line =~ /^VSTEP\s+([\d\.]+)$/ ) {
                     $hero->{'vstep'} = $1;
                     next;
                 }
@@ -1626,7 +1626,7 @@ sub generate_screen {
                         "\t\t\t.delay_data = { .frame_delay = %d, .sequence_delay = %d },\n" .
                         "\t\t\t.sequence_data = { .initial_sequence = %d },\n" .
                         "\t\t\t.current =  { .sequence = %d, .sequence_counter = %d, .frame_delay_counter = %d, .sequence_delay_counter = %d } },\n" .
-                        "\t\t.position = { .coords.u16.x = %d, .coords.u16.y = %d, .xmax = %d, .ymax = %d },\n" .
+                        "\t\t.position = { .x.value = %d , .y.value = %d, .xmax = %d, .ymax = %d },\n" .
                         "\t\t.movement = { .type = %s, .delay = %d, .delay_counter = %d,\n" .
                         "\t\t\t.data = { .%s = { %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d } },\n" .
                         "\t\t\t.flags = %s },\n" .
@@ -1710,7 +1710,7 @@ sub generate_screen {
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
                 my $ymax = $y + ( defined( $_->{'pix_height'} ) ? $_->{'pix_height'} : $_->{'height'} * 8 ) - 1;
-                sprintf( "\t{ .position = { .coords.u8.x_int = %d, .coords.u8.y_int = %d, .xmax = %d, .ymax = %d }, .state_index = %s }",
+                sprintf( "\t{ .position = { .x.part.integer = %d, .y.part.integer = %d, .xmax = %d, .ymax = %d }, .state_index = %s }",
                     $x, $y, $xmax, $ymax,
                     $_->{'asset_state_index'},
                 )
@@ -1817,6 +1817,8 @@ sub generate_hero {
     my $delay			= $hero->{'animation_delay'};
     my $hstep			= $hero->{'hstep'};
     my $vstep			= $hero->{'vstep'};
+    my $hstep_ffp		= int( 256 * $hero->{'hstep'} );
+    my $vstep_ffp		= int( 256 * $hero->{'vstep'} );
     my $local_num_sprite	= $dataset_dependency{'home'}{'sprite_global_to_dataset_index'}{ $num_sprite };
     my $health_max		= $hero->{'damage_mode'}{'health_max'};
     my $enemy_damage		= $hero->{'damage_mode'}{'enemy_damage'};
@@ -1846,8 +1848,10 @@ sub generate_hero {
 #define	HERO_SPRITE_ANIMATION_DELAY	$delay
 #define HERO_SPRITE_WIDTH		$width
 #define HERO_SPRITE_HEIGHT		$height
-#define	HERO_MOVE_HSTEP			$hstep
-#define	HERO_MOVE_VSTEP			$vstep
+// FFP value: 256 * $hstep
+#define	HERO_MOVE_HSTEP			$hstep_ffp
+// FFP value: 256 * $vstep
+#define	HERO_MOVE_VSTEP			$vstep_ffp
 #define	HERO_MOVE_XMIN			$move_xmin
 #define	HERO_MOVE_XMAX			$move_xmax
 #define	HERO_MOVE_YMIN			$move_ymin
@@ -1934,7 +1938,7 @@ struct bullet_state_data_s bullet_state_data[ BULLET_MAX_BULLETS ] = {
 EOF_BULLET5
 ;
     foreach ( 1 .. $max_bullets ) {
-        push @c_game_data_lines, "\t{ NULL, { .coords.u16.x = 0, .coords.u16.y = 0, .xmax = 0, .ymax = 0 }, 0, 0, 0, NULL, 0 },\n";
+        push @c_game_data_lines, "\t{ NULL, { .x.value = 0, .y.value = 0, .xmax = 0, .ymax = 0 }, 0, 0, 0, NULL, 0 },\n";
     }
     push @c_game_data_lines, "};\n\n";
 

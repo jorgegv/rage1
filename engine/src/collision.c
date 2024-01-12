@@ -23,10 +23,10 @@
 #define COLLISION_TOLERANCE	2
 
 uint8_t collision_check( struct position_data_s *a,struct position_data_s *b ) {
-    if ( a->xmax - COLLISION_TOLERANCE < b->coords.u8.x_int + COLLISION_TOLERANCE    ) return 0;
-    if ( a->coords.u8.x_int + COLLISION_TOLERANCE    > b->xmax - COLLISION_TOLERANCE ) return 0;
-    if ( a->ymax - COLLISION_TOLERANCE < b->coords.u8.y_int + COLLISION_TOLERANCE    ) return 0;
-    if ( a->coords.u8.y_int + COLLISION_TOLERANCE    > b->ymax - COLLISION_TOLERANCE ) return 0;
+    if ( a->xmax - COLLISION_TOLERANCE < b->x.part.integer + COLLISION_TOLERANCE    ) return 0;
+    if ( a->x.part.integer + COLLISION_TOLERANCE    > b->xmax - COLLISION_TOLERANCE ) return 0;
+    if ( a->ymax - COLLISION_TOLERANCE < b->y.part.integer + COLLISION_TOLERANCE    ) return 0;
+    if ( a->y.part.integer + COLLISION_TOLERANCE    > b->ymax - COLLISION_TOLERANCE ) return 0;
     return 1;
 }
 

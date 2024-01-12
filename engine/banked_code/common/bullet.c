@@ -48,14 +48,14 @@ void bullet_animate_and_move_all(void) {
 
         // reset delay counter and update coords
         bs->delay_counter = bi->movement.delay;
-        bs->position.coords.u8.x_int += bs->dx;
-        bs->position.coords.u8.y_int += bs->dy;
+        bs->position.x.part.integer += bs->dx;
+        bs->position.y.part.integer += bs->dy;
 
         // if we have reached game area borders, deactivate bullet and move it offscreen
-        if ( ( bs->position.coords.u8.x_int > CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - bi->width ) ||
-                ( bs->position.coords.u8.x_int < CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) ) ||
-                ( bs->position.coords.u8.y_int > CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - bi->height ) ||
-                ( bs->position.coords.u8.y_int < CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
+        if ( ( bs->position.x.part.integer > CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - bi->width ) ||
+                ( bs->position.x.part.integer < CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) ) ||
+                ( bs->position.y.part.integer > CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - bi->height ) ||
+                ( bs->position.y.part.integer < CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
             ) { // then
             // move bullet offscreen and deactivate
             SET_BULLET_FLAG( *bs, F_BULLET_MOVE_OFFSCREEN );
@@ -65,25 +65,25 @@ void bullet_animate_and_move_all(void) {
         // check for obstacles
         if (
                 // moving right:
-                ( ( bs->dx > 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int ), 			PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int + bi->width ) ) == TT_OBSTACLE ) ||
-                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int + bi->height - 1 ),	PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int + bi->width ) ) == TT_OBSTACLE ) ) ) ||
+                ( ( bs->dx > 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer ), 			PIXEL_TO_CELL_COORD( bs->position.x.part.integer + bi->width ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer + bi->height - 1 ),	PIXEL_TO_CELL_COORD( bs->position.x.part.integer + bi->width ) ) == TT_OBSTACLE ) ) ) ||
                 // moving left:
-                ( ( bs->dx < 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int ),			PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int - 1 ) ) == TT_OBSTACLE ) ||
-                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int + bi->height - 1 ),	PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int - 1 ) ) == TT_OBSTACLE ) ) ) ||
+                ( ( bs->dx < 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer ),			PIXEL_TO_CELL_COORD( bs->position.x.part.integer - 1 ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer + bi->height - 1 ),	PIXEL_TO_CELL_COORD( bs->position.x.part.integer - 1 ) ) == TT_OBSTACLE ) ) ) ||
                 // moving down:
-                ( ( bs->dy > 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int + bi->height ),		PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int ) ) == TT_OBSTACLE ) ||
-                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int + bi->height ),		PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int + bi->width - 1 ) ) == TT_OBSTACLE ) ) ) ||
+                ( ( bs->dy > 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer + bi->height ),		PIXEL_TO_CELL_COORD( bs->position.x.part.integer ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer + bi->height ),		PIXEL_TO_CELL_COORD( bs->position.x.part.integer + bi->width - 1 ) ) == TT_OBSTACLE ) ) ) ||
                 // moving up:
-                ( ( bs->dy < 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int - 1 ),			PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int ) ) == TT_OBSTACLE ) ||
-                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.coords.u8.y_int - 1 ),			PIXEL_TO_CELL_COORD( bs->position.coords.u8.x_int + bi->width - 1 ) ) == TT_OBSTACLE ) ) )
+                ( ( bs->dy < 0 ) && ( ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer - 1 ),			PIXEL_TO_CELL_COORD( bs->position.x.part.integer ) ) == TT_OBSTACLE ) ||
+                                      ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( bs->position.y.part.integer - 1 ),			PIXEL_TO_CELL_COORD( bs->position.x.part.integer + bi->width - 1 ) ) == TT_OBSTACLE ) ) )
             ) { // then
             // move bullet offscreen and deactivate
             SET_BULLET_FLAG( *bs, F_BULLET_MOVE_OFFSCREEN );
             continue;
         }
         // adjust xmax, ymax and move sprite to new position
-        bs->position.xmax = bs->position.coords.u8.x_int + bi->width - 1;
-        bs->position.ymax = bs->position.coords.u8.y_int + bi->height - 1;
+        bs->position.xmax = bs->position.x.part.integer + bi->width - 1;
+        bs->position.ymax = bs->position.y.part.integer + bi->height - 1;
         SET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
     }
 }
@@ -112,35 +112,35 @@ void bullet_add( void ) {
             v_dx = ( HERO_SPRITE_WIDTH - bi->width ) / 2;
 
             if ( hero->movement.last_direction & MOVE_UP ) {
-                    bs->position.coords.u8.x_int = hero->position.coords.u8.x_int + v_dx;
-                    bs->position.coords.u8.y_int = hero->position.coords.u8.y_int - bi->height;
+                    bs->position.x.part.integer = hero->position.x.part.integer + v_dx;
+                    bs->position.y.part.integer = hero->position.y.part.integer - bi->height;
                     bs->dx = 0;
                     bs->dy = -bi->movement.dy;
                     bs->frame = bi->frames[ BULLET_SPRITE_FRAME_UP ];
             }
             if ( hero->movement.last_direction & MOVE_DOWN ) {
-                    bs->position.coords.u8.x_int = hero->position.coords.u8.x_int + v_dx;
-                    bs->position.coords.u8.y_int = hero->position.ymax + 1;
+                    bs->position.x.part.integer = hero->position.x.part.integer + v_dx;
+                    bs->position.y.part.integer = hero->position.ymax + 1;
                     bs->dx = 0;
                     bs->dy = bi->movement.dy;
                     bs->frame = bi->frames[ BULLET_SPRITE_FRAME_DOWN ];
             }
             if ( hero->movement.last_direction & MOVE_LEFT ) {
-                    bs->position.coords.u8.x_int = hero->position.coords.u8.x_int - bi->width;
-                    bs->position.coords.u8.y_int = hero->position.coords.u8.y_int + h_dy;
+                    bs->position.x.part.integer = hero->position.x.part.integer - bi->width;
+                    bs->position.y.part.integer = hero->position.y.part.integer + h_dy;
                     bs->dx = -bi->movement.dx;
                     bs->dy = 0;
                     bs->frame = bi->frames[ BULLET_SPRITE_FRAME_LEFT ];
             }
             if ( hero->movement.last_direction & MOVE_RIGHT ) {
-                    bs->position.coords.u8.x_int = hero->position.xmax + 1;
-                    bs->position.coords.u8.y_int = hero->position.coords.u8.y_int + h_dy;
+                    bs->position.x.part.integer = hero->position.xmax + 1;
+                    bs->position.y.part.integer = hero->position.y.part.integer + h_dy;
                     bs->dx = bi->movement.dx;
                     bs->dy = 0;
                     bs->frame = bi->frames[ BULLET_SPRITE_FRAME_RIGHT ];
             }
-            bs->position.xmax = bs->position.coords.u8.x_int + bi->width - 1;
-            bs->position.ymax = bs->position.coords.u8.y_int + bi->height - 1;
+            bs->position.xmax = bs->position.x.part.integer + bi->width - 1;
+            bs->position.ymax = bs->position.y.part.integer + bi->height - 1;
             bs->delay_counter = bi->movement.delay;
 
             // slot found, set game event and return

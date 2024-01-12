@@ -489,7 +489,9 @@ END_HERO
   steady position after having moved in a given direction.
 * `ANIMATION_DELAY`: delay between hero animation frames, in 1/50s (screen
   frames)
-* `HSTEP`, `VSTEP`: movement increments for the hero
+* `HSTEP`, `VSTEP`: movement increments for the hero on each game loop
+  cycle.  Can be fractional (e.g.  1.2 ), so this is a coarse measure of the
+  movement speed.
 * `LIVES`: number of lives
 * `DAMAGE_MODE`: defines advanced configuration for the hero lives system.
   This setting is optional; if it is not specified, the simple schema of N

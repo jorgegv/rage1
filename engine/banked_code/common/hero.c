@@ -48,44 +48,43 @@ uint8_t hero_can_move_horizontal( uint8_t y, uint8_t r, uint8_t c ) {
 }
 
 uint8_t hero_can_move_in_direction( uint8_t direction ) {
-    struct hero_info_s *h;
-    uint8_t x,y,dx,dy,r,c;
+    uint8_t r,c;
+    ffp16_t x,y,dx,dy;
 
-    h = &game_state.hero;
-    x = h->position.coords.u8.x_int;
-    y = h->position.coords.u8.y_int;
-    dx = h->movement.dx;
-    dy = h->movement.dy;
+    x.value = game_state.hero.position.x.value;
+    y.value = game_state.hero.position.y.value;
+    dx.value = game_state.hero.movement.dx.value;
+    dy.value = game_state.hero.movement.dy.value;
 
     // hero can move in one direction if there are no obstacles in the new position
     switch (direction ) {
         case MOVE_UP:
-            if ( y <= HERO_MOVE_YMIN )
+            if ( y.value <= HERO_MOVE_YMIN * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y - dy );
-            c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
-            return hero_can_move_vertical( x, r, c );
+            r = PIXEL_TO_CELL_COORD( ( y.value - dy.value ) / 256 );
+            c = PIXEL_TO_CELL_COORD( x.part.integer + HERO_SPRITE_WIDTH - 1 );
+            return hero_can_move_vertical( x.part.integer, r, c );
             break;
         case MOVE_DOWN:
-            if ( y >= HERO_MOVE_YMAX )
+            if ( y.value >= HERO_MOVE_YMAX * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 + dy );
-            c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 );
-            return hero_can_move_vertical( x, r, c );
+            r = PIXEL_TO_CELL_COORD( ( y.value + dy.value ) / 256 + HERO_SPRITE_HEIGHT - 1 );
+            c = PIXEL_TO_CELL_COORD( x.part.integer + HERO_SPRITE_WIDTH - 1 );
+            return hero_can_move_vertical( x.part.integer, r, c );
             break;
         case MOVE_LEFT:
-            if ( x <= HERO_MOVE_XMIN )
+            if ( x.value <= HERO_MOVE_XMIN * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
-            c = PIXEL_TO_CELL_COORD( x - dx );
-            return hero_can_move_horizontal( y, r, c );
+            r = PIXEL_TO_CELL_COORD( y.part.integer + HERO_SPRITE_HEIGHT - 1 );
+            c = PIXEL_TO_CELL_COORD( ( x.value - dx.value ) / 256 );
+            return hero_can_move_horizontal( y.part.integer, r, c );
             break;
         case MOVE_RIGHT:
-            if ( x >= HERO_MOVE_XMAX )
+            if ( x.value >= HERO_MOVE_XMAX * 256 )
                 return 0;
-            r = PIXEL_TO_CELL_COORD( y + HERO_SPRITE_HEIGHT - 1 );
-            c = PIXEL_TO_CELL_COORD( x + HERO_SPRITE_WIDTH - 1 + dx );
-            return hero_can_move_horizontal( y, r, c );
+            r = PIXEL_TO_CELL_COORD( y.part.integer + HERO_SPRITE_HEIGHT - 1 );
+            c = PIXEL_TO_CELL_COORD( ( x.value + dx.value ) / 256 + HERO_SPRITE_WIDTH - 1 );
+            return hero_can_move_horizontal( y.part.integer, r, c );
             break;
     }
     // should not reach this
@@ -98,7 +97,8 @@ void hero_animate_and_move( void ) {
     struct position_data_s *pos;
     struct hero_movement_data_s *move;
     uint8_t controller;
-    uint8_t newx,newy,x,y,oldx,oldy;
+    uint16_t newx_ffp, newy_ffp;
+    uint8_t oldx,oldy;
     uint8_t *animation_frame;
     uint8_t allowed;
     uint8_t steady_frame;
@@ -146,10 +146,8 @@ void hero_animate_and_move( void ) {
     pos = &h->position;
 
     // initialize preconditions
-    oldx = x = pos->coords.u8.x_int;
-    oldy = y = pos->coords.u8.y_int;
-
-    // FIXME START: code to account for fracal coordinates goes below until FIXME END
+    oldx = pos->x.part.integer;
+    oldy = pos->y.part.integer;
 
     // operate on the hero following controller state
     if ( controller & MOVE_UP ) {
@@ -159,56 +157,53 @@ void hero_animate_and_move( void ) {
             anim->current_sequence = anim->sequence_up;
         }
         // check if can move to new coordinate
-        newy = pos->coords.u8.y_int - move->dy;
-        if ( newy <= CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
-            pos->coords.u8.y_int = CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
+        newy_ffp = pos->y.value - move->dy.value;
+        if ( newy_ffp <= 256 * CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
+            pos->y.value  = 256 * CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
         else
             if ( hero_can_move_in_direction( MOVE_UP ) )
-                pos->coords.u8.y_int = newy;
+                pos->y.value = newy_ffp;
     }
     if ( controller & MOVE_DOWN ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_down;
         }
-        newy = pos->coords.u8.y_int + move->dy;
+        newy_ffp = pos->y.value + move->dy.value;
         // coordinate of the bottommost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - HERO_SPRITE_HEIGHT;
-        if ( newy >= allowed )
-            pos->coords.u8.y_int = allowed;
+        if ( newy_ffp >= 256 * allowed )
+            pos->y.value = 256 * allowed;
         else
             if ( hero_can_move_in_direction( MOVE_DOWN ) )
-                pos->coords.u8.y_int = newy;
+                pos->y.value = newy_ffp;
     }
     if ( controller & MOVE_LEFT ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_left;
         }
-        newx = pos->coords.u8.x_int - move->dx;
-        if ( newx <= CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
-            pos->coords.u8.x_int = CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
+        newx_ffp = pos->x.value - move->dx.value;
+        if ( newx_ffp <= 256 * CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
+            pos->x.value = 256 * CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
         else
             if ( hero_can_move_in_direction( MOVE_LEFT ) )
-                pos->coords.u8.x_int = newx;
+                pos->x.value = newx_ffp;
     }
     if ( controller & MOVE_RIGHT ) {
         if ( controller != move->last_direction ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_right;
         }
-        newx = pos->coords.u8.x_int + move->dx;
+        newx_ffp = pos->x.value + move->dx.value;
         // coordinate of the rightmost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - HERO_SPRITE_WIDTH;
-        if ( newx >= allowed )
-            pos->coords.u8.x_int = allowed;
+        if ( newx_ffp >= 256 * allowed )
+            pos->x.value = 256 * allowed;
         else
             if ( hero_can_move_in_direction( MOVE_RIGHT ) )
-                pos->coords.u8.x_int = newx;
+                pos->x.value = newx_ffp;
     }
-
-    // FIXME END: fixes for fracal coordinates
-
 
     // update last movement direction
     move->last_direction = controller;
@@ -228,9 +223,9 @@ void hero_animate_and_move( void ) {
 
     // if position has changed, adjust xmax, ymax and move sprite to new
     // position
-    if ( ( oldx != pos->coords.u8.x_int ) || ( oldy != pos->coords.u8.y_int ) ) {
-        pos->xmax = pos->coords.u8.x_int + HERO_SPRITE_WIDTH - 1;
-        pos->ymax = pos->coords.u8.y_int + HERO_SPRITE_HEIGHT - 1;
+    if ( ( oldx != pos->x.part.integer ) || ( oldy != pos->y.part.integer ) ) {
+        pos->xmax = pos->x.part.integer + HERO_SPRITE_WIDTH - 1;
+        pos->ymax = pos->y.part.integer + HERO_SPRITE_HEIGHT - 1;
         anim->last_frame_ptr = animation_frame;
         SET_LOOP_FLAG( F_LOOP_REDRAW_HERO );
     }
