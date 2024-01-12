@@ -15,19 +15,17 @@
 
 #include "features.h"
 
+// FFP (Fractional Fixed Point) type definitions
+typedef union {
+    struct {
+        uint8_t fraction;	// low byte, fractional part
+        uint8_t integer;	// high byte, integer part
+    } part;
+    uint16_t value;		// ffp as 16-bit little endian
+} ffp16_t;
+
 struct position_data_s {
-    union {
-        struct {
-            uint8_t x_frac;	// x pos, with optional fractional part
-            uint8_t x_int;
-            uint8_t y_frac;	// y pos, with optional fractional part
-            uint8_t y_int;
-        } u8;
-        struct {
-            uint16_t x;		// x pos, as 16-bit fixed-point (8+8)
-            uint16_t y;		// y pos, as 16-bit fixed-point (8+8)
-        } u16;
-    } coords;
+    ffp16_t x,y;
     uint8_t xmax,ymax;	// position bottom,right
 };
 

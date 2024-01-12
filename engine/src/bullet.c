@@ -47,7 +47,7 @@ void bullet_redraw_all( void ) {
                 game_state.bullet.active_bullets--;
             }
             if ( BULLET_NEEDS_REDRAW( *bs ) ) {
-                sp1_MoveSprPix( bs->sprite, &game_area, bs->frame, bs->position.coords.u8.x_int, bs->position.coords.u8.y_int );
+                sp1_MoveSprPix( bs->sprite, &game_area, bs->frame, bs->position.x.part.integer, bs->position.y.part.integer );
                 RESET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
             }
         }

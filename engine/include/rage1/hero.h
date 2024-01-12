@@ -48,9 +48,10 @@ struct hero_animation_data_s {
 #define MOVE_LEFT	IN_STICK_LEFT
 #define MOVE_RIGHT	IN_STICK_RIGHT
 #define MOVE_ALL	( MOVE_UP | MOVE_DOWN | MOVE_LEFT | MOVE_RIGHT )
+
 struct hero_movement_data_s {
     uint8_t last_direction;
-    uint16_t dx,dy;
+    ffp16_t dx,dy;
 };
 
 // describes the damage mode for the hero
