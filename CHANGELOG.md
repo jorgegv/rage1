@@ -2,8 +2,107 @@
 
 ## 0.6.0 (XXXX-XX-XX) - WORK IN PROGRESS
 
+As we said in version 0.5.0, "Cesare The Somnambule" has been developed
+using RAGE1, and as consequence version 0.6.0 has dozens of new features and
+fixes which were required/uncovered by the game.  The most interesting of
+these are described in the sections below.
+
+The game is very near publication, so stay alert to its announcement!
+
+**IMPORTANT NOTE**: the _required_ Z88DK version to compile RAGE1 is now
+Z88DK 2.2 (the version must be exactly this one, not previous or later
+versions).  Update your toolchain if you need to!
+
+### New features and gameplay options
+
+- Support for Monochrome games: you can make your btiles use a single
+  default attribute, and no memory will be used for btile attributes, making
+  your level definitions around 15-20% smaller (sprites still keep their
+  colors, don't worry!)
+
+- New GAME_TIME concept: a global time counter that can be checked and acted
+  upon in flow rules.
+
+- Custom user data can be stored in global Game State, and accessed from
+  code functions.
+
+- Support for multiple trackers (not only Arkos), and introducing support
+  for Vortex2!
+
+### Enhancements, Fixes and Optimizations
+
+- Logical lines in GDATA files can now be split into multiple text lines,
+  just end them with '\' character and they will be concatenated and
+  processed as a single line. Very convenient for readability!
+
+- The hero speed can now be specified in fractional pixel increments, and
+  can be changed during the game. This allows gameplays where the hero speed
+  depends on game factors: game time, health level, ownership of a given
+  item, etc.
+
+- Enemies can now be enabled/disabled by flow rules. This means the enemies
+  can show or not depending on game conditions: game time, hero health
+  level, having some specific inventory items...
+
+- MAPGEN now generates all possible BTILE combinations, transformations, and
+  subtiles, so that they do not need to be created by hand.  Also
+  automatically and smartly coalesces small 1x1 BTILEs into bigger ones for
+  optimizing the memory used by them.  This means you can now draw using
+  your tilesets, and you can use any tile subset or transformacion (rotation
+  and mirror), and MAPGEN will detect them and generate the BTILEs for you. 
+  Just _draw your map_!
+
+- The hero autofire capability can be enabled/disabled fro flow rules
+
+- ISR configuration in 128K mode has been parameterized. Now you can specify
+  the ISR vector and address and leave more low memory for bigger datasets at
+  runtime!
+
+- Banktool now calculates the optimal DATASET/CODESET layout in memory
+  banks, accounting for all available free space in all banks (including the
+  one used by RAGE1).  Now ALL (_all_) of the 128K memory can be used for
+  games!  Everything is packed to the maximum!
+
+- Add support for PATCH_SCREEN directive, and map and flow patching files,
+  which allows adding content to an already existing SCREEN definition. 
+  This makes it easy to automatically generate the screen GDATA
+  configurations with MAPGEN, and patch them with items, custom btiles,
+  enemies, rules, etc.
+
+- A custom Makefile has been added to the game template: you can now add our
+  own targets integrated with the regular RAGE1 ones.
+
+- Parameters can now be passed at runtime to CALL_CUSTOM_FUNCTION checks and
+  actions
+
+- Some race conditions in critical interrupt and banking routines have been
+  fixed. These were causing very rare hangs and resets.
+
+### New tools
+
+- New tileset mirror and rotating scripts
+
+- New DSOPT optimizing tool for clustering screens which share the most BTILES
+  and storing them in the same DATASET
+
+- New ITEMGEN tool to quickly generate item definitions and dropoff
+  mechanism rules as GDATA PATCH files.
+
+- The old `make mem` target which reports the memory usage for the game has
+  been extensively modified and now shows the exact state and usage for all
+  banks and game sections
+
+### Documentation
+
 - WIP: The all wanted TUTORIAL is still in the works!  Sorry for moving this
-  here from 0.5.0 release :-)
+  here from 0.5.0 release :-) Most probably this will come in the form of a
+  series of videos (or posts) indicating the making-off process for Cesare.
+
+## 0.5.1 (2023-03-18)
+
+This was just a very small corrective release:
+
+- Just some minor fixes related to Animated BTiles
 
 ## 0.5.0 (2022-12-11)
 
