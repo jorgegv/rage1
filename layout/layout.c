@@ -53,7 +53,8 @@ void lprintf( char *fmt, uint16_t data ) {
         lprintc( *txt++ );
 }
 
-#define DEF(a,b)	lputs( "def " #a ":" #b )
+#define DEF_SYM(a,b)	lputs( "def " #b ":" #a )
+#define DEF(a,b)	lprintf( "def " #a "+%d:" #a "." #b "\n", offset_of( a, b ) )
 #define PB(a,b)		lprintf( "pb " #a "+%d:" #a "." #b "\n", offset_of( a, b ) )
 #define PW(a,b)		lprintf( "pw " #a "+%d:" #a "." #b "\n", offset_of( a, b ) )
 
@@ -71,11 +72,11 @@ void main( void ) {
     puts( "Please wait until this window" );
     puts( "disappears\n" );
 
-    DEF( game_state, _game_state );
+    DEF_SYM( game_state, _game_state );
 
     PB( game_state, current_screen );
 
-    DEF( warp_next_screen, game_state.warp_next_screen );
+    DEF( game_state, warp_next_screen );
     PB( game_state, warp_next_screen.num_screen );
     PB( game_state, warp_next_screen.hero_x );
     PB( game_state, warp_next_screen.hero_y );
@@ -86,7 +87,7 @@ void main( void ) {
 
     PB( game_state, active_dataset );
 
-    DEF( hero, game_state.hero );
+    DEF( game_state, hero );
     PW( game_state, hero.sprite );
     PB( game_state, hero.num_graphic );
 #ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
@@ -124,16 +125,16 @@ void main( void ) {
     PB( game_state, hero.health.immunity_timer );
     PB( game_state, hero.flags );
 
-    DEF( bullet, game_state.bullet );
+    DEF( game_state, bullet );
     PB( game_state, bullet.width );
     PB( game_state, bullet.height );
     PW( game_state, bullet.frames );
-    DEF( bullet_frames, bullet.frames );
+    DEF( game_state, bullet.frames );
     PB( game_state, bullet.movement.dx );
     PB( game_state, bullet.movement.dy );
     PB( game_state, bullet.movement.delay );
-    PB( game_state, bullet.bullets );
-    DEF( bullets, bullet.bullets );
+    PW( game_state, bullet.bullets );
+    DEF( game_state, bullet.bullets );
     PB( game_state, bullet.active_bullets );
     PB( game_state, bullet.reload_delay );
     PB( game_state, bullet.reloading );
@@ -149,7 +150,7 @@ void main( void ) {
 
     PB( game_state, user_flags );
 
-    DEF( controller, game_state.controller );
+    DEF( game_state, controller );
     PB( game_state, controller.type );
     PW( game_state, controller.keys.fire);
     PW( game_state, controller.keys.right);
@@ -158,7 +159,7 @@ void main( void ) {
     PW( game_state, controller.keys.up);
     PB( game_state, controller.state );
 
-    DEF( inventory, game_state.inventory );
+    DEF( game_state, inventory );
     PW( game_state, inventory.owned_items );
 
     PW( game_state, enemies_alive );
