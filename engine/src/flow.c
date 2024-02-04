@@ -43,24 +43,19 @@ extern rule_action_fn_t rule_action_fn[];
 extern struct flow_rule_table_s game_events_rule_table;
 
 // executes a complete rule table
-void run_flow_rule_table( struct flow_rule_table_s *t ) {
+void run_flow_rule_table( struct flow_rule_table_s *t ) __z88dk_fastcall {
     // beware Z80 optimizations!  The rule table is an ordered list, so it
     // has to be run in order from 0 to (num_rules-1)
     uint8_t i,j;
-    struct flow_rule_check_s *check;
-    struct flow_rule_action_s *action;
     for ( i = 0; i < t->num_rules; i++ ) {
-        struct flow_rule_s *r = t->rules[i];
         // run the checks in order, skip to next rule as soon as one check returns false
-        for ( j = 0; j < r->num_checks; j++ ) {
-            check = &r->checks[j];
-            if ( ! rule_check_fn[ check->type ]( check ) )
+        for ( j = 0; j < t->rules[i]->num_checks; j++ ) {
+            if ( ! rule_check_fn[ t->rules[i]->checks[j].type ]( &t->rules[i]->checks[j] ) )
                 goto next_rule;
         }
         // if we reach here, all checks were true, or there were no checks; run the actions in order
-        for ( j = 0; j < r->num_actions; j++ ) {
-            action = &r->actions[j];
-            rule_action_fn[ action->type ]( action );
+        for ( j = 0; j < t->rules[i]->num_actions; j++ ) {
+            rule_action_fn[ t->rules[i]->actions[j].type ]( &t->rules[i]->actions[j] );
         }
     next_rule:
         continue;
