@@ -66,9 +66,16 @@ void map_draw_screen(struct map_screen_s *s) {
         }
     }
 
-    // draw tiles
-    ti = s->btile_data.num_btiles;
-    while ( ti-- ) {
+    // Draw all screen tiles.  Instead of drawing from the last to first
+    // btile ( while ti--...) we draw from first to last.  The automatically
+    // generated tiles are drawn first and the "patched" ones, which
+    // typically are the ones that have state, are created last in the
+    // array, and thus take preference because they are drawn last.  This
+    // makes spotting errors with "state" btiles easier, since they are
+    // drawn on top.  It took me more than 2 weeks to spot a bug with a
+    // state btile in the wrong position, just because a bigger fixed btile
+    // was being drawn on top of it!
+    for ( ti = 0; ti < s->btile_data.num_btiles; ti++ ) {
         t = &s->btile_data.btiles_pos[ti];
         // we draw if there is no state ( no state = always active ), or if the btile is active
         if ( ( t->state_index == ASSET_NO_STATE ) ||
