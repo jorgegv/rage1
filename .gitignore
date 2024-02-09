@@ -5,6 +5,7 @@
 *.o
 *.dep
 *.sym
+*.linked
 game_data.inc
 game_data*.c
 game_data*.h
