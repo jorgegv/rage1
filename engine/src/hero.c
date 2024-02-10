@@ -266,17 +266,24 @@ void hero_check_tiles_below(void) {
                 crumb_loc = map_get_crumb_location_at_position( game_state.current_screen_ptr, r, c );
                 crumb_type = tile_type & 0x0F;
 
-                // do action for the grabbed crumb
-                crumb_was_grabbed( crumb_type );
+                // do the crumb actions, but onlu if the player has all the
+                // items indicated in the inventory mask for this crumb
+                // type.  This works even if the inventory_mask is 0 (i.e. 
+                // no items are needed for grabbing this crumb type),
+                // because we check that the masked value equals the mask
+                if ( ( game_state.inventory.owned_items & all_crumb_types[ crumb_type ].required_items ) == all_crumb_types[ crumb_type ].required_items ) {
+                    // do action for the grabbed crumb
+                    crumb_was_grabbed( crumb_type );
 
-                // mark the crumb as inactive
-                RESET_CRUMB_FLAG( game_state.current_screen_asset_state_table_ptr[ crumb_loc->state_index ].asset_state, F_CRUMB_ACTIVE );
+                    // mark the crumb as inactive
+                    RESET_CRUMB_FLAG( game_state.current_screen_asset_state_table_ptr[ crumb_loc->state_index ].asset_state, F_CRUMB_ACTIVE );
 
-                // remove crumb from screen - crumb types always have their btiles in home dataset
-                btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumb_types[ crumb_type ].btile_num ] );
+                    // remove crumb from screen - crumb types always have their btiles in home dataset
+                    btile_remove( crumb_loc->row, crumb_loc->col, &home_assets->all_btiles[ all_crumb_types[ crumb_type ].btile_num ] );
 
-                // set event
-                SET_GAME_EVENT( E_CRUMB_WAS_GRABBED );
+                    // set event
+                    SET_GAME_EVENT( E_CRUMB_WAS_GRABBED );
+                }
             }
 #endif // BUILD_FEATURE_CRUMBS
 

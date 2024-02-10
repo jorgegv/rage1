@@ -561,7 +561,7 @@ BEGIN_GAME_CONFIG
         DEBUG_AREA      TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
 	TITLE_AREA	TOP=23 LEFT=10 BOTTOM=23 RIGHT=19
 	BINARY_DATA     FILE=game_data/png/loading_screen.scr SYMBOL=binary_stored_screen COMPRESS=1 CODESET=0
-	CRUMB_TYPE	NAME=RedPill BTILE=RedPill ACTION_FUNCTION=redpill_grabbed FILE=crumb_functions.c CODESET=1
+	CRUMB_TYPE	NAME=RedPill BTILE=RedPill ACTION_FUNCTION=redpill_grabbed FILE=crumb_functions.c CODESET=1 REQUIRED_ITEMS=INVENTORY_ITEM_ITEM1
         TRACKER         TYPE=arkos2 IN_GAME_SONG=in_game_song FX_CHANNEL=0 FX_VOLUME=10
         TRACKER_SONG    NAME=menu_song FILE=game_data/music/music1.aks
         TRACKER_SONG    NAME=in_game_song FILE=game_data/music/music2.aks
@@ -685,6 +685,10 @@ including different data pieces.  Arguments:
   * `NAME`: mandatory, specifies the name of the crumb type
   * `BTILE`: mandatory, specifies the BTILE that will be used to draw crumbs
     of this type
+  * `REQUIRED_ITEMS`: (optional) specifies an item (or items) that need to
+    be currently owned for the crumb to be grabbed by the player. More than
+    one item can be specified by OR'ing values, e.g.
+    `INVENTORY_ITEM_ITEM1|INVENTORY_ITEM_ITEM2`
   * `ACTION_FUNCTION`: (optional) specifies an additional function that will
     be called every time a crumb of this type is grabbed by the hero.  The
     function receives as a parameter a pointer to the `struct

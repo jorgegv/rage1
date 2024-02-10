@@ -951,6 +951,11 @@ sub read_input_data {
 
                     }
 
+                    # if an inventory mask is defined keep it, otherwise set it to 0
+                    if ( not defined( $item->{'required_items'} ) ) {
+                        $item->{'required_items'} = 0;
+                    }
+
                     # add the crumb type to the global list
                     my $index = scalar( @all_crumb_types );
                     push @all_crumb_types, $item;
@@ -2060,9 +2065,10 @@ EOF_CRUMBS1
 ;
     push @c_game_data_lines, join( ",\n",
         map {
-            sprintf( "\t{ .btile_num = BTILE_ID_%s, .counter = 0, .do_action = %s }",
+            sprintf( "\t{ .btile_num = BTILE_ID_%s, .counter = 0, .do_action = %s, .required_items = %s }",
                 uc( $all_crumb_types[ $_ ]{'btile'} ),
                 $all_crumb_types[ $_ ]{'action_function'} || 'NULL',
+                $all_crumb_types[ $_ ]{'required_items'} || 0,
             )
         } ( 0 .. ( $crumb_num_types - 1 ) )
     );

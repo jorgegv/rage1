@@ -19,6 +19,7 @@ struct crumb_info_s {
     uint8_t	btile_num;
     uint16_t	counter;
     void	(*do_action)( struct crumb_info_s *c );
+    uint16_t	required_items;
 };
 
 struct crumb_location_s {
