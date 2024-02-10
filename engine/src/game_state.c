@@ -136,8 +136,25 @@ void game_state_switch_to_next_screen(void) {
     // draw the hero in the new position
     hero_draw();
 
-    // set flag
-    SET_LOOP_FLAG( F_LOOP_ENTER_SCREEN );
+    // draw thw new screen and reset sprites
+
+    // We must also redraw the new screen now.  Later on the main loop, when
+    // we return from this function, the function do_hero_actions() uses the
+    // current hero position to check facts related the current screen
+    // (crumbs, obstacles, etc.).  But since we already have moved the hero
+    // to the new position in the new screen, the screen data must be that
+    // of the new screen also!
+
+    // this sequence must be the exact same as in game_loop.c, function check_loop_flags, when GAME_START
+    map_draw_screen( game_state.current_screen_ptr );
+    enemy_reset_position_all(
+       game_state.current_screen_ptr->enemy_data.num_enemies,
+       game_state.current_screen_ptr->enemy_data.enemies
+    );
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
+    bullet_reset_all();
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON
+
 }
 
 void game_state_assets_reset_all(void) {

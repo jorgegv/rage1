@@ -49,7 +49,7 @@ void check_loop_flags( void ) {
 
     // update screen data if the player has entered new screen
     // also done whe game has just started
-    if ( GET_LOOP_FLAG( F_LOOP_ENTER_SCREEN ) || GET_GAME_FLAG( F_GAME_START )) {
+    if ( GET_GAME_FLAG( F_GAME_START ) ) {
 
        // draw screen and reset sprites
        map_draw_screen( game_state.current_screen_ptr );

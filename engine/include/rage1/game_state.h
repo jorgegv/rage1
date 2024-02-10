@@ -161,8 +161,7 @@ void game_state_switch_to_next_screen( void );
 #define RESET_ALL_LOOP_FLAGS()	(game_state.loop_flags = 0)
 
 
-// player has just entered a new screen
-#define F_LOOP_ENTER_SCREEN		0x0001
+// 0x0001 value unused
 // the hero nust be redrawn
 #define F_LOOP_REDRAW_HERO		0x0002
 // inside EXIT hotzone
