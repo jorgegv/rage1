@@ -2407,6 +2407,7 @@ my $check_data_output_format = {
     GAME_TIME_MORE_THAN		=> ".data.game_time.seconds = %s",
     GAME_TIME_LESS_THAN		=> ".data.game_time.seconds = %s",
     GAME_EVENT_HAPPENED		=> ".data.game_event.event = %s",
+    ITEM_IS_NOT_OWNED		=> ".data.item.item_id = %s",
 };
 
 my $action_data_output_format = {

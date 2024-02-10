@@ -286,6 +286,12 @@ uint8_t do_rule_check_game_event_happened( struct flow_rule_check_s *check ) __z
 }
 #endif
 
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ITEM_IS_NOT_OWNED
+uint8_t do_rule_check_item_is_not_owned( struct flow_rule_check_s *check ) __z88dk_fastcall {
+    return ( INVENTORY_HAS_ITEM( &game_state.inventory, check->data.item.item_id ) ? 0 : 1 );
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////
 // rules: functions for 'action' dispatch table
 // prototype:
@@ -633,6 +639,11 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_GAME_EVENT_HAPPENED
     do_rule_check_game_event_happened,
+#else
+    NULL,
+#endif
+#ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ITEM_IS_NOT_OWNED
+    do_rule_check_item_is_owned,
 #else
     NULL,
 #endif
