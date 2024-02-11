@@ -643,7 +643,7 @@ rule_check_fn_t rule_check_fn[ RULE_CHECK_MAX + 1 ] = {
     NULL,
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_CHECK_ITEM_IS_NOT_OWNED
-    do_rule_check_item_is_owned,
+    do_rule_check_item_is_not_owned,
 #else
     NULL,
 #endif
