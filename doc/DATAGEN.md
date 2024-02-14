@@ -848,13 +848,13 @@ check is successful. Options:
   - [x] RESET_USER_FLAG <flag>
   - [x] INC_LIVES <num_lives>
   - [x] PLAY_SOUND <fxid> - IDs are the ones available in sound.h for bit_beepfx
-  - [x] ENABLE_TILE <tile_name>
-  - [x] DISABLE_TILE <tile_name>
-  - [x] ENABLE_HOTZONE <hotzone_name>
-  - [x] DISABLE_HOTZONE <hotzone_name>
   - [x] CALL_CUSTOM_FUNCTION NAME=<function_name> PARAM=<byte_param> - function prototype: `void my_custom_action(uint8_t param)`
   - [x] END_OF_GAME
   - [x] WARP_TO_SCREEN DEST_SCREEN=<screen_name> [DEST_HERO_X=<xxx>] [DEST_HERO_Y=<yyy>]
+  - [x] ENABLE_HOTZONE <hotzone_name>
+  - [x] DISABLE_HOTZONE <hotzone_name>
+  - [x] ENABLE_BTILE <tile_name>
+  - [x] DISABLE_BTILE <tile_name>
   - [x] ADD_TO_INVENTORY <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
   - [x] REMOVE_FROM_INVENTORY <item_id> - item_id = 2^ITEM_NUMBER (in GDATA file)
   - [x] SET_SCREEN_FLAG SCREEN=<screen_name> FLAG=<flag>

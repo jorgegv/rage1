@@ -2435,6 +2435,8 @@ my $action_data_output_format = {
     TRACKER_MUSIC_STOP		=> ".data.unused = %d",
     TRACKER_MUSIC_START		=> ".data.unused = %d",
     TRACKER_PLAY_FX		=> ".data.tracker_fx.num_effect = %d",
+    HERO_ENABLE_WEAPON		=> ".data.unused = %d",
+    HERO_DISABLE_WEAPON		=> ".data.unused = %d",
     ENABLE_ENEMY		=> ".data.enemy.num_enemy = %d",
     DISABLE_ENEMY		=> ".data.enemy.num_enemy = %d",
 };
