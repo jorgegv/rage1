@@ -25,21 +25,19 @@
 #include "rage1/banked.h"
 
 void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies ) {
-    struct enemy_info_s *e;
-    struct animation_data_s *anim;
-    struct position_data_s *pos;
-    struct enemy_movement_data_s *move;
-    struct sprite_graphic_data_s *g;
+    static struct animation_data_s *anim;
+    static struct position_data_s *pos;
+    static struct enemy_movement_data_s *move;
+    static struct sprite_graphic_data_s *g;
     uint8_t n;
 
     n = num_enemies;
     while( n-- ) {
-        e = &enemies[n];		// efficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )	// skip if not active
+        if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state ) )	// skip if not active
             continue;
 
-        g = dataset_get_banked_sprite_ptr( e->num_graphic );
-        anim = &e->animation;
+        g = dataset_get_banked_sprite_ptr( enemies[n].num_graphic );
+        anim = &enemies[n].animation;
 
         // Sprite may need update either because of animation, movement, or
         // both.  We only set F_ENEMY_NEEDS_REDRAW if it really needs it -
@@ -52,11 +50,11 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
             // animation_sequence_tick returns tryu if the frame has changed, 0 otherwise
             // so only update the sprite if frame has changed
             if ( animation_sequence_tick( anim, g->sequence_data.sequences[ anim->current.sequence ].num_frames ) )
-                SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
+                SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
 
         // set new sprite position according to movement rules
-        pos = &e->position;
-        move = &e->movement;
+        pos = &enemies[n].position;
+        move = &enemies[n].movement;
         switch ( move->type ) {
             case ENEMY_MOVE_LINEAR:
                 // optimization: only do the move if dx or dy are != 0
@@ -89,7 +87,7 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
                                     );
                                 }
                             }
-                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
+                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
                         }
 
                         // optimization: only calculate vertical movement if dy != 0
@@ -116,7 +114,7 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
                                         move->data.linear.sequence_b
                                     );
                                 }
-                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
+                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
                             }
                         }
                     }
