@@ -107,7 +107,7 @@ void bullet_add( void ) {
         bs = &game_state.bullet.bullets[ i ];
         if ( ! GET_BULLET_FLAG( *bs, F_BULLET_ACTIVE ) ) {
             SET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
-            &game_state.bullet.active_bullets++;
+            game_state.bullet.active_bullets++;
             h_dy = ( HERO_SPRITE_HEIGHT - bi->height ) / 2;
             v_dx = ( HERO_SPRITE_WIDTH - bi->width ) / 2;
 
