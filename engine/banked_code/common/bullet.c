@@ -26,8 +26,8 @@
 
 void bullet_animate_and_move_all(void) {
     uint8_t i;
-    struct bullet_info_s *bi;
-    struct bullet_state_data_s *bs;
+    static struct bullet_info_s *bi;
+    static struct bullet_state_data_s *bs;
 
     bi = &game_state.bullet;
 
@@ -89,7 +89,7 @@ void bullet_animate_and_move_all(void) {
 }
 
 void bullet_add( void ) {
-    struct bullet_state_data_s *bs;
+    static struct bullet_state_data_s *bs;
     uint8_t i;
     uint8_t h_dy, v_dx;
 
