@@ -47,9 +47,9 @@ uint8_t hero_can_move_horizontal( uint8_t y, uint8_t r, uint8_t c ) {
     return 1;
 }
 
-uint8_t hero_can_move_in_direction( uint8_t direction ) {
-    uint8_t r,c;
-    ffp16_t x,y,dx,dy;
+uint8_t hero_can_move_in_direction( uint8_t direction ) __z88dk_fastcall {
+    static uint8_t r,c;
+    static ffp16_t x,y,dx,dy;
 
     x.value = game_state.hero.position.x.value;
     y.value = game_state.hero.position.y.value;
@@ -92,24 +92,22 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) {
 }
 
 void hero_animate_and_move( void ) {
-    struct hero_info_s *h;
-    struct hero_animation_data_s *anim;
-    struct position_data_s *pos;
-    struct hero_movement_data_s *move;
-    uint8_t controller;
-    uint16_t newx_ffp, newy_ffp;
-    uint8_t oldx,oldy;
-    uint8_t *animation_frame;
-    uint8_t allowed;
-    uint8_t steady_frame;
+    static struct hero_animation_data_s *anim;
+    static struct position_data_s *pos;
+    static struct hero_movement_data_s *move;
+    static uint8_t controller;
+    static uint16_t newx_ffp, newy_ffp;
+    static uint8_t oldx,oldy;
+    static uint8_t *animation_frame;
+    static uint8_t allowed;
+    static uint8_t steady_frame;
 
-    h = &game_state.hero;	// efficiency matters ;-)
     if ( ! IS_HERO_ALIVE( game_state.hero ) )	// skip if not alive
         return;
 
     // cache some pointers for eficiency
-    anim = &h->animation;
-    move = &h->movement;
+    anim = &game_state.hero.animation;
+    move = &game_state.hero.movement;
 
     // get controller movement state
     controller = game_state.controller.state & MOVE_ALL;
@@ -143,7 +141,7 @@ void hero_animate_and_move( void ) {
     RESET_HERO_FLAG( game_state.hero, F_HERO_STEADY );
 
     // cache some pointers for eficiency
-    pos = &h->position;
+    pos = &game_state.hero.position;
 
     // initialize preconditions
     oldx = pos->x.part.integer;

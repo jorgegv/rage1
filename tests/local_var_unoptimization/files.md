@@ -7,7 +7,7 @@ Files to review and associated baseline after optimization:
 - [x] engine/banked_code/common/btile.c - NO CHANGES
 - [x] engine/banked_code/common/bullet.c - OK - optimize1.txt
 - [x] engine/banked_code/common/enemy.c - OK - optimize2.txt
-- [ ] engine/banked_code/common/hero.c
+- [x] engine/banked_code/common/hero.c - OK - optimize3.txt
 - [x] engine/banked_code/128/btile.c - NO CHANGES
 - [x] engine/banked_code/128/dataset.c - NO CHANGES
 - [x] engine/banked_code/128/init.c - NO CHANGES
