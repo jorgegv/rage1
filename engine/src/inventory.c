@@ -63,6 +63,16 @@ void inventory_show(void) {
             col += tile->num_cols;
         }
     }
+
+#ifndef BUILD_FEATURE_GAMEAREA_COLOR_FULL
+    // If the game is monochrome, the default color can be changed while
+    // during the game, and the btile draw routine uses its value to draw
+    // all btiles, including inventory ones.  This would end with some items
+    // drawn with different colors depending on the mono attr value when
+    // they were grabbed.  To avoid this, we must reset the colors of the
+    // inventory area to the original game default mono attr
+    sp1_ClearRectInv( &inventory_area, GAMEAREA_COLOR_MONO_ATTR, 0, SP1_RFLAG_COLOUR );
+#endif
 }
 
 void inventory_add_item( struct inventory_info_s *inv, uint8_t item ) {
