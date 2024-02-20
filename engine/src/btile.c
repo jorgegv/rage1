@@ -66,7 +66,7 @@ void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type
 #ifdef BUILD_FEATURE_GAMEAREA_COLOR_FULL
                 sp1_PrintAtInv( r, c, b->frames[ num_frame ].attrs[ n ], (uint16_t)b->frames[ num_frame ].tiles[ n ] );
 #else
-                sp1_PrintAtInv( r, c, GAMEAREA_COLOR_MONO_ATTR, (uint16_t)b->frames[ num_frame ].tiles[ n ] );
+                sp1_PrintAtInv( r, c, game_state.default_mono_attr, (uint16_t)b->frames[ num_frame ].tiles[ n ] );
 #endif
                 SET_TILE_TYPE_AT( r, c, type );
             }

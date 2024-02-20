@@ -94,6 +94,10 @@ void game_state_reset_initial(void) {
    game_state.enemies_alive = GAME_NUM_TOTAL_ENEMIES;
    game_state.enemies_killed = 0;
 
+#ifndef BUILD_FEATURE_GAMEAREA_COLOR_FULL
+   game_state.default_mono_attr = GAMEAREA_COLOR_MONO_ATTR;
+#endif
+
    // reset all flags and set initial ones
    RESET_ALL_GAME_FLAGS();
    RESET_ALL_LOOP_FLAGS();

@@ -121,6 +121,10 @@ struct game_state_s {
    // custom state data
    uint8_t custom_data[ CUSTOM_STATE_DATA_SIZE ];
 #endif
+
+#ifndef BUILD_FEATURE_GAMEAREA_COLOR_FULL
+   uint8_t default_mono_attr;
+#endif
 };
 
 extern struct game_state_s game_state;
