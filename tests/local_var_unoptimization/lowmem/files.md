@@ -26,7 +26,7 @@ Files:
 - [x] engine/src/dataset.c - NO CHANGES
 - [x] engine/src/bullet.c - NO CHANGES
 - [x] engine/src/collision.c - UNOPT
-- [x] engine/src/enemy.c
+- [x] engine/src/enemy.c - UNOPT,STATIC
 - [x] engine/src/flow.c
 - [x] engine/src/hero.c
 - [x] engine/src/hotzone.c
