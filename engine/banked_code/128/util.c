@@ -16,11 +16,11 @@
 
 #include "rage1/banked.h"
 
-uint8_t pixel_to_cell_coord( uint8_t a ) {
+uint8_t pixel_to_cell_coord( uint8_t a ) __z88dk_fastcall {
     return a >> 3;
 }
 
-uint8_t cell_to_pixel_coord( uint8_t a ) {
+uint8_t cell_to_pixel_coord( uint8_t a ) __z88dk_fastcall {
     return a << 3;
 }
 

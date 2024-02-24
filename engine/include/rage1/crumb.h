@@ -39,7 +39,7 @@ struct crumb_location_s {
 
 extern struct crumb_info_s all_crumb_types[];
 
-void crumb_was_grabbed ( uint8_t type );
+void crumb_was_grabbed ( uint8_t type ) __z88dk_fastcall;
 void crumb_reset_all( void );
 
 #endif // _CRUMB_H

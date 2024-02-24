@@ -17,7 +17,7 @@
 
 #include "game_data.h"
 
-void sprite_move_offscreen( struct sp1_ss *s ) {
+void sprite_move_offscreen( struct sp1_ss *s ) __z88dk_fastcall {
     sp1_MoveSprAbs( s, &full_screen, NULL, OFF_SCREEN_ROW, OFF_SCREEN_COLUMN, 0, 0 );
 }
 
@@ -61,7 +61,7 @@ struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
     return s;
 }
 
-void sprite_free( struct sp1_ss *s ) {
+void sprite_free( struct sp1_ss *s ) __z88dk_fastcall {
         sp1_DeleteSpr( s );
 }
 

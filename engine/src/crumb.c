@@ -23,7 +23,7 @@
   #error BUILD_FEATURE_HERO_CHECK_TILES_BELOW must be defined!
 #endif
 
-void crumb_was_grabbed ( uint8_t type ) {
+void crumb_was_grabbed ( uint8_t type ) __z88dk_fastcall {
     all_crumb_types[ type ].counter++;
     if ( all_crumb_types[ type ].do_action != NULL )
         all_crumb_types[ type ].do_action( &all_crumb_types[ type ] );

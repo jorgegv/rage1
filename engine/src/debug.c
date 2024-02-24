@@ -16,11 +16,13 @@
 
 #include "game_data.h"
 
+#ifdef BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA
+#ifdef RAGE1_DEBUG
+
 uint8_t initialized = 0;
 
 uint16_t debug_flags = 0;
 
-#ifdef BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA
 struct sp1_pss debug_ctx = { &debug_area, SP1_PSSFLAG_INVALIDATE, 0, 0, 0, INK_WHITE | PAPER_BLACK, 0, 0 };
 
 void debug_out( char *txt ) {
@@ -35,7 +37,6 @@ void debug_out( char *txt ) {
     }
     sp1_PrintString( &debug_ctx, txt );
 }
-#endif
 
 uint8_t *digits="0123456789abcdef";
 
@@ -52,7 +53,7 @@ char *itohex( uint16_t i ) {
     return &ito_buffer[0];
 }
 
-char *i8toa( uint8_t i ){
+char *i8toa( uint8_t i ) {
     ito_buffer[0] = '0' + i / 100;
     ito_buffer[1] = '0' + ( i % 100 ) / 10;
     ito_buffer[2] = '0' + i % 10;
@@ -81,3 +82,6 @@ void debug_panic( uint8_t code ) {
         debug_pause( 69 );
     }
 }
+
+#endif // RAGE1_DEBUG
+#endif // BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA

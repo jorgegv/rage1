@@ -42,11 +42,11 @@ struct  sprite_graphic_data_s {
 //////////////////////////////////////////////////////////////////////////
 
 // move sprite off screen
-void sprite_move_offscreen( struct sp1_ss *s );
+void sprite_move_offscreen( struct sp1_ss *s ) __z88dk_fastcall;
 
 // allocate/free a sprite
 struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols);
-void sprite_free( struct sp1_ss *s );
+void sprite_free( struct sp1_ss *s ) __z88dk_fastcall;
 
 // set a sprite color
 void sprite_set_color( struct sp1_ss *s, uint8_t color );

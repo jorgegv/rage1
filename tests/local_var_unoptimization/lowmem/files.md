@@ -1,15 +1,15 @@
 # Files to check
 
-- [ ] engine/src/controller.c
-- [ ] engine/src/screen.c
-- [ ] engine/src/sp1engine.c
-- [ ] engine/src/sprite.c
-- [ ] engine/src/util.c
-- [ ] engine/src/charset.c
-- [ ] engine/src/crumb.c
-- [ ] engine/src/sound.c
-- [ ] engine/src/timer.c
-- [ ] engine/src/debug.c
+- [x] engine/src/controller.c - NO CHANGES
+- [x] engine/src/screen.c - NO CHANGES
+- [x] engine/src/sp1engine.c - NO CHANGES
+- [x] engine/src/sprite.c - FASTCALL
+- [x] engine/src/util.c - FASTCALL
+- [x] engine/src/charset.c - NO CHANGES
+- [x] engine/src/crumb.c - NO CHANGES
+- [x] engine/src/sound.c - NO CHANGES
+- [x] engine/src/timer.c - NO CHANGES
+- [x] engine/src/debug.c - CONDITIONAL COMPILE
 - [ ] engine/src/interrupts.c
 - [ ] engine/src/memory.c
 - [ ] engine/src/codeset.c
