@@ -51,7 +51,7 @@ void init_codesets( void ) {
 }
 
 // call a given codeset function by its global function index
-void codeset_call_function( uint8_t global_function_num ) {
+void codeset_call_function( uint8_t global_function_num ) __z88dk_fastcall {
     struct codeset_function_info_s *f;
     uint8_t previous_memory_bank;
 

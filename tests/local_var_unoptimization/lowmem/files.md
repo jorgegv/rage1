@@ -10,12 +10,12 @@
 - [x] engine/src/sound.c - NO CHANGES
 - [x] engine/src/timer.c - NO CHANGES
 - [x] engine/src/debug.c - CONDITIONAL COMPILE
-- [ ] engine/src/interrupts.c
-- [ ] engine/src/memory.c
-- [ ] engine/src/codeset.c
-- [ ] engine/src/main.c
-- [ ] engine/src/banked.c
-- [ ] engine/src/dataset.c
+- [x] engine/src/interrupts.c - NO CHANGES
+- [x] engine/src/memory.c - NO CHANGES
+- [x] engine/src/codeset.c - FASTCALL
+- [x] engine/src/main.c
+- [x] engine/src/banked.c
+- [x] engine/src/dataset.c
 - [ ] engine/src/bullet.c
 - [ ] engine/src/collision.c
 - [ ] engine/src/enemy.c

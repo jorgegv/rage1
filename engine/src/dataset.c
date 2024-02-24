@@ -25,7 +25,7 @@
 // struct dataset_assets_s *home_assets;
 
 #ifdef BUILD_FEATURE_ZX_TARGET_128
-void dataset_activate( uint8_t d ) {
+void dataset_activate( uint8_t d ) __z88dk_fastcall {
     uint8_t previous_memory_bank;
 
     // if the dataset is already active, do nothing
@@ -52,7 +52,7 @@ void dataset_activate( uint8_t d ) {
 
 // Force the loading of a dataset, even it is the current one.  Useful when we have destroyed the
 // low mem buffer with some other data and we want to rebuild it
-void dataset_activate_force( uint8_t d ) {
+void dataset_activate_force( uint8_t d ) __z88dk_fastcall {
     game_state.active_dataset = NO_DATASET;
     dataset_activate( d );
 }
