@@ -13,6 +13,9 @@
 # build targets
 .PHONY: data all build clean clean-config data_depend build-data help
 
+.SILENT:
+
+
 help:
 	@echo "============================================================"
 	@echo "==  RAGE1 library Makefile                                =="
@@ -27,15 +30,15 @@ help:
 	@echo ""
 
 clean:
-	@-rm -rf *.{lis,bin,tap,c.asm,map,log,sym} \
+	@-rm -rf *.{lis,linked,bin,tap,c.asm,map,log,sym} \
 		$(BUILD_DIR)/{game_src,game_data,generated} \
-		$(ENGINE_DIR)/src/*.{map,lis,o,c.asm,sym,bin} \
-		$(ENGINE_DIR)/lowmem/*.{map,lis,o,c.asm,sym,bin} \
-		$(GAME_SRC_DIR)/*.{map,lis,o,c.asm,sym,bin} \
-		$(GAME_DATA_DIR)/*.{map,lis,o,c.asm,sym,bin} \
-		$(BANKED_CODE_DIR)/*.{map,lis,o,c.asm,,sym,bin} \
-		$(BANKED_CODE_DIR_COMMON)/*.{map,lis,o,c.asm,,sym,bin} \
-		$(BANKED_CODE_DIR_128)/*.{map,lis,o,c.asm,,sym,bin} \
+		$(ENGINE_DIR)/src/*.{map,lis,linked,o,c.asm,sym,bin} \
+		$(ENGINE_DIR)/lowmem/*.{map,lis,linked,o,c.asm,sym,bin} \
+		$(GAME_SRC_DIR)/*.{map,lis,linked,o,c.asm,sym,bin} \
+		$(GAME_DATA_DIR)/*.{map,lis,linked,o,c.asm,sym,bin} \
+		$(BANKED_CODE_DIR)/*.{map,lis,linked,o,c.asm,,sym,bin} \
+		$(BANKED_CODE_DIR_COMMON)/*.{map,lis,linked,o,c.asm,,sym,bin} \
+		$(BANKED_CODE_DIR_128)/*.{map,lis,linked,o,c.asm,,sym,bin} \
 		2>/dev/null
 config:
 	@-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* $(GENERATED_DIR)/* 2>/dev/null

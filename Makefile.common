@@ -287,3 +287,19 @@ linecount: clean
 	@find doc/ -type f|xargs cat|wc -l
 	@echo -n "Lines of Test Games:       "
 	@find $(TEST_GAMES_DIR)/ -type f|xargs -l cat|wc -l
+
+LIS2ADDR = ../zxtools/bin/lis2addr.pl
+
+lis-link:
+	echo "Resolving addresses in .c.lis files [main]..."
+	for file in $$( find engine/src -name "*.c.lis"); do \
+		$(LIS2ADDR) -l "$$file" -m main.map > "$$file.linked" ; \
+	done
+	echo "Resolving addresses in .c.lis files [banked]..."
+	for file in $$( find engine/banked_code -name "*.c.lis"); do \
+		$(LIS2ADDR) -l "$$file" -m engine/banked_code/banked_code.map > "$$file.linked" ; \
+	done
+	echo "Resolving addresses in .c.lis files [codeset_0]..."
+	for file in $$( find build/generated/codesets/codeset_0.src -name "*.c.lis"); do \
+		$(LIS2ADDR) -l "$$file" -m build/generated/codesets/codeset_0.map > "$$file.linked" ; \
+	done
