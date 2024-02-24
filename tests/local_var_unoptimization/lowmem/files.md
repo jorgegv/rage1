@@ -27,8 +27,8 @@ Files:
 - [x] engine/src/bullet.c - NO CHANGES
 - [x] engine/src/collision.c - UNOPT
 - [x] engine/src/enemy.c - UNOPT,STATIC
-- [x] engine/src/flow.c
-- [x] engine/src/hero.c
+- [x] engine/src/flow.c - NO CHANGES
+- [x] engine/src/hero.c - UNOPT
 - [x] engine/src/hotzone.c
 - [x] engine/src/map.c - FASTCALL
 - [x] engine/src/game_loop.c

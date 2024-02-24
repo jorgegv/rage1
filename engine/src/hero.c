@@ -86,26 +86,24 @@ void init_hero(void) {
 
 // resets hero position after being killed
 void hero_reset_position(void) {
-    struct hero_info_s *h;
-    struct hero_animation_data_s *anim;
-    uint8_t *animation_frame;
-
-    h = &game_state.hero;
-
     // reset animation sequence
-    anim = &h->animation;
-    h->animation.current_sequence = h->animation.sequence_down;
-    h->animation.current_frame = 0;
+    game_state.hero.animation.current_sequence = game_state.hero.animation.sequence_down;
+    game_state.hero.animation.current_frame = 0;
 
     // set pointer to steady frame down
-    SET_HERO_FLAG( *h, F_HERO_STEADY );
-    animation_frame = home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ HERO_SPRITE_STEADY_FRAME_DOWN ];
-    h->movement.last_direction = MOVE_DOWN;
+    SET_HERO_FLAG( game_state.hero, F_HERO_STEADY );
+    game_state.hero.movement.last_direction = MOVE_DOWN;
 
     // set initial position and move it there
-    hero_set_position_x( h, game_state.current_screen_ptr->hero_data.startup_x );
-    hero_set_position_y( h, game_state.current_screen_ptr->hero_data.startup_y );
-    sp1_MoveSprPix( h->sprite, &game_area, animation_frame, h->position.x.part.integer, h->position.y.part.integer );
+    hero_set_position_x( &game_state.hero, game_state.current_screen_ptr->hero_data.startup_x );
+    hero_set_position_y( &game_state.hero, game_state.current_screen_ptr->hero_data.startup_y );
+    sp1_MoveSprPix(
+        game_state.hero.sprite,
+        &game_area,
+        home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ HERO_SPRITE_STEADY_FRAME_DOWN ],
+        game_state.hero.position.x.part.integer,
+        game_state.hero.position.y.part.integer
+    );
 }
 
 // X and Y setting functions - take care of setting XMAX and YMAX also
@@ -201,8 +199,7 @@ void hero_shoot_bullet( void ) {
 
 #ifdef BUILD_FEATURE_HERO_CHECK_TILES_BELOW
 void hero_check_tiles_below(void) {
-    struct sp1_ss *s;
-    uint8_t i,j,cols,r,c,tile_type;
+    uint8_t i,j,r,c,tile_type;
 
 #ifdef BUILD_FEATURE_INVENTORY
     uint8_t item;
@@ -214,17 +211,14 @@ void hero_check_tiles_below(void) {
     struct crumb_location_s *crumb_loc;
 #endif
 
-    s = game_state.hero.sprite;
-
     // run all chars and search for items
-    cols = s->width;	// SP1 units: chars (_not_ pixels!)
 
-    i = s->height;		// same comment as above!
+    i = game_state.hero.sprite->height;		// same comment as above!
     while ( i-- ) {
-        r = s->row + i;
-        j = cols;
+        r = game_state.hero.sprite->row + i;
+        j = game_state.hero.sprite->width;
         while ( j-- ) {
-            c = s->col + j;
+            c = game_state.hero.sprite->col + j;
             tile_type = GET_TILE_TYPE_AT( r, c );
 
 #ifdef BUILD_FEATURE_INVENTORY
