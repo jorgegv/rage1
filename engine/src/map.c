@@ -32,7 +32,7 @@ struct sp1_pss title_ctx = {
 #endif // BUILD_FEATURE_SCREEN_TITLES
 
 // draw a given screen
-void map_draw_screen(struct map_screen_s *s) {
+void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall {
     uint8_t i,r,c, maxr, maxc, btwidth, btheight;
     uint16_t ti;
     struct btile_pos_s *t;
@@ -168,7 +168,7 @@ struct crumb_location_s *map_get_crumb_location_at_position( struct map_screen_s
 }
 #endif // BUILD_FEATURE_CRUMBS
 
-void map_enter_screen( uint8_t screen_num ) {
+void map_enter_screen( uint8_t screen_num ) __z88dk_fastcall {
     // If we are in 128 mode, we need to switch to the dataset where the
     // screen resides.  If in 48 mode, this is not needed since everything
     // is in home dataset
@@ -184,11 +184,11 @@ void map_enter_screen( uint8_t screen_num ) {
     map_allocate_sprites( &banked_assets->all_screens[ screen_dataset_map[ screen_num ].dataset_local_screen_num ] );
 }
 
-void map_exit_screen( struct map_screen_s *s ) {
+void map_exit_screen( struct map_screen_s *s ) __z88dk_fastcall {
     map_free_sprites( s );
 }
 
-void map_allocate_sprites( struct map_screen_s *m ) {
+void map_allocate_sprites( struct map_screen_s *m ) __z88dk_fastcall {
     uint8_t i;
     struct sp1_ss *s;
     struct sprite_graphic_data_s *g;
@@ -208,7 +208,7 @@ void map_allocate_sprites( struct map_screen_s *m ) {
 // this function can be used generically, since the only data needed for
 // free is the pointer itself, and we know the number of sprites from
 // map_screen_s struct
-void map_free_sprites( struct map_screen_s *s ) {
+void map_free_sprites( struct map_screen_s *s ) __z88dk_fastcall {
     uint8_t i;
     i = s->enemy_data.num_enemies;
     while ( i-- )

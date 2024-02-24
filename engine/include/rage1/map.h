@@ -100,11 +100,11 @@ extern struct screen_dataset_map_s screen_dataset_map[];
 // with a generic function to draw a screen passed by pointer we can
 // later modify the logic behind maps without touching the map display
 // code
-void map_draw_screen(struct map_screen_s *s);
-void map_enter_screen( uint8_t screen );
-void map_exit_screen( struct map_screen_s *s );
-void map_allocate_sprites( struct map_screen_s *m );
-void map_free_sprites( struct map_screen_s *s );
+void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall;
+void map_enter_screen( uint8_t screen ) __z88dk_fastcall;
+void map_exit_screen( struct map_screen_s *s ) __z88dk_fastcall;
+void map_allocate_sprites( struct map_screen_s *m ) __z88dk_fastcall;
+void map_free_sprites( struct map_screen_s *s ) __z88dk_fastcall;
 
 struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
 struct crumb_location_s *map_get_crumb_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );

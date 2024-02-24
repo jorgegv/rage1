@@ -16,13 +16,13 @@
 - [x] engine/src/main.c
 - [x] engine/src/banked.c
 - [x] engine/src/dataset.c
-- [ ] engine/src/bullet.c
-- [ ] engine/src/collision.c
-- [ ] engine/src/enemy.c
-- [ ] engine/src/flow.c
-- [ ] engine/src/hero.c
-- [ ] engine/src/hotzone.c
-- [ ] engine/src/map.c
+- [x] engine/src/bullet.c
+- [x] engine/src/collision.c
+- [x] engine/src/enemy.c
+- [x] engine/src/flow.c
+- [x] engine/src/hero.c
+- [x] engine/src/hotzone.c
+- [x] engine/src/map.c - FASTCALL
 - [ ] engine/src/game_loop.c
 - [ ] engine/src/btile.c
 - [ ] engine/src/game_state.c
