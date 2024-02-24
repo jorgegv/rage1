@@ -29,9 +29,9 @@ Files:
 - [x] engine/src/enemy.c - UNOPT,STATIC
 - [x] engine/src/flow.c - NO CHANGES
 - [x] engine/src/hero.c - UNOPT
-- [x] engine/src/hotzone.c
+- [x] engine/src/hotzone.c - NO CHANGES
 - [x] engine/src/map.c - FASTCALL
-- [x] engine/src/game_loop.c
-- [x] engine/src/btile.c
+- [x] engine/src/game_loop.c - NO CHANGES
+- [x] engine/src/btile.c - STATIC
 - [x] engine/src/game_state.c
 - [x] engine/src/inventory.c
