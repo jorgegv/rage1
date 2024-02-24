@@ -60,23 +60,21 @@ void collision_check_hero_with_sprites(void) {
 #ifdef BUILD_FEATURE_HERO_HAS_WEAPON
 
 void collision_check_bullets_with_sprites( void ) {
-    struct bullet_state_data_s *b;
     struct enemy_info_s *s;
     uint8_t si,bi;
 
     bi = BULLET_MAX_BULLETS;
     while ( bi-- ) {
-        b = &game_state.bullet.bullets[ bi ];
-        if ( IS_BULLET_ACTIVE( *b ) ) {
+        if ( IS_BULLET_ACTIVE( game_state.bullet.bullets[ bi ] ) ) {
             si = game_state.current_screen_ptr->enemy_data.num_enemies;
             while ( si-- ) {
                 s = &game_state.current_screen_ptr->enemy_data.enemies[ si ];
                 if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state ) ) {
-                    if ( collision_check( &b->position, &s->position ) ) {
+                    if ( collision_check( &game_state.bullet.bullets[ bi ].position, &s->position ) ) {
                         // set bullet inactive and move away
-                        RESET_BULLET_FLAG( *b, F_BULLET_ACTIVE );
+                        RESET_BULLET_FLAG( game_state.bullet.bullets[ bi ], F_BULLET_ACTIVE );
                         game_state.bullet.active_bullets--;
-                        sprite_move_offscreen( b->sprite );
+                        sprite_move_offscreen( game_state.bullet.bullets[ bi ].sprite );
                         // set sprite inactive and move away
                         RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state, F_ENEMY_ACTIVE );
                         sprite_move_offscreen( s->sprite );
