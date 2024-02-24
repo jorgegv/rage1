@@ -33,5 +33,5 @@ Files:
 - [x] engine/src/map.c - FASTCALL
 - [x] engine/src/game_loop.c - NO CHANGES
 - [x] engine/src/btile.c - STATIC
-- [x] engine/src/game_state.c
-- [x] engine/src/inventory.c
+- [x] engine/src/game_state.c - NO CHANGES
+- [x] engine/src/inventory.c - UNOPT
