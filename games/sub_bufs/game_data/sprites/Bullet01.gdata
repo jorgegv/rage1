@@ -1,0 +1,30 @@
+BEGIN_SPRITE
+	NAME	Bullet01
+	ROWS	1
+	COLS	1
+//	TYPE	MASK
+
+	FRAMES	1
+
+	PIXELS	..######........
+	PIXELS	##....####......
+	PIXELS	##..######......
+	PIXELS	##########......
+	PIXELS	..######........
+	PIXELS	................
+	PIXELS	................
+	PIXELS	................
+
+	MASK	##......########
+	MASK	..........######
+	MASK	..........######
+	MASK	..........######
+	MASK	##......########
+	MASK	################
+	MASK	################
+	MASK	################
+
+	REAL_PIXEL_WIDTH	5
+	REAL_PIXEL_HEIGHT	5
+
+END_SPRITE
