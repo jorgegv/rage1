@@ -1062,6 +1062,21 @@ sub read_input_data {
                     add_build_feature( 'CUSTOM_STATE_DATA' );
                     next;
                 }
+                if ( $line =~ /^SINGLE_USE_BLOB\s+(\w.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $item->{'type'} ) ) {
+                        die "SINGLE_USE_BLOB: $file, line $current_line: missing TYPE argument\n";
+                    }
+                    $game_config->{'single_user_blobs'}{ lc( $item->{'type'} ) } = $item;
+                    add_build_feature( 'SINGLE_USER_BLOB' );
+                    add_build_feature( 'SINGLE_USER_BLOB_' . uc( $item->{'type'} . 'BUF' ) );
+                    next;
+                }
                 if ( $line =~ /^END_GAME_CONFIG$/ ) {
                     $state = 'NONE';
                     next;
@@ -2682,6 +2697,22 @@ sub check_game_config_is_valid {
         add_build_feature( 'GAMEAREA_COLOR_MONO' );
     } else {
         add_build_feature( 'GAMEAREA_COLOR_FULL' );
+    }
+
+    # SUBs configuration
+    foreach my $k ( keys %{ $game_config->{'single_user_blobs'} } ) {
+        if ( ! grep { $k } qw( ds sp1 ) ) {
+            warn "SINGLE_USER_BLOB: type must be one of SP1,DS\n";
+            $errors++;
+        }
+        if ( ( $k eq 'ds' ) and not is_build_feature_enabled( 'ZX_TARGET_128' ) ) {
+            warn "SINGLE_USER_BLOB: type DS can only be used in 128K mode games\n";
+            $errors++;
+        }
+        if ( defined( $game_config->{'single_user_blobs'}{ $k }{'ds_org_address'} ) and ( $k ne 'ds' ) ) {
+            warn "SINGLE_USER_BLOB: DS_ORG_ADDRESS can only specified when TYPE=DS\n";
+            $errors++;
+        }
     }
 
     return $errors;
