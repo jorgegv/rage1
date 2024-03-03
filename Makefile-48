@@ -13,8 +13,12 @@
 MYMAKE			= $(MAKE) -s -f Makefile-48
 ZPRAGMA_INC		= zpragma-48.inc
 
+# SUB taps
+SUB_SP1BUF_TAP		= $(wildcard $(GAME_SRC_DIR)/sub_sp1buf/sub.tap )
+SUB_TAPS                = $(SUB_SP1BUF_TAP)
+
 # All taps
-TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(MAIN_TAP)
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(MAIN_TAP) $(SUB_TAPS)
 
 -include Makefile.common
 
@@ -28,6 +32,9 @@ build:
 	cp $(ENGINE_DIR)/loader48/$(BAS_LOADER_SRC) $(BAS_LOADER)
 	if ( grep -q -Pi 'SINGLE_USE_BLOB\s+TYPE=SP1' $(GAME_DATA_DIR)/game_config/*.gdata ) then \
 		$(MAKE) -s -C $(GAME_SRC_DIR)/sub_sp1buf sub_bin sub_tap_nohdr; \
+	fi
+	if ( grep -q -Pi '^\s*SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata ) then \
+		./tools/gen_sub_data.sh; \
 	fi
 	$(MYMAKE) -j8 main
 	$(MYMAKE) -j8 taps
