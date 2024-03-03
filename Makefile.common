@@ -8,6 +8,8 @@
 ## 
 ################################################################################
 
+.SILENT:
+
 # directory configurations
 ENGINE_DIR			= engine
 BUILD_DIR			= build
@@ -115,18 +117,18 @@ endif
 
 # generic rules
 %.o: %.c
-	@echo Compiling $*.c ...
-	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(BANKED_CFLAGS) -c $*.c
+	echo Compiling $*.c ...
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(BANKED_CFLAGS) -c $*.c
 
 %.o: %.asm
-	@echo Assembling $*.asm ...
-	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(BANKED_CFLAGS) -c $*.asm
+	echo Assembling $*.asm ...
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(BANKED_CFLAGS) -c $*.asm
 
 # rule for inspecting generated asm code - run 'make myfile.c.asm' to
 # get the .c.asm assembler generated from C file, with C code as comments
 %.c.asm: %.c
-	@echo Generating ASM for $*.c ...
-	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(CFLAGS_TO_ASM) -c $*.c
+	echo Generating ASM for $*.c ...
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(CFLAGS_TO_ASM) -c $*.c
 
 # build targets
 .PHONY: data all build clean clean-config data_depend build-data help final taps main tests
@@ -138,10 +140,10 @@ final: $(FINAL_TAP)
 ##
 
 $(GENERATED_DIR)/game_data_home.c: $(GENERATED_DIR)/game_data.dep
-	@$(MYMAKE) -s data
+	$(MYMAKE) data
 
 $(GENERATED_DIR_DATASETS)/game_data_banked.c: $(GENERATED_DIR)/game_data.dep
-	@$(MYMAKE) -s data
+	$(MYMAKE) data
 
 $(GENERATED_DIR)/game_data.dep: data_depend
 
@@ -154,36 +156,36 @@ GDATA_FILES =	$(wildcard $(GAME_DATA_DIR)/game_config/*.gdata) \
 GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata) $(wildcard $(GAME_DATA_DIR)/patches/flow/*.gdata)
 
 data:
-	@$(DATAGEN) -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
-	@./tools/generate_banked_function_defs.pl
+	$(DATAGEN) -t $(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
+	./tools/generate_banked_function_defs.pl
 
 data_depend:
-	@if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GDATA_FILES) $(GDATA_PATCHES) | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
-	@ls -1 $(GDATA_FILES) $(GDATA_PATCHES) | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
-	@if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
+	if [ ! -f $(GENERATED_DIR)/game_data.dep ]; then ls -1 $(GDATA_FILES) $(GDATA_PATCHES) | xargs -l stat -c '%n%Y' | sha256sum > $(GENERATED_DIR)/game_data.dep; fi
+	ls -1 $(GDATA_FILES) $(GDATA_PATCHES) | xargs -l stat -c '%n%Y' | sha256sum > /tmp/game_data.dep
+	if ( ! cmp -s $(GENERATED_DIR)/game_data.dep /tmp/game_data.dep ) then rm $(GENERATED_DIR)/game_data.dep; mv /tmp/game_data.dep $(GENERATED_DIR)/game_data.dep; fi
 
 ## Taps
 
 taps: $(TAPS)
 
 %.tap: %.bas
-	@echo "Creating TAP $@..."
-	@bas2tap -sLOADER -a10 -q $<
+	echo "Creating TAP $@..."
+	bas2tap -sLOADER -a10 -q $<
 
 $(FINAL_TAP): $(TAPS)
-	@echo "Building final TAP $(FINAL_TAP)..."
-	@cat $(TAPS) > $(FINAL_TAP)
-	@echo "Build completed SUCCESSFULLY"
+	echo "Building final TAP $(FINAL_TAP)..."
+	cat $(TAPS) > $(FINAL_TAP)
+	echo "Build completed SUCCESSFULLY"
 
 screen.tap:
-	@echo "Adding loading SCREEN$$..."
-	@-rm -f /tmp/screen.scr 2>/dev/null
-#	@echo "PNG:" '"$(LOADING_SCREEN_PNG)"'
-#	@echo "SCR:" '"$(LOADING_SCREEN_SCR)"'
-	@if [ ! -z "$(LOADING_SCREEN_SCR)" ] && [ ! -z "$(LOADING_SCREEN_PNG)" ]; then echo "** Error: LOADING_SCREEN: PNG and SCR cannot de used at the same time"; exit 1; fi
-	@if [ ! -z "$(LOADING_SCREEN_SCR)" ]; then cp "$(BUILD_DIR)/$(LOADING_SCREEN_SCR)" /tmp/screen.scr; else ./tools/png2scr.pl "$(BUILD_DIR)/$(LOADING_SCREEN_PNG)" /tmp/screen.scr; fi
-	@if [ "$$(wc -c /tmp/screen.scr | awk '{print $$1}')" -ne 6912 ]; then echo "** Error: LOADING_SCREEN must be exactly 6912 bytes long"; exit 1 ; fi
-	@z88dk-appmake +zx --noloader --org 16384 -b /tmp/screen.scr -o screen.tap
+	echo "Adding loading SCREEN$$..."
+	-rm -f /tmp/screen.scr 2>/dev/null
+#	echo "PNG:" '"$(LOADING_SCREEN_PNG)"'
+#	echo "SCR:" '"$(LOADING_SCREEN_SCR)"'
+	if [ ! -z "$(LOADING_SCREEN_SCR)" ] && [ ! -z "$(LOADING_SCREEN_PNG)" ]; then echo "** Error: LOADING_SCREEN: PNG and SCR cannot de used at the same time"; exit 1; fi
+	if [ ! -z "$(LOADING_SCREEN_SCR)" ]; then cp "$(BUILD_DIR)/$(LOADING_SCREEN_SCR)" /tmp/screen.scr; else ./tools/png2scr.pl "$(BUILD_DIR)/$(LOADING_SCREEN_PNG)" /tmp/screen.scr; fi
+	if [ "$$(wc -c /tmp/screen.scr | awk '{print $$1}')" -ne 6912 ]; then echo "** Error: LOADING_SCREEN must be exactly 6912 bytes long"; exit 1 ; fi
+	z88dk-appmake +zx --noloader --org 16384 -b /tmp/screen.scr -o screen.tap
 
 ## Main game
 
@@ -194,21 +196,21 @@ main: $(MAIN_BIN)
 ##
 
 show:
-	@echo "Game Configuration : $(shell grep -E '^\s*NAME\s+' build/game_data/game_config/Game.gdata | head -1 | awk '{print $$2}' )"
-	@echo "Build Configuration: $(ZX_TARGET)K"
+	echo "Game Configuration : $(shell grep -E '^\s*NAME\s+' build/game_data/game_config/Game.gdata | head -1 | awk '{print $$2}' )"
+	echo "Build Configuration: $(ZX_TARGET)K"
 
 ##
 ## Run options
 ##
 
 run:
-	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
+	fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
 
 debug:
-	@fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | ./tools/r1sym.pl -m main.map )"
+	fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command "$$(cat debug_script.cfg | ./tools/r1sym.pl -m main.map )"
 
 runz:
-	@../zesarux/src/zesarux $(FINAL_TAP)
+	../zesarux/src/zesarux $(FINAL_TAP)
 
 ##
 ## Tests
@@ -249,44 +251,44 @@ LIB_GAME_DATA_DIRS	= $(TEST_GAMES_DIR)/minimal/game_data $(TEST_GAMES_DIR)/minim
 
 # create a minimal game using the library
 new-game:
-	@if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
-	@if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, won't overwrite!"; exit 2; fi
-	@echo "Creating game directory $(target)..."
-	@mkdir -p "$(target)/"
-	@echo -n "Syncing library and game template files... "
-	@rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)"
-	@rsync -ap Makefile.game "$(target)/Makefile"
-	@echo "Done!"
+	if [ -z "$(target)" ]; then echo "Usage: make new-game target=<game-directory>"; exit 1; fi
+	if [ -d "$(target)" ]; then echo "Existing game directory $(target) found, won't overwrite!"; exit 2; fi
+	echo "Creating game directory $(target)..."
+	mkdir -p "$(target)/"
+	echo -n "Syncing library and game template files... "
+	rsync -ap $(LIB_GAME_DATA_DIRS) "$(target)"
+	rsync -ap Makefile.game "$(target)/Makefile"
+	echo "Done!"
 
 # tools
 mem_obj:
-	@echo ""; echo "MEMORY USAGE REPORT BY OBJECT FILE:"
-	@./tools/r1size.sh
+	echo ""; echo "MEMORY USAGE REPORT BY OBJECT FILE:"
+	./tools/r1size.sh
 
 mem_main:
-	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (MAIN MEMORY):"
-	@./tools/memmap.pl -m -p main main.map
+	echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (MAIN MEMORY):"
+	./tools/memmap.pl -m -p main main.map
 
 mem_bank:
-	@echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (BANKED MEMORY):"
-	@./tools/memmap.pl -m -p bank $(BANKED_CODE_DIR)/banked_code.map
+	echo ""; echo "MEMORY USAGE REPORT BY BINARY SECTION (BANKED MEMORY):"
+	./tools/memmap.pl -m -p bank $(BANKED_CODE_DIR)/banked_code.map
 
 mem-old: mem_main mem_bank
 
 mem:
-	@./tools/mem-summary.sh
+	./tools/mem-summary.sh
 
 linecount: clean
-	@echo -n "Lines of Code (C):         "
-	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'C source'|cut -f1 -d:|xargs -l cat|wc -l
-	@echo -n "Lines of Code (Perl):      "
-	@find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'Perl'|cut -f1 -d:|xargs -l cat|wc -l
-	@echo -n "Lines of Code (Assembler): "
-	@find . -type f -iname "*.asm"|grep -v -E '^./.git'|grep -v tests/|xargs -l cat|wc -l
-	@echo -n "Lines of Docs:             "
-	@find doc/ -type f|xargs cat|wc -l
-	@echo -n "Lines of Test Games:       "
-	@find $(TEST_GAMES_DIR)/ -type f|xargs -l cat|wc -l
+	echo -n "Lines of Code (C):         "
+	find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'C source'|cut -f1 -d:|xargs -l cat|wc -l
+	echo -n "Lines of Code (Perl):      "
+	find . -type f |grep -v -E '^./.git'|grep -v tests/|xargs -l file|grep -E 'Perl'|cut -f1 -d:|xargs -l cat|wc -l
+	echo -n "Lines of Code (Assembler): "
+	find . -type f -iname "*.asm"|grep -v -E '^./.git'|grep -v tests/|xargs -l cat|wc -l
+	echo -n "Lines of Docs:             "
+	find doc/ -type f|xargs cat|wc -l
+	echo -n "Lines of Test Games:       "
+	find $(TEST_GAMES_DIR)/ -type f|xargs -l cat|wc -l
 
 LIS2ADDR = ../zxtools/bin/lis2addr.pl
 

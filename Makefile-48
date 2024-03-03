@@ -8,7 +8,9 @@
 ## 
 ################################################################################
 
-MYMAKE			= $(MAKE) -f Makefile-48
+.SILENT:
+
+MYMAKE			= $(MAKE) -s -f Makefile-48
 ZPRAGMA_INC		= zpragma-48.inc
 
 # All taps
@@ -23,10 +25,10 @@ SRC			+= $(BANKED_CODE_SRC_COMMON)
 OBJS			+= $(BANKED_CODE_OBJS_COMMON)
 
 build:
-	@cp $(ENGINE_DIR)/loader48/$(LOADER48) $(BAS_LOADER)
-	@$(MYMAKE) -s -j8 main
-	@$(MYMAKE) -s -j8 taps
-	@$(MYMAKE) -s final
+	cp $(ENGINE_DIR)/loader48/$(LOADER48) $(BAS_LOADER)
+	$(MYMAKE) -j8 main
+	$(MYMAKE) -j8 taps
+	$(MYMAKE) final
 
 ## Taps
 
@@ -34,12 +36,12 @@ taps: $(TAPS)
 
 # we set org at 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
-	@echo "Creating TAP $@..."
-	@z88dk-appmake +zx --noloader --org 0x5F00 -b $<
+	echo "Creating TAP $@..."
+	z88dk-appmake +zx --noloader --org 0x5F00 -b $<
 
 $(MAIN_BIN): $(OBJS)
-	@echo "Bulding $(MAIN_BIN)...."
-	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
+	echo "Bulding $(MAIN_BIN)...."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
 
 ## Run options
 

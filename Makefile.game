@@ -18,33 +18,33 @@ RAGE1REPO = https://github.com/jorgegv/rage1.git
 
 # game targets
 info:
-	@echo "Game Directory: $(GAMEDIR)"
-	@echo "RAGE1 Directory: $(RAGE1DIR)"
-	@echo "RAGE1 Tag: $(RAGE1_TAG)"
+	echo "Game Directory: $(GAMEDIR)"
+	echo "RAGE1 Directory: $(RAGE1DIR)"
+	echo "RAGE1 Tag: $(RAGE1_TAG)"
 
 rage1-clone:
 	if [ ! -d "$(RAGE1DIR)" ]; then git clone "$(RAGE1REPO)" "$(RAGE1DIR)" ]; fi
 	cd "$(RAGE1DIR)" && git checkout master && git pull --all
 
 rage1-checkout: rage1-clone
-	@bash -c "( cd '$(RAGE1DIR)' && git co $(RAGE1_TAG) >/dev/null 2>&1 ) || echo 'Git: error checking out $(RAGE1_TAG)'"
+	bash -c "( cd '$(RAGE1DIR)' && git co $(RAGE1_TAG) >/dev/null 2>&1 ) || echo 'Git: error checking out $(RAGE1_TAG)'"
 
 build: info rage1-checkout
-	@bash -c "cd $(RAGE1DIR) && make -s build target_game=$(GAMEDIR)" | tee build.log
+	bash -c "cd $(RAGE1DIR) && make build target_game=$(GAMEDIR)" | tee build.log
 	cp "$(RAGE1DIR)/game.tap" .
 
 build-debug: info rage1-checkout
-	@bash -c "cd $(RAGE1DIR) && make -s build-debug target_game=$(GAMEDIR)" | tee build.log
+	bash -c "cd $(RAGE1DIR) && make build-debug target_game=$(GAMEDIR)" | tee build.log
 	cp "$(RAGE1DIR)/game.tap" .
 
 run:
-	@bash -c "cd $(RAGE1DIR) && make -s run"
+	bash -c "cd $(RAGE1DIR) && make run"
 
 mem:
-	@bash -c "cd $(RAGE1DIR) && make -s mem"
+	bash -c "cd $(RAGE1DIR) && make mem"
 
 mem-128:
-	@bash -c "cd $(RAGE1DIR) && make -s mem-128"
+	bash -c "cd $(RAGE1DIR) && make mem-128"
 
 # include additional rules specified in the game, if any
 include Makefile.custom
