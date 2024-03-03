@@ -24,6 +24,12 @@ CFLAGS			+= -pragma-define:REGISTER_SP=$(ISR_VECTOR_ADDRESS_128)
 .PHONY: datasets codesets taps
 
 build:
+	if ( grep -q -Pi 'SINGLE_USE_BLOB\s+TYPE=SP1$$' $(TARGET_GAME)/game_data/game_config/*.gdata ) then \
+		$(MYMAKE) -j8 -C $(TARGET_GAME_SRC)/sub_sp1buf sub_bin sub_bin_nohdr; \
+	fi
+	if ( grep -q -Pi 'SINGLE_USE_BLOB\s+TYPE=DS' $(TARGET_GAME)/game_data/game_config/*.gdata ) then \
+		$(MYMAKE) -j8 -C $(TARGET_GAME_SRC)/sub_dsbuf sub_bin sub_bin_nohdr; \
+	fi
 	$(MYMAKE) banked_definitions
 	$(MYMAKE) datasets
 	$(MYMAKE) codesets

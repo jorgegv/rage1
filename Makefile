@@ -122,6 +122,9 @@ build-monochrome:
 build-vortex2:
 	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/vortex2
 
+build-sub_bufs:
+	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/sub_bufs
+
 # just a target for the default game for completeness
 build-default: build
 
