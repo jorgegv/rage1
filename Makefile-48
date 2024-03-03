@@ -26,8 +26,8 @@ OBJS			+= $(BANKED_CODE_OBJS_COMMON)
 
 build:
 	cp $(ENGINE_DIR)/loader48/$(BAS_LOADER_SRC) $(BAS_LOADER)
-	if ( grep -q -Pi 'SINGLE_USE_BLOB\s+TYPE=SP1' $(TARGET_GAME)/game_data/game_config/*.gdata ) then \
-		$(MYMAKE) -j8 -C $(TARGET_GAME_SRC)/sub_sp1buf sub_bin sub_bin_nohdr; \
+	if ( grep -q -Pi 'SINGLE_USE_BLOB\s+TYPE=SP1' $(GAME_DATA_DIR)/game_config/*.gdata ) then \
+		$(MAKE) -s -C $(GAME_SRC_DIR)/sub_sp1buf sub_bin sub_tap_nohdr; \
 	fi
 	$(MYMAKE) -j8 main
 	$(MYMAKE) -j8 taps
