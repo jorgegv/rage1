@@ -44,6 +44,9 @@ section code_compress_zx0
 section code_im2
 section code_z80
 
+;; the following section is the SUB loader and must be as low in memory as
+;; possible to avoid being overwritten or swapped
+section rage1_subs_loader
 ;; the following sections have been moved from their normal places so
 ;; that game data is placed at the start of the memory map
 section rodata_input

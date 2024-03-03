@@ -1073,8 +1073,8 @@ sub read_input_data {
                         die "SINGLE_USE_BLOB: $file, line $current_line: missing TYPE argument\n";
                     }
                     $game_config->{'single_user_blobs'}{ lc( $item->{'type'} ) } = $item;
-                    add_build_feature( 'SINGLE_USER_BLOB' );
-                    add_build_feature( 'SINGLE_USER_BLOB_' . uc( $item->{'type'} . 'BUF' ) );
+                    add_build_feature( 'SINGLE_USE_BLOB' );
+                    add_build_feature( 'SINGLE_USE_BLOB_' . uc( $item->{'type'} . 'BUF' ) );
                     next;
                 }
                 if ( $line =~ /^END_GAME_CONFIG$/ ) {

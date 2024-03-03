@@ -54,7 +54,7 @@ indicated in the next sections.
 ```
 GAME_CONFIG
 	(...)
-	SINGLE_USE_BLOB TYPE=SP1|DS DS_ORG_ADDRESS=XXXX
+	SINGLE_USE_BLOB TYPE=SP1|DS DS_ORG_ADDRESS=XXXX ORDER=N
 	(...)
 END_GAME_CONFIG
 
@@ -86,6 +86,10 @@ END_GAME_CONFIG
 - A table in an ASM file will be generated with the SUB data needed for
   loading and running the code at the proper addresses
 
+- An ORDER parameter can be used to indicate how the SUBs must be executed.
+  If no ORDER is specified, SP1BUF will be run first, then DSBUF. If ORDER
+  is provided, the SUBs will be run in ascending ORDER.
+
 ## RAGE1 startup changes
 
 - The SUBs will run at the very beginning of the program, even before any
@@ -95,8 +99,9 @@ END_GAME_CONFIG
 
 - Only the SUBs configured in GAME_CONFIG will be run.
 
-- The SP1 SUB will run first (if configured), the DSBUF SUB will run second
-  (if configured)
+- If both are configured, then if no ORDER is specified, SP1BUF will be run
+  first, then DSBUF.  If ORDER was provided, the SUBs will be run in
+  ascending ORDER.
 
 - All SUB related initialization and execution will only be brought into the
   main game if the functionality is used, via the conditional compilation

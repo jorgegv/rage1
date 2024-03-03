@@ -34,4 +34,8 @@ BEGIN_GAME_CONFIG
 	TRACKER_SONG	NAME=game_song FILE=game_data/music/music1.aks
 	TRACKER_SONG	NAME=menu_song FILE=game_data/music/music2.aks
 	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
+
+	// SUBs - Single Use Blobs
+	SINGLE_USE_BLOB TYPE=SP1
+	SINGLE_USE_BLOB TYPE=DS DS_ORG_ADDRESS=0xA000
 END_GAME_CONFIG
