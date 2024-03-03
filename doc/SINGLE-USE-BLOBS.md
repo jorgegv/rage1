@@ -43,8 +43,8 @@ indicated in the next sections.
   either as a standalone TAP file (for easy testing and debugging) or as a
   headerless TAP file which can be used in the global RAGE1 build.
 
-- The global RAGE1 Makefile will use the target in the private Makefile for
-  the binary output. The binary
+- The global RAGE1 Makefile will use the targets in the private Makefile for
+  the binary output.
 
 ## DATAGEN changes
 
@@ -70,20 +70,21 @@ END_GAME_CONFIG
   (0x5B00, in contended memory).
 
 - If uncontended memory is needed with the DS type (e.g.  because a beeper
-  sound engine is used), a DS_ORG_ADDRESS parameter can be specified.  In this
-  case, the SUB will be temporary swapped to that address, and the contents
-  at that address saved to 0x5B00. The SUB code will be then run from
-  DS_ORG_ADDRESS, and when it returns, the saved data wil be restored to the
-  DS_ORG_ADDRESS.
+  sound engine is used), a DS_ORG_ADDRESS parameter can be specified.  In
+  this case, the SUB will be temporary swapped to that address before
+  execution, and the contents at that address saved to 0x5B00.  The SUB code
+  will be then run from DS_ORG_ADDRESS, and when it returns, the saved data
+  wil be restored to the DS_ORG_ADDRESS from 0x5B00.
 
 - Checks will be implemented to enable DSBUF SUB only in 128K mode. SP1BUF
   SUB will be allowed in both modes.
 
-- The regular conditional compilation BUILD_FEATURE_xxxx #define's will be
-  generated.
+- The conditional compilation BUILD_FEATURE_SINGLE_USER_BLOB,
+  BUILD_FEATURE_SINGLE_USER_BLOB_DSBUF and
+  BUILD_FEATURE_SINGLE_USER_BLOB_SP1BUF #define macros will be generated.
 
 - A table in an ASM file will be generated with the SUB data needed for
-  loading and running the code at the proper address
+  loading and running the code at the proper addresses
 
 ## RAGE1 startup changes
 
