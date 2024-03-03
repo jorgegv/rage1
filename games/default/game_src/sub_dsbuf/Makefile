@@ -1,7 +1,10 @@
 # This Makefile must always offer the targets "sub_bin" and "sub_bin_nohdr",
 # which are used by the main Makefiles
 
-.PHONY: clean
+.SILENT:
+
+.PHONY: clean sub_bin sub_tap sub_tap_nohdr
+
 
 # DATASET buffer address
 ORG = 0x5B00
