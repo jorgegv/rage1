@@ -8,7 +8,9 @@
 # SP1 buffer address
 ORG = 0xD1ED
 
-BIN_CMD = zcc +zx -zorg=$(ORG) -o sub.bin main.c -pragma-redirect=CRT_FONT=_font_8x8_bbc_system
+CFLAGS = --list -s -m --c-code-in-asm
+
+BIN_CMD = zcc +zx -zorg=$(ORG) -o sub.bin main.c $(CFLAGS) -pragma-redirect=CRT_FONT=_font_8x8_bbc_system
 
 # binary-only generation, used for getting exact size
 sub_bin:
