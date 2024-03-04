@@ -117,8 +117,15 @@ END_GAME_CONFIG
   into the proper places in RAM.  The user will just sense one or two
   additional loading blocks.
 
+- When using DSBUF, both SUBs must NOT enable interrupts at any time.  The
+  SUBs are called with interrupts disabled, and should stay this way.  If
+  they were run with the normal interrupt configuration (i.e.  the ROM ISR
+  routine), some system variables in the SYSVARS area (0x5B00 and above)
+  will be updated by the ROM ISR, and will corrupt the data we just loadad
+  at that address, with catastrophic consequences.
+
 - After the SUB(s) have been loaded in place, they will be run in the order
-  specified in the previous section.
+  specified in the previous section, with interrupts disabled.
 
 - When the SUBs return, the rest of the RAGE1 game startup will continue. 
   RAGE1 will take full control over the machine and the DSBUF and SP1BUF
