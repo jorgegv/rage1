@@ -30,11 +30,11 @@ rage1-checkout: rage1-clone
 	bash -c "( cd '$(RAGE1DIR)' && git co $(RAGE1_TAG) >/dev/null 2>&1 ) || echo 'Git: error checking out $(RAGE1_TAG)'"
 
 build: info rage1-checkout
-	bash -c "cd $(RAGE1DIR) && make build target_game=$(GAMEDIR)" | tee build.log
+	set -o pipefail && bash -c "cd $(RAGE1DIR) && make build target_game=$(GAMEDIR)" | tee build.log
 	cp "$(RAGE1DIR)/game.tap" .
 
 build-debug: info rage1-checkout
-	bash -c "cd $(RAGE1DIR) && make build-debug target_game=$(GAMEDIR)" | tee build.log
+	set -o pipefail && bash -c "cd $(RAGE1DIR) && make build-debug target_game=$(GAMEDIR)" | tee build.log
 	cp "$(RAGE1DIR)/game.tap" .
 
 run:
