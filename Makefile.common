@@ -305,3 +305,7 @@ lis-link:
 	for file in $$( find build/generated/codesets/codeset_0.src -name "*.c.lis"); do \
 		$(LIS2ADDR) -l "$$file" -m build/generated/codesets/codeset_0.map > "$$file.linked" ; \
 	done
+
+section-check:
+	echo "Checking all compiler sections in MMAP.INC..."
+	./tools/check_mmap_sections.sh main.map mmap.inc

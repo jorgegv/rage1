@@ -42,6 +42,8 @@ section code_math
 section code_stdlib
 section code_compress_zx0
 section code_im2
+section code_z80
+
 ;; the following sections have been moved from their normal places so
 ;; that game data is placed at the start of the memory map
 section rodata_input
@@ -71,6 +73,7 @@ section code_user
 ;; place the bit_beepfx routine and pals in non-contended memory
 ;; above code_compiler section
 section code_sound_bit
+section code_temp_sp1
 
 section rodata_align_256
 align 256

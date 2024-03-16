@@ -35,6 +35,7 @@ build:
 	$(MYMAKE) taps
 	$(MYMAKE) final
 	$(MYMAKE) lowmemcheck
+	$(MYMAKE) section-check
 
 ## Check that certain symbols are linked in low memory.  It is assumed that
 ## all symbols mentioned as "extern" in .h files will be accessed from

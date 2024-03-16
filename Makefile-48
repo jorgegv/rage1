@@ -29,6 +29,7 @@ build:
 	$(MYMAKE) -j8 main
 	$(MYMAKE) -j8 taps
 	$(MYMAKE) final
+	$(MYMAKE) section-check
 
 ## Taps
 
