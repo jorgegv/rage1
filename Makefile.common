@@ -19,6 +19,7 @@ GENERATED_DIR_CODESETS		= $(GENERATED_DIR)/codesets
 GENERATED_DIR_LOWMEM		= $(GENERATED_DIR)/lowmem
 GENERATED_DIR_BANKED_128	= $(GENERATED_DIR)/banked/128
 GENERATED_DIR_BANKED_COMMON	= $(GENERATED_DIR)/banked/common
+GENERATED_DIR_ASMLOADER		= $(GENERATED_DIR)/asmloader/
 GAME_SRC_DIR			= $(BUILD_DIR)/game_src
 GAME_DATA_DIR			= $(BUILD_DIR)/game_data
 
@@ -68,10 +69,10 @@ BANKED_RESERVED_BANK		= 4
 BANK_BINS		= $(wildcard $(GENERATED_DIR)/bank_*.bin )
 BANK_TAPS		= $(BANK_BINS:.bin=.tap)
 
-# Bank switcher routine for BASIC and tap
-BSWITCH_SRC		= $(ENGINE_DIR)/bank/bswitch.asm
-BSWITCH_BIN		= $(GENERATED_DIR)/bswitch.bin
-BSWITCH_TAP		= $(BSWITCH_BIN:.bin=.tap)
+# Loader routine and tap
+ASMLOADER_SRC		= $(GENERATED_DIR_ASMLOADER)/asmloader.asm
+ASMLOADER_BIN		= $(ASMLOADER_SRC:.asm=.bin)
+ASMLOADER_TAP		= $(ASMLOADER_SRC:.asm=.tap)
 
 # BASIC Loader and tap
 BAS_LOADER		= $(GENERATED_DIR)/loader.bas
@@ -94,7 +95,7 @@ LOADING_SCREEN_TAP	= $(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_dat
 LOADING_SCREEN_PNG	= $(shell grep -oP '^\s*LOADING_SCREEN.*' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|perl -ne '/PNG=(.*?)\s/i; print $$1;')
 LOADING_SCREEN_SCR	= $(shell grep -oP '^\s*LOADING_SCREEN.*' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|head -1|perl -ne '/SCR=(.*?)\s/i; print $$1;')
 LOADING_SCREEN_FLAG	= $(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "-s")
-LOADER48		= loader$(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "-with-screen").bas
+BAS_LOADER_SRC		= loader$(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "-with-screen").bas
 
 #######################################################################
 

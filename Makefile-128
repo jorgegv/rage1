@@ -14,7 +14,7 @@ MYMAKE			= $(MAKE) -s -f Makefile-128 -j8
 ZPRAGMA_INC             = zpragma-128.inc
 
 # All taps
-TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(BANK_TAPS) $(MAIN_TAP)
 
 -include Makefile.common
 
@@ -30,8 +30,9 @@ build:
 	$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
 	$(MYMAKE) banks
 	$(MYMAKE) main
-	$(MYMAKE) bank_switcher
 	$(MYMAKE) loader
+	$(MYMAKE) asmloader
+	cp $(ENGINE_DIR)/loader128/$(BAS_LOADER_SRC) $(BAS_LOADER)
 	$(MYMAKE) taps
 	$(MYMAKE) final
 	$(MYMAKE) lowmemcheck
@@ -121,19 +122,19 @@ banks:
 	echo "Building Bank binaries and Dataset/Codeset maps..."
 	./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM)
 
-bank_switcher: $(BSWITCH_BIN)
-
-$(BSWITCH_BIN):
-	echo "Assembling bank switch routine..."
-	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
-
 ##
-## Custom BASIC loader
+## Custom ASM loader
 ##
 
 loader:
-	echo "Creating custom BASIC loader..."
-	./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR) $(LOADING_SCREEN_FLAG)
+	echo "Creating custom loader..."
+	./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER) $(LOADING_SCREEN_FLAG)
+
+asmloader: $(ASMLOADER_BIN)
+
+$(ASMLOADER_BIN):
+	echo "Assembling loader routine..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --list --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
 
 ##
 ## Taps
@@ -144,15 +145,15 @@ taps: $(TAPS)
 # we set org at 0xC000 for the banks
 bank_%.tap: bank_%.bin
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --org 0xC000 -b $<
+	z88dk-appmake +zx --noloader --noheader --org 0xC000 -b $<
 
 # we set org at base code address for 128 mode, 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --org $(BASE_CODE_ADDRESS_128) -b $<
+	z88dk-appmake +zx --noloader --noheader --org $(BASE_CODE_ADDRESS_128) -b $<
 
-# we set org at 0x8000 for bank switcher
-$(BSWITCH_TAP): $(BSWITCH_BIN)
+# we set org at 0x8000 for loader
+$(ASMLOADER_TAP): $(ASMLOADER_BIN)
 	echo "Creating TAP $@..."
 	z88dk-appmake +zx --noloader --org 0x8000 -b $<
 
