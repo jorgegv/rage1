@@ -13,11 +13,6 @@
 MYMAKE			= $(MAKE) -s -f Makefile-128 -j8
 ZPRAGMA_INC             = zpragma-128.inc
 
-# SUB taps
-SUB_SP1BUF_TAP		= $(wildcard $(GAME_SRC_DIR)/sub_sp1buf/sub.tap )
-SUB_DSBUF_TAP		= $(wildcard $(GAME_SRC_DIR)/sub_dsbuf/sub.tap )
-SUB_TAPS                = $(SUB_SP1BUF_TAP) $(SUB_DSBUF_TAP)
-
 # All taps
 TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(BANK_TAPS) $(MAIN_TAP) $(SUB_TAPS)
 
@@ -44,6 +39,7 @@ build:
 	$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
 	$(MYMAKE) banks
 	$(MYMAKE) main
+	$(MYMAKE) subs
 	$(MYMAKE) loader
 	$(MYMAKE) asmloader
 	cp $(ENGINE_DIR)/loader128/$(BAS_LOADER_SRC) $(BAS_LOADER)
@@ -104,13 +100,23 @@ dataset_%.zx0: dataset_%.bin
 
 codesets: $(BIN_CODESETS)
 
-#codeset_%.bin: codeset_%.src/*.c codeset_%.src/*.asm
 codeset_%.bin:
 	echo "Compiling CODESET $@ ..."
 	# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -I$(GAME_SRC_DIR) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
 	mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
 	if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
+
+##
+## SUBs (Single Use Binaries) compilation to standalone binaries
+##
+
+subs: $(SUB_BINS)
+
+sub_%.bin:
+	echo "Compiling SUB $@ ..."
+	$(MYMAKE) -s -C $(GENERATED_DIR_SUBS)/sub_$@ sub_bin
+	cp $(GENERATED_DIR_SUBS)/$@/sub.bin $(GENERATED_DIR)/$@.bin
 
 ##
 ## Banked code compilation to standalone binary at 0xC000
@@ -170,6 +176,11 @@ $(MAIN_TAP): $(MAIN_BIN)
 $(ASMLOADER_TAP): $(ASMLOADER_BIN)
 	echo "Creating TAP $@..."
 	z88dk-appmake +zx --noloader --org 0x8000 -b $<
+
+# we set org at 0x0000 for the subs (unused)
+sub_%.tap: sub_%.bin
+	echo "Creating TAP $@..."
+	z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $<
 
 ##
 ## Main

@@ -165,6 +165,17 @@ sub add_default_build_features {
 ## Input data parsing and state machine
 ##########################################
 
+sub optional_hex_decode {
+    my $value = shift;
+    if ( $value =~ m/^0x[0-9a-f]+$/i ) {
+        return hex( $value );
+    }
+    if ( $value =~ m/^\$([0-9a-f]+)$/i ) {
+        return hex( $1 );
+    }
+    return $value;
+}
+
 sub read_input_data {
     # possible states: NONE, BTILE, SCREEN, SPRITE, HERO, GAME_CONFIG, RULE
     # initial state
@@ -1069,12 +1080,14 @@ sub read_input_data {
                         map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                         split( /\s+/, $args )
                     };
-                    if ( not defined( $item->{'type'} ) ) {
-                        die "SINGLE_USE_BLOB: $file, line $current_line: missing TYPE argument\n";
+                    if ( not defined( $item->{'name'} ) ) {
+                        die "SINGLE_USE_BLOB: $file, line $current_line: missing NAME argument\n";
                     }
-                    $game_config->{'single_user_blobs'}{ lc( $item->{'type'} ) } = $item;
+                    if ( not defined( $item->{'load_address'} ) ) {
+                        die "SINGLE_USE_BLOB: $file, line $current_line: missing LOAD_ADDRESS argument\n";
+                    }
+                    push @{ $game_config->{'single_user_blobs'} }, $item;
                     add_build_feature( 'SINGLE_USE_BLOB' );
-                    add_build_feature( 'SINGLE_USE_BLOB_' . uc( $item->{'type'} . 'BUF' ) );
                     next;
                 }
                 if ( $line =~ /^END_GAME_CONFIG$/ ) {
@@ -2615,6 +2628,7 @@ sub integer_in_range {
     return ( ( $value >= $min ) and ( $value <= $max ) );
 }
 
+
 sub check_game_config_is_valid {
     my $errors = 0;
     if ( defined( $game_config->{'zx_target'} ) ) {
@@ -2700,17 +2714,18 @@ sub check_game_config_is_valid {
     }
 
     # SUBs configuration
-    foreach my $k ( keys %{ $game_config->{'single_user_blobs'} } ) {
-        if ( ! grep { $k } qw( ds sp1 ) ) {
-            warn "SINGLE_USER_BLOB: type must be one of SP1,DS\n";
-            $errors++;
+    foreach my $sub ( @{ $game_config->{'single_user_blobs'} } ) {
+        if ( not defined( $sub->{'org_address'} ) ) {
+            $sub->{'org_address'} = $sub->{'load_address'};
         }
-        if ( ( $k eq 'ds' ) and not is_build_feature_enabled( 'ZX_TARGET_128' ) ) {
-            warn "SINGLE_USER_BLOB: type DS can only be used in 128K mode games\n";
-            $errors++;
+        if ( not defined( $sub->{'run_address'} ) ) {
+            $sub->{'run_address'} = $sub->{'org_address'};
         }
-        if ( defined( $game_config->{'single_user_blobs'}{ $k }{'ds_org_address'} ) and ( $k ne 'ds' ) ) {
-            warn "SINGLE_USER_BLOB: DS_ORG_ADDRESS can only specified when TYPE=DS\n";
+        $sub->{'load_address'} = optional_hex_decode( $sub->{'load_address'} );
+        $sub->{'org_address'} = optional_hex_decode( $sub->{'org_address'} );
+        $sub->{'run_address'} = optional_hex_decode( $sub->{'run_address'} );
+        if ( ( $sub->{'load_address'} < 0xC000 ) and not is_build_feature_enabled( 'ZX_TARGET_128' ) ) {
+            warn "SINGLE_USER_BLOB: LOAD_ADDRESS lower than 0xC000 can only be used in 128K mode games\n";
             $errors++;
         }
     }

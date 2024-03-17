@@ -25,19 +25,12 @@
 #include "rage1/codeset.h"
 #include "rage1/charset.h"
 #include "rage1/timer.h"
-#include "rage1/sub.h"
 
 #include "rage1/banked.h"
 
 #include "game_data.h"
 
 void init_program(void) {
-
-#ifdef BUILD_FEATURE_SINGLE_USE_BLOB
-   // if used, the SUBs are run before anything RAGE1 related
-   subs_load();
-   subs_run();
-#endif
 
    // from this point, RAGE1 takes full control of the machine and memory
    init_memory();
