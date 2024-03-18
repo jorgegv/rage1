@@ -68,6 +68,7 @@ sub gather_sub_binaries {
     }
     close BINDIR;
 
+    my $order = 0;
     open GAME_CONFIG, $game_config_name or
         die "** Error: could not open $game_config_name for reading\n";
     while ( my $line = <GAME_CONFIG> ) {
@@ -88,6 +89,8 @@ sub gather_sub_binaries {
             $binaries{ $item->{'name'} }{'load_address'} = $item->{'load_address'};
             $binaries{ $item->{'name'} }{'org_address'} = $org_address;
             $binaries{ $item->{'name'} }{'run_address'} = $run_address;
+            $binaries{ $item->{'name'} }{'order'} = $order;
+            $order++;
         }
     }
 
@@ -204,6 +207,8 @@ EOF_HEADER
 
 
     # load each sub at its LOAD_ADDRESS
+    # it is important that this sort matches the one done by the Makefile to
+    # enumerate the SUBs, which is normally alphabetical
     foreach my $sub ( sort keys %$sub_bins ) {
         my $sub_size = $sub_bins->{ $sub }{'size'};
         my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
@@ -218,11 +223,30 @@ EOF_HEADER
     }
 
     # run each SUB in order
-    foreach my $sub ( sort keys %$sub_bins ) {
+    # this sort must be according to the order in which the SUBs were
+    # defined in the GAME_CONFIG
+    foreach my $sub ( sort { 
+            $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'} 
+            } keys %$sub_bins ) {
+        my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
+        my $sub_org_addr = $sub_bins->{ $sub }{'org_address'};
         my $sub_run_addr = $sub_bins->{ $sub }{'run_address'};
+        my $sub_size = $sub_bins->{ $sub }{'size'};
         push @lines, "\t;; Run SUB '$sub' with ints disabled";
         push @lines, "\tdi";
-        push @lines, "\tcall $sub_run_addr";
+        if ( $sub_load_addr ne $sub_org_addr ) {
+            push @lines, "\tld de,$sub_org_addr\t;; swap from $sub_load_addr to $sub_org_addr";
+            push @lines, "\tld hl,$sub_load_addr";
+            push @lines, "\tld bc,$sub_size";
+            push @lines, "\tcall memswap";
+        }
+        push @lines, "\tcall $sub_run_addr\t;; run SUB";
+        if ( $sub_load_addr ne $sub_org_addr ) {
+            push @lines, "\tld de,$sub_org_addr\t;; swap it back";
+            push @lines, "\tld hl,$sub_load_addr";
+            push @lines, "\tld bc,$sub_size";
+            push @lines, "\tcall memswap";
+        }
         push @lines, "";
     }
 
@@ -235,6 +259,8 @@ EOF_HEADER
     # output auxiliary function
     push @lines, <<EOF_BSWITCH
 
+;; Switch memory bank at 0xC000
+;;   A = bank to activate (0-7)
 bswitch:
         ;; register A contains the bank to switch to
         and     0x07            ; get 3 low bits only
@@ -245,8 +271,24 @@ bswitch:
         ld      bc,0x7ffd       ; set the port number
         ld      (0x5b5c),a      ; ...store the new value to SYS.BANKM
         out     (c),a           ; ...and select the new bank
-        ret                     ; back to BASIC
+        ret
 
+
+;; Swap memory blocks
+;;   BC = size
+;;   DE = dst
+;;   HL = src
+memswap:
+memswap_loop:
+        ld a,(de)
+        ldi
+        dec hl
+        ld (hl),a
+        inc hl
+        jp PE,memswap_loop
+        ret
+
+;; Return to BASIC
 to_basic:
         ei
         ret
