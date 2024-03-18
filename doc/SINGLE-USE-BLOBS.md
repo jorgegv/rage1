@@ -126,3 +126,20 @@ RUN_ADDRESS.
   RAGE1 will take full control over the machine and the DSBUF and SP1BUF
   will be wiped and used for their intended purpose during the game.  At
   this point, the entry code stored in DSBUF and SP1BUF will be fully gone.
+
+## Code notes for SUBs and Z88DK
+
+- Try to use as little of the standard library and the ROM as possible (or
+  not at all).  The library and ROM assume that they control the machine,
+  and that you'll return to BASIC, and they update some SYSVARs (which may
+  corrupt some of your code)
+
+- Try to use --no-crt compilation option (for no CRT), and use your own
+  trivial CRT (in asm) to set an ORG, call `main()` and return to the
+  caller.
+
+- A SUB completely done in assembler allows you full control of the code
+  that will run.
+
+- See the SUBs in `game_src` directory inside the test games `sub_bufs_128`
+  and `sub_bufs_48` for working examples of SUBs.
