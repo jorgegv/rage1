@@ -19,9 +19,11 @@ BEGIN_GAME_CONFIG
 	// single use blob loaded and run from 0xD1ED
 	SINGLE_USE_BLOB	NAME=sp1buf LOAD_ADDRESS=0xD1ED
 
-	// single use blob loaded at 0x5B00, swapped to 0xD1ED and run from there
-	SINGLE_USE_BLOB	NAME=dsbuf LOAD_ADDRESS=0x5B00 ORG_ADDRESS=0xD200
-//	SINGLE_USE_BLOB	NAME=dsbuf LOAD_ADDRESS=0x%B00
+	// single use blob loaded at 0x5B00 and run from there
+	SINGLE_USE_BLOB	NAME=dsbuf1 LOAD_ADDRESS=0x5B00
+
+	// single use blob loaded at 0x6100, swapped to 0xD200 and run from there
+	SINGLE_USE_BLOB	NAME=dsbuf2 LOAD_ADDRESS=0x6100 ORG_ADDRESS=0xD200
 
 	// single use blob loaded at 0x5B00, swapped to 0xD1ED and run from 0xD200
 	// SINGLE_USE_BLOB	NAME=dsbuf2 LOAD_ADDRESS=0x5B00 ORG_ADDRESS=0xD1ED RUN_ADDRESS=0xD200

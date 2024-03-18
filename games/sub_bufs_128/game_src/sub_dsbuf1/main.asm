@@ -1,4 +1,4 @@
-	org 0xD200
+	org __ORG
 
 extern _main
 

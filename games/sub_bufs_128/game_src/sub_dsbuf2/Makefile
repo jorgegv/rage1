@@ -9,7 +9,7 @@ SUB_BIN = sub.bin
 SUB_SRC = main.asm main.c
 
 # DATASET buffer address
-ORG = 0xD1ED
+ORG = 0xD200
 
 BIN_CMD = zcc +zx -zorg=$(ORG) -Ca -D__ORG=$(ORG) -m --list --c-code-in-asm --no-crt -o $(SUB_BIN)
 

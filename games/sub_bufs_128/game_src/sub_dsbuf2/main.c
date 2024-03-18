@@ -59,9 +59,9 @@ void main( void ) {
     set_border( INK_BLACK );
     blank_screen( INK_BLACK | PAPER_BLACK );
 
-    print_string( 10, 6, "                    ", INK_WHITE | PAPER_RED );
-    print_string( 11, 6, " This is DSBUF SUB  ", INK_WHITE | PAPER_RED );
-    print_string( 12, 6, "                    ", INK_WHITE | PAPER_RED );
+    print_string( 10, 6, "                    ", INK_BLACK | PAPER_GREEN );
+    print_string( 11, 6, " This is DSBUF2 SUB ", INK_BLACK | PAPER_GREEN );
+    print_string( 12, 6, "                    ", INK_BLACK | PAPER_GREEN );
 
     print_string( 15, 6, "** Press any key **", INK_WHITE | PAPER_BLACK );
 
