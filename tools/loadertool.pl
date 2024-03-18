@@ -21,10 +21,12 @@ use lib "$FindBin::Bin/../lib";
 
 require RAGE::Config;
 
-my $basic_loader_name = 'loader.bas';
-my $asm_loader_name = 'asmloader.asm';
+# filenames are relative to the GENERATED dir, normally 'build/generated'
 
-my $main_bin_filename = 'main_CODE.bin';
+my $basic_loader_name	= 'loader.bas';
+my $asm_loader_name	= 'asmloader.asm';
+my $game_config_name	= 'build/game_data/game_config/Game.gdata';
+my $main_bin_filename	= 'main_CODE.bin';
 
 my $cfg = rage1_get_config();
 
@@ -49,6 +51,50 @@ sub gather_bank_binaries {
     return \%binaries;
 }
 
+# sub binaries are files under build/generated/ with names sub_<name>.bin
+sub gather_sub_binaries {
+    my ( $dir ) = @_;
+    my %binaries;
+
+    opendir BINDIR, $dir or
+        die "** Error: could not open directory $dir for reading\n";
+    foreach my $bin ( grep { /^sub_.*\.bin/ } readdir BINDIR ) {
+        $bin =~ m/^sub_(.*)\.bin/;
+        $binaries{ $1 } = {
+                'name'	=> $bin,
+                'size'	=> ( stat( "$dir/$bin" ) )[7],
+                'dir'	=> $dir,
+        };
+    }
+    close BINDIR;
+
+    open GAME_CONFIG, $game_config_name or
+        die "** Error: could not open $game_config_name for reading\n";
+    while ( my $line = <GAME_CONFIG> ) {
+        chomp( $line );
+        $line =~ s/^\s*//g;         # remove leading blanks
+        $line =~ s/\/\/.*$//g;      # remove comments (//...)
+        $line =~ s/\s*$//g;         # remove trailing blanks
+        next if $line eq '';                # ignore blank lines
+        if ( $line =~ /^SINGLE_USE_BLOB\s+(\w.*)$/ ) {
+            # ARG1=val1 ARG2=va2 ARG3=val3...
+            my $args = $1;
+            my $item = {
+                map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                split( /\s+/, $args )
+            };
+            my $org_address = $item->{'org_address'} || $item->{'load_address'};
+            my $run_address = $item->{'run_address'} || $org_address;
+            $binaries{ $item->{'name'} }{'load_address'} = $item->{'load_address'};
+            $binaries{ $item->{'name'} }{'org_address'} = $org_address;
+            $binaries{ $item->{'name'} }{'run_address'} = $run_address;
+        }
+    }
+
+    return \%binaries;
+}
+
+# get the size of the main.bin file
 sub get_main_bin_size {
     my @stat_results = stat( $main_bin_filename );
     return $stat_results[7];
@@ -101,7 +147,7 @@ sub generate_basic_loader {
 }
 
 sub generate_assembler_loader {
-    my ( $layout, $outdir ) = @_;
+    my ( $bank_bins, $sub_bins, $outdir ) = @_;
     my $asm_loader = $outdir . '/' . $asm_loader_name;
 
     my @lines;
@@ -115,8 +161,7 @@ EOF_HEADER
 ;
 
     push @lines, "\torg 0x8000";
-    push @lines, "\tdefc LD_BYTES = 1366\t;; ROM routine";
-    push @lines, "\textern bswitch";
+    push @lines, "\tdefc LD_BYTES = 1366\t;; ROM routine at 0x0556";
     push @lines, "";
     push @lines, "\t;; do all loads with interrupts disabled so that bank 7 is not";
     push @lines, "\t;; corrupted by +3DOS at address 0xD200";
@@ -124,14 +169,16 @@ EOF_HEADER
     push @lines, "";
 
     # switch to each bank with the bank switching routine and load each bank content at 0xC000
-    foreach my $bank ( sort keys %$layout ) {
+    foreach my $bank ( sort keys %$bank_bins ) {
+        my $bank_size = $bank_bins->{ $bank }{'size'};
         push @lines, "\tld a,$bank\t\t;; switch to bank $bank";
         push @lines, "\tcall bswitch";
         push @lines, "\tld a,0xff\t;; load data operation";
-        push @lines, sprintf( "\tld de,%d\t;; number of bytes to load", $layout->{ $bank }{'size'} );
+        push @lines, "\tld de,$bank_size\t;; number of bytes to load";;
         push @lines, "\tld ix,0xc000\t;; destination address";
         push @lines, "\tscf";
         push @lines, "\tcall LD_BYTES\t;; load block";
+        push @lines, "\tjp nc,to_basic";
         push @lines, "";
     }
 
@@ -146,18 +193,46 @@ EOF_HEADER
         hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
         $cfg->{'interrupts_128'}{'base_code_address'}
     );
+    my $main_size = get_main_bin_size;
     push @lines, "\tld a,0xff";
-    push @lines, sprintf( "\tld de,%d", get_main_bin_size );
+    push @lines, "\tld de,$main_size";
     push @lines, "\tld ix,$main_code_start";
     push @lines, "\tscf";
     push @lines, "\tcall LD_BYTES";
+    push @lines, "\tjp nc,to_basic";
     push @lines, "";
 
+
+    # load each sub at its LOAD_ADDRESS
+    foreach my $sub ( sort keys %$sub_bins ) {
+        my $sub_size = $sub_bins->{ $sub }{'size'};
+        my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
+        push @lines, "\t;; Load SUB '$sub'";
+        push @lines, "\tld a,0xff\t;; load data operation";
+        push @lines, "\tld de,$sub_size\t;; number of bytes to load";;
+        push @lines, "\tld ix,$sub_load_addr\t;; destination address";
+        push @lines, "\tscf";
+        push @lines, "\tcall LD_BYTES\t;; load block";
+        push @lines, "\tjp nc,to_basic";
+        push @lines, "";
+    }
+
+    # run each SUB in order
+    foreach my $sub ( sort keys %$sub_bins ) {
+        my $sub_run_addr = $sub_bins->{ $sub }{'run_address'};
+        push @lines, "\t;; Run SUB '$sub' with ints disabled";
+        push @lines, "\tdi";
+        push @lines, "\tcall $sub_run_addr";
+        push @lines, "";
+    }
+
+    # transfer control to main
     push @lines, "\t;; Start execution";
     push @lines, "\tdi";
     push @lines, "\tjp $main_code_start";
     push @lines, "\t;; shouldn't return";
 
+    # output auxiliary function
     push @lines, <<EOF_BSWITCH
 
 bswitch:
@@ -171,10 +246,14 @@ bswitch:
         ld      (0x5b5c),a      ; ...store the new value to SYS.BANKM
         out     (c),a           ; ...and select the new bank
         ret                     ; back to BASIC
+
+to_basic:
+        ei
+        ret
 EOF_BSWITCH
 ;
 
-    # that's it, output the BASIC program
+    # that's it, output the ASM program
     open my $asm, ">", $asm_loader
         or die "\n** Error: could not open $asm_loader for writing\n";
     foreach my $line ( @lines ) {
@@ -199,7 +278,8 @@ my $loading_screen = $opt_s;
 # if $lowmem_output_dir is not specified, use same as $output_dir
 my ( $input_dir, $output_dir ) = ( $opt_i, $opt_o );
 
-my $bins = gather_bank_binaries( $input_dir );
+my $bank_bins = gather_bank_binaries( $input_dir );
+my $sub_bins = gather_sub_binaries( $input_dir );
 
 #generate_basic_loader( $bins, $output_dir, $loading_screen );
-generate_assembler_loader( $bins, $output_dir );
+generate_assembler_loader( $bank_bins, $sub_bins, $output_dir );

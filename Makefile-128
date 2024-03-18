@@ -24,22 +24,13 @@ CFLAGS			+= -pragma-define:REGISTER_SP=$(ISR_VECTOR_ADDRESS_128)
 .PHONY: datasets codesets taps
 
 build:
-	if ( grep -q -Pi '^\s*SINGLE_USE_BLOB\s+TYPE=SP1' $(GAME_DATA_DIR)/game_config/*.gdata ) then \
-		$(MAKE) -s -C $(GAME_SRC_DIR)/sub_sp1buf sub_bin sub_tap_nohdr; \
-	fi
-	if ( grep -q -Pi '^\s*SINGLE_USE_BLOB\s+TYPE=DS' $(GAME_DATA_DIR)/game_config/*.gdata ) then \
-		$(MAKE) -s -C $(GAME_SRC_DIR)/sub_dsbuf sub_bin sub_tap_nohdr; \
-	fi
-	if ( grep -q -Pi '^\s*SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata ) then \
-		./tools/gen_sub_data.sh; \
-	fi
+	$(MYMAKE) subs
 	$(MYMAKE) banked_definitions
 	$(MYMAKE) datasets
 	$(MYMAKE) codesets
 	$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
 	$(MYMAKE) banks
 	$(MYMAKE) main
-	$(MYMAKE) subs
 	$(MYMAKE) loader
 	$(MYMAKE) asmloader
 	cp $(ENGINE_DIR)/loader128/$(BAS_LOADER_SRC) $(BAS_LOADER)
@@ -111,12 +102,15 @@ codeset_%.bin:
 ## SUBs (Single Use Binaries) compilation to standalone binaries
 ##
 
-subs: $(SUB_BINS)
-
-sub_%.bin:
-	echo "Compiling SUB $@ ..."
-	$(MYMAKE) -s -C $(GENERATED_DIR_SUBS)/sub_$@ sub_bin
-	cp $(GENERATED_DIR_SUBS)/$@/sub.bin $(GENERATED_DIR)/$@.bin
+subs:
+	-for i in $(GAME_SRC_DIR)/sub_*; do mv "$$i" "$(GENERATED_DIR_SUBS)/$$( basename "$$i" ).src"; done
+	set -e && for sub_dir_full in $(GENERATED_DIR_SUBS)/sub_*.src; do \
+		sub_dir=$$( basename "$$sub_dir_full") ; \
+		sub=$$( basename "$$sub_dir" .src ) ; \
+		echo "Compiling SUB $$sub ..." ; \
+		$(MAKE) -s -C "$$sub_dir_full" sub_bin ; \
+		cp "$$sub_dir_full/sub.bin" $(GENERATED_DIR)/$$sub.bin ; \
+	done
 
 ##
 ## Banked code compilation to standalone binary at 0xC000

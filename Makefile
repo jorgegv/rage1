@@ -51,7 +51,8 @@ config:
 		$(GENERATED_DIR_LOWMEM)/	\
 		$(GENERATED_DIR_BANKED_128)/	\
 		$(GENERATED_DIR_BANKED_COMMON)/	\
-		$(GENERATED_DIR_ASMLOADER)/
+		$(GENERATED_DIR_ASMLOADER)/	\
+		$(GENERATED_DIR_SUBS)/
 	cp -r $(TARGET_GAME)/game_data/* $(GAME_DATA_DIR)/
 	cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
 	$(MYMAKE) show	# shows game name and build configuration

@@ -19,8 +19,8 @@ GENERATED_DIR_CODESETS		= $(GENERATED_DIR)/codesets
 GENERATED_DIR_LOWMEM		= $(GENERATED_DIR)/lowmem
 GENERATED_DIR_BANKED_128	= $(GENERATED_DIR)/banked/128
 GENERATED_DIR_BANKED_COMMON	= $(GENERATED_DIR)/banked/common
-GENERATED_DIR_ASMLOADER		= $(GENERATED_DIR)/asmloader/
-GENERATED_DIR_SUBS		= $(GENERATED_DIR)/subs/
+GENERATED_DIR_ASMLOADER		= $(GENERATED_DIR)/asmloader
+GENERATED_DIR_SUBS		= $(GENERATED_DIR)/subs
 GAME_SRC_DIR			= $(BUILD_DIR)/game_src
 GAME_DATA_DIR			= $(BUILD_DIR)/game_data
 
@@ -71,7 +71,8 @@ BANK_BINS		= $(wildcard $(GENERATED_DIR)/bank_*.bin )
 BANK_TAPS		= $(BANK_BINS:.bin=.tap)
 
 # SUB binaries and taps
-SUB_BINS		= $(wildcard $(GENERATED_DIR)/sub_*.bin )
+SUB_DIRS		= $(wildcard $(GENERATED_DIR_SUBS)/sub_*.src)
+SUB_BINS		= $(wildcard $(GENERATED_DIR)/sub_*.bin)
 SUB_TAPS		= $(SUB_BINS:.bin=.tap)
 
 # Loader routine and tap

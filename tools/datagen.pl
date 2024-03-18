@@ -1073,7 +1073,7 @@ sub read_input_data {
                     add_build_feature( 'CUSTOM_STATE_DATA' );
                     next;
                 }
-                if ( $line =~ /^SINGLE_USE_BLOB\s+(\w.*)$/ ) {
+                if ( $line =~ /^SINGLE_USE_BLOB\s+(.*)$/ ) {
                     # ARG1=val1 ARG2=va2 ARG3=val3...
                     my $args = $1;
                     my $item = {
