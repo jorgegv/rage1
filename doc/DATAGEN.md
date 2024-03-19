@@ -567,6 +567,7 @@ BEGIN_GAME_CONFIG
         TRACKER_SONG    NAME=in_game_song FILE=game_data/music/music2.aks
 	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
 	CUSTOM_STATE_DATA	SIZE=8
+        SINGLE_USE_BLOB NAME=dsbuf2 LOAD_ADDRESS=0x6100 ORG_ADDRESS=0xD200 RUN_ADDRESS=0xD212
 END_GAME_CONFIG
 ```
 
@@ -733,6 +734,24 @@ including different data pieces.  Arguments:
   parameter. The reserved area can be accessed via the
   `game_state.custom_data` byte array, and will have a maximum size of
   `CUSTOM_STATE_DATA_SIZE` bytes.
+
+* `SINGLE_USE_BLOB`: load and runs a SUB (Single Use Blob). Arguments:
+  * `NAME`: (mandatory) a regular RAGE1 identifier used to refer to the SUB.
+  * `LOAD_ADDRESS`: (mandatory) indicates where the blob will be loaded in
+    the load stage
+  * `ORG_ADDRESS`: (optional) indicates where the blob must be located for
+    running.  If not specified LOAD_ADDRESS will be used as ORG_ADDRESS.
+  * `RUN_ADDRESS`: (optional) indicates the entry point that will be called
+    to execute the code.  If not specified, ORG_ADDRESS will be used as
+    RUN_ADDRESS.
+  * If LOAD_ADDRESS is different from ORG_ADDRESS, the block wil be
+    exchanged temporarily from LOAD_ADDRESS to ORG_ADDRESS before running,
+    and restored to the original location after it has finished.  See
+    [SINGLE-USE-BLOBS.md](SINGLE-USE-BLOBS.md) for an explanation.
+  * Addresses can be specified in decimal, or in hex notation, with '0x' or
+    '$' prefixes
+  * SUBs loaded at addresses below 0xC000 are only allowed in 128K mode. 
+    SUBs at that address or above are allowed in both 48K and 128K modes.
 
 # FLOWGEN
 
