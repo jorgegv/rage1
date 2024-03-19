@@ -103,52 +103,6 @@ sub get_main_bin_size {
     return $stat_results[7];
 }
 
-# currently unused, I leave it here just in case
-sub generate_basic_loader {
-    my ( $layout, $outdir, $loading_screen ) = @_;
-    my $bas_loader = $outdir . '/' . $basic_loader_name;
-
-    # generate the lines first, we'll number them later
-    my @lines;
-
-    # Bank switch routine loads at address 0x8000, CLEAR to the byte before
-    push @lines, sprintf( 'CLEAR VAL "%d"', 0x7FFF );
-
-    # if we want an initial SCREEN$, generate loading code and disable output to screen
-    if ( $loading_screen ) {
-        push @lines, 'BORDER VAL "0": PAPER VAL "0": INK VAL "0": CLS';
-        push @lines, 'LOAD "" SCREEN$:POKE VAL "23739", VAL "111"';
-    }
-
-    # load bank switching code at 0x8000 (32768)
-    # bank variable is at 0x8000, code switching entry point at 0x8001
-    push @lines, 'LOAD "" CODE';
-
-    # switch to each bank with the bank switching routine and load each bank content at 0xC000
-    foreach my $bank ( sort keys %$layout ) {
-        push @lines, sprintf( 'POKE VAL "%d", VAL "%d" : RANDOMIZE USR VAL "%d" : LOAD "" CODE', 0x8000, $bank, 0x8001 );
-    }
-
-    # switch back to bank 0
-    push @lines, sprintf( 'POKE VAL "%d", VAL "%d" : RANDOMIZE USR VAL "%d"', 0x8000, 0, 0x8001 );
-
-    # load main program code at base code address and start execution
-    my $main_code_start = ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
-        hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
-        $cfg->{'interrupts_128'}{'base_code_address'}
-    );
-    push @lines, sprintf( 'LOAD "" CODE : RANDOMIZE USR VAL "%d"', $main_code_start );
-
-    # that's it, output the BASIC program
-    open my $bas_h, ">", $bas_loader
-        or die "\n** Error: could not open $bas_loader for writing\n";
-    my $line_number = 10;
-    foreach my $line ( @lines ) {
-        printf $bas_h "%3d %s\n", $line_number, $line;
-        $line_number += 10;
-    }
-}
-
 sub generate_assembler_loader {
     my ( $bank_bins, $sub_bins, $outdir ) = @_;
     my $asm_loader = $outdir . '/' . $asm_loader_name;
@@ -207,9 +161,11 @@ EOF_HEADER
 
 
     # load each sub at its LOAD_ADDRESS
-    # it is important that this sort matches the one done by the Makefile to
-    # enumerate the SUBs, which is normally alphabetical
-    foreach my $sub ( sort keys %$sub_bins ) {
+    # this sort must be according to the order in which the SUBs were
+    # defined in the GAME_CONFIG
+    foreach my $sub ( sort {
+            $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'}
+            }keys %$sub_bins ) {
         my $sub_size = $sub_bins->{ $sub }{'size'};
         my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
         push @lines, "\t;; Load SUB '$sub'";
@@ -226,7 +182,7 @@ EOF_HEADER
     # this sort must be according to the order in which the SUBs were
     # defined in the GAME_CONFIG
     foreach my $sub ( sort { 
-            $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'} 
+            $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'}
             } keys %$sub_bins ) {
         my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
         my $sub_org_addr = $sub_bins->{ $sub }{'org_address'};
@@ -272,7 +228,6 @@ bswitch:
         ld      (0x5b5c),a      ; ...store the new value to SYS.BANKM
         out     (c),a           ; ...and select the new bank
         ret
-
 
 ;; Swap memory blocks
 ;;   BC = size
@@ -323,5 +278,4 @@ my ( $input_dir, $output_dir ) = ( $opt_i, $opt_o );
 my $bank_bins = gather_bank_binaries( $input_dir );
 my $sub_bins = gather_sub_binaries( $input_dir );
 
-#generate_basic_loader( $bins, $output_dir, $loading_screen );
 generate_assembler_loader( $bank_bins, $sub_bins, $output_dir );

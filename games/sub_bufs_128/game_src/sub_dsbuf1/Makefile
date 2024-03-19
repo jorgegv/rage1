@@ -11,7 +11,7 @@ SUB_SRC = main.asm main.c
 # DATASET buffer address
 ORG = 0x5B00
 
-BIN_CMD = zcc +zx -zorg=$(ORG) -Ca -D__ORG=$(ORG) -m --list --c-code-in-asm --no-crt -o $(SUB_BIN)
+BIN_CMD = zcc +zx -Wno-incompatible-pointer-types -zorg=$(ORG) -Ca -D__ORG=$(ORG) -m --list --c-code-in-asm --no-crt -o $(SUB_BIN)
 
 # binary-only generation, used for getting exact size
 sub_bin:

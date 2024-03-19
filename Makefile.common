@@ -71,8 +71,9 @@ BANK_BINS		= $(wildcard $(GENERATED_DIR)/bank_*.bin )
 BANK_TAPS		= $(BANK_BINS:.bin=.tap)
 
 # SUB binaries and taps
-SUB_DIRS		= $(wildcard $(GENERATED_DIR_SUBS)/sub_*.src)
-SUB_BINS		= $(wildcard $(GENERATED_DIR)/sub_*.bin)
+# The order of the SUBs must be _always_ the one of the GAME_CONFIG file
+SUB_DIRS		= $(shell grep -P '^\s*SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/Game.gdata |grep -Po 'NAME=\w+'|cut -f2 -d=|sed 's/^/sub_/g')
+SUB_BINS		= $(shell grep -P '^\s*SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/Game.gdata |grep -Po 'NAME=\w+'|cut -f2 -d=|sed 's/^/sub_/g'|sed 's/$$/.bin/g')
 SUB_TAPS		= $(SUB_BINS:.bin=.tap)
 
 # Loader routine and tap
