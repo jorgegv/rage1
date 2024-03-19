@@ -30,6 +30,9 @@ my $main_bin_filename	= 'main_CODE.bin';
 
 my $cfg = rage1_get_config();
 
+my $loader_org_48	= 0x5E00;
+my $loader_org_128	= 0x8000;
+
 # auxiliary functions
 
 # bank binaries are files under build/generated/ with names bank_N.bin
@@ -97,6 +100,23 @@ sub gather_sub_binaries {
     return \%binaries;
 }
 
+sub get_zx_target {
+    open GAME_CONFIG, $game_config_name or
+        die "** Error: could not open $game_config_name for reading\n";
+    while ( my $line = <GAME_CONFIG> ) {
+        chomp( $line );
+        $line =~ s/^\s*//g;         # remove leading blanks
+        $line =~ s/\/\/.*$//g;      # remove comments (//...)
+        $line =~ s/\s*$//g;         # remove trailing blanks
+        next if $line eq '';                # ignore blank lines
+        if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
+            # ARG1=val1 ARG2=va2 ARG3=val3...
+            return $1;
+        }
+    }
+    return '48'; # default
+}
+
 # get the size of the main.bin file
 sub get_main_bin_size {
     my @stat_results = stat( $main_bin_filename );
@@ -109,6 +129,8 @@ sub generate_assembler_loader {
 
     my @lines;
 
+    my $loader_org = ( get_zx_target() eq '48' ? $loader_org_48 : $loader_org_128 );
+
     push @lines, <<EOF_HEADER
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This file has been generated automatically, do not edit!
@@ -117,7 +139,7 @@ sub generate_assembler_loader {
 EOF_HEADER
 ;
 
-    push @lines, "\torg 0x8000";
+    push @lines, "\torg $loader_org";
     push @lines, "\tdefc LD_BYTES = 1366\t;; ROM routine at 0x0556";
     push @lines, "";
     push @lines, "\t;; do all loads with interrupts disabled so that bank 7 is not";
@@ -125,31 +147,38 @@ EOF_HEADER
     push @lines, "\tdi";
     push @lines, "";
 
-    # switch to each bank with the bank switching routine and load each bank content at 0xC000
-    foreach my $bank ( sort keys %$bank_bins ) {
-        my $bank_size = $bank_bins->{ $bank }{'size'};
-        push @lines, "\tld a,$bank\t\t;; switch to bank $bank";
+    if ( get_zx_target() eq '128' ) {
+        # switch to each bank with the bank switching routine and load each bank content at 0xC000
+        foreach my $bank ( sort keys %$bank_bins ) {
+            my $bank_size = $bank_bins->{ $bank }{'size'};
+            push @lines, "\tld a,$bank\t\t;; switch to bank $bank";
+            push @lines, "\tcall bswitch";
+            push @lines, "\tld a,0xff\t;; load data operation";
+            push @lines, "\tld de,$bank_size\t;; number of bytes to load";;
+            push @lines, "\tld ix,0xc000\t;; destination address";
+            push @lines, "\tscf";
+            push @lines, "\tcall LD_BYTES\t;; load block";
+            push @lines, "\tjp nc,to_basic";
+            push @lines, "";
+        }
+
+        # switch back to bank 0
+        push @lines, "\t;; switch to bank 0 and load main binary";
+        push @lines, "\txor a";
         push @lines, "\tcall bswitch";
-        push @lines, "\tld a,0xff\t;; load data operation";
-        push @lines, "\tld de,$bank_size\t;; number of bytes to load";;
-        push @lines, "\tld ix,0xc000\t;; destination address";
-        push @lines, "\tscf";
-        push @lines, "\tcall LD_BYTES\t;; load block";
-        push @lines, "\tjp nc,to_basic";
         push @lines, "";
     }
 
-    # switch back to bank 0
-    push @lines, "\t;; switch to bank 0 and load main binary";
-    push @lines, "\txor a";
-    push @lines, "\tcall bswitch";
-    push @lines, "";
-
     # load main program code at base code address and start execution
-    my $main_code_start = ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
-        hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
-        $cfg->{'interrupts_128'}{'base_code_address'}
-    );
+    my $main_code_start;
+    if ( get_zx_target() eq '128' ) {
+        $main_code_start = ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
+            hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
+            $cfg->{'interrupts_128'}{'base_code_address'}
+        );
+    } else {
+        $main_code_start = 0x5F00;
+    }
     my $main_size = get_main_bin_size;
     push @lines, "\tld a,0xff";
     push @lines, "\tld de,$main_size";
@@ -210,11 +239,11 @@ EOF_HEADER
     push @lines, "\t;; Start execution";
     push @lines, "\tdi";
     push @lines, "\tjp $main_code_start";
-    push @lines, "\t;; shouldn't return";
+    push @lines, "";
 
-    # output auxiliary function
-    push @lines, <<EOF_BSWITCH
-
+    if ( get_zx_target() eq '128' ) {
+        # output auxiliary function for 128 mode
+        push @lines, <<EOF_BSWITCH
 ;; Switch memory bank at 0xC000
 ;;   A = bank to activate (0-7)
 bswitch:
@@ -243,11 +272,17 @@ memswap_loop:
         jp PE,memswap_loop
         ret
 
+EOF_BSWITCH
+;
+    }
+
+    # output auxiliary function for 128 mode
+    push @lines, <<EOF_RETBAS
 ;; Return to BASIC
 to_basic:
         ei
         ret
-EOF_BSWITCH
+EOF_RETBAS
 ;
 
     # that's it, output the ASM program
