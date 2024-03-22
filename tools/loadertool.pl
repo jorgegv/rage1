@@ -129,49 +129,51 @@ sub generate_assembler_loader {
 
     my @lines;
 
-    my $loader_org = ( get_zx_target() eq '48' ? $loader_org_48 : $loader_org_128 );
+    my $loader_org = ( get_zx_target eq '48' ? $loader_org_48 : $loader_org_128 );
 
     push @lines, <<EOF_HEADER
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This file has been generated automatically, do not edit!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+    org $loader_org
+    defc LD_BYTES = 1366	;; ROM routine at 0x0556
+
+    ;; do all loads with interrupts disabled so that bank 7 is not
+    ;; corrupted by +3DOS at address 0xD200
+    di
 EOF_HEADER
 ;
 
-    push @lines, "\torg $loader_org";
-    push @lines, "\tdefc LD_BYTES = 1366\t;; ROM routine at 0x0556";
-    push @lines, "";
-    push @lines, "\t;; do all loads with interrupts disabled so that bank 7 is not";
-    push @lines, "\t;; corrupted by +3DOS at address 0xD200";
-    push @lines, "\tdi";
-    push @lines, "";
-
-    if ( get_zx_target() eq '128' ) {
+    if ( get_zx_target eq '128' ) {
         # switch to each bank with the bank switching routine and load each bank content at 0xC000
         foreach my $bank ( sort keys %$bank_bins ) {
             my $bank_size = $bank_bins->{ $bank }{'size'};
-            push @lines, "\tld a,$bank\t\t;; switch to bank $bank";
-            push @lines, "\tcall bswitch";
-            push @lines, "\tld a,0xff\t;; load data operation";
-            push @lines, "\tld de,$bank_size\t;; number of bytes to load";;
-            push @lines, "\tld ix,0xc000\t;; destination address";
-            push @lines, "\tscf";
-            push @lines, "\tcall LD_BYTES\t;; load block";
-            push @lines, "\tjp nc,to_basic";
-            push @lines, "";
+            push @lines, <<EOF_BANK1
+    ld a,$bank		;; switch to bank $bank
+    call bswitch
+    ld a,0xff		;; load data operation
+    ld de,$bank_size	;; number of bytes to load
+    ld ix,0xc000	;; destination address
+    scf
+    call LD_BYTES	;; load block
+    jp nc,to_basic
+EOF_BANK1
+;
         }
 
         # switch back to bank 0
-        push @lines, "\t;; switch to bank 0 and load main binary";
-        push @lines, "\txor a";
-        push @lines, "\tcall bswitch";
-        push @lines, "";
+        push @lines, <<EOF_BANK0
+    ;; switch to bank 0 and load main binary
+    xor a
+    call bswitch
+EOF_BANK0
+;
     }
 
     # load main program code at base code address and start execution
     my $main_code_start;
-    if ( get_zx_target() eq '128' ) {
+    if ( get_zx_target eq '128' ) {
         $main_code_start = ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
             hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
             $cfg->{'interrupts_128'}{'base_code_address'}
@@ -180,14 +182,15 @@ EOF_HEADER
         $main_code_start = 0x5F00;
     }
     my $main_size = get_main_bin_size;
-    push @lines, "\tld a,0xff";
-    push @lines, "\tld de,$main_size";
-    push @lines, "\tld ix,$main_code_start";
-    push @lines, "\tscf";
-    push @lines, "\tcall LD_BYTES";
-    push @lines, "\tjp nc,to_basic";
-    push @lines, "";
-
+    push @lines, <<EOF_LOAD_MAIN
+    ld a,0xff
+    ld de,$main_size
+    ld ix,$main_code_start
+    scf
+    call LD_BYTES
+    jp nc,to_basic
+EOF_LOAD_MAIN
+;
 
     # load each sub at its LOAD_ADDRESS
     # this sort must be according to the order in which the SUBs were
@@ -197,14 +200,16 @@ EOF_HEADER
             }keys %$sub_bins ) {
         my $sub_size = $sub_bins->{ $sub }{'size'};
         my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
-        push @lines, "\t;; Load SUB '$sub'";
-        push @lines, "\tld a,0xff\t;; load data operation";
-        push @lines, "\tld de,$sub_size\t;; number of bytes to load";;
-        push @lines, "\tld ix,$sub_load_addr\t;; destination address";
-        push @lines, "\tscf";
-        push @lines, "\tcall LD_BYTES\t;; load block";
-        push @lines, "\tjp nc,to_basic";
-        push @lines, "";
+        push @lines, <<EOF_LOAD_SUB
+    ;; Load SUB '$sub'
+    ld a,0xff	;; load data operation
+    ld de,$sub_size	;; number of bytes to load
+    ld ix,$sub_load_addr	;; destination address
+    scf
+    call LD_BYTES	;; load block
+    jp nc,to_basic
+EOF_LOAD_SUB
+;
     }
 
     # run each SUB in order
@@ -217,46 +222,58 @@ EOF_HEADER
         my $sub_org_addr = $sub_bins->{ $sub }{'org_address'};
         my $sub_run_addr = $sub_bins->{ $sub }{'run_address'};
         my $sub_size = $sub_bins->{ $sub }{'size'};
-        push @lines, "\t;; Run SUB '$sub' with ints disabled";
-        push @lines, "\tdi";
+        push @lines, <<EOF_RUN_SUB1
+    ;; Run SUB '$sub' with ints disabled
+    di
+EOF_RUN_SUB1
+;
         if ( $sub_load_addr ne $sub_org_addr ) {
-            push @lines, "\tld de,$sub_org_addr\t;; swap from $sub_load_addr to $sub_org_addr";
-            push @lines, "\tld hl,$sub_load_addr";
-            push @lines, "\tld bc,$sub_size";
-            push @lines, "\tcall memswap";
+            push @lines, <<EOF_RUN_SUB2
+    ld de,$sub_org_addr	;; swap from $sub_load_addr to $sub_org_addr
+    ld hl,$sub_load_addr
+    ld bc,$sub_size
+    call memswap
+EOF_RUN_SUB2
+;
         }
-        push @lines, "\tcall $sub_run_addr\t;; run SUB";
+        push @lines, <<EOF_RUN_SUB3
+    call $sub_run_addr	;; run SUB
+EOF_RUN_SUB3
+;
         if ( $sub_load_addr ne $sub_org_addr ) {
-            push @lines, "\tld de,$sub_org_addr\t;; swap it back";
-            push @lines, "\tld hl,$sub_load_addr";
-            push @lines, "\tld bc,$sub_size";
-            push @lines, "\tcall memswap";
+            push @lines, <<EOF_RUN_SUB4
+    ld de,$sub_org_addr	;; swap it back
+    ld hl,$sub_load_addr
+    ld bc,$sub_size
+    call memswap
+EOF_RUN_SUB4
+;
         }
-        push @lines, "";
     }
 
     # transfer control to main
-    push @lines, "\t;; Start execution";
-    push @lines, "\tdi";
-    push @lines, "\tjp $main_code_start";
-    push @lines, "";
-
-    if ( get_zx_target() eq '128' ) {
+    push @lines, <<EOF_JP_MAIN
+    ;; Start execution
+    di
+    jp $main_code_start
+EOF_JP_MAIN
+;
+    if ( get_zx_target eq '128' ) {
         # output auxiliary function for 128 mode
-        push @lines, <<EOF_BSWITCH
+        push @lines, <<EOF_AUX_FUNC
 ;; Switch memory bank at 0xC000
 ;;   A = bank to activate (0-7)
 bswitch:
-        ;; register A contains the bank to switch to
-        and     0x07            ; get 3 low bits only
-        ld      b,a             ; save for later
-        ld      a,(0x5b5c)      ; get last value from SYS.BANKM
-        and     0xf8            ; save 5 top bits
-        or      b               ; mix new value with old
-        ld      bc,0x7ffd       ; set the port number
-        ld      (0x5b5c),a      ; ...store the new value to SYS.BANKM
-        out     (c),a           ; ...and select the new bank
-        ret
+    ;; register A contains the bank to switch to
+    and     0x07            ; get 3 low bits only
+    ld      b,a             ; save for later
+    ld      a,(0x5b5c)      ; get last value from SYS.BANKM
+    and     0xf8            ; save 5 top bits
+    or      b               ; mix new value with old
+    ld      bc,0x7ffd       ; set the port number
+    ld      (0x5b5c),a      ; ...store the new value to SYS.BANKM
+    out     (c),a           ; ...and select the new bank
+    ret
 
 ;; Swap memory blocks
 ;;   BC = size
@@ -264,15 +281,14 @@ bswitch:
 ;;   HL = src
 memswap:
 memswap_loop:
-        ld a,(de)
-        ldi
-        dec hl
-        ld (hl),a
-        inc hl
-        jp PE,memswap_loop
-        ret
-
-EOF_BSWITCH
+    ld a,(de)
+    ldi
+    dec hl
+    ld (hl),a
+    inc hl
+    jp PE,memswap_loop
+    ret
+EOF_AUX_FUNC
 ;
     }
 
@@ -280,8 +296,8 @@ EOF_BSWITCH
     push @lines, <<EOF_RETBAS
 ;; Return to BASIC
 to_basic:
-        ei
-        ret
+    ei
+    ret
 EOF_RETBAS
 ;
 
