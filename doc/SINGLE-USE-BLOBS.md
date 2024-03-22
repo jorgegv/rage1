@@ -37,7 +37,7 @@ indicated in the next sections.
 ```
 GAME_CONFIG
 	(...)
-	SINGLE_USE_BLOB NAME=<name> LOAD_ADDRESS=XXXX ORG_ADDRESS=YYYY RUN_ADDRESS=ZZZZ
+	SINGLE_USE_BLOB NAME=<name> LOAD_ADDRESS=XXXX ORG_ADDRESS=YYYY RUN_ADDRESS=ZZZZ COMPRESS=1
 	(...)
 END_GAME_CONFIG
 
@@ -70,11 +70,14 @@ RUN_ADDRESS.
 - Checks will be implemented to enable DSBUF SUB only in 128K mode. SP1BUF
   SUB will be allowed in both modes.
 
+- If COMPRESS is 1, then the binary will be stored compressed with ZX0, and
+  decompressed to ORG_ADDRESS before being executed.
+
 ## Loadertool changes
 
 - The regular ASM loader will be modified to also load SUBs after all banks
-  have been loaded.  The loader code will load, swap (if needed) and run
-  the SUB code before jumping to the main program.
+  have been loaded.  The loader code will load, swap (if needed), decompress
+  (if needed) and run the SUB code before jumping to the main program.
 
 - The SUBs will be loaded and run in the same order as they are specified in
   the GAME_CONFIG directive.

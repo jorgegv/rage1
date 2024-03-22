@@ -71,6 +71,18 @@ sub gather_sub_binaries {
     }
     close BINDIR;
 
+    opendir BINDIR, $dir or
+        die "** Error: could not open directory $dir for reading\n";
+    foreach my $bin ( grep { /^sub_.*\.bin.zx0/ } readdir BINDIR ) {
+        $bin =~ m/^sub_(.*)\.bin.zx0/;
+        $binaries{ $1 } = {
+                'compressed_name'	=> $bin,
+                'compressed_size'	=> ( stat( "$dir/$bin" ) )[7],
+                'dir'			=> $dir,
+        };
+    }
+    close BINDIR;
+
     my $order = 0;
     open GAME_CONFIG, $game_config_name or
         die "** Error: could not open $game_config_name for reading\n";
@@ -198,7 +210,11 @@ EOF_LOAD_MAIN
     foreach my $sub ( sort {
             $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'}
             }keys %$sub_bins ) {
-        my $sub_size = $sub_bins->{ $sub }{'size'};
+
+        my $sub_size = ( $sub_bins->{ $sub }{'compress'} ?
+            $sub_bins->{ $sub }{'compressed_size'} :
+            $sub_bins->{ $sub }{'size'}
+        );
         my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
         push @lines, <<EOF_LOAD_SUB
     ;; Load SUB '$sub'
@@ -215,6 +231,8 @@ EOF_LOAD_SUB
     # run each SUB in order
     # this sort must be according to the order in which the SUBs were
     # defined in the GAME_CONFIG
+    my $some_subs_are_compressed = 0;
+    my $some_subs_are_swapped = 0;
     foreach my $sub ( sort { 
             $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'}
             } keys %$sub_bins ) {
@@ -227,27 +245,41 @@ EOF_LOAD_SUB
     di
 EOF_RUN_SUB1
 ;
-        if ( $sub_load_addr ne $sub_org_addr ) {
-            push @lines, <<EOF_RUN_SUB2
+
+        if ( $sub_bins->{ $sub }{'compress'} ) {
+            $some_subs_are_compressed++;
+            push @lines, <<EOF_UNCOMPRESS
+    ld de,$sub_org_addr	;; set src and dest for decompression
+    ld hl,$sub_load_addr
+    call dzx0_standard
+
+    call $sub_run_addr	;; run SUB
+EOF_UNCOMPRESS
+;
+        } else {
+            if ( $sub_load_addr ne $sub_org_addr ) {
+                $some_subs_are_swapped++;
+                push @lines, <<EOF_RUN_SUB2
     ld de,$sub_org_addr	;; swap from $sub_load_addr to $sub_org_addr
     ld hl,$sub_load_addr
     ld bc,$sub_size
     call memswap
 EOF_RUN_SUB2
 ;
-        }
-        push @lines, <<EOF_RUN_SUB3
+            }
+            push @lines, <<EOF_RUN_SUB3
     call $sub_run_addr	;; run SUB
 EOF_RUN_SUB3
 ;
-        if ( $sub_load_addr ne $sub_org_addr ) {
-            push @lines, <<EOF_RUN_SUB4
+            if ( $sub_load_addr ne $sub_org_addr ) {
+                push @lines, <<EOF_RUN_SUB4
     ld de,$sub_org_addr	;; swap it back
     ld hl,$sub_load_addr
     ld bc,$sub_size
     call memswap
 EOF_RUN_SUB4
 ;
+            }
         }
     }
 
@@ -258,9 +290,10 @@ EOF_RUN_SUB4
     jp $main_code_start
 EOF_JP_MAIN
 ;
+
+    # output auxiliary functions for 128 mode
     if ( get_zx_target eq '128' ) {
-        # output auxiliary function for 128 mode
-        push @lines, <<EOF_AUX_FUNC
+        push @lines, <<EOF_BSWITCH
 ;; Switch memory bank at 0xC000
 ;;   A = bank to activate (0-7)
 bswitch:
@@ -274,7 +307,13 @@ bswitch:
     ld      (0x5b5c),a      ; ...store the new value to SYS.BANKM
     out     (c),a           ; ...and select the new bank
     ret
+EOF_BSWITCH
+;
+    }
 
+    # output memswap function if needed
+    if ( $some_subs_are_swapped ) {
+        push @lines, <<EOF_MEMSWAP
 ;; Swap memory blocks
 ;;   BC = size
 ;;   DE = dst
@@ -288,7 +327,77 @@ memswap_loop:
     inc hl
     jp PE,memswap_loop
     ret
-EOF_AUX_FUNC
+EOF_MEMSWAP
+;
+    }
+
+    # output decompress function if needed
+    if ( $some_subs_are_compressed ) {
+        push @lines, <<EOF_COMPRESS
+; -----------------------------------------------------------------------------
+; ZX0 decoder by Einar Saukas
+; "Standard" version (69 bytes only)
+; -----------------------------------------------------------------------------
+; Parameters:
+;   HL: source address (compressed data)
+;   DE: destination address (decompressing)
+; -----------------------------------------------------------------------------
+
+dzx0_standard:
+        ld      bc, 0xffff               ; preserve default offset 1
+        push    bc
+        inc     bc
+        ld      a, 0x80
+dzx0s_literals:
+        call    dzx0s_elias             ; obtain length
+        ldir                            ; copy literals
+        add     a, a                    ; copy from last offset or new offset?
+        jr      c, dzx0s_new_offset
+        call    dzx0s_elias             ; obtain length
+dzx0s_copy:
+        ex      (sp), hl                ; preserve source, restore offset
+        push    hl                      ; preserve offset
+        add     hl, de                  ; calculate destination - offset
+        ldir                            ; copy from offset
+        pop     hl                      ; restore offset
+        ex      (sp), hl                ; preserve offset, restore source
+        add     a, a                    ; copy from literals or new offset?
+        jr      nc, dzx0s_literals
+dzx0s_new_offset:
+        call    dzx0s_elias             ; obtain offset MSB
+        ex      af, af'
+        pop     af                      ; discard last offset
+        xor     a                       ; adjust for negative offset
+        sub     c
+        ret     z                       ; check end marker
+        ld      b, a
+        ex      af, af'
+        ld      c, (hl)                 ; obtain offset LSB
+        inc     hl
+        rr      b                       ; last offset bit becomes first length bit
+        rr      c
+        push    bc                      ; preserve new offset
+        ld      bc, 1                   ; obtain length
+        call    nc, dzx0s_elias_backtrack
+        inc     bc
+        jr      dzx0s_copy
+dzx0s_elias:
+        inc     c                       ; interlaced Elias gamma coding
+dzx0s_elias_loop:
+        add     a, a
+        jr      nz, dzx0s_elias_skip
+        ld      a, (hl)                 ; load another group of 8 bits
+        inc     hl
+        rla
+dzx0s_elias_skip:
+        ret     c
+dzx0s_elias_backtrack:
+        add     a, a
+        rl      c
+        rl      b
+        jr      dzx0s_elias_loop
+; -----------------------------------------------------------------------------
+EOF_COMPRESS
 ;
     }
 

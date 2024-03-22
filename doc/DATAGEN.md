@@ -567,7 +567,7 @@ BEGIN_GAME_CONFIG
         TRACKER_SONG    NAME=in_game_song FILE=game_data/music/music2.aks
 	TRACKER_FXTABLE	FILE=game_data/music/soundfx.aks
 	CUSTOM_STATE_DATA	SIZE=8
-        SINGLE_USE_BLOB NAME=dsbuf2 LOAD_ADDRESS=0x6100 ORG_ADDRESS=0xD200 RUN_ADDRESS=0xD212
+        SINGLE_USE_BLOB NAME=dsbuf2 LOAD_ADDRESS=0x6100 ORG_ADDRESS=0xD200 RUN_ADDRESS=0xD212 COMPRESS=1
 END_GAME_CONFIG
 ```
 
@@ -744,6 +744,10 @@ including different data pieces.  Arguments:
   * `RUN_ADDRESS`: (optional) indicates the entry point that will be called
     to execute the code.  If not specified, ORG_ADDRESS will be used as
     RUN_ADDRESS.
+  * `COMPRESS`: (optional) if 1, the binary will be stored compresses, and
+    will be decompressed to ORG_ADDRESS before being run. The data at
+    ORG_ADDRESS will be overwritten, so make sure that area is free or
+    contains unused data (e.g. an already execuited SUB)
   * If LOAD_ADDRESS is different from ORG_ADDRESS, the block wil be
     exchanged temporarily from LOAD_ADDRESS to ORG_ADDRESS before running,
     and restored to the original location after it has finished.  See
