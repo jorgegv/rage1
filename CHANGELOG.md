@@ -33,7 +33,8 @@ versions).  Update your toolchain if you need to!
   your game, that can be loaded and run before your game is run, using the
   big buffers that are used during the game, but are free at loading time. 
   They can be used for intros, music, etc.  that is executed only once just
-  after the game loads, but it's discarded afterwards.
+  after the game loads, but it's discarded afterwards. They can be
+  compressed, which allows for much bigger intros!
 
 ### Enhancements, Fixes and Optimizations
 
