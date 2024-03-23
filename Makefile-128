@@ -110,7 +110,8 @@ sub_%.bin:
 	$(MAKE) -s -C $(GENERATED_DIR_SUBS)/sub_$*.src
 	cp $(GENERATED_DIR_SUBS)/sub_$*.src/sub.bin  $(GENERATED_DIR)/sub_$*.bin
 	if ( grep -i 'SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata | grep -i 'NAME=$*' | grep -qi 'COMPRESS=1' ) then \
-		$(ZX0) -f $(GENERATED_DIR)/sub_$*.bin ; \
+		echo "Compressing SUB $@ ..." ; \
+		$(ZX0) -f $(GENERATED_DIR)/sub_$*.bin >/dev/null 2>&1 ; \
 	fi
 
 # we set org at 0x0000 for the subs (unused)
