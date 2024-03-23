@@ -109,11 +109,18 @@ sub_%.bin:
 	mv $(GAME_SRC_DIR)/sub_$* $(GENERATED_DIR_SUBS)/sub_$*.src
 	$(MAKE) -s -C $(GENERATED_DIR_SUBS)/sub_$*.src
 	cp $(GENERATED_DIR_SUBS)/sub_$*.src/sub.bin  $(GENERATED_DIR)/sub_$*.bin
+	if ( grep -i 'SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata | grep -i 'NAME=$*' | grep -qi 'COMPRESS=1' ) then \
+		cp $(GENERATED_DIR_SUBS)/sub_$*.src/sub.bin.zx0  $(GENERATED_DIR)/sub_$*.bin.zx0 ; \
+	fi
 
 # we set org at 0x0000 for the subs (unused)
 sub_%.tap:
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin -o sub_$*.tap
+	if ( grep -i 'SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata | grep -i 'NAME=$*' | grep -qi 'COMPRESS=1' ) then \
+		z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin.zx0 -o sub_$*.tap ; \
+	else \
+		z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin -o sub_$*.tap ; \
+	fi
 
 ##
 ## Banked code compilation to standalone binary at 0xC000

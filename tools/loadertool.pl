@@ -61,25 +61,21 @@ sub gather_sub_binaries {
 
     opendir BINDIR, $dir or
         die "** Error: could not open directory $dir for reading\n";
-    foreach my $bin ( grep { /^sub_.*\.bin/ } readdir BINDIR ) {
+    foreach my $bin ( grep { /^sub_.*\.bin$/ } readdir BINDIR ) {
         $bin =~ m/^sub_(.*)\.bin/;
-        $binaries{ $1 } = {
-                'name'	=> $bin,
-                'size'	=> ( stat( "$dir/$bin" ) )[7],
-                'dir'	=> $dir,
-        };
+        $binaries{ $1 }{'name'}	= $bin;
+        $binaries{ $1 }{'size'}	= ( stat( "$dir/$bin" ) )[7];
+        $binaries{ $1 }{'dir'}	= $dir;
     }
     close BINDIR;
 
     opendir BINDIR, $dir or
         die "** Error: could not open directory $dir for reading\n";
-    foreach my $bin ( grep { /^sub_.*\.bin.zx0/ } readdir BINDIR ) {
+    foreach my $bin ( grep { /^sub_.*\.bin\.zx0$/ } readdir BINDIR ) {
         $bin =~ m/^sub_(.*)\.bin.zx0/;
-        $binaries{ $1 } = {
-                'compressed_name'	=> $bin,
-                'compressed_size'	=> ( stat( "$dir/$bin" ) )[7],
-                'dir'			=> $dir,
-        };
+        $binaries{ $1 }{'compressed_name'}	= $bin;
+        $binaries{ $1 }{'compressed_size'}	= ( stat( "$dir/$bin" ) )[7];
+        $binaries{ $1 }{'dir'} 			= $dir;
     }
     close BINDIR;
 
@@ -105,6 +101,7 @@ sub gather_sub_binaries {
             $binaries{ $item->{'name'} }{'org_address'} = $org_address;
             $binaries{ $item->{'name'} }{'run_address'} = $run_address;
             $binaries{ $item->{'name'} }{'order'} = $order;
+            $binaries{ $item->{'name'} }{'compress'} = $item->{'compress'} || 0;
             $order++;
         }
     }
