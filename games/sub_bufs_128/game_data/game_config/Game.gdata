@@ -16,6 +16,11 @@ BEGIN_GAME_CONFIG
 	INVENTORY_AREA	TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
 	DEBUG_AREA	TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
 
+	// Single User Blob definitions - Attention! order matters!
+
+	// intentional error for testing: overlaps with sp1buf when decompressing
+//	SINGLE_USE_BLOB	NAME=dsbuf_error LOAD_ADDRESS=0x7000 ORG_ADDRESS=0xD200 COMPRESS=1
+
 	// single use blob loaded and run from 0xD1ED
 	SINGLE_USE_BLOB	NAME=sp1buf LOAD_ADDRESS=0xD1ED
 
@@ -25,9 +30,16 @@ BEGIN_GAME_CONFIG
 	// single use blob loaded at 0x6000, swapped to 0xD200 and run from there
 	SINGLE_USE_BLOB	NAME=dsbuf2 LOAD_ADDRESS=0x6000 ORG_ADDRESS=0xD200
 
-	// single use blob loaded at 0x6500, decompressed to 0xD200 and run from there
+	// single use blob loaded compressed at 0x6500, decompressed to 0xD200 and run from there
 	SINGLE_USE_BLOB	NAME=dsbuf3 LOAD_ADDRESS=0x6500 ORG_ADDRESS=0xD200 COMPRESS=1
 
 	// single use blob loaded at 0x5B00, swapped to 0xD1ED and run from 0xD200
-	// SINGLE_USE_BLOB	NAME=dsbuf2 LOAD_ADDRESS=0x5B00 ORG_ADDRESS=0xD1ED RUN_ADDRESS=0xD200
+//	SINGLE_USE_BLOB	NAME=dsbufN LOAD_ADDRESS=0x5B00 ORG_ADDRESS=0xD1ED RUN_ADDRESS=0xD200
+
+	// intentional error for testing: duplicate name
+//	SINGLE_USE_BLOB	NAME=dsbuf3 LOAD_ADDRESS=0x6800
+
+	// intentional error for testing: overlaps with sp1buf when loading
+//	SINGLE_USE_BLOB	NAME=dsbuf_error LOAD_ADDRESS=0xD300
+	
 END_GAME_CONFIG

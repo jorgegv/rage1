@@ -1086,7 +1086,7 @@ sub read_input_data {
                     if ( not defined( $item->{'load_address'} ) ) {
                         die "SINGLE_USE_BLOB: $file, line $current_line: missing LOAD_ADDRESS argument\n";
                     }
-                    push @{ $game_config->{'single_user_blobs'} }, $item;
+                    push @{ $game_config->{'single_use_blobs'} }, $item;
                     add_build_feature( 'SINGLE_USE_BLOB' );
                     next;
                 }
@@ -2713,19 +2713,37 @@ sub check_game_config_is_valid {
         add_build_feature( 'GAMEAREA_COLOR_FULL' );
     }
 
-    # SUBs configuration
-    foreach my $sub ( @{ $game_config->{'single_user_blobs'} } ) {
+    # check SUBs configuration
+    my %used_sub_names;
+    foreach my $sub ( @{ $game_config->{'single_use_blobs'} } ) {
         if ( not defined( $sub->{'org_address'} ) ) {
             $sub->{'org_address'} = $sub->{'load_address'};
         }
         if ( not defined( $sub->{'run_address'} ) ) {
             $sub->{'run_address'} = $sub->{'org_address'};
         }
+        if ( not defined( $sub->{'compress'} ) ) {
+            $sub->{'compress'} = 0;
+        }
         $sub->{'load_address'} = optional_hex_decode( $sub->{'load_address'} );
         $sub->{'org_address'} = optional_hex_decode( $sub->{'org_address'} );
         $sub->{'run_address'} = optional_hex_decode( $sub->{'run_address'} );
+
+        # at this point, NAME,LOAD_ADDRESS,ORG_ADDRESS,RUN_ADDRESS and COMPRESS are always defined
+        # Now with the logic checks
+
+        if ( $used_sub_names{ $sub->{'name'} }++ ) {
+            warn "SINGLE_USE_BLOB: $sub->{'name'}: duplicate SUB name\n";
+            $errors++;
+        }
+
         if ( ( $sub->{'load_address'} < 0xC000 ) and not is_build_feature_enabled( 'ZX_TARGET_128' ) ) {
-            warn "SINGLE_USER_BLOB: LOAD_ADDRESS lower than 0xC000 can only be used in 128K mode games\n";
+            warn "SINGLE_USE_BLOB: $sub->{'name'}: LOAD_ADDRESS lower than 0xC000 can only be used in 128K mode games\n";
+            $errors++;
+        }
+
+        if ( ( $sub->{'compress'} ) and ( $sub->{'load_address'} == $sub->{'org_address'} ) ) {
+            warn "SINGLE_USE_BLOB: $sub->{'name'}: LOAD_ADDRESS and ORG_ADDRESS can't be the same if COMPRESS=1\n";
             $errors++;
         }
     }

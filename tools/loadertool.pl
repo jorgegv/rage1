@@ -54,6 +54,17 @@ sub gather_bank_binaries {
     return \%binaries;
 }
 
+sub optional_hex_decode {
+    my $value = shift;
+    if ( $value =~ m/^0x[0-9a-f]+$/i ) {
+        return hex( $value );
+    }
+    if ( $value =~ m/^\$([0-9a-f]+)$/i ) {
+        return hex( $1 );
+    }
+    return $value;
+}
+
 # sub binaries are files under build/generated/ with names sub_<name>.bin
 sub gather_sub_binaries {
     my ( $dir ) = @_;
@@ -97,9 +108,9 @@ sub gather_sub_binaries {
             };
             my $org_address = $item->{'org_address'} || $item->{'load_address'};
             my $run_address = $item->{'run_address'} || $org_address;
-            $binaries{ $item->{'name'} }{'load_address'} = $item->{'load_address'};
-            $binaries{ $item->{'name'} }{'org_address'} = $org_address;
-            $binaries{ $item->{'name'} }{'run_address'} = $run_address;
+            $binaries{ $item->{'name'} }{'load_address'} = optional_hex_decode( $item->{'load_address'} );
+            $binaries{ $item->{'name'} }{'org_address'} = optional_hex_decode( $org_address );
+            $binaries{ $item->{'name'} }{'run_address'} = optional_hex_decode( $run_address );
             $binaries{ $item->{'name'} }{'order'} = $order;
             $binaries{ $item->{'name'} }{'compress'} = $item->{'compress'} || 0;
             $order++;
@@ -107,6 +118,46 @@ sub gather_sub_binaries {
     }
 
     return \%binaries;
+}
+
+# do some sanity checks on the SUB binaries
+sub sanity_check_sub_binaries {
+    my $bins = shift;
+
+    # check that SUBs do not overlap when loading
+    my $errors;
+    foreach my $sub_name ( keys %$bins ) {
+        my $sub = $bins->{ $sub_name };
+        foreach my $another_sub_name ( keys %$bins ) {
+            next if $sub_name eq $another_sub_name;
+            my $another_sub = $bins->{ $another_sub_name };
+            if ( ( $sub->{'load_address'} >= $another_sub->{'load_address'} ) and 
+                ( $sub->{'load_address'} <= $another_sub->{'load_address'} + ( $another_sub->{'compress'} ? $another_sub->{'compressed_size'} : $another_sub->{'size'} ) ) ) {
+                warn "SINGLE_USE_BLOB: SUB '$sub_name' LOAD_ADDRESS overlaps with SUB '$another_sub_name'\n";
+                $errors++;
+            }
+        }
+    }
+
+    # check that compressed SUBs do not decompress over another SUBs before those others have been run
+    # it only matters if the compressed one is run before the other
+    foreach my $sub_name ( keys %$bins ) {
+        my $sub = $bins->{ $sub_name };
+        next if not $sub->{'compress'};		# ignore uncompressed SUBs
+        foreach my $another_sub_name ( keys %$bins ) {
+            next if $sub_name eq $another_sub_name;
+            my $another_sub = $bins->{ $another_sub_name };
+            if ( ( $sub->{'org_address'} >= $another_sub->{'org_address'} ) and 
+                ( $sub->{'org_address'} <= ( $another_sub->{'org_address'} + $another_sub->{'size'} ) ) and
+                ( $sub->{'order'} < $another_sub->{'order'} ) ) {
+                warn "SINGLE_USE_BLOB: SUB '$sub_name' ORG_ADDRESS overlaps with SUB '$another_sub_name' when decompressing\n";
+                $errors++;
+            }
+        }
+    }
+
+    # return
+    return ( $errors ? undef : 1 );
 }
 
 sub get_zx_target {
@@ -138,7 +189,7 @@ sub generate_assembler_loader {
 
     my @lines;
 
-    my $loader_org = ( get_zx_target eq '48' ? $loader_org_48 : $loader_org_128 );
+    my $loader_org = sprintf( '0x%04x', ( get_zx_target eq '48' ? $loader_org_48 : $loader_org_128 ) );
 
     push @lines, <<EOF_HEADER
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -183,20 +234,20 @@ EOF_BANK0
     # load main program code at base code address and start execution
     my $main_code_start;
     if ( get_zx_target eq '128' ) {
-        $main_code_start = ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
+        $main_code_start = sprintf( '0x%04x', ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
             hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
             $cfg->{'interrupts_128'}{'base_code_address'}
-        );
+        ) );
     } else {
-        $main_code_start = 0x5F00;
+        $main_code_start = '0x5f00';
     }
     my $main_size = get_main_bin_size;
     push @lines, <<EOF_LOAD_MAIN
-    ld a,0xff
-    ld de,$main_size
-    ld ix,$main_code_start
+    ld a,0xff		;; load data operation
+    ld de,$main_size	;; number of bytes to load
+    ld ix,$main_code_start	;; destination address
     scf
-    call LD_BYTES
+    call LD_BYTES	;; load block
     jp nc,to_basic
 EOF_LOAD_MAIN
 ;
@@ -212,7 +263,7 @@ EOF_LOAD_MAIN
             $sub_bins->{ $sub }{'compressed_size'} :
             $sub_bins->{ $sub }{'size'}
         );
-        my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
+        my $sub_load_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'load_address'} );
         push @lines, <<EOF_LOAD_SUB
     ;; Load SUB '$sub'
     ld a,0xff	;; load data operation
@@ -233,23 +284,20 @@ EOF_LOAD_SUB
     foreach my $sub ( sort { 
             $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'}
             } keys %$sub_bins ) {
-        my $sub_load_addr = $sub_bins->{ $sub }{'load_address'};
-        my $sub_org_addr = $sub_bins->{ $sub }{'org_address'};
-        my $sub_run_addr = $sub_bins->{ $sub }{'run_address'};
+        my $sub_load_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'load_address'} );
+        my $sub_org_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'org_address'} );
+        my $sub_run_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'run_address'} );
         my $sub_size = $sub_bins->{ $sub }{'size'};
-        push @lines, <<EOF_RUN_SUB1
-    ;; Run SUB '$sub' with ints disabled
-    di
-EOF_RUN_SUB1
-;
+        push @lines, "    ;; Run SUB '$sub' with ints disabled";
 
         if ( $sub_bins->{ $sub }{'compress'} ) {
             $some_subs_are_compressed++;
             push @lines, <<EOF_UNCOMPRESS
-    ld de,$sub_org_addr	;; set src and dest for decompression
-    ld hl,$sub_load_addr
+    ld hl,$sub_load_addr	;; decompress from $sub_load_addr to $sub_org_addr
+    ld de,$sub_org_addr
     call dzx0_standard
 
+    di
     call $sub_run_addr	;; run SUB
 EOF_UNCOMPRESS
 ;
@@ -257,21 +305,22 @@ EOF_UNCOMPRESS
             if ( $sub_load_addr ne $sub_org_addr ) {
                 $some_subs_are_swapped++;
                 push @lines, <<EOF_RUN_SUB2
-    ld de,$sub_org_addr	;; swap from $sub_load_addr to $sub_org_addr
-    ld hl,$sub_load_addr
+    ld hl,$sub_load_addr	;; swap from $sub_load_addr to $sub_org_addr
+    ld de,$sub_org_addr
     ld bc,$sub_size
     call memswap
 EOF_RUN_SUB2
 ;
             }
             push @lines, <<EOF_RUN_SUB3
-    call $sub_run_addr	;; run SUB
+    di
+    call $sub_run_addr
 EOF_RUN_SUB3
 ;
             if ( $sub_load_addr ne $sub_org_addr ) {
                 push @lines, <<EOF_RUN_SUB4
-    ld de,$sub_org_addr	;; swap it back
-    ld hl,$sub_load_addr
+    ld hl,$sub_load_addr	;; swap it back
+    ld de,$sub_org_addr
     ld bc,$sub_size
     call memswap
 EOF_RUN_SUB4
@@ -294,6 +343,7 @@ EOF_JP_MAIN
 ;; Switch memory bank at 0xC000
 ;;   A = bank to activate (0-7)
 bswitch:
+    ;; we enter with ints already disabled
     ;; register A contains the bank to switch to
     and     0x07            ; get 3 low bits only
     ld      b,a             ; save for later
@@ -400,7 +450,7 @@ EOF_COMPRESS
 
     # output auxiliary function for 128 mode
     push @lines, <<EOF_RETBAS
-;; Return to BASIC
+;; Return to BASIC, only in case of loading errors
 to_basic:
     ei
     ret
@@ -434,5 +484,8 @@ my ( $input_dir, $output_dir ) = ( $opt_i, $opt_o );
 
 my $bank_bins = gather_bank_binaries( $input_dir );
 my $sub_bins = gather_sub_binaries( $input_dir );
+
+sanity_check_sub_binaries( $sub_bins ) or
+    die "** Error: some SUB consistency checks failed\n";
 
 generate_assembler_loader( $bank_bins, $sub_bins, $output_dir );
