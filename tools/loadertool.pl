@@ -139,7 +139,7 @@ sub sanity_check_sub_binaries {
         }
     }
 
-    # check that compressed SUBs do not decompress over another SUBs before those others have been run
+    # check that compressed SUBs do not decompress over another uncompressed SUBs before those others have been run
     # it only matters if the compressed one is run before the other
     foreach my $sub_name ( keys %$bins ) {
         my $sub = $bins->{ $sub_name };
@@ -147,6 +147,7 @@ sub sanity_check_sub_binaries {
         foreach my $another_sub_name ( keys %$bins ) {
             next if $sub_name eq $another_sub_name;
             my $another_sub = $bins->{ $another_sub_name };
+            next if $another_sub->{'compress'};		# ignore compressed SUBs
             if ( ( $sub->{'org_address'} >= $another_sub->{'org_address'} ) and 
                 ( $sub->{'org_address'} <= ( $another_sub->{'org_address'} + $another_sub->{'size'} ) ) and
                 ( $sub->{'order'} < $another_sub->{'order'} ) ) {
