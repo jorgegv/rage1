@@ -12,13 +12,10 @@ SUB_SRC = main.asm main.c
 ORG = 0xD200
 
 BIN_CMD = zcc +zx -Wno-incompatible-pointer-types -zorg=$(ORG) -Ca -D__ORG=$(ORG) -m --list --c-code-in-asm --no-crt -o $(SUB_BIN)
-ZX0	= z88dk-zx0 -f
 
 # binary-only generation, used for getting exact size
-# generate also the compressed binary
 sub_bin:
 	$(BIN_CMD) $(SUB_SRC)
-	$(ZX0) $(SUB_BIN)
 
 # full tap generation with loader, useful for testing
 sub_tap: sub_bin
