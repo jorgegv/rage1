@@ -114,8 +114,8 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
                                         move->data.linear.sequence_b
                                     );
                                 }
-                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
                             }
+                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
                         }
                     }
                 }
