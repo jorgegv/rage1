@@ -57,67 +57,65 @@ void enemy_animate_and_move( uint8_t num_enemies, struct enemy_info_s *enemies )
         move = &enemies[n].movement;
         switch ( move->type ) {
             case ENEMY_MOVE_LINEAR:
-                // optimization: only do the move if dx or dy are != 0
-                if ( move->data.linear.dx || move->data.linear.dy ) {
-                    if ( ++move->delay_counter == move->delay ) {
-                        move->delay_counter = 0;
+                if ( ++move->delay_counter == move->delay ) {
+                    move->delay_counter = 0;
 
-                        // optimization: only calculate horizontal movement if dx != 0
-                        if ( move->data.linear.dx ) {
-                            pos->x.part.integer += move->data.linear.dx;
-                            pos->xmax = pos->x.part.integer + g->width - 1;
-                            if (
-                                    ( pos->x.part.integer >= move->data.linear.xmax ) ||
-                                    ( pos->x.part.integer <= move->data.linear.xmin ) ||
-                                    ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer ), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width ) ) == TT_OBSTACLE ) ||
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer ), PIXEL_TO_CELL_COORD( pos->x.part.integer - 1 ) ) == TT_OBSTACLE ) ||
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height - 1), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width ) ) == TT_OBSTACLE ) ||
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height - 1), PIXEL_TO_CELL_COORD( pos->x.part.integer - 1 ) ) == TT_OBSTACLE )
-                                    ) )
-                                ) { // then
-                                move->data.linear.dx = -move->data.linear.dx;
-                                // adjust animation sequence if the enemy is configured for it
-                                // sequence_a if dx > 0, sequence_b if dx < 0
-                                if ( ENEMY_MOVE_CHANGES_SEQUENCE_HORIZ( *move ) ) {
-                                    animation_set_sequence( anim, 
-                                        move->data.linear.dx > 0 ?
-                                        move->data.linear.sequence_a :
-                                        move->data.linear.sequence_b
-                                    );
-                                }
-                            }
-                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
-                        }
-
-                        // optimization: only calculate vertical movement if dy != 0
-                        if ( move->data.linear.dy ) {
-                            pos->y.part.integer += move->data.linear.dy;
-                            pos->ymax = pos->y.part.integer + g->height - 1;
-                            if (
-                                    ( pos->y.part.integer >= move->data.linear.ymax ) ||
-                                    ( pos->y.part.integer <= move->data.linear.ymin ) ||
-                                    ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height ), PIXEL_TO_CELL_COORD( pos->x.part.integer ) ) == TT_OBSTACLE ) ||
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer - 1 ), PIXEL_TO_CELL_COORD( pos->x.part.integer ) ) == TT_OBSTACLE ) ||
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height ), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width - 1) ) == TT_OBSTACLE ) ||
-                                        ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer - 1), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width - 1 ) ) == TT_OBSTACLE )
-                                    ) )
-                                ) { // then
-                                move->data.linear.dy = -move->data.linear.dy;
-                                // adjust animation sequence if the enemy is configured for it
-                                // sequence_a if dy > 0, sequence_b if dy < 0
-                                if ( ENEMY_MOVE_CHANGES_SEQUENCE_VERT( *move ) ) {
-                                    animation_set_sequence( anim, 
-                                        move->data.linear.dy > 0 ?
-                                        move->data.linear.sequence_a :
-                                        move->data.linear.sequence_b
-                                    );
-                                }
-                            SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
+                    // optimization: only calculate horizontal movement if dx != 0
+                    if ( move->data.linear.dx ) {
+                        pos->x.part.integer += move->data.linear.dx;
+                        pos->xmax = pos->x.part.integer + g->width - 1;
+                        if (
+                                ( pos->x.part.integer >= move->data.linear.xmax ) ||
+                                ( pos->x.part.integer <= move->data.linear.xmin ) ||
+                                ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer ), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width ) ) == TT_OBSTACLE ) ||
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer ), PIXEL_TO_CELL_COORD( pos->x.part.integer - 1 ) ) == TT_OBSTACLE ) ||
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height - 1), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width ) ) == TT_OBSTACLE ) ||
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height - 1), PIXEL_TO_CELL_COORD( pos->x.part.integer - 1 ) ) == TT_OBSTACLE )
+                                ) )
+                            ) { // then
+                            move->data.linear.dx = -move->data.linear.dx;
+                            // adjust animation sequence if the enemy is configured for it
+                            // sequence_a if dx > 0, sequence_b if dx < 0
+                            if ( ENEMY_MOVE_CHANGES_SEQUENCE_HORIZ( *move ) ) {
+                                animation_set_sequence( anim, 
+                                    move->data.linear.dx > 0 ?
+                                    move->data.linear.sequence_a :
+                                    move->data.linear.sequence_b
+                                );
                             }
                         }
                     }
+
+                    // optimization: only calculate vertical movement if dy != 0
+                    if ( move->data.linear.dy ) {
+                        pos->y.part.integer += move->data.linear.dy;
+                        pos->ymax = pos->y.part.integer + g->height - 1;
+                        if (
+                                ( pos->y.part.integer >= move->data.linear.ymax ) ||
+                                ( pos->y.part.integer <= move->data.linear.ymin ) ||
+                                ( ENEMY_MOVE_MUST_BOUNCE( *move ) && (
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height ), PIXEL_TO_CELL_COORD( pos->x.part.integer ) ) == TT_OBSTACLE ) ||
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer - 1 ), PIXEL_TO_CELL_COORD( pos->x.part.integer ) ) == TT_OBSTACLE ) ||
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer + g->height ), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width - 1) ) == TT_OBSTACLE ) ||
+                                    ( GET_TILE_TYPE_AT( PIXEL_TO_CELL_COORD( pos->y.part.integer - 1), PIXEL_TO_CELL_COORD( pos->x.part.integer + g->width - 1 ) ) == TT_OBSTACLE )
+                                ) )
+                            ) { // then
+                            move->data.linear.dy = -move->data.linear.dy;
+                            // adjust animation sequence if the enemy is configured for it
+                            // sequence_a if dy > 0, sequence_b if dy < 0
+                            if ( ENEMY_MOVE_CHANGES_SEQUENCE_VERT( *move ) ) {
+                                animation_set_sequence( anim, 
+                                    move->data.linear.dy > 0 ?
+                                    move->data.linear.sequence_a :
+                                    move->data.linear.sequence_b
+                                );
+                            }
+                        }
+                    }
+
+                    // at this point either X or Y movement has taken place, so set redraw flag
+                    SET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
                 }
                 break;
             default:
