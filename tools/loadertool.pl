@@ -343,16 +343,16 @@ EOF_JP_MAIN
         push @lines, <<EOF_BSWITCH
 ;; Switch memory bank at 0xC000
 ;;   A = bank to activate (0-7)
+;;
+;; We want USR0 mode: bits 0-2: bank number to map; bit 3: 0 (normal
+;; screen); bit 4: 1 (48K ROM); bit 5: 0 (allow paging) => 0x10 | bank
+
 bswitch:
     ;; we enter with ints already disabled
     ;; register A contains the bank to switch to
     and     0x07            ; get 3 low bits only
-    ld      b,a             ; save for later
-    ld      a,(0x5b5c)      ; get last value from SYS.BANKM
-    and     0xf8            ; save 5 top bits
-    or      b               ; mix new value with old
+    or      0x10            ; set default for USR0 mode
     ld      bc,0x7ffd       ; set the port number
-    ld      (0x5b5c),a      ; ...store the new value to SYS.BANKM
     out     (c),a           ; ...and select the new bank
     ret
 EOF_BSWITCH
