@@ -15,6 +15,22 @@
 
 With the exception of Z88DK, all the other modules and requirements are available in standard repos for most distributions
 
+## Specific instructions for Fedora
+
+Enter the following command for installing the required packages:
+
+```
+sudo dnf install -y perl perl-Data-Compare perl-List-MoreUtils perl-File-Copy perl-GD perl-YAML m4 make
+```
+
+## Specific instructions for Ubuntu and Debian
+
+Enter the following command for installing the required packages:
+
+```
+sudo apt install -y perl libdata-compare-perl liblist-moreutils-perl libgd-perl libyaml-perl m4 make
+```
+
 # Windows Requirements
 
 * [Z88DK](https://github.com/z88dk/z88dk/wiki)
@@ -29,3 +45,6 @@ With the exception of Z88DK, all the other modules and requirements are availabl
   * perl-GD
   * perl-YAML
 * [Fuse (ZX Spectrum Emulator)](https://sourceforge.net/projects/fuse-emulator/files/fuse/)
+
+Alternatively, you can just launch a WSL2 session with Ubuntu 22.04, and
+follow the Linux installation instructions above.
