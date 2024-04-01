@@ -23,7 +23,7 @@ Enter the following command for installing the required packages:
 sudo dnf install -y perl perl-Data-Compare perl-List-MoreUtils perl-File-Copy perl-GD perl-YAML m4 make
 ```
 
-## Specific instructions for Ubuntu and Debian
+## Specific instructions for Ubuntu, Debian and Linux Mint
 
 Enter the following command for installing the required packages:
 
