@@ -2,7 +2,6 @@
 
 * [Z88DK version 2.2](https://github.com/z88dk/z88dk/wiki)
 * [bas2tap](https://github.com/speccyorg/bas2tap)
-* netpbm-progs
 * Perl 5
 * Perl modules:
   * `Data::Compare`
@@ -23,7 +22,6 @@ With the exception of Z88DK, all the other modules and requirements are availabl
 * On CYGWIN installation, select at least the following packages in addition to the default packages:
   * m4
   * make
-  * netpbm
   * perl
   * perl-Data-Compare
   * perl-List-MoreUtils
