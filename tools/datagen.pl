@@ -3808,8 +3808,15 @@ sub generate_tracker_data {
 
             # generate song ASM file and put it in place for compilation
             if ( $game_config->{'tracker'}{'type'} eq 'arkos2' ) {
-                # for Arkos2, convert it into asm format with the official tool
-                my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+                # for Arkos2, convert it into asm format with the official tool if it is in AKS format
+                my $asm_file;
+                if ( $song->{'file'} =~ m/\.asm$/i ) {
+                    $asm_file = "$build_dir/$song->{'file'}";
+                } elsif ( $song->{'file'} =~ m/\.aks$/i ) {
+                    $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+                } else {
+                    die "Arkos songs can only be in AKS or ASM format\n";
+                }
                 my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
                 move( $asm_file, $dest_asm_file ) or
                     die "Could not rename $asm_file to $dest_asm_file\n";
@@ -3845,7 +3852,14 @@ sub generate_tracker_data {
         if ( defined( $game_config->{'tracker'}{'fxtable'} ) ) {
             # generate song ASM file and put it in place for compilation
             # the extern declaration for this is already in tracker.h
-            my $asm_file = arkos2_convert_effects_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            my $asm_file;
+            if ( $game_config->{'tracker'}{'fxtable'}{'file'} =~ m/\.asm$/i ) {
+                $asm_file = "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}";
+            } elsif ( $game_config->{'tracker'}{'fxtable'}{'file'} =~ m/\.aks$/i ) {
+                $asm_file = arkos2_convert_effects_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            } else {
+                die "Arkos sound FX can only be in AKS or ASM format\n";
+            }
             my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
 
             my $effects_count = arkos2_count_sound_effects( $asm_file );
