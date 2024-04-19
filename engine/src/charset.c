@@ -10,8 +10,8 @@
 
 // charset.c
 
-#include <games/sp1.h>
-#include <arch/spectrum.h>
+#include <arch/zx/sprites/sp1.h>
+#include <arch/zx/spectrum.h>
 
 #include "features.h"
 

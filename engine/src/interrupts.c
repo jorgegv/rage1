@@ -65,7 +65,6 @@ void interrupt_enable_periodic_isr_tasks( void ) {
 
 // ISR definition
 M_BEGIN_ISR(service_interrupt)
-{
     do_timer_tick();
     if ( periodic_tasks_enabled )
         do_periodic_isr_tasks();

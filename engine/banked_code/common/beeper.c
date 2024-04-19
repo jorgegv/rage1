@@ -9,7 +9,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
-#include <sound/bit.h>
+#include <sound.h>
 
 #include "features.h"
 
@@ -20,9 +20,9 @@
 #ifdef BUILD_FEATURE_ZX_TARGET_128
 // this one is only needed when compiling for 128
 // for 48 mode the beepr gets initialized by regular BSS init code
-extern uint8_t _sound_bit_state;
+//extern uint8_t _sound_bit_state;
 void init_beeper( void ) {
-    _sound_bit_state = 0;
+//    _sound_bit_state = 0;
 }
 #endif
 

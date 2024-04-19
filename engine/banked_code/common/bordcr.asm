@@ -1,0 +1,2 @@
+defc __SYSVAR_BORDCR = 0x5C48
+public __SYSVAR_BORDCR

@@ -8,8 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <arch/spectrum.h>
-#include <games/sp1.h>
+#include <arch/zx/spectrum.h>
+#include <arch/zx/sprites/sp1.h>
 #include <input.h>
 
 #include "rage1/screen.h"
@@ -89,7 +89,7 @@ void my_menu_screen(void) {
    sp1_PrintString( &print_ctx, "\x16\x12\x06 Selection: " );
    while ( ! game_state.controller.type ) {
       key_pressed = 0;
-      while ( ! key_pressed ) { key_pressed = in_inkey(); }
+      while ( ! key_pressed ) { key_pressed = in_Inkey(); }
       switch ( key_pressed ) {
          case '1':
             game_state.controller.type = CTRL_TYPE_KEYBOARD;
@@ -106,9 +106,9 @@ void my_menu_screen(void) {
       }
    }
    sp1_UpdateNow();
-   in_pause(100);
+   in_Pause(100);
    beeper_play_fx( SOUND_CONTROLLER_SELECTED );
-   in_pause(500);
+   in_Pause(500);
 
    // stop playing and reset the song
    tracker_stop();
@@ -179,16 +179,16 @@ void my_intro_screen(void) {
 
    draw_text_box( &b1, "" );
    sp1_UpdateNow();
-   in_pause( 100 );
+   in_Pause( 100 );
 
    draw_text_box( &b2, "" );
    sp1_UpdateNow();
-   in_pause( 100 );
+   in_Pause( 100 );
 
    draw_text_box( &b3, "Get all items\r and kill all\r   enemies!" );
    sp1_UpdateNow();
 
-   in_wait_key();
+   in_WaitForKey();
 
    // clear screen and exit
    sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
@@ -200,8 +200,8 @@ void my_game_end_screen(void) {
    sp1_UpdateNow();
    beeper_play_fx( SOUND_GAME_WON );
 
-   in_wait_nokey();
-   in_wait_key();
+   in_WaitForNoKey();
+   in_WaitForKey();
 
    // clear screen and exit
    sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
@@ -213,8 +213,8 @@ void my_game_over_screen(void) {
    sp1_UpdateNow();
    beeper_play_fx( SOUND_GAME_OVER );
 
-   in_wait_nokey();
-   in_wait_key();
+   in_WaitForNoKey();
+   in_WaitForKey();
 
    // clear screen and exit
    sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );

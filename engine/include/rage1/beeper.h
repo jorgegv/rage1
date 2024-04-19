@@ -12,7 +12,7 @@
 #define _BEEPER_H
 
 // for the beepfx FX constants
-#include <sound/bit.h>
+#include <sound.h>
 
 #include "features.h"
 

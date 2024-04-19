@@ -91,7 +91,7 @@ uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall {
     ld a, d
     and a,0x07
     or a,0x10
-    ld bc,_IO_7FFD
+    ld bc,0x7ffd
     out (c),a
     ld (hl), d
     ld hl,_interrupt_nesting_level

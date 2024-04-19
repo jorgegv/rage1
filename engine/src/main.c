@@ -81,8 +81,8 @@ void init_program(void) {
 void main(void)
 {
 #ifdef BUILD_FEATURE_LOADING_SCREEN_WAIT_ANY_KEY
-   in_wait_key();
-   in_wait_nokey();
+   in_WaitForKey();
+   in_WaitForNoKey();
 #endif
 
    init_program();

@@ -8,7 +8,7 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <arch/zx.h>
+#include <arch/zx/spectrum.h>
 
 #include "rage1/game_state.h"
 #include "rage1/sprite.h"

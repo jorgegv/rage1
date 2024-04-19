@@ -168,7 +168,7 @@ void hero_shoot_bullet( void ) {
 #ifdef BUILD_FEATURE_HERO_WEAPON_AUTOFIRE
         // For Autofire, we just spit out the next bullet quickly as long as
         // the user keeps the FIRE button pressed
-        if ( game_state.controller.state & IN_STICK_FIRE ) {
+        if ( game_state.controller.state & in_FIRE ) {
             bullet_add();
             game_state.bullet.reloading = game_state.bullet.reload_delay;
         }
@@ -181,14 +181,14 @@ void hero_shoot_bullet( void ) {
         // and are ignored
 
         // Case 1:
-        if ( ( game_state.controller.state & IN_STICK_FIRE ) && ( ! game_state.bullet.firing ) ) {
+        if ( ( game_state.controller.state & in_FIRE ) && ( ! game_state.bullet.firing ) ) {
             game_state.bullet.firing++;
             bullet_add();
             game_state.bullet.reloading = game_state.bullet.reload_delay;
         }
 
         // Case 2:
-        if ( ( ! ( game_state.controller.state & IN_STICK_FIRE ) ) && game_state.bullet.firing ) {
+        if ( ( ! ( game_state.controller.state & in_FIRE ) ) && game_state.bullet.firing ) {
             game_state.bullet.firing = 0;
         }
 #endif
