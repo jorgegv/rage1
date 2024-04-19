@@ -28,4 +28,4 @@
 #pragma output CLIB_FOPEN_MAX         = -1	// no FILE* list
 #pragma output CLIB_OPEN_MAX          = -1	// no fd table
 
-#pragma output __MMAP                 = -1	// use user-supplied memory map: mmap.inc
+#pragma output MMAP                 = -1	// use user-supplied memory map: mmap.inc
