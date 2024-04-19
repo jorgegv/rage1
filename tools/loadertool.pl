@@ -26,7 +26,7 @@ require RAGE::Config;
 my $basic_loader_name	= 'loader.bas';
 my $asm_loader_name	= 'asmloader.asm';
 my $game_config_name	= 'build/game_data/game_config/Game.gdata';
-my $main_bin_filename	= 'main_CODE.bin';
+my $main_bin_filename	= 'main.bin';
 
 my $cfg = rage1_get_config();
 
