@@ -57,11 +57,18 @@ void game_state_flow_vars_reset_all(void);
 //  struct
 struct game_state_s {
 
-   // current, previous screen indexes in map table and some cached values
+   // current, next screen indexes in map table and some cached values
    uint8_t current_screen;
-   uint8_t next_screen;
+   struct {
+      uint8_t num_screen;
+      uint8_t hero_x;
+      uint8_t hero_y;
+   } warp_next_screen;
    struct map_screen_s *current_screen_ptr;
    struct asset_state_s *current_screen_asset_state_table_ptr;
+
+   // currently mapped dataset
+   uint8_t active_dataset;
 
    // hero info and state
    struct hero_info_s hero;
@@ -78,10 +85,15 @@ struct game_state_s {
    //     game loop functions and reacted upon in a central place.  They are
    //     all reset at the end of the game loop
    //
+   //  * game_events: similar to loop flags but for actions that happen due
+   //    to direct player interaction.  It is also reset at the end of the
+   //    game loop
+   //
    //   * user flags: they are checked and manipulated from FLOWGEN rules
    //
    uint8_t flags;
    uint8_t loop_flags;
+   uint8_t game_events;
    uint8_t user_flags;
 
    // controller data
@@ -94,8 +106,24 @@ struct game_state_s {
    uint16_t enemies_alive;
    uint16_t enemies_killed;
 
-   // pointer to sound effect to play when required
-   void *sound_fx;
+   // pointer to beeper sound fx to play when required
+   void *beeper_fx;
+   // id of tracker sound fx to play when required
+   uint16_t tracker_fx;
+
+#ifdef BUILD_FEATURE_GAME_TIME
+   // game_time: seconds elapsed since start of game
+   uint16_t game_time;
+#endif
+
+#ifdef BUILD_FEATURE_CUSTOM_STATE_DATA
+   // custom state data
+   uint8_t custom_data[ CUSTOM_STATE_DATA_SIZE ];
+#endif
+
+#ifndef BUILD_FEATURE_GAMEAREA_COLOR_FULL
+   uint8_t default_mono_attr;
+#endif
 };
 
 extern struct game_state_s game_state;
@@ -136,20 +164,39 @@ void game_state_switch_to_next_screen( void );
 #define RESET_ALL_LOOP_FLAGS()	(game_state.loop_flags = 0)
 
 
-// player has just entered a new screen
-#define F_LOOP_ENTER_SCREEN		0x0001
+// 0x0001 value unused
 // the hero nust be redrawn
 #define F_LOOP_REDRAW_HERO		0x0002
-// player has collided with a sprite
-#define F_LOOP_HERO_HIT			0x0004
 // inside EXIT hotzone
-#define F_LOOP_WARP_TO_SCREEN		0x0008
-// enemy was hit
-#define F_LOOP_ENEMY_HIT		0x0010
+#define F_LOOP_WARP_TO_SCREEN		0x0004
 // an item was picked up
-#define F_LOOP_ITEM_GRABBED		0x0020
-// play pending sound effect
-#define F_LOOP_PLAY_SOUNDFX		0x0040
+#define F_LOOP_ITEM_GRABBED		0x0008
+// play pending beeper effect
+#define F_LOOP_PLAY_BEEPER_FX		0x0010
+// play pending tracker effect
+#define F_LOOP_PLAY_TRACKER_FX		0x0020
+
+///////////////////////////////////////////////
+// game events macros and definitions
+///////////////////////////////////////////////
+
+#define GET_GAME_EVENT(f)	(game_state.game_events & (f))
+#define SET_GAME_EVENT(f)	(game_state.game_events |= (f))
+#define RESET_GAME_EVENT(f)	(game_state.game_events &= ~(f))
+#define RESET_ALL_GAME_EVENTS()	(game_state.game_events = 0)
+
+// player has received a hit
+#define E_HERO_WAS_HIT			0x0001
+// enemy was hit
+#define E_ENEMY_WAS_HIT			0x0002
+// an item was picked up
+#define E_ITEM_WAS_GRABBED		0x0004
+// a crumb was picked up
+#define E_CRUMB_WAS_GRABBED		0x0008
+// the hero died
+#define E_HERO_DIED			0x0010
+// a bullet was shot
+#define E_BULLET_WAS_SHOT		0x0020
 
 ///////////////////////////////////////////////
 // user flags macros and definitions

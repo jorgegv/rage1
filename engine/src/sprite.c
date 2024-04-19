@@ -17,7 +17,7 @@
 
 #include "game_data.h"
 
-void sprite_move_offscreen( struct sp1_ss *s ) {
+void sprite_move_offscreen( struct sp1_ss *s ) __z88dk_fastcall {
     sp1_MoveSprAbs( s, &full_screen, NULL, OFF_SCREEN_ROW, OFF_SCREEN_COLUMN, 0, 0 );
 }
 
@@ -25,7 +25,7 @@ void sprite_move_offscreen( struct sp1_ss *s ) {
 // its parameters must be passed through 2 global variables, defined below :-/
 struct attr_param_s sprite_attr_param;
 
-# pragma disable_warning 85
+#pragma disable_warning 85
 void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c ) {
     c->attr		= sprite_attr_param.attr;
     c->attr_mask	= sprite_attr_param.attr_mask;
@@ -61,7 +61,7 @@ struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
     return s;
 }
 
-void sprite_free( struct sp1_ss *s ) {
+void sprite_free( struct sp1_ss *s ) __z88dk_fastcall {
         sp1_DeleteSpr( s );
 }
 

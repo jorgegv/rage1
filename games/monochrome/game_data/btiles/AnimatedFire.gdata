@@ -1,0 +1,30 @@
+BEGIN_BTILE
+	NAME	AnimatedFire
+	ROWS	1
+	COLS	1
+	FRAMES	2
+
+	PIXELS	........##......
+	PIXELS	....########....
+	PIXELS	..######..####..
+	PIXELS	######....######
+	PIXELS	####......######
+	PIXELS	####........####
+	PIXELS	..####....####..
+	PIXELS	....##..####....
+
+	PIXELS	......##........
+	PIXELS	....########....
+	PIXELS	..####..######..
+	PIXELS	######....######
+	PIXELS	######......####
+	PIXELS	####........####
+	PIXELS	..####....####..
+	PIXELS	....####..##....
+
+	ATTR	INK_RED | PAPER_BLACK | BRIGHT
+	ATTR	INK_RED | PAPER_BLACK
+
+	SEQUENCE        NAME=FireSeq FRAMES=1,0
+
+END_BTILE

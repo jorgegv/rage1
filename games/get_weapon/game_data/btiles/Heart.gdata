@@ -1,0 +1,17 @@
+BEGIN_BTILE
+	NAME	Heart
+	ROWS	1
+	COLS	1
+
+	PIXELS	..####....####..
+	PIXELS	################
+	PIXELS	##..########..##
+	PIXELS	################
+	PIXELS	####..####..####
+	PIXELS	..####....####..
+	PIXELS	....########....
+	PIXELS	......####......
+
+	ATTR	INK_MAGENTA | PAPER_BLACK
+END_BTILE
+

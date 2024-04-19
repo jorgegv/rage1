@@ -20,7 +20,7 @@
 #include "rage1/banked.h"
 
 
-#ifdef BUILD_FEATURE_BTILE_PACKED_TYPE_MAP
+#ifdef BUILD_FEATURE_BTILE_2BIT_TYPE_MAP
 
 // Accelerated functions for getting/setting tile types
 

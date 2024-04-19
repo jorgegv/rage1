@@ -30,15 +30,19 @@ game code, which varies from game to game).
   function ID (known at compile time) in the banked functions array (always
   at address 0xC000)
 
-- All BANKED functions must use the prototype `void f(void)`
+- BANKED functions can use prototypes `void f(void)` or `void f( uint16_t
+  arg )`
 
 - All accesses from the BANKED functions to lowmem data must be done via the
   macro definitions in `banked.h`
 
-- The `banked.h` file will include a generated file called `mainsyms.h`
-  which is generated from the `main.map` file which is created whe compiling
-  the main program.  This file maps the symbols in `main` to their final
-  addresses in low memory, so that the banked functions can use them.
+- Main symbols in low memory can be accessed from banked code by means of a
+  `struct main_shared_data_s` which is populated at program start by
+  function `init_banked_code()`.  This structure contains pointers to useful
+  data in low memory, such as the `game_state` structure, the tile type data
+  structure and others (see `banked.h` file for the structure definition). 
+  Macros are defined in `banked.h` for accessing those data easily when
+  compiling banked code.
 
 - Initially, banked functions receive no parameters and return nothing, but
   this limitation is to be revisited, since it seems easy to have a
@@ -80,7 +84,25 @@ should be taken into account:
 
 ## Steps for migration of an engine function to banked code
 
-- The function to migrate should match the `void f( void )` prototype
+- Function signatures are constructed as follows:
+
+  - a16 (for argument, 16-bit), r8 (for return, 8-bit), etc.
+  - Return qualifier always comes last, arguments come first
+  - If no arguments are used, no aNN signature should be used
+  - If no return value no rNN should be used
+  - A function matching the protype `void f( void )` has no signature
+  - Example: `a16_a16_r8` is a signature for a function with the following
+    prototype: `uint8_t f( uint16_t arg1, uint16_t arg2 )`
+
+- The signature of the function to migrate (args plus return value) must
+  have an associated `memory_banked_function_call...()` function (see
+  `memory.h` for instructions on how to define them)
+
+- A valid function `typedef` must also exist in `memory.h` for the given
+  function signature.
+
+- The function to migrate should match any of the prototypes defined by the
+  signature `typedef`s.
 
 - Copy the source file which contains the function to be migrated to the
   `banked_code` directory
@@ -90,15 +112,21 @@ should be taken into account:
   been included.  The `banked.h` file should be the last one of the RAGE1
   `#includes`
 
-- Add function ID and function call macro (for 128K mode) to `memory.h`
+- Add the function definition to the config file `etc/rage1-config.yml`,
+  under the `banked_functions` key (see existing functions):
 
-- Add the function ID to the banked function table at `00main.asm` in
-  `banked_code`
-
-- Add the needed macro definitions to `banked.h` for the low memory symbols
-  and data structures that the migrated function will access
+  - The `name` parameter is mandatory, it is the name of the C function
+    being migrated
+  - The `signature` parameter is only needed if the function does not match
+    the `void f( void )` prototype. Signature definition must be according
+    to the rules indicated above.
+  - The `build_dependency` parameter specifies a BUILD_FEATURE_xx macro that
+    must be found in `features.h` if the function definitions are to be
+    generated. If no dependency is declared, function definitions are always
+    generated
 
 - Directories under `engine/banked_code`:
+
   - `common`: code in this folder will be compiled as banked code in 128K
     mode, and will be included also when compiling in 48K mode
   - `128`: code in this folder will only be compiled as banked code in 128K
@@ -120,10 +148,50 @@ should be taken into account:
   - When building in 48K mode, only the copy from `engine/src` will be
     compiled and used, so only 1 copy of the function will exist.
 
-- This situation happens when migrating some functions from a given module
-  (e.g.  `enemy.c`) but not others: not all functions from a module need to
-  be migrated initially.  When/if later on, _all_ of the module functions
-  are migrated to `banked_code`, the support functions under
-  `banked_code/128` directory can be moved to `banked_code/common`, so that
-  they are always compiled as banked code in 128K mode and as low memory in
-  48K mode.
+- This situation normally happens only temporarily when migrating some
+  functions from a given module (e.g.  `enemy.c`) but not others: not all
+  functions from a module need to be migrated initially.  When/if later on,
+  _all_ of the module functions are migrated to `banked_code`, the support
+  functions under `banked_code/128` directory can be moved to
+  `banked_code/common`, so that they are always compiled as banked code in
+  128K mode and as low memory in 48K mode.
+
+## Calling Banked Functions from an ISR
+
+Banked functions can be called from Interrupt Service Routines without
+problems.  They just need to be called using the regular `memory.h` macros
+for them so that correct bank switching is done.
+
+Since the bank port is write only, we cannot read the current bank state, so
+we need to keep it in a dedicated variable, and update that variable each
+time a bank switch is done.
+
+It is critical that both the bank switch and the update of the variable is
+done atomically: if an interrupt is received just between switching bank and
+updating the bank variable, and then a bank switch is done again in the ISR
+routine (e.g.  because the ISR calls banked code), the state between the
+variable and the banking register will not match and a crash will occur
+shortly afterwards.
+
+This happens in RAGE1 when using interrupt-driven music playback with the
+tracker, since the tracker code is compiled to banked memory and thus needs
+a bank switch when the periodic task is called for playing music.
+
+The way to make the changes atomic is by enclosing the bank switch between
+an DI/EI instruction pair.  When this is done, the following cases may
+occur:
+
+a) INT happens in the middle of regular code (bank 0).  The banked code in
+the ISR is called normally: the ISR will do the bank switch, run the banked
+code and restore the previous bank.  The bank-switching function will
+restore interrupts (EI) early during the ISR and not at the end, but this is
+not harmful because the Refresh INT is the only interrupt source, and a new
+int will not happen if we ensure absolutely that the whole ISR runs in less
+than 1/50 s.  This will happen anyway, because if it is longer, we are
+already screwed.
+
+b) INT happens in the middle of banked code (bank not 0).  Again, same
+reasoning as above, plus bank switch/restore inside the ISR is done
+correctly because the banked call routines are fully reentrant: they store
+the previous bank state in the stack, so everything is restored correctly
+when returning from the ISR.

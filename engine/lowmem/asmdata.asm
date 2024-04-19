@@ -25,13 +25,18 @@ section		code_crt_common
 ;;
 
 public		_current_time
-
 _current_time:
-
 hour:		db	0
 min:		db	0
 sec:		db	0
 frame:		db	0
+ticks:		dq	0	;; 32-bit
+
+;; extern uint8_t periodic_tasks_enabled
+
+public		_periodic_tasks_enabled
+_periodic_tasks_enabled:
+		db	0
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -62,3 +67,15 @@ _home_assets:
 public		_codeset_assets
 _codeset_assets:
 		dw	0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Global interrupt nesting counter. It moust go in low memory, so it
+;; is instead included in lowmem/asmdata.asm.  Declaration in interrupts.h
+;;
+;; extern uint8_t interrupt_nesting_level;
+;;
+
+public		_interrupt_nesting_level
+_interrupt_nesting_level:
+		db	0

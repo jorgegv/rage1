@@ -8,11 +8,13 @@
 ## 
 ################################################################################
 
-MYMAKE			= $(MAKE) -f Makefile-48
+.SILENT:
+
+MYMAKE			= $(MAKE) -s -f Makefile-48
 ZPRAGMA_INC		= zpragma-48.inc
 
 # All taps
-TAPS			= $(BAS_LOADER_TAP) $(MAIN_TAP)
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(MAIN_TAP) $(SUB_TAPS)
 
 -include Makefile.common
 
@@ -23,23 +25,68 @@ SRC			+= $(BANKED_CODE_SRC_COMMON)
 OBJS			+= $(BANKED_CODE_OBJS_COMMON)
 
 build:
-	@cp $(ENGINE_DIR)/loader48/loader.bas $(BAS_LOADER)
-	@$(MYMAKE) -s -j8 main
-	@$(MYMAKE) -s -j8 taps
-	@$(MYMAKE) -s final
+	cp $(ENGINE_DIR)/loader48/$(BAS_LOADER_SRC) $(BAS_LOADER)
+	$(MYMAKE) -j8 main
+	$(MYMAKE) -j8 subs
+	$(MYMAKE) loader
+	$(MYMAKE) asmloader
+	$(MYMAKE) -j8 taps
+	$(MYMAKE) final
+	$(MYMAKE) section-check
 
 ## Taps
 
 taps: $(TAPS)
 
+##
+## SUBs (Single Use Binaries) compilation to standalone binaries
+##
+
+subs: $(SUB_BINS)
+
+sub_%.bin:
+	echo "Compiling SUB $@ ..."
+	mv $(GAME_SRC_DIR)/sub_$* $(GENERATED_DIR_SUBS)/sub_$*.src
+	$(MAKE) -s -C $(GENERATED_DIR_SUBS)/sub_$*.src
+	cp $(GENERATED_DIR_SUBS)/sub_$*.src/sub.bin  $(GENERATED_DIR)/sub_$*.bin
+
+# we set org at 0x0000 for the subs (unused)
+sub_%.tap:
+	echo "Creating TAP $@..."
+	z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin -o sub_$*.tap
+
+##
+## Custom ASM loader
+##
+
+# loader is loaded at 0x5E00 in 48 mode
+loader:
+	echo "Creating custom loader..."
+	./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER) $(LOADING_SCREEN_FLAG)
+
+asmloader: $(ASMLOADER_BIN)
+
+$(ASMLOADER_BIN):
+	echo "Assembling loader routine..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --list --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
+
+# we set org at 0x5E00 for loader
+$(ASMLOADER_TAP): $(ASMLOADER_BIN)
+	echo "Creating TAP $@..."
+	z88dk-appmake +zx --noloader --org 0x5E00 -b $<
+
+##
+## Main binary
+##
+
 # we set org at 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
-	@echo "Creating TAP $@..."
-	@z88dk-appmake +zx --noloader --org 0x5F00 -b $<
+	echo "Creating TAP $@..."
+	z88dk-appmake +zx --noloader --noheader --org 0x5F00 -b $<
 
 $(MAIN_BIN): $(OBJS)
-	@echo "Bulding $(MAIN_BIN)...."
-	@$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
+	echo "Bulding $(MAIN_BIN)...."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
 
 ## Run options
 

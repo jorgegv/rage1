@@ -22,6 +22,7 @@
 #include "rage1/hotzone.h"
 #include "rage1/flow.h"
 #include "rage1/enemy.h"
+#include "rage1/crumb.h"
 
 // Screen functions and definitions
 // A screen has a set of btiles , a set of sprites and some hero data
@@ -38,9 +39,15 @@ struct map_screen_s {
 
     // data
     struct {
-        uint8_t num_btiles;
+        uint16_t num_btiles;
         struct btile_pos_s *btiles_pos;
     } btile_data;
+#ifdef BUILD_FEATURE_ANIMATED_BTILES
+    struct {
+        uint16_t num_btiles;
+        struct animated_btile_s *btiles;
+    } animated_btile_data;
+#endif
     struct { 
         uint8_t num_enemies; 
         struct enemy_info_s *enemies;
@@ -53,6 +60,12 @@ struct map_screen_s {
         uint8_t num_items;
         struct item_location_s *items;
     } item_data;
+#endif
+#ifdef BUILD_FEATURE_CRUMBS
+    struct {
+        uint8_t num_crumbs;
+        struct crumb_location_s *crumbs;
+    } crumb_data;
 #endif
     struct {
         uint8_t num_hotzones;
@@ -87,12 +100,14 @@ extern struct screen_dataset_map_s screen_dataset_map[];
 // with a generic function to draw a screen passed by pointer we can
 // later modify the logic behind maps without touching the map display
 // code
-void map_draw_screen(struct map_screen_s *s);
+void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall;
+void map_enter_screen( uint8_t screen ) __z88dk_fastcall;
+void map_exit_screen( struct map_screen_s *s ) __z88dk_fastcall;
+void map_allocate_sprites( struct map_screen_s *m ) __z88dk_fastcall;
+void map_free_sprites( struct map_screen_s *s ) __z88dk_fastcall;
+
 struct item_location_s *map_get_item_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
-void map_enter_screen( uint8_t screen );
-void map_exit_screen( struct map_screen_s *s );
-void map_allocate_sprites( struct map_screen_s *m );
-void map_free_sprites( struct map_screen_s *s );
+struct crumb_location_s *map_get_crumb_location_at_position( struct map_screen_s *s, uint8_t row, uint8_t col );
 
 // utility macros and definitions
 // screen flags macros and definitions

@@ -1,0 +1,22 @@
+candy			0 0 2 2 item
+candy_holder		0 2 2 2 decoration
+spot_1			0 4 2 2 decoration
+spot_2			0 6 2 2 decoration
+ball			0 8 2 2 item
+ball_holder		0 10 2 2 decoration
+desk			0 12 4 3 obstacle
+chair_right		0 16 2 2 obstacle
+chair_left		0 18 2 2 obstacle
+truck			2 0 2 2 item
+truck_holder		2 2 2 2 decoration
+shovel			2 4 2 2 item
+shovel_holder		2 6 2 2 decoration
+pencil			2 8 2 2 item
+pencil_holder		2 10 2 2 decoration
+bed			4 0 5 3 obstacle
+wall_1x1        4 5 1 1 obstacle
+wall_2x1        4 5 2 1 obstacle
+wall_1x2        4 5 1 2 obstacle
+wall_2x2        4 5 2 2 obstacle
+wall_4x2        4 5 4 2 obstacle
+redpill		4 9 1 1 crumb type=RedPill

@@ -24,10 +24,10 @@
 #include "rage1/banked.h"
 
 // acceleration functions
-struct btile_s *dataset_get_banked_btile_ptr( uint8_t t ) __z88dk_fastcall {
-    return &banked_assets->all_btiles[ t ];
+struct btile_s *dataset_get_banked_btile_ptr( uint16_t btile_id ) __z88dk_fastcall {
+    return &banked_assets->all_btiles[ btile_id ];
 }
 
-struct sprite_graphic_data_s *dataset_get_banked_sprite_ptr( uint8_t s ) __z88dk_fastcall {
-    return &banked_assets->all_sprite_graphics[ s ];
+struct sprite_graphic_data_s *dataset_get_banked_sprite_ptr( uint8_t sprite_id ) __z88dk_fastcall {
+    return &banked_assets->all_sprite_graphics[ sprite_id ];
 }

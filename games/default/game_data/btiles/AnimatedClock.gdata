@@ -1,0 +1,90 @@
+BEGIN_BTILE
+	NAME	AnimatedClock
+	ROWS	1
+	COLS	1
+	FRAMES	8
+
+	PIXELS	....########....
+	PIXELS	..##....##..##..
+	PIXELS	##......##....##
+	PIXELS	##......##....##
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	..##........##..
+	PIXELS	....########....
+
+	PIXELS	....########....
+	PIXELS	..##........##..
+	PIXELS	##........##..##
+	PIXELS	##......##....##
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	..##........##..
+	PIXELS	....########....
+
+	PIXELS	....########....
+	PIXELS	..##........##..
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	##......########
+	PIXELS	##............##
+	PIXELS	..##........##..
+	PIXELS	....########....
+
+	PIXELS	....########....
+	PIXELS	..##........##..
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	##......##....##
+	PIXELS	##........##..##
+	PIXELS	..##........##..
+	PIXELS	....########....
+
+	PIXELS	....########....
+	PIXELS	..##........##..
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	##....##......##
+	PIXELS	##....##......##
+	PIXELS	..##..##....##..
+	PIXELS	....########....
+
+	PIXELS	....########....
+	PIXELS	..##........##..
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	##....##......##
+	PIXELS	##..##........##
+	PIXELS	..##........##..
+	PIXELS	....########....
+
+	PIXELS	....########....
+	PIXELS	..##........##..
+	PIXELS	##............##
+	PIXELS	########......##
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	..##........##..
+	PIXELS	....########....
+
+	PIXELS	....########....
+	PIXELS	..##........##..
+	PIXELS	##..##........##
+	PIXELS	##....##......##
+	PIXELS	##............##
+	PIXELS	##............##
+	PIXELS	..##........##..
+	PIXELS	....########....
+
+	ATTR	INK_CYAN | PAPER_BLACK | BRIGHT
+	ATTR	INK_CYAN | PAPER_BLACK
+	ATTR	INK_BLUE | PAPER_BLACK | BRIGHT
+	ATTR	INK_BLUE | PAPER_BLACK
+	ATTR	INK_BLUE | PAPER_BLACK
+	ATTR	INK_BLUE | PAPER_BLACK | BRIGHT
+	ATTR	INK_CYAN | PAPER_BLACK
+	ATTR	INK_CYAN | PAPER_BLACK | BRIGHT
+
+	SEQUENCE        NAME=Main FRAMES=0,1,2,3,4,5,6,7
+
+END_BTILE

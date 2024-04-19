@@ -1,0 +1,45 @@
+BEGIN_GAME_CONFIG
+	NAME		MinimalGameWithSUBs
+	ZX_TARGET	128
+	SCREEN		INITIAL=Screen01
+	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK
+	SOUND		ENEMY_KILLED=BEEPFX_HIT_3
+	SOUND		BULLET_SHOT=BEEPFX_SHOT_2
+	SOUND		HERO_DIED=BEEPFX_NOPE
+	SOUND		ITEM_GRABBED=BEEPFX_JUMP_2
+	SOUND		CONTROLLER_SELECTED=BEEPFX_ITEM_3
+	SOUND		GAME_WON=BEEPFX_SELECT_7
+	SOUND		GAME_OVER=BEEPFX_JET_BURST
+	GAME_FUNCTION	TYPE=MENU NAME=my_menu_screen FILE=menu.c
+	GAME_AREA	TOP=1 LEFT=1 BOTTOM=21 RIGHT=30
+	LIVES_AREA	TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
+	INVENTORY_AREA	TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
+	DEBUG_AREA	TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
+
+	// Single User Blob definitions - Attention! order matters!
+
+	// intentional error for testing: overlaps with sp1buf when decompressing
+//	SINGLE_USE_BLOB	NAME=dsbuf_error LOAD_ADDRESS=0x7000 ORG_ADDRESS=0xD200 COMPRESS=1
+
+	// single use blob loaded and run from 0xD1ED
+	SINGLE_USE_BLOB	NAME=sp1buf LOAD_ADDRESS=0xD1ED
+
+	// single use blob loaded at 0x5B00 and run from there
+	SINGLE_USE_BLOB	NAME=dsbuf1 LOAD_ADDRESS=0x5B00
+
+	// single use blob loaded at 0x6000, swapped to 0xD200 and run from there
+	SINGLE_USE_BLOB	NAME=dsbuf2 LOAD_ADDRESS=0x6000 ORG_ADDRESS=0xD200
+
+	// single use blob loaded compressed at 0x6500, decompressed to 0xD200 and run from there
+	SINGLE_USE_BLOB	NAME=dsbuf3 LOAD_ADDRESS=0x6500 ORG_ADDRESS=0xD200 COMPRESS=1
+
+	// single use blob loaded at 0x5B00, swapped to 0xD1ED and run from 0xD200
+//	SINGLE_USE_BLOB	NAME=dsbufN LOAD_ADDRESS=0x5B00 ORG_ADDRESS=0xD1ED RUN_ADDRESS=0xD200
+
+	// intentional error for testing: duplicate name
+//	SINGLE_USE_BLOB	NAME=dsbuf3 LOAD_ADDRESS=0x6800
+
+	// intentional error for testing: overlaps with sp1buf when loading
+//	SINGLE_USE_BLOB	NAME=dsbuf_error LOAD_ADDRESS=0xD300
+	
+END_GAME_CONFIG

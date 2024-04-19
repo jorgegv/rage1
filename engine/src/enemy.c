@@ -8,6 +8,8 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <arch/zx.h>
+
 #include "rage1/game_state.h"
 #include "rage1/sprite.h"
 #include "rage1/enemy.h"
@@ -16,40 +18,42 @@
 #include "rage1/debug.h"
 #include "rage1/util.h"
 #include "rage1/dataset.h"
+#include "rage1/animation.h"
+
+#include "rage1/memory.h"
 
 #include "game_data.h"
 
 void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
-    struct enemy_info_s *e;
-    struct sprite_graphic_data_s *g;
+    static struct sprite_graphic_data_s *g;
     uint8_t n;
 
     n = num_enemies;
     while( n-- ) {
-        e = &enemies[n];		// eficiency matters ;-)
-        if ( ! IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) )	// skip if not active
-            continue;
+        // we reset coordinates for all enemies, even those that are not
+        // active (they may be activated later)
 
-        g = dataset_get_banked_sprite_ptr( e->num_graphic );
+        g = dataset_get_banked_sprite_ptr( enemies[n].num_graphic );
 
         // reset enemy state to initial values
 
         // animation
-        // e->animation.current.sequence is already assigned at data definition
-        e->animation.current.sequence_counter = 0;					// initial frame index
-        e->animation.current.frame_delay_counter = e->animation.delay_data.frame_delay;	// initial frame delay counter
-        e->animation.current.sequence_delay_counter = 0;				// initial sequence delay counter
+        // enemies[n].animation.current.sequence is already assigned at data definition
+        animation_reset_state( &enemies[n].animation );
         // position - update also xmax and ymax
-        e->position.x = e->movement.data.linear.initx;
-        e->position.y = e->movement.data.linear.inity;
-        e->position.xmax = e->position.x + g->width - 1;
-        e->position.ymax = e->position.y + g->height - 1;
+        enemies[n].position.x.part.integer = enemies[n].movement.data.linear.initx;
+        enemies[n].position.y.part.integer = enemies[n].movement.data.linear.inity;
+        enemies[n].position.x.part.fraction = 0;
+        enemies[n].position.y.part.fraction = 0;
+        enemies[n].position.xmax = enemies[n].position.x.part.integer + g->width - 1;
+        enemies[n].position.ymax = enemies[n].position.y.part.integer + g->height - 1;
         // movement
-        e->movement.data.linear.dx = e->movement.data.linear.initdx;
-        e->movement.data.linear.dy = e->movement.data.linear.initdy;
+        enemies[n].movement.data.linear.dx = enemies[n].movement.data.linear.initdx;
+        enemies[n].movement.data.linear.dy = enemies[n].movement.data.linear.initdy;
 
-        // move enemy to initial position
-        sp1_MoveSprPix( e->sprite, &game_area, g->frame_data.frames[0], e->position.x, e->position.y );
+        // move enemy to initial position, only if it is active
+        if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state ) )
+            sp1_MoveSprPix( enemies[n].sprite, &game_area, g->frame_data.frames[0], enemies[n].position.x.part.integer, enemies[n].position.y.part.integer );
     }
 }
 
@@ -59,28 +63,22 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
 
 void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
     uint8_t n;
-    struct enemy_info_s *e;
-    struct sprite_graphic_data_s *g;
-    struct sprite_animation_data_s *anim;
-    struct position_data_s *pos;
+    static struct sprite_graphic_data_s *g;
 
     n = num_enemies;
     while( n-- ) {
-        e = &enemies[n];		// efficiency matters ;-)
-        if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) &&
-            ( ENEMY_NEEDS_REDRAW( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state ) ) ) {
+        if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state ) &&
+            ( ENEMY_NEEDS_REDRAW( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state ) ) ) {
 
             // precalc some values
-            g = dataset_get_banked_sprite_ptr( e->num_graphic );
-            anim = &e->animation;
-            pos = &e->position;
+            g = dataset_get_banked_sprite_ptr( enemies[n].num_graphic );
 
             // move/animate sprite into new position
             // sprite may need update either because of animation, movement, or both
-            sp1_MoveSprPix( e->sprite, &game_area,
-                g->frame_data.frames[ g->sequence_data.sequences[ anim->current.sequence ].frame_numbers[ anim->current.sequence_counter ] ],
-                pos->x, pos->y );
-            RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
+            sp1_MoveSprPix( enemies[n].sprite, &game_area,
+                g->frame_data.frames[ g->sequence_data.sequences[ enemies[n].animation.current.sequence ].frame_numbers[ enemies[n].animation.current.sequence_counter ] ],
+                enemies[n].position.x.part.integer, enemies[n].position.y.part.integer );
+            RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
         }
     }
 }

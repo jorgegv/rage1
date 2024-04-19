@@ -47,8 +47,13 @@
 #define RULE_CHECK_FLOW_VAR_EQUAL		20
 #define RULE_CHECK_FLOW_VAR_MORE_THAN		21
 #define RULE_CHECK_FLOW_VAR_LESS_THAN		22
+#define RULE_CHECK_GAME_TIME_EQUAL		23
+#define RULE_CHECK_GAME_TIME_MORE_THAN		24
+#define RULE_CHECK_GAME_TIME_LESS_THAN		25
+#define RULE_CHECK_GAME_EVENT_HAPPENED		26
+#define RULE_CHECK_ITEM_IS_NOT_OWNED		27
 
-#define RULE_CHECK_MAX				22
+#define RULE_CHECK_MAX				27
 
 struct flow_rule_check_s {
     uint8_t type;
@@ -57,10 +62,12 @@ struct flow_rule_check_s {
         struct { uint8_t	flag; }			flag_state;	// USER_FLAG_*, GAME_FLAG_*, LOOP_FLAG_*, SCREEN_FLAG
         struct { uint8_t	count; }		lives;		// INC_LIVES
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
-        struct { uint8_t	function_id; }		custom;		// CALL_CUSTOM_FUNCTION
-        struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED
+        struct { uint8_t	function_id, param; }	custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint16_t	item_id; }		item;		// ITEM_IS_OWNED/NOT_OWNED
         struct { uint8_t	num_hotzone; }		hotzone;	// HERO_INSIDE_HOTZONE
         struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
+        struct { uint16_t	seconds; }		game_time;	// GAME_TIME_*
+        struct { uint8_t	event; }		game_event;	// GAME_EVENT_HAPPENED
     } data;
 };
 
@@ -92,8 +99,16 @@ struct flow_rule_check_s {
 #define RULE_ACTION_FLOW_VAR_ADD		17
 #define RULE_ACTION_FLOW_VAR_DEC		18
 #define RULE_ACTION_FLOW_VAR_SUB		19
+#define RULE_ACTION_TRACKER_SELECT_SONG		20
+#define RULE_ACTION_TRACKER_MUSIC_STOP		21
+#define RULE_ACTION_TRACKER_MUSIC_START		22
+#define RULE_ACTION_TRACKER_PLAY_FX		23
+#define RULE_ACTION_HERO_ENABLE_WEAPON		24
+#define RULE_ACTION_HERO_DISABLE_WEAPON		25
+#define RULE_ACTION_ENABLE_ENEMY		26
+#define RULE_ACTION_DISABLE_ENEMY		27
 
-#define RULE_ACTION_MAX				19
+#define RULE_ACTION_MAX				27
 
 struct flow_rule_action_s {
     uint8_t type;
@@ -103,9 +118,10 @@ struct flow_rule_action_s {
         struct { void		*sound_id; }		play_sound;	// PLAY_SOUND
         struct { uint8_t	flag; }			user_flag;	// SET_USER_FLAG, RESET_USER_FLAG
         struct { uint16_t	count; }		enemies;	// ENEMIES_ALIVE_*, ENEMIES_KILLED_*
-        struct { uint8_t	function_id; }		custom;		// CALL_CUSTOM_FUNCTION
+        struct { uint8_t	function_id, param; }	custom;		// CALL_CUSTOM_FUNCTION
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
         struct { uint8_t	num_btile; }		btile;		// ENABLE/DISABLE_BTILE
+        struct { uint8_t	num_enemy; }		enemy;		// ENABLE/DISABLE_ENEMY
         struct { 
             uint8_t	num_screen;
             uint8_t	hero_x;
@@ -115,6 +131,8 @@ struct flow_rule_action_s {
         struct { uint16_t	item_id; }		item;		// ADD_TO/REMOVE_FROM_INVENTORY
         struct { uint8_t	num_screen, flag; }	screen_flag;	// SET/RESET_SCREEN_FLAG
         struct { uint8_t	var_id, value; }	flow_var;	// FLOW_VAR_*
+        struct { uint8_t	num_song; }		tracker_song;	// TRACKER_SELECT_SONG
+        struct { uint16_t	num_effect; }		tracker_fx;	// TRACKER_PLAY_FX
     } data;
 };
 
@@ -138,10 +156,11 @@ struct flow_rule_table_s {
 };
 
 // function types for custom checks/actions
-typedef int (*check_custom_function_t)( void );
-typedef void (*action_custom_function_t)( void );
+typedef uint8_t (*check_custom_function_t)( uint8_t param );
+typedef void (*action_custom_function_t)( uint8_t param );
 
 // executes user flow rules
-void check_flow_rules(void);
+void check_flow_rules( void );
+void check_game_event_rules( void );
 
 #endif //_FLOW_H

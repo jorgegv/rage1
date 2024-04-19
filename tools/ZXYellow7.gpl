@@ -1,0 +1,11 @@
+GIMP Palette
+Name: ZXYellow7
+Columns: 7
+#
+  0   0   0	Black
+  0   0 192	Blue
+  0   0 255	Bright Blue
+192 192   0	Yellow
+192 192 192	White
+255 255   0	Bright Yellow
+255 255 255	Bright White

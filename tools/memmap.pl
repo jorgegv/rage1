@@ -19,12 +19,13 @@ use Data::Dumper;
 use Getopt::Std;
 
 # handle command options
-our ( $opt_s, $opt_m, $opt_h );
-getopts("smh");
+our ( $opt_s, $opt_m, $opt_h, $opt_p );
+getopts("smhp:");
 if ( defined($opt_h) ) {
     say "usage: $0 [-s] [-m] [-h] <file.map> ...";
     say "  -s: section/symbol mode - dumps a table of the sections, symbols and their addresses";
     say "  -m: map mode - dumps a table of the section names, addresses and sizes";
+    say "  -p <profile>: <profile> can be 'main' (for low memory/48K mode) or 'bank' (for \$C000 memory bank)";
     say "  -h: this help text";
     exit 1;
 }
@@ -32,6 +33,11 @@ if ( defined($opt_h) ) {
 # set default mode to map-mode
 if ( not defined( $opt_s ) and not defined( $opt_m ) ) {
     $opt_m++;
+}
+
+# set default profile to main
+if ( not defined( $opt_p ) ) {
+    $opt_p = 'main';
 }
 
 # slurp all data and create data struct
@@ -82,9 +88,21 @@ while (<>) {
     }
 }
 
+# predefined sections for each profile
 # about these predefined sections, see doc/MEMORY-MAP.doc
-$sections->{'FREE'}		= { 'base' => $highest,	'top' => 0xd1ec, size => 0xd1ec - $highest + 1 };
-$sections->{'RESERVED_SP1'}	= { 'base' => 0xd1ed,	'top' => 0xffff, size => 0xffff - 0xd1ed + 1 };
+my $predefined_sections = {
+    main => {
+        'FREE'		=> { 'base' => $highest, 'top' => 0xd1ec, size => 0xd1ec - $highest + 1 },
+        'RESERVED_SP1'	=> { 'base' => 0xd1ed,   'top' => 0xffff, size => 0xffff - 0xd1ed + 1 },
+    },
+    bank => {
+        'FREE'		=> { 'base' => $highest, 'top' => 0xffff, size => 0xffff - $highest + 1 },
+    },
+};
+
+foreach my $s ( keys %{ $predefined_sections->{ $opt_p } } ) {
+    $sections->{ $s } = $predefined_sections->{ $opt_p }{ $s };
+}
 
 # fix the top values of all sections but the last
 my @sections_in_order = sort { $sections->{ $a }{'base'} <=> $sections->{ $b }{'base'} } keys %$sections;
@@ -98,10 +116,10 @@ foreach my $i ( 0 .. $#sections_in_order ) {
 
 # OK processing, now with the output...
 
-# this sections will be ignored i reports and calculations
+# this sections will be ignored in reports and calculations
 my @sections_to_ignore = (
     'data_threads', 'code_l', 'code_l_sdcc', 'code_math', 'code_stdlib',
-    'code_temp_sp1', 'code_threads_mutex', 'code_z80',
+    'code_threads_mutex', 'code_z80',
 );
 
 # section/symbol mode
