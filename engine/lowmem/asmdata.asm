@@ -9,9 +9,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; This file contains data that needs to be in low memory at all times, so
-;; it is placed in the code_crt_common section
+;; it is placed in its own section, which is located in lowmem by mmap.inc
 
-section		code_crt_common
+section		rage1_lowmem
 
 ;;
 ;; Data follows

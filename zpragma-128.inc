@@ -16,7 +16,7 @@
 //#pragma output CRT_ORG_CODE           = 0x8184	// org of compile
 //#pragma output REGISTER_SP            = 0x8181	// just below ISR
 
-#pragma output CRT_STACK_SIZE         = 128	// just enough
+//#pragma output CRT_STACK_SIZE         = 128	// just enough
 
 #pragma output CRT_ENABLE_CLOSE       = 0	// don't bother closing files on exit
 #pragma output CRT_ENABLE_EIDI        = 1	// disable interrupts at start
@@ -29,3 +29,8 @@
 #pragma output CLIB_OPEN_MAX          = -1	// no fd table
 
 #pragma output MMAP                 = -1	// use user-supplied memory map: mmap.inc
+#pragma output CLIB_EXIT_STACK_SIZE = 0		// no atexit() functions
+#pragma output CRT_ENABLE_STDIO = 0	
+#pragma output fputc_cons = 0
+#pragma output CRT_DISABLELOADER = 1
+#pragma output CRT_INITIALIZE_BSS = 0

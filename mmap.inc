@@ -26,10 +26,8 @@
     SECTION code_crt_init_exit
     SECTION code_crt_exit
     SECTION code_crt_exit_exit
-    SECTION code_driver
+    SECTION rage1_lowmem
     SECTION rodata_driver       ;Keep it in low memoey
-    SECTION code_compiler
-    SECTION code_clib
     SECTION code_l
     SECTION code_l_sdcc
     SECTION code_l_sccz80
@@ -72,13 +70,37 @@
     SECTION code_alloc_balloc
     SECTION code_alloc_obstack
     SECTION code_arch
-    SECTION code_font
-    SECTION code_font_fzx
     SECTION code_psg
     SECTION code_sound_ay
     SECTION code_PSGlib
     SECTION code_time
     SECTION code_z80
+
+
+    SECTION rage1_subs_loader
+    SECTION rodata_input
+    SECTION rodata_compiler
+    SECTION rodata_sound_bit
+    SECTION rodata_clib
+    SECTION rodata_font_4x8
+    SECTION data_compiler
+    SECTION data_clib
+    SECTION data_arch
+    SECTION data_stdlib
+    SECTION data_sound_bit
+    SECTION bss_compiler
+    SECTION bss_error
+    SECTION bss_stdlib
+    SECTION bss_crt
+    SECTION bss_driver
+    SECTION bss_clib
+
+
+    SECTION code_compiler
+    SECTION code_driver
+    SECTION code_clib
+    SECTION code_font
+    SECTION code_font_fzx
     SECTION code_sprite_sp1
     SECTION code_temp_sp1
     SECTION code_splib2
@@ -100,7 +122,6 @@ ENDIF
     SECTION rodata_fp_am9511
     SECTION rodata_fp_dai32
     SECTION rodata_arch
-    SECTION rodata_compiler
     SECTION rodata_clib
     SECTION rodata_psg
     SECTION rodata_sound_ay
@@ -116,7 +137,6 @@ ENDIF
     SECTION rodata_font_8x10
     SECTION rodata_font_ansi
     SECTION rodata_splib2
-    SECTION rodata_sound_bit
     ; Keep the following section last of all
     SECTION rodata_appdor
     SECTION RODATA_END
@@ -143,7 +163,6 @@ IF !__crt_model
     SECTION data_crt
     SECTION data_fp_mbf32
     SECTION data_arch
-    SECTION data_compiler
     SECTION data_splib2
     SECTION data_user
     SECTION data_alloc_balloc
@@ -211,7 +230,6 @@ IF __crt_model > 0
     SECTION data_crt
     SECTION data_fp_mbf32
     SECTION data_arch
-    SECTION data_compiler
     SECTION data_splib2
     SECTION data_user
     SECTION data_alloc_balloc

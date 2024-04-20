@@ -343,7 +343,7 @@ print $dsmap_h <<EOF_DSMAP_3
 ;; struct dataset_info_s dataset_info[ $num_datasets ] = { ... }
 ;;
 
-section         code_crt_common
+section         rage1_lowmem
 
 public		_dataset_info
 
