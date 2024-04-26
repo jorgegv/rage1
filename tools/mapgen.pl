@@ -220,7 +220,10 @@ sub is_background_btile {
 sub generate_btiles {
     my ( $png, $tiledefs, $png_file, $prefix ) = @_;
 
-    my $file_prefix = basename( $png_file, '.png', '.PNG' ) . '_' . $prefix;
+    my $sanitized_basename = basename( $png_file, '.png', '.PNG' );
+    $sanitized_basename =~ s/[\-\.]/_/g;
+
+    my $file_prefix = $sanitized_basename . '_' . $prefix;
 
     my @generated_btiles;
 
