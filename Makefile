@@ -140,6 +140,13 @@ test-build-%:
 all-test-builds:
 	echo -n "START: "
 	date
-	for i in $(ALL_TEST_GAMES); do $(MYMAKE) test-build-$$i; done
+	for i in $(ALL_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds.log
 	echo -n "END: "
 	date
+	if ( grep -i Errors /tmp/all-test-builds.log ) then \
+		echo "*** Some tests failed ***"; \
+		exit 1; \
+	else \
+		echo "All tests succeeded"; \
+		exit 0; \
+	fi
