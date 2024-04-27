@@ -1,0 +1,22 @@
+---
+name: build-test-games
+
+on:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  build-test-games:
+    name: Build test games
+    runs-on: ubuntu-latest
+    container: zxjogv/rage1-z88dk:latest
+    steps:
+
+      - name: Checkout RAGE1 repo
+        uses: actions/checkout@v4
+
+      - name: Build test games
+        run: |
+          cd /github/workspace && \
+          make all-test-builds
