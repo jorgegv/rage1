@@ -9,9 +9,12 @@
   * `File::Copy`
   * `GD`
   * `YAML`
+  * `Algorithm::FastPermute`
+  * `Digest::SHA1`
 * M4
 * Fuse (ZX Spectrum Emulator)
 * make
+* git
 
 With the exception of Z88DK, all the other modules and requirements are available in standard repos for most distributions
 
@@ -20,7 +23,7 @@ With the exception of Z88DK, all the other modules and requirements are availabl
 Enter the following command for installing the required packages:
 
 ```
-sudo dnf install -y perl perl-Data-Compare perl-List-MoreUtils perl-File-Copy perl-GD perl-YAML m4 make
+sudo dnf install -y perl perl-Data-Compare perl-List-MoreUtils perl-File-Copy perl-GD perl-YAML m4 make perl-Algorithm-FastPermute
 ```
 
 ## Specific instructions for Ubuntu, Debian and Linux Mint
