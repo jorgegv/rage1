@@ -14,7 +14,7 @@ jobs:
     container:
       image: zxjogv/rage1-z88dk:latest
       volumes:
-        - /github/workspace
+        - ${{ github.workspace }}:/src/rage1
     steps:
 
       - name: Checkout RAGE1 repo
@@ -22,5 +22,5 @@ jobs:
 
       - name: Build test games
         run: |
-          cd /github/workspace && \
+          cd /src/rage1 && \
           make all-test-builds
