@@ -8,6 +8,9 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+// the name of this file starts with 00...  so that it is compiled (and
+// linked!) at the beginning of the code section
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <alloc.h>
