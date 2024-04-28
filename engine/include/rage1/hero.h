@@ -48,20 +48,38 @@ struct hero_animation_data_s {
 #define MOVE_LEFT	IN_STICK_LEFT
 #define MOVE_RIGHT	IN_STICK_RIGHT
 #define MOVE_ALL	( MOVE_UP | MOVE_DOWN | MOVE_LEFT | MOVE_RIGHT )
+
 struct hero_movement_data_s {
     uint8_t last_direction;
-    uint8_t dx,dy;
+    ffp16_t dx,dy;
+};
+
+// describes the damage mode for the hero
+struct hero_damage_mode_s {
+    uint8_t	lives_max;		// num of lives per game
+    uint8_t	health_max;		// health counter per life
+    uint8_t	enemy_damage;		// damage inflicted by 1 enemy impact
+    uint8_t	immunity_period;	// period of immunity after enemy impact (1/50s)
+};
+
+// hero health data
+struct hero_health_data_s {
+    uint8_t num_lives;			// lives
+    uint8_t health_amount;		// health counter for each life
+    uint8_t immunity_timer;		// immunity counter
 };
 
 struct hero_info_s {
     struct sp1_ss *sprite;                      // ptr to SP1 sprite struct
     uint8_t num_graphic;			// index in global sprite table
+#ifdef BUILD_FEATURE_HERO_ADVANCED_DAMAGE_MODE
+    struct hero_damage_mode_s damage_mode;	// damage mode data
+#endif
     struct hero_animation_data_s animation;	// animation data	
-    struct position_data_s position;	// position data
+    struct position_data_s position;		// position data
     struct hero_movement_data_s movement;	// movement data
+    struct hero_health_data_s health;		// health data
     uint8_t flags;				// flags
-    uint8_t num_lives;				// lives
-    uint8_t lives_btile_num;			// btile used to draw remaining lives
 };
 
 // a pre-filled hero_info_s struct for game reset
@@ -74,23 +92,29 @@ extern struct sp1_ss *hero_sprite;
 #define SET_HERO_FLAG(s,f)	( (s).flags |= (f) )
 #define RESET_HERO_FLAG(s,f)	( (s).flags &= ~(f) )
 
-#define F_HERO_ALIVE	0x01
-#define F_HERO_STEADY	0x02
+#define F_HERO_ALIVE		0x01
+#define F_HERO_STEADY		0x02
+#define F_HERO_IMMUNE		0x04
+#define F_HERO_CAN_SHOOT	0x08
 
 #define IS_HERO_ALIVE(s)	(GET_HERO_FLAG((s),F_HERO_ALIVE))
 #define IS_HERO_STEADY(s)	(GET_HERO_FLAG((s),F_HERO_STEADY))
+#define IS_HERO_IMMUNE(s)	(GET_HERO_FLAG((s),F_HERO_IMMUNE))
+#define CAN_HERO_SHOOT(s)	(GET_HERO_FLAG((s),F_HERO_CAN_SHOOT))
 
 void init_hero(void);
 void hero_reset_all(void);
 void hero_reset_position(void);
 void hero_animate_and_move( void );
 void hero_shoot_bullet( void );
-void hero_pickup_items(void);
+void hero_check_tiles_below(void);
 void hero_update_lives_display(void);
 void hero_draw(void);
 void hero_set_position_x( struct hero_info_s *h, uint8_t x);
 void hero_set_position_y( struct hero_info_s *h, uint8_t y);
 void hero_move_offscreen(void);
 void hero_init_sprites(void);
+void hero_handle_hit( void );
+void hero_do_immunity_expiration( void );
 
 #endif // _HERO_H

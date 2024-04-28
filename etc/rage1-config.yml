@@ -1,0 +1,112 @@
+##
+## build configuration
+##
+build:
+  generated_dir: 'build/generated'
+  banked_functions:
+    asm_table_filename: 'build/generated/banked/128/00banked_function_table.asm'
+    c_macros_filename: 'build/generated/banked_function_defs.h'
+  
+##
+## tools configuration
+##
+tools:
+  arkos:
+    dir: '/home/jorgegv/src/spectrum/arkos/Arkos Tracker 2'
+
+##
+## IM2 interrupt configuration for 128K mode
+## Int config is fixed for 48K mode
+##
+## 257 bytes with value ISR_VECTOR_BYTE are stored at address IV_TABLE_ADDR
+## ISR address is built as 2 consecutive bytes of value ISR_VECTOR_BYTE, e.g. 0x8181
+## At that address there is a JP <ISR> 3-byte jump instruction to the real ISR routine.
+## So the real code starts at ISR address + 3.
+##
+
+# standard RAGE1 map
+interrupts_128:
+  iv_table_addr: 0x8000
+  isr_vector_byte: 0x81
+  isr_vector_address: 0x8181
+  base_code_address: 0x8184
+
+#
+# alternative map with IV at 0x8400, ISR at 0x8585 and code starting at 0x8588
+#
+#interrupts_128:
+#  iv_table_addr: 0x8400
+#  isr_vector_byte: 0x85
+#  isr_vector_address: 0x8585
+#  base_code_address: 0x8588
+
+##
+## banked functions database
+##
+## Fields:
+##   name (mandatory)
+##   signature (optional): a16, a16_r8, etc.
+##   build_dependency (optional): BUILD_FEATURE_xx
+##
+## Definitions for the given functions will only be output if
+## BUILD_FEATURE_xx is enabled in features.h, or no build_dependency is
+## present
+##
+## See doc/BANKED-FUNCTIONS.md for details
+##
+banked_functions:
+
+  # init_main_shared_data
+  - name: init_main_shared_data
+    signature: a16
+
+  # beeper
+  - name: beeper_play_pending_fx
+  - name: beeper_request_fx
+    signature: a16
+  - name: init_beeper
+  - name: beeper_play_fx
+    signature: a16
+
+  # animation
+  - name: animation_sequence_tick
+    signature: a16_a8_r8
+  - name: animation_reset_state
+    signature: a16
+
+  # hero
+  - name: hero_animate_and_move
+
+  # enemy
+  - name: enemy_animate_and_move_all
+
+  # bullet
+  - name: bullet_animate_and_move_all
+    build_dependency: BUILD_FEATURE_HERO_HAS_WEAPON
+  - name: bullet_add
+    build_dependency: BUILD_FEATURE_HERO_HAS_WEAPON
+
+  # tracker
+  - name: init_tracker
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_select_song
+    signature: a16
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_start
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_stop
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_do_periodic_tasks
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: init_tracker_sound_effects
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX
+  - name: tracker_play_fx
+    signature: a16
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX
+  - name: tracker_rewind
+    build_dependency: BUILD_FEATURE_TRACKER
+  - name: tracker_play_pending_fx
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX
+  - name: tracker_request_fx
+    signature: a16
+    build_dependency: BUILD_FEATURE_TRACKER_SOUNDFX

@@ -24,21 +24,17 @@
 // struct dataset_assets_s *banked_assets;
 // struct dataset_assets_s *home_assets;
 
-uint8_t dataset_currently_active = 255;
-
 #ifdef BUILD_FEATURE_ZX_TARGET_128
-void dataset_activate( uint8_t d ) {
+void dataset_activate( uint8_t d ) __z88dk_fastcall {
     uint8_t previous_memory_bank;
 
     // if the dataset is already active, do nothing
-    if ( d == dataset_currently_active )
+    if ( game_state.active_dataset == d )
         return;
 
-    // save previous memory bank
-    previous_memory_bank = memory_current_memory_bank;
-
-    // switch the proper memory bank for the given dataset
-    memory_switch_bank( dataset_info[ d ].bank_num );
+    // save previous memory bank, switch the proper memory bank for the
+    // given dataset
+    previous_memory_bank = memory_switch_bank( dataset_info[ d ].bank_num );
 
     // copy dataset data into LOWMEM buffer
     // data is ZX0 compressed, so decompress to destination address
@@ -48,9 +44,17 @@ void dataset_activate( uint8_t d ) {
     // switch back to previous memory bank
     memory_switch_bank( previous_memory_bank );
 
-    // Save the dataset that was activated - Beware!  This has to be done
-    // AFTER switching back to bank 0!
-    dataset_currently_active = d;
+    // Save the dataset that was activated here and in game_state - Beware!
+    // This has to be done AFTER switching back to bank 0!
+    game_state.active_dataset = d;
+
+}
+
+// Force the loading of a dataset, even it is the current one.  Useful when we have destroyed the
+// low mem buffer with some other data and we want to rebuild it
+void dataset_activate_force( uint8_t d ) __z88dk_fastcall {
+    game_state.active_dataset = NO_DATASET;
+    dataset_activate( d );
 }
 #endif
 
@@ -71,10 +75,10 @@ void init_datasets(void) {
 }
 
 // acceleration functions
-struct btile_s *dataset_get_banked_btile_ptr( uint8_t t ) __z88dk_fastcall {
-    return &banked_assets->all_btiles[ t ];
+struct btile_s *dataset_get_banked_btile_ptr( uint16_t btile_id ) __z88dk_fastcall {
+    return &banked_assets->all_btiles[ btile_id ];
 }
 
-struct sprite_graphic_data_s *dataset_get_banked_sprite_ptr( uint8_t s ) __z88dk_fastcall {
-    return &banked_assets->all_sprite_graphics[ s ];
+struct sprite_graphic_data_s *dataset_get_banked_sprite_ptr( uint8_t sprite_id ) __z88dk_fastcall {
+    return &banked_assets->all_sprite_graphics[ sprite_id ];
 }

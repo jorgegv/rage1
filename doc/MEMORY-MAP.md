@@ -31,5 +31,31 @@ In 128K mode, the additional banks are mapped into $C000 address range in
 the usual way.  Also, the ROM page mapped at address $0000 is the 48K ROM,
 since this is required for correct SP1 library initialization.
 
-Please refer to the [BANKING-DESIGN.md](BANKING-DESIGN.md) document for a
+The memory layout for 128K mode may be changed in the RAGE1 config file,
+please refer to the [BANKING-DESIGN.md](BANKING-DESIGN.md) document for a
 full reference on the memory banking implementation in RAGE1.
+
+## Distribution of memory banks in 128K mode
+
+The regular mapping of banks 5,2,0 is used at program startup.
+
+- Bank 5 is used for screen, lowmem buffer and heap
+
+- Banks 2 and 0 are used for lowmem code and SP1 data (SP1 code is not
+  currently banked in RAGE1)
+
+- Bank 4 is used by RAGE1 for its banked code (owned by RAGE1; non-contended)
+
+- Bank 6 can be used for CODESET 0 (user code and data; non-contended)
+
+- Banks 1,3,7 can be used for DATASETs (user data assets: sprites, tiles,
+  screens and rules; contended)
+
+- If needed, some of the DATASET banks can be used for CODESETs (change
+  DATAGEN source for that), but keeping in mind that the code will live in
+  contended memory, so it will run a bit slower.
+
+- As a rule of thumb, even banks should be used for code, odd banks for
+  data.
+
+Note: contended banks: 1,3,5,7; non-contended: 0,2,4,6.

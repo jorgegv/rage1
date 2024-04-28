@@ -69,7 +69,7 @@ extern struct codeset_function_info_s all_codeset_functions[];
 void init_codesets( void );
 
 // function to call a given codeset function, wherever it may be
-void codeset_call_function( uint8_t global_function_num );
+void codeset_call_function( uint8_t global_function_num ) __z88dk_fastcall;
 
 ////////////////////////////////////////////////////////////////
 //

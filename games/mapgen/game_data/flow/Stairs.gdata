@@ -1,0 +1,24 @@
+// Hotzone 'GeneratedHotzone_0' screen-warp rule
+BEGIN_RULE
+	SCREEN	Stairs
+	WHEN	GAME_LOOP
+	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_0
+	DO	WARP_TO_SCREEN DEST_SCREEN=Corridor DEST_HERO_Y=112
+END_RULE
+
+// Hotzone 'GeneratedHotzone_1' screen-warp rule
+BEGIN_RULE
+	SCREEN	Stairs
+	WHEN	GAME_LOOP
+	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_1
+	DO	WARP_TO_SCREEN DEST_SCREEN=AutoScreen_001_000 DEST_HERO_X=176
+END_RULE
+
+// Hotzone 'GeneratedHotzone_2' screen-warp rule
+BEGIN_RULE
+	SCREEN	Stairs
+	WHEN	GAME_LOOP
+	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_2
+	DO	WARP_TO_SCREEN DEST_SCREEN=AutoScreen_001_002 DEST_HERO_X=16
+END_RULE
+

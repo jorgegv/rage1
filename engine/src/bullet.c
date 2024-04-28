@@ -16,10 +16,11 @@
 #include "rage1/screen.h"
 #include "rage1/util.h"
 #include "rage1/debug.h"
-#include "rage1/sound.h"
+#include "rage1/sprite.h"
 
 #include "game_data.h"
 
+#ifdef BUILD_FEATURE_HERO_HAS_WEAPON
 void init_bullets( void ) {
     bullet_init_sprites();
 }
@@ -30,8 +31,10 @@ void bullet_redraw_all( void ) {
     struct bullet_state_data_s *bs;
 
     bi = &game_state.bullet;
+    if ( ! bi->active_bullets )
+        return;
 
-    i = bi->num_bullets;
+    i = BULLET_MAX_BULLETS;
     while ( i-- ) {
         bs = &bi->bullets[ i ];
 
@@ -41,9 +44,10 @@ void bullet_redraw_all( void ) {
                 sprite_move_offscreen( bs->sprite );
                 RESET_BULLET_FLAG( *bs, F_BULLET_MOVE_OFFSCREEN );
                 RESET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
+                game_state.bullet.active_bullets--;
             }
             if ( BULLET_NEEDS_REDRAW( *bs ) ) {
-                sp1_MoveSprPix( bs->sprite, &game_area, bi->frames[0], bs->position.x, bs->position.y );
+                sp1_MoveSprPix( bs->sprite, &game_area, bs->frame, bs->position.x.part.integer, bs->position.y.part.integer );
                 RESET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
             }
         }
@@ -54,26 +58,44 @@ void bullet_reset_all(void) {
     uint8_t i;
     struct sp1_ss *save;
 
-    i = game_state.bullet.num_bullets;
+    i = BULLET_MAX_BULLETS;
     while ( i-- ) {
         save = game_state.bullet.bullets[ i ].sprite;
         memset( &game_state.bullet.bullets[ i ], 0, sizeof( struct bullet_state_data_s ) );
         game_state.bullet.bullets[ i ].sprite = save;
         sprite_move_offscreen( save );
+        game_state.bullet.active_bullets = 0;
     }
 }
 
 void bullet_move_offscreen_all(void) {
     uint8_t i;
 
-    i = game_state.bullet.num_bullets;
+    i = BULLET_MAX_BULLETS;
     while ( i-- )
         sprite_move_offscreen( game_state.bullet.bullets[i].sprite );
 }
 
+struct bullet_info_s bullet_startup_data = {
+    .width		= BULLET_SPRITE_WIDTH,
+    .height		= BULLET_SPRITE_HEIGHT,
+    .frames		= NULL,	// will be initialized at runtime, comes from home_bank assets ptr
+    .movement		= {
+        .dx = BULLET_MOVEMENT_DX,
+        .dy = BULLET_MOVEMENT_DY,
+        .delay = BULLET_MOVEMENT_DELAY,
+        },
+    .bullets		= &bullet_state_data[0],
+    .active_bullets	= 0,
+    .reload_delay	= BULLET_RELOAD_DELAY,
+    .reloading		= 0,
+#ifndef BUILD_FEATURE_HERO_WEAPON_AUTOFIRE
+    .firing		= 0,
+#endif
+};
+
 // Bullet Sprites initialization function
 void bullet_init_sprites(void) {
-    struct bullet_info_s *bi;
     struct sp1_ss *bs;
     uint8_t i;
 
@@ -86,15 +108,8 @@ void bullet_init_sprites(void) {
     }
 
     // initialize remaining game_state.bullet struct fields
-    bi = &game_state.bullet;
-    bi->width = BULLET_SPRITE_WIDTH;
-    bi->height = BULLET_SPRITE_HEIGHT;
-    bi->frames = BULLET_SPRITE_FRAMES;
-    bi->movement.dx = BULLET_MOVEMENT_DX;
-    bi->movement.dy = BULLET_MOVEMENT_DY;
-    bi->movement.delay = BULLET_MOVEMENT_DELAY;
-    bi->num_bullets = BULLET_MAX_BULLETS;
-    bi->bullets = &bullet_state_data[0];
-    bi->reload_delay = BULLET_RELOAD_DELAY;
-    bi->reloading = 0;
+    memcpy( &game_state.bullet, &bullet_startup_data, sizeof( struct bullet_info_s ) );
+    game_state.bullet.frames = home_assets->all_sprite_graphics[ BULLET_SPRITE_ID ].frame_data.frames;
 }
+
+#endif // BUILD_FEATURE_HERO_HAS_WEAPON

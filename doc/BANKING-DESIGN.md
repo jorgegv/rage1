@@ -33,10 +33,38 @@ The low memory map for our game is as follows:
 5B00-7FFF: LOWMEM BUFFER + HEAP ( 9472 BYTES)
 8000-8100: INT VECTOR TABLE     (  257 BYTES)
 8101-8180: STACK                (  128 BYTES)
-8181-8183: "jp <isr>" OPCODES   (    3 BYTES)
+8181-8183: "jp <isr>" OPCODE    (    3 BYTES)
 8184-D1EC: C PROGRAM CODE       (20585 BYTES)
 D1ED-FFFF: SP1 LIBRARY DATA     (11795 BYTES)
 ```
+
+The "LOWMEM BUFFER + HEAP" area (used for DATASETs, whch include screen
+definitions, rules and enemy sprites) can be enlarged by moving it upwards
+while maintaining the restrictions associated to IM2 Spectrum interrupt
+tables (ISR address must be expressable as a repeated byte, e.g.  0x8181,
+0x9191, 257 bytes for IV table, etc.).  Of course, the enlarged LOWMEM
+buffer area makes the "C PROGRAM CODE" smaller by approximately the same
+amount.
+
+Considering this, an alternative memory layout with a bigger LOWMEM buffer
+and associated interrupt configuration may be the following:
+
+```
+0000-3FFF: ROM                  (16384 BYTES)
+4000-5AFF: SCREEN$              ( 6912 BYTES)
+5B00-7FFF: LOWMEM BUFFER + HEAP (13568 BYTES)
+9000-9100: INT VECTOR TABLE     (  257 BYTES)
+9101-9190: STACK                (  144 BYTES)
+9191-9193: "jp <isr>" OPCODE    (    3 BYTES)
+9194-D1EC: C PROGRAM CODE       (16473 BYTES)
+D1ED-FFFF: SP1 LIBRARY DATA     (11795 BYTES)
+```
+
+The interrupt configuration can be changed in the config file located the
+`etc` directory.
+
+The next sections assume the first example memory layout but the concepts
+are the same for any layout which respects the rules mentioned above.
 
 ## Implementation
 

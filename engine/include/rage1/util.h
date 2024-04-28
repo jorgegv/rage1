@@ -16,8 +16,7 @@
 #define PIXEL_TO_CELL_COORD(a)		( pixel_to_cell_coord( (a) ) )
 #define CELL_TO_PIXEL_COORD(a)		( cell_to_pixel_coord( (a) ) )
 
-extern uint8_t pixel_to_cell_coord( uint8_t a );
-extern uint8_t cell_to_pixel_coord( uint8_t a );
-
+extern uint8_t pixel_to_cell_coord( uint8_t a ) __z88dk_fastcall;
+extern uint8_t cell_to_pixel_coord( uint8_t a ) __z88dk_fastcall;
 
 #endif //_UTIL_H

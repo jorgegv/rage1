@@ -51,19 +51,16 @@ void init_codesets( void ) {
 }
 
 // call a given codeset function by its global function index
-void codeset_call_function( uint8_t global_function_num ) {
+void codeset_call_function( uint8_t global_function_num ) __z88dk_fastcall {
     struct codeset_function_info_s *f;
     uint8_t previous_memory_bank;
-
-    // save current memory bank
-    previous_memory_bank = memory_current_memory_bank;
 
     // for efficiency
     f = &all_codeset_functions[ global_function_num ];
 
-    // get the bank number from the codeset info table and swicth to the
-    // proper bank
-    memory_switch_bank( f->bank_num );
+    // save current memory bank, get the bank number from the codeset info
+    // table and switch to the proper bank
+    previous_memory_bank = memory_switch_bank( f->bank_num );
 
     // call the function
     codeset_assets->functions[ f->local_function_num ]();

@@ -23,7 +23,16 @@ The following sections explain the most interesting techniques mentioned there.
 * As with all optimizations, use them where they make sense and be aware of
   the memory/speed trade off
 
-Example:
+* As a rule of thumb, this optimization pays off in medium-big functions ( >
+  15-20 lines) in which the optimized variable is used a lot.  It is usually
+  not worth to do it in small functions.
+
+* Apply this optimization one function at a time, and build and check the
+  used memory after applying it. You may find that you thought the function
+  would decrease in size, but it increases instead.
+
+Example (this is a small function, so it is not worth in this case, but it
+shows the technique):
 
 ```
 void my_fun( int a ) {			void my_fun( int a ) {
@@ -51,10 +60,20 @@ void my_fun( int a ) {			void my_fun( int a ) {
   defining a struct for all those params, and passing instead a pointer to
   that struct when calling that function
 
+* When your function receives a single parameter (8 or 16-bit), declare the
+  function as `__z88dk_fastcall`.  This will pass your parameter directly in
+  L or HL registers (which can be used straight forward inside the called
+  routine), and also makes the function not need to clean the stack when
+  returning.  This option is specially interesting for functions that are
+  called very often.
+
 ## Make loop counters count down instead of up
 
 * C constructs like `while ( i-- ) { ... }` can be directly translated to
   DJNZ instructions, which are compact and convenient
+
+* Beware of cases where the items need to be accessed in order from 0 up.
+  When counting down, your items will be processed starting from the last.
 
 Example:
 

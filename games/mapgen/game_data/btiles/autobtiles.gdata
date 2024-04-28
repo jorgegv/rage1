@@ -1,0 +1,198 @@
+// tiledef line: 'candy 0 0 2 2 item'
+BEGIN_BTILE
+        NAME    candy
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=0 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'candy_holder 0 2 2 2 decoration'
+BEGIN_BTILE
+        NAME    candy_holder
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=16 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'spot_1 0 4 2 2 decoration'
+BEGIN_BTILE
+        NAME    spot_1
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=32 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'spot_2 0 6 2 2 decoration'
+BEGIN_BTILE
+        NAME    spot_2
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=48 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'ball 0 8 2 2 item'
+BEGIN_BTILE
+        NAME    ball
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=64 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'ball_holder 0 10 2 2 decoration'
+BEGIN_BTILE
+        NAME    ball_holder
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=80 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'desk 0 12 4 3 obstacle'
+BEGIN_BTILE
+        NAME    desk
+        ROWS    3
+        COLS    4
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=96 YPOS=0 WIDTH=32 HEIGHT=24
+END_BTILE
+
+// tiledef line: 'chair_right 0 16 2 2 obstacle'
+BEGIN_BTILE
+        NAME    chair_right
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=128 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'chair_left 0 18 2 2 obstacle'
+BEGIN_BTILE
+        NAME    chair_left
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=144 YPOS=0 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'truck 2 0 2 2 item'
+BEGIN_BTILE
+        NAME    truck
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=0 YPOS=16 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'truck_holder 2 2 2 2 decoration'
+BEGIN_BTILE
+        NAME    truck_holder
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=16 YPOS=16 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'shovel 2 4 2 2 item'
+BEGIN_BTILE
+        NAME    shovel
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=32 YPOS=16 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'shovel_holder 2 6 2 2 decoration'
+BEGIN_BTILE
+        NAME    shovel_holder
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=48 YPOS=16 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'pencil 2 8 2 2 item'
+BEGIN_BTILE
+        NAME    pencil
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=64 YPOS=16 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'pencil_holder 2 10 2 2 decoration'
+BEGIN_BTILE
+        NAME    pencil_holder
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=80 YPOS=16 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'bed 4 0 5 3 obstacle'
+BEGIN_BTILE
+        NAME    bed
+        ROWS    3
+        COLS    5
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=0 YPOS=32 WIDTH=40 HEIGHT=24
+END_BTILE
+
+// tiledef line: 'wall_1x1 4 5 1 1 obstacle'
+BEGIN_BTILE
+        NAME    wall_1x1
+        ROWS    1
+        COLS    1
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=40 YPOS=32 WIDTH=8 HEIGHT=8
+END_BTILE
+
+// tiledef line: 'wall_2x1 4 5 2 1 obstacle'
+BEGIN_BTILE
+        NAME    wall_2x1
+        ROWS    1
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=40 YPOS=32 WIDTH=16 HEIGHT=8
+END_BTILE
+
+// tiledef line: 'wall_1x2 4 5 1 2 obstacle'
+BEGIN_BTILE
+        NAME    wall_1x2
+        ROWS    2
+        COLS    1
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=40 YPOS=32 WIDTH=8 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'wall_2x2 4 5 2 2 obstacle'
+BEGIN_BTILE
+        NAME    wall_2x2
+        ROWS    2
+        COLS    2
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=40 YPOS=32 WIDTH=16 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'wall_4x2 4 5 4 2 obstacle'
+BEGIN_BTILE
+        NAME    wall_4x2
+        ROWS    2
+        COLS    4
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=40 YPOS=32 WIDTH=32 HEIGHT=16
+END_BTILE
+
+// tiledef line: 'redpill 4 9 1 1 crumb type=RedPill'
+BEGIN_BTILE
+        NAME    redpill
+        ROWS    1
+        COLS    1
+
+        PNG_DATA        FILE=game_data/png/test-tiles.png XPOS=72 YPOS=32 WIDTH=8 HEIGHT=8
+END_BTILE
+

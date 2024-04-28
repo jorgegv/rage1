@@ -1,0 +1,26 @@
+// Hotzone 'GeneratedHotzone_0' screen-warp rule
+BEGIN_RULE
+	SCREEN	Corridor
+	WHEN	GAME_LOOP
+	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_0
+	DO	WARP_TO_SCREEN DEST_SCREEN=StartScreen DEST_HERO_X=176
+END_RULE
+
+// Hotzone 'GeneratedHotzone_1' screen-warp rule
+BEGIN_RULE
+	SCREEN	Corridor
+	WHEN	GAME_LOOP
+	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_1
+	DO	WARP_TO_SCREEN DEST_SCREEN=Dungeon DEST_HERO_X=16
+END_RULE
+
+// Hotzone 'GeneratedHotzone_2' screen-warp rule
+BEGIN_RULE
+	SCREEN	Corridor
+	WHEN	GAME_LOOP
+	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_2
+	DO	WARP_TO_SCREEN DEST_SCREEN=Stairs DEST_HERO_Y=16
+END_RULE
+
+// Hotzone 'GeneratedHotzone_3' has no links, its rules must be defined manually
+

@@ -1,0 +1,47 @@
+
+[42m[37;1m    MEMORY AND BANK USAGE REPORT     [0m
+
+BANKS 5,2,0 [Screen + RAGE1 Heap + Lowmem]
+
+  SECTION       START  END     SIZE
+  screen        $4000  $582f   6912
+  databuf       $5830  $77b7   8072
+  heap          $77b8  $7fff   2120
+  intstk        $8000  $8183    388
+  startup       $8184  $837e    507
+  data          $837f  $8cc0   2369
+  bss           $8cc0  $9027    871
+  code          $9027  $c82e  14343
+  sp1data       $d1ed  $ffff  11795
+
+[42m[37;1m  TOTAL                       46658  [0m
+[41m[37;1m  FREE                         2494  [0m
+
+BANK 4 [RAGE1 code/dataset]
+
+  SECTION                      SIZE
+  rage1_code                  12777
+
+[42m[37;1m  TOTAL                       12777  [0m
+[41m[37;1m  FREE                         3607  [0m
+
+BANK 1 [codeset/dataset]
+
+  DATASET              SIZE   CSIZE
+  dataset_0            1569     997
+  dataset_1             679     449
+  dataset_2            1362     824
+
+  Max. allowed dataset size: 8072
+
+[42m[37;1m  TOTAL                        2270  [0m
+[41m[37;1m  FREE                        14114  [0m
+
+BANK 6 [codeset/dataset]
+
+  SECTION                      SIZE
+  codeset_0                      68
+
+[42m[37;1m  TOTAL                          68  [0m
+[41m[37;1m  FREE                        16316  [0m
+
