@@ -165,6 +165,17 @@ sub add_default_build_features {
 ## Input data parsing and state machine
 ##########################################
 
+sub optional_hex_decode {
+    my $value = shift;
+    if ( $value =~ m/^0x[0-9a-f]+$/i ) {
+        return hex( $value );
+    }
+    if ( $value =~ m/^\$([0-9a-f]+)$/i ) {
+        return hex( $1 );
+    }
+    return $value;
+}
+
 sub read_input_data {
     # possible states: NONE, BTILE, SCREEN, SPRITE, HERO, GAME_CONFIG, RULE
     # initial state
@@ -1060,6 +1071,23 @@ sub read_input_data {
                     }
                     $game_config->{'custom_state_data'} = $item;
                     add_build_feature( 'CUSTOM_STATE_DATA' );
+                    next;
+                }
+                if ( $line =~ /^SINGLE_USE_BLOB\s+(.*)$/ ) {
+                    # ARG1=val1 ARG2=va2 ARG3=val3...
+                    my $args = $1;
+                    my $item = {
+                        map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
+                        split( /\s+/, $args )
+                    };
+                    if ( not defined( $item->{'name'} ) ) {
+                        die "SINGLE_USE_BLOB: $file, line $current_line: missing NAME argument\n";
+                    }
+                    if ( not defined( $item->{'load_address'} ) ) {
+                        die "SINGLE_USE_BLOB: $file, line $current_line: missing LOAD_ADDRESS argument\n";
+                    }
+                    push @{ $game_config->{'single_use_blobs'} }, $item;
+                    add_build_feature( 'SINGLE_USE_BLOB' );
                     next;
                 }
                 if ( $line =~ /^END_GAME_CONFIG$/ ) {
@@ -2600,6 +2628,7 @@ sub integer_in_range {
     return ( ( $value >= $min ) and ( $value <= $max ) );
 }
 
+
 sub check_game_config_is_valid {
     my $errors = 0;
     if ( defined( $game_config->{'zx_target'} ) ) {
@@ -2682,6 +2711,41 @@ sub check_game_config_is_valid {
         add_build_feature( 'GAMEAREA_COLOR_MONO' );
     } else {
         add_build_feature( 'GAMEAREA_COLOR_FULL' );
+    }
+
+    # check SUBs configuration
+    my %used_sub_names;
+    foreach my $sub ( @{ $game_config->{'single_use_blobs'} } ) {
+        if ( not defined( $sub->{'org_address'} ) ) {
+            $sub->{'org_address'} = $sub->{'load_address'};
+        }
+        if ( not defined( $sub->{'run_address'} ) ) {
+            $sub->{'run_address'} = $sub->{'org_address'};
+        }
+        if ( not defined( $sub->{'compress'} ) ) {
+            $sub->{'compress'} = 0;
+        }
+        $sub->{'load_address'} = optional_hex_decode( $sub->{'load_address'} );
+        $sub->{'org_address'} = optional_hex_decode( $sub->{'org_address'} );
+        $sub->{'run_address'} = optional_hex_decode( $sub->{'run_address'} );
+
+        # at this point, NAME,LOAD_ADDRESS,ORG_ADDRESS,RUN_ADDRESS and COMPRESS are always defined
+        # Now with the logic checks
+
+        if ( $used_sub_names{ $sub->{'name'} }++ ) {
+            warn "SINGLE_USE_BLOB: $sub->{'name'}: duplicate SUB name\n";
+            $errors++;
+        }
+
+        if ( ( $sub->{'load_address'} < 0xC000 ) and not is_build_feature_enabled( 'ZX_TARGET_128' ) ) {
+            warn "SINGLE_USE_BLOB: $sub->{'name'}: LOAD_ADDRESS lower than 0xC000 can only be used in 128K mode games\n";
+            $errors++;
+        }
+
+        if ( ( $sub->{'compress'} ) and ( $sub->{'load_address'} == $sub->{'org_address'} ) ) {
+            warn "SINGLE_USE_BLOB: $sub->{'name'}: LOAD_ADDRESS and ORG_ADDRESS can't be the same if COMPRESS=1\n";
+            $errors++;
+        }
     }
 
     return $errors;
@@ -3744,8 +3808,15 @@ sub generate_tracker_data {
 
             # generate song ASM file and put it in place for compilation
             if ( $game_config->{'tracker'}{'type'} eq 'arkos2' ) {
-                # for Arkos2, convert it into asm format with the official tool
-                my $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+                # for Arkos2, convert it into asm format with the official tool if it is in AKS format
+                my $asm_file;
+                if ( $song->{'file'} =~ m/\.asm$/i ) {
+                    $asm_file = "$build_dir/$song->{'file'}";
+                } elsif ( $song->{'file'} =~ m/\.aks$/i ) {
+                    $asm_file = arkos2_convert_song_to_asm( "$build_dir/$song->{'file'}", $symbol_name );
+                } else {
+                    die "Arkos songs can only be in AKS or ASM format\n";
+                }
                 my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
                 move( $asm_file, $dest_asm_file ) or
                     die "Could not rename $asm_file to $dest_asm_file\n";
@@ -3781,7 +3852,14 @@ sub generate_tracker_data {
         if ( defined( $game_config->{'tracker'}{'fxtable'} ) ) {
             # generate song ASM file and put it in place for compilation
             # the extern declaration for this is already in tracker.h
-            my $asm_file = arkos2_convert_effects_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            my $asm_file;
+            if ( $game_config->{'tracker'}{'fxtable'}{'file'} =~ m/\.asm$/i ) {
+                $asm_file = "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}";
+            } elsif ( $game_config->{'tracker'}{'fxtable'}{'file'} =~ m/\.aks$/i ) {
+                $asm_file = arkos2_convert_effects_to_asm( "$build_dir/$game_config->{'tracker'}{'fxtable'}{'file'}", 'all_sound_effects' );
+            } else {
+                die "Arkos sound FX can only be in AKS or ASM format\n";
+            }
             my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
 
             my $effects_count = arkos2_count_sound_effects( $asm_file );

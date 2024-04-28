@@ -17,6 +17,7 @@ use utf8;
 use Carp;
 use Data::Dumper;
 use List::MoreUtils qw( frequency );
+use GD::Image;
 
 # standard ZX Spectrum color palette
 my %zx_colors = (
@@ -51,28 +52,22 @@ sub load_png_file {
         return $png_file_cache->{ $file };
     }
 
-    # ..else, build it...
-    my $command = sprintf( "pngtopam '%s' | pamtable", $file );
-    my @pixel_lines = `$command`;
-    chomp @pixel_lines;
+    my $png = GD::Image->newFromPng( $file );
+    defined( $png ) or
+        die "Could not load PNG file $file\n";
 
-    # ensure the PNG is in RGB format (pixels separated by '|') and is not indexed
-    if ( not grep { /\|/ } @pixel_lines ) {
-        warn "** Warning: PNG File $file is not in RGB(A) format\n";
-        return undef;
+    my $pixels;
+    foreach my $row ( 0 .. ( $png->height - 1 ) ) {
+      foreach my $col ( 0 .. ( $png->width - 1 ) ) {
+          $pixels->[ $row ][ $col ] = sprintf( '%02x%02x%02x', $png->rgb( $png->getPixel( $col, $row ) ) );
+      }
     }
 
-    my @pixels = map {			# for each line...
-        s/(\d+)/sprintf("%02X",$1)/ge;	# replace decimals by upper hex equivalent
-        s/ //g;				# remove spaces
-       [ split /\|/ ];			# split each pixel data by '|' and return listref of pixels
-    } @pixel_lines;
-
     # ...store in cache for later use...
-    $png_file_cache->{ $file } = \@pixels;
+    $png_file_cache->{ $file } = $pixels;
 
     # ..and return it
-    return \@pixels;
+    return $pixels;
 }
 
 # get PNG dimensions in pixels and cells

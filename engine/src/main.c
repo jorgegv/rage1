@@ -31,6 +31,8 @@
 #include "game_data.h"
 
 void init_program(void) {
+
+   // from this point, RAGE1 takes full control of the machine and memory
    init_memory();
    init_sp1();
    init_interrupts();

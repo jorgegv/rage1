@@ -30,91 +30,119 @@ So we could define a maximum of 2 single use blobs (SUBs), one for SP1
 buffer and other for DATASET buffer.  The changes needed for RAGE1 are
 indicated in the next sections.
 
-## Build changes
-
-- There will be two new directories under `game_src`: `game_src/sub_sp1buf`
-  (for SP1 SUB) and `game_src/sub_dsbuf` (for DATASET SUB)
-
-- The code inside each of those two directories must be completely
-  self-contained.  They need to be completely independent programs that can
-  run standalone.
-
-- A private Makefile skeleton will be provided to compile the same code
-  either as a standalone TAP file (for easy testing and debugging) or as a
-  headerless TAP file which can be used in the global RAGE1 build.
-
-- The global RAGE1 Makefile will use the target in the private Makefile for
-  the binary output. The binary
-
 ## DATAGEN changes
 
 - The `GAME_CONFIG` section will add support for a new `SINGLE_USE_BLOB`
   element, similar to this:
-
 ```
 GAME_CONFIG
 	(...)
-	SINGLE_USE_BLOB TYPE=SP1|DS DS_ORG_ADDRESS=XXXX
+	SINGLE_USE_BLOB NAME=<name> LOAD_ADDRESS=XXXX ORG_ADDRESS=YYYY RUN_ADDRESS=ZZZZ COMPRESS=1
 	(...)
 END_GAME_CONFIG
 
 ```
 
-- The SP1 or DS type indicates if the SP1BUF or the DSBUF will be used for the
-  SUB.
+- `LOAD_ADDRESS` indicates where the blob will be loaded in the load stage
 
-- For the SP1 type, the code will run directly from the SP1BUF address
-  (0xD1ED, in uncontended memory)
+- `ORG_ADDRESS` (optional) indicates where the blob must be located for
+  running.  If not specified LOAD_ADDRESS will be used as ORG_ADDRESS.
 
-- For the DS type, the code can run directly from the DSBUF address
-  (0x5B00, in contended memory).
+- `RUN_ADDRESS` (optional) indicates the entry point that will be called to
+  execute the code.  If not specified, ORG_ADDRESS will be used as
+RUN_ADDRESS.
 
-- If uncontended memory is needed with the DS type (e.g.  because a beeper
-  sound engine is used), a DS_ORG_ADDRESS parameter can be specified.  In this
-  case, the SUB will be temporary swapped to that address, and the contents
-  at that address saved to 0x5B00. The SUB code will be then run from
-  DS_ORG_ADDRESS, and when it returns, the saved data wil be restored to the
-  DS_ORG_ADDRESS.
+- `NAME` is a regular RAGE1 identifier used to refer to the proper SUB.
+
+- If LOAD_ADDRESS is different from ORG_ADDRESS, the block wil be exchanged
+  temporarily from LOAD_ADDRESS to ORG_ADDRESS before running, and restored
+  to the original location after it has finished.  The memory block at
+  ORG_ADDRESS is also temporarily saved at LOAD_ADDRESS, so nothing is lost.
+
+- The possibility of this temporary swap is intended for code that can be
+  loaded in free contended memory (e.g.  the decompression buffer at 0x5B00)
+  but needs to run in uncontended memory (e.g. because it uses an advanced
+  beeper routine).
+
+- Addresses can be specified in decimal, or in hex notation, with '0x' or
+  '$' prefixes
 
 - Checks will be implemented to enable DSBUF SUB only in 128K mode. SP1BUF
   SUB will be allowed in both modes.
 
-- The regular conditional compilation BUILD_FEATURE_xxxx #define's will be
-  generated.
+- If COMPRESS is 1, then the binary will be stored compressed with ZX0, and
+  decompressed to ORG_ADDRESS before being executed.
 
-- A table in an ASM file will be generated with the SUB data needed for
-  loading and running the code at the proper address
+## Loadertool changes
+
+- The regular ASM loader will be modified to also load SUBs after all banks
+  have been loaded.  The loader code will load, swap (if needed), decompress
+  (if needed) and run the SUB code before jumping to the main program.
+
+- The SUBs will be loaded and run in the same order as they are specified in
+  the GAME_CONFIG directive.
+
+- The SUBs will start their execution at the address indicated in their
+  `RUN_ADDRESS` parameter (or the defaults indicated above), with
+  _interrupts disabled_.
+
+- SUBs must NOT enable interrupts at any time.  The SUBs are called with
+  interrupts disabled, and should stay this way.  If they were run with the
+  normal interrupt configuration (i.e.  the ROM ISR routine), some system
+  variables in the SYSVARS area (0x5B00 and above, or BANK 7 at 0xD200) will
+  be updated by the ROM ISR, and will corrupt the data we just loaded at
+  that address, with catastrophic consequences.
+
+## Build changes
+
+- For each SUB there will be a directory under `game_src` called
+  `sub_<subname>`, where `subname` is the name specified with the NAME
+  parameter described above.
+
+- The code inside each of those directories must be completely
+  self-contained.  They need to be completely independent programs that can
+  run standalone.
+
+- A private Makefile skeleton will be provided to compile the same code
+  either as a standalone TAP file (for easy testing and debugging) or as a
+  headerless TAP file which can be used in the global RAGE1 build. This can
+  be copied to the SUB directory as a starting point.
+
+- The global RAGE1 Makefile will use a specific `sub_bin` target in the
+  private Makefile for the binary output, which will be called `sub.bin`,
+  and another one `sub_tap_nohdr` for generating a headerless TAP file.
+
+- The loader tool will be modified to gather information about the SUBs and
+  generate additional code for loading and running them before jumping to
+  the main program.
 
 ## RAGE1 startup changes
 
-- The SUBs will run at the very beginning of the program, even before any
-  initialization takes place.  This is to ensure that the RAGE1 engine
-  initializes everything after all SUBs have run, so no unexpected changes
-  can happen.
+- The SUBs will run befre any RAGE1 initialization has taken place, even
+  before the `main()` function has been called.  This is to ensure that the
+  RAGE1 engine initializes everything after all SUBs have run, so no
+  unexpected changes can happen.
 
 - Only the SUBs configured in GAME_CONFIG will be run.
-
-- The SP1 SUB will run first (if configured), the DSBUF SUB will run second
-  (if configured)
-
-- All SUB related initialization and execution will only be brought into the
-  main game if the functionality is used, via the conditional compilation
-  macros mentioned before (BUILD_FEATURE_xxxx)
-
-## SUB initialization
-
-- The SUB initialization and run function will be the first function called,
-  before even any of the RAGE1 init routines.
-
-- The SUB initializacion code will use the data table previously generated
-  by DATAGEN and use the ROM routine LD_BYTES to load the headerless TAPs
-  into the proper places in RAM.  The user will just sense one or two
-  additional loading blocks.
-
-- After the SUB(s) have been loaded in place, they will be run in the order
-  specified in the previous section.
 
 - When the SUBs return, the rest of the RAGE1 game startup will continue. 
   RAGE1 will take full control over the machine and the DSBUF and SP1BUF
   will be wiped and used for their intended purpose during the game.  At
   this point, the entry code stored in DSBUF and SP1BUF will be fully gone.
+
+## Code notes for SUBs and Z88DK
+
+- Try to use as little of the standard library and the ROM as possible (or
+  not at all).  The library and ROM assume that they control the machine,
+  and that you'll return to BASIC, and they update some SYSVARs (which may
+  corrupt some of your code)
+
+- Try to use --no-crt compilation option (for no CRT), and use your own
+  trivial CRT (in asm) to set an ORG, call `main()` and return to the
+  caller.
+
+- A SUB completely done in assembler allows you full control of the code
+  that will run.
+
+- See the SUBs in `game_src` directory inside the test games `sub_bufs_128`
+  and `sub_bufs_48` for working examples of SUBs.

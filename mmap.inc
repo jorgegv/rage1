@@ -35,6 +35,18 @@ section code_crt_main
 section code_crt_exit
 section code_crt_return
 section code_crt_common
+section code_l
+section code_l_sdcc
+section code_l_sccz80
+section code_math
+section code_stdlib
+section code_compress_zx0
+section code_im2
+section code_z80
+
+;; the following section is the SUB loader and must be as low in memory as
+;; possible to avoid being overwritten or swapped
+section rage1_subs_loader
 ;; the following sections have been moved from their normal places so
 ;; that game data is placed at the start of the memory map
 section rodata_input
@@ -64,6 +76,7 @@ section code_user
 ;; place the bit_beepfx routine and pals in non-contended memory
 ;; above code_compiler section
 section code_sound_bit
+section code_temp_sp1
 
 section rodata_align_256
 align 256

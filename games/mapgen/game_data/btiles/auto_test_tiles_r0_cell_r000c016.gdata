@@ -1,0 +1,8 @@
+// tiledef line: 'test_tiles_r0_cell_r000c016 0 16 1 1 obstacle'
+BEGIN_BTILE
+        NAME    test_tiles_r0_cell_r000c016
+        ROWS    1
+        COLS    1
+
+	PNG_DATA	FILE=game_data/png/test-tiles.png XPOS=128 YPOS=0 WIDTH=8 HEIGHT=8   
+END_BTILE

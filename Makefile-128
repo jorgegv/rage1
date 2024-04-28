@@ -14,7 +14,7 @@ MYMAKE			= $(MAKE) -s -f Makefile-128 -j8
 ZPRAGMA_INC             = zpragma-128.inc
 
 # All taps
-TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(BSWITCH_TAP) $(BANK_TAPS) $(MAIN_TAP)
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(BANK_TAPS) $(MAIN_TAP) $(SUB_TAPS)
 
 -include Makefile.common
 
@@ -30,11 +30,14 @@ build:
 	$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
 	$(MYMAKE) banks
 	$(MYMAKE) main
-	$(MYMAKE) bank_switcher
+	$(MYMAKE) subs
 	$(MYMAKE) loader
+	$(MYMAKE) asmloader
+	cp $(ENGINE_DIR)/loader128/$(BAS_LOADER_SRC) $(BAS_LOADER)
 	$(MYMAKE) taps
 	$(MYMAKE) final
 	$(MYMAKE) lowmemcheck
+	$(MYMAKE) section-check
 
 ## Check that certain symbols are linked in low memory.  It is assumed that
 ## all symbols mentioned as "extern" in .h files will be accessed from
@@ -88,13 +91,37 @@ dataset_%.zx0: dataset_%.bin
 
 codesets: $(BIN_CODESETS)
 
-#codeset_%.bin: codeset_%.src/*.c codeset_%.src/*.asm
 codeset_%.bin:
 	echo "Compiling CODESET $@ ..."
 	# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -I$(GAME_SRC_DIR) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
 	mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
 	if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
+
+##
+## SUBs (Single Use Binaries) compilation to standalone binaries
+##
+
+subs: $(SUB_BINS)
+
+sub_%.bin:
+	echo "Compiling SUB $@ ..."
+	mv $(GAME_SRC_DIR)/sub_$* $(GENERATED_DIR_SUBS)/sub_$*.src
+	$(MAKE) -s -C $(GENERATED_DIR_SUBS)/sub_$*.src
+	cp $(GENERATED_DIR_SUBS)/sub_$*.src/sub.bin  $(GENERATED_DIR)/sub_$*.bin
+	if ( grep -i 'SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata | grep -i 'NAME=$*' | grep -qi 'COMPRESS=1' ) then \
+		echo "Compressing SUB $@ ..." ; \
+		$(ZX0) -f $(GENERATED_DIR)/sub_$*.bin >/dev/null 2>&1 ; \
+	fi
+
+# we set org at 0x0000 for the subs (unused)
+sub_%.tap:
+	echo "Creating TAP $@..."
+	if ( grep -i 'SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata | grep -i 'NAME=$*' | grep -qi 'COMPRESS=1' ) then \
+		z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin.zx0 -o sub_$*.tap ; \
+	else \
+		z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin -o sub_$*.tap ; \
+	fi
 
 ##
 ## Banked code compilation to standalone binary at 0xC000
@@ -120,19 +147,19 @@ banks:
 	echo "Building Bank binaries and Dataset/Codeset maps..."
 	./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM)
 
-bank_switcher: $(BSWITCH_BIN)
-
-$(BSWITCH_BIN):
-	echo "Assembling bank switch routine..."
-	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --list --no-crt $(BSWITCH_SRC) -o $(BSWITCH_BIN)
-
 ##
-## Custom BASIC loader
+## Custom ASM loader
 ##
 
 loader:
-	echo "Creating custom BASIC loader..."
-	./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR) $(LOADING_SCREEN_FLAG)
+	echo "Creating custom loader..."
+	./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER) $(LOADING_SCREEN_FLAG)
+
+asmloader: $(ASMLOADER_BIN)
+
+$(ASMLOADER_BIN):
+	echo "Assembling loader routine..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --list --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
 
 ##
 ## Taps
@@ -143,15 +170,15 @@ taps: $(TAPS)
 # we set org at 0xC000 for the banks
 bank_%.tap: bank_%.bin
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --org 0xC000 -b $<
+	z88dk-appmake +zx --noloader --noheader --org 0xC000 -b $<
 
 # we set org at base code address for 128 mode, 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --org $(BASE_CODE_ADDRESS_128) -b $<
+	z88dk-appmake +zx --noloader --noheader --org $(BASE_CODE_ADDRESS_128) -b $<
 
-# we set org at 0x8000 for bank switcher
-$(BSWITCH_TAP): $(BSWITCH_BIN)
+# we set org at 0x8000 for loader
+$(ASMLOADER_TAP): $(ASMLOADER_BIN)
 	echo "Creating TAP $@..."
 	z88dk-appmake +zx --noloader --org 0x8000 -b $<
 

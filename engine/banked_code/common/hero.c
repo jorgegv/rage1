@@ -66,6 +66,8 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) __z88dk_fastcall {
             return hero_can_move_vertical( x.part.integer, r, c );
             break;
         case MOVE_DOWN:
+// SDCC bug in the following line, see: https://sourceforge.net/p/sdcc/bugs/2877/
+#pragma disable_warning 165
             if ( y.value >= HERO_MOVE_YMAX * 256 )
                 return 0;
             r = PIXEL_TO_CELL_COORD( ( y.value + dy.value ) / 256 + HERO_SPRITE_HEIGHT - 1 );
@@ -80,6 +82,8 @@ uint8_t hero_can_move_in_direction( uint8_t direction ) __z88dk_fastcall {
             return hero_can_move_horizontal( y.part.integer, r, c );
             break;
         case MOVE_RIGHT:
+// SDCC bug in the following line, see: https://sourceforge.net/p/sdcc/bugs/2877/
+#pragma disable_warning 165
             if ( x.value >= HERO_MOVE_XMAX * 256 )
                 return 0;
             r = PIXEL_TO_CELL_COORD( y.part.integer + HERO_SPRITE_HEIGHT - 1 );

@@ -50,7 +50,9 @@ config:
 		$(GENERATED_DIR_CODESETS)/	\
 		$(GENERATED_DIR_LOWMEM)/	\
 		$(GENERATED_DIR_BANKED_128)/	\
-		$(GENERATED_DIR_BANKED_COMMON)/
+		$(GENERATED_DIR_BANKED_COMMON)/	\
+		$(GENERATED_DIR_ASMLOADER)/	\
+		$(GENERATED_DIR_SUBS)/
 	cp -r $(TARGET_GAME)/game_data/* $(GAME_DATA_DIR)/
 	cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
 	$(MYMAKE) show	# shows game name and build configuration
@@ -121,6 +123,12 @@ build-monochrome:
 build-vortex2:
 	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/vortex2
 
+build-sub_bufs_48:
+	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/sub_bufs_48
+
+build-sub_bufs_128:
+	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/sub_bufs_128
+
 # just a target for the default game for completeness
 build-default: build
 
@@ -132,6 +140,13 @@ test-build-%:
 all-test-builds:
 	echo -n "START: "
 	date
-	for i in $(ALL_TEST_GAMES); do $(MYMAKE) test-build-$$i; done
+	for i in $(ALL_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds.log
 	echo -n "END: "
 	date
+	if ( grep -i Errors /tmp/all-test-builds.log ) then \
+		echo "*** Some tests failed ***"; \
+		exit 1; \
+	else \
+		echo "All tests succeeded"; \
+		exit 0; \
+	fi

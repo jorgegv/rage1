@@ -30,7 +30,7 @@
 
 // disable "unreferenced function argument" warning, there are some
 // functions here that don't use their parameter
-# pragma disable_warning 85
+#pragma disable_warning 85
 
 // Dispatch tables for rule checks and actions
 typedef uint8_t (*rule_check_fn_t)( struct flow_rule_check_s * ) __z88dk_fastcall;

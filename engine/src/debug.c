@@ -17,7 +17,6 @@
 #include "game_data.h"
 
 #ifdef BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA
-#ifdef RAGE1_DEBUG
 
 uint8_t initialized = 0;
 
@@ -83,5 +82,4 @@ void debug_panic( uint8_t code ) {
     }
 }
 
-#endif // RAGE1_DEBUG
 #endif // BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA

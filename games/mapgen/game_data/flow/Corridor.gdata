@@ -22,13 +22,5 @@ BEGIN_RULE
 	DO	WARP_TO_SCREEN DEST_SCREEN=Stairs DEST_HERO_Y=16
 END_RULE
 
-// Hotzone 'GeneratedHotzone_3' screen-warp rule
-BEGIN_RULE
-	SCREEN	Corridor
-	WHEN	GAME_LOOP
-	CHECK	HERO_OVER_HOTZONE GeneratedHotzone_3
-	DO	WARP_TO_SCREEN DEST_SCREEN=Stairs DEST_HERO_Y=16
-END_RULE
-
-// Hotzone 'GeneratedHotzone_4' has no links, its rules must be defined manually
+// Hotzone 'GeneratedHotzone_3' has no links, its rules must be defined manually
 
