@@ -16,7 +16,6 @@ BUILD_DIR			= build
 GENERATED_DIR			= $(BUILD_DIR)/generated
 GENERATED_DIR_DATASETS		= $(GENERATED_DIR)/datasets
 GENERATED_DIR_CODESETS		= $(GENERATED_DIR)/codesets
-GENERATED_DIR_LOWMEM		= $(GENERATED_DIR)/lowmem
 GENERATED_DIR_BANKED_128	= $(GENERATED_DIR)/banked/128
 GENERATED_DIR_BANKED_COMMON	= $(GENERATED_DIR)/banked/common
 GENERATED_DIR_ASMLOADER		= $(GENERATED_DIR)/asmloader
@@ -32,12 +31,10 @@ DEFAULT_TARGET_GAME	= $(TEST_GAMES_DIR)/default
 TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
 
 # Main sources and objs
-LOWMEM_CSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.c) $(wildcard $(GENERATED_DIR_LOWMEM)/*.c)
-LOWMEM_ASMSRC		= $(wildcard $(ENGINE_DIR)/lowmem/*.asm) $(wildcard $(GENERATED_DIR_LOWMEM)/*.asm)
 CSRC 			= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC			= $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
-SRC			= $(LOWMEM_ASMSRC) $(LOWMEM_CSRC) $(CSRC) $(ASMSRC)
-OBJS			= $(LOWMEM_CSRC:.c=.o) $(LOWMEM_ASMSRC:.asm=.o) $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
+SRC			= $(CSRC) $(ASMSRC)
+OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 
 # Dataset sources and binaries
 DATASET_DIRS		= $(wildcard $(GENERATED_DIR_DATASETS)/dataset_*.src)
