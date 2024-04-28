@@ -145,7 +145,7 @@ $(BIN_BANKED_CODE): $(BANKED_CODE_OBJS_COMMON) $(BANKED_CODE_OBJS_128)
 
 banks:
 	echo "Building Bank binaries and Dataset/Codeset maps..."
-	./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR) -l $(GENERATED_DIR_LOWMEM)
+	./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR)
 
 ##
 ## Custom ASM loader
