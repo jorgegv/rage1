@@ -88,7 +88,8 @@ my %dataset_dependency;
 my $c_file_game_data		= 'game_data.c';
 my $asm_file_game_data		= 'asm_game_data.asm';
 my $h_file_game_data		= 'game_data.h';
-my $h_file_build_features	= 'features.h';
+my $h_file_build_features	= 'features.h';		# for C files
+my $inc_file_build_features	= 'features.inc';	# for ASM files
 my $c_file_banked_data_128	= 'banked/128/game_data_128.c';
 
 # global directories
@@ -119,6 +120,7 @@ my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
 my @h_build_features_lines;
+my @inc_build_features_lines;
 my @c_banked_data_128_lines;
 
 # misc vars
@@ -3457,7 +3459,7 @@ sub generate_misc_data {
 
 sub generate_conditional_build_features {
 
-    # output build features for conditional compiles
+    # output build features for conditional compiles for both C and ASM
     push @h_build_features_lines, <<EOF_FEATURES1
 
 ////////////////////////////////////////////////////////////////
@@ -3470,8 +3472,18 @@ sub generate_conditional_build_features {
 EOF_FEATURES1
 ;
 
+    push @inc_build_features_lines, <<EOF_FEATURES10
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BUILD FEATURE MACROS FOR CONDITIONAL COMPILES
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+EOF_FEATURES10
+;
+
     foreach my $f ( sort keys %conditional_build_features ) {
         push @h_build_features_lines, sprintf( "#define BUILD_FEATURE_%s\n", uc($f) );
+        push @inc_build_features_lines, sprintf( "DEFINE BUILD_FEATURE_%s\n", uc($f) );
     }
 
     push @h_build_features_lines, <<EOF_FEATURES2
@@ -3483,6 +3495,14 @@ EOF_FEATURES1
 #endif // _FEATURES_H
 
 EOF_FEATURES2
+;
+    push @inc_build_features_lines, <<EOF_FEATURES20
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; END OF BUILD FEATURE MACROS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+EOF_FEATURES20
 ;
 
 }
@@ -4112,6 +4132,12 @@ sub output_game_data {
     print $output_fh join( "", @h_build_features_lines );
     close $output_fh;
 
+    # output features.inc file
+    open( $output_fh, ">", $inc_file_build_features ) or
+        die "Could not open $inc_file_build_features for writing\n";
+    print $output_fh join( "", @inc_build_features_lines );
+    close $output_fh;
+
 }
 
 # calculates dataset_dependency structure:
@@ -4316,6 +4342,7 @@ if ( defined( $opt_d ) ) {
     $asm_file_game_data		= "$opt_d/$asm_file_game_data";
     $h_file_game_data		= "$opt_d/$h_file_game_data";
     $h_file_build_features	= "$opt_d/$h_file_build_features";
+    $inc_file_build_features	= "$opt_d/$inc_file_build_features";
     $c_file_banked_data_128	=  "$opt_d/$c_file_banked_data_128";
     $dump_file = "$opt_d/$dump_file";
     $output_dest_dir = $opt_d;
