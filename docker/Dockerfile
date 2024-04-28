@@ -6,7 +6,7 @@
 FROM fedora:latest
 
 ENV Z88DK_PATH="/opt/z88dk"
-ENV Z88DK_TAG="v2.3"
+ENV Z88DK_TAG="v2.2"
 
 ENV BAS2TAP_PATH="/opt/bas2tap"
 
