@@ -628,7 +628,10 @@ END_GAME_CONFIG
   these functions take and return no arguments, and must work over the
   global `game_state` variable. Arguments:
   * `TYPE`: the type of function. Possible values:
-    * `MENU`: the main menu, must end with the correct controller selected
+    * `MENU`: the main menu, must end with the correct controller selected.
+      It can also be used to redefine the default keys QAOP-SP (see the
+      menu function in the example game `default`, and the auxiliary
+      function in the `kbd.c` file in the same directory)
     * `INTRO`: intro screen, shown just after the menu and before beginning
     gameplay
     * `GAME_END`: this function will run when the game is ended successfully,

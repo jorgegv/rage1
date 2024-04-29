@@ -25,6 +25,8 @@
 
 #include "game_data.h"
 
+#include "kbd.h"
+
 // External frame coordinates and dimensions
 #define BORDER_TOP		0
 #define BORDER_LEFT		0
@@ -75,6 +77,7 @@ void my_menu_screen(void) {
    sp1_PrintString( &print_ctx, "\x16\x0e\x09 1: KEYBOARD" );
    sp1_PrintString( &print_ctx, "\x16\x0f\x09 2: KEMPSTON" );
    sp1_PrintString( &print_ctx, "\x16\x10\x09 3: SINCLAIR" );
+   sp1_PrintString( &print_ctx, "\x16\x11\x09 4: REDEFINE" );
 
    // draw full screen
    sp1_UpdateNow();
@@ -86,7 +89,7 @@ void my_menu_screen(void) {
    tracker_start();
 
    // wait for selection
-   sp1_PrintString( &print_ctx, "\x16\x12\x06 Selection: " );
+   sp1_PrintString( &print_ctx, "\x16\x13\x06 Selection: " );
    while ( ! game_state.controller.type ) {
       key_pressed = 0;
       while ( ! key_pressed ) { key_pressed = in_inkey(); }
@@ -102,6 +105,43 @@ void my_menu_screen(void) {
          case '3':
             game_state.controller.type = CTRL_TYPE_SINCLAIR1;
             sp1_PrintString( &print_ctx, "Sinclair" );
+            break;
+         case '4':
+            // wait until no key pressed
+            in_wait_nokey();
+
+            sp1_PrintString( &print_ctx,"\x16\x13\x06 Key UP:   " );
+            sp1_UpdateNow();
+            game_state.controller.keys.up = capture_key_scancode();
+            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            in_pause( 500 );
+
+            sp1_PrintString( &print_ctx,"\x16\x13\x06 Key DOWN: " );
+            sp1_UpdateNow();
+            game_state.controller.keys.down = capture_key_scancode();
+            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            in_pause( 500 );
+
+            sp1_PrintString( &print_ctx,"\x16\x13\x06 Key LEFT: " );
+            sp1_UpdateNow();
+            game_state.controller.keys.left = capture_key_scancode();
+            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            in_pause( 500 );
+
+            sp1_PrintString( &print_ctx,"\x16\x13\x06 Key RIGHT:" );
+            sp1_UpdateNow();
+            game_state.controller.keys.right = capture_key_scancode();
+            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            in_pause( 500 );
+
+            sp1_PrintString( &print_ctx,"\x16\x13\x06 Key FIRE: " );
+            sp1_UpdateNow();
+            game_state.controller.keys.fire = capture_key_scancode();
+            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            in_pause( 500 );
+
+            sp1_PrintString( &print_ctx, "\x16\x13\x06 Selection: " );
+            sp1_UpdateNow();
             break;
       }
    }
