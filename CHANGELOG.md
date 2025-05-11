@@ -1,13 +1,13 @@
 # RAGE1 ChangeLog
 
-## 0.6.0 (XXXX-XX-XX) - WORK IN PROGRESS
+## 0.6.0 (2025-05-11)
 
 As we said in version 0.5.0, "Cesare The Somnambule" has been developed
 using RAGE1, and as consequence version 0.6.0 has dozens of new features and
 fixes which were required/uncovered by the game.  The most interesting of
 these are described in the sections below.
 
-The game is very near publication, so stay alert to its announcement!
+The game was published on March 29th 2024, see https://zxamaze.itch.io/cesare-the-somnambule
 
 **IMPORTANT NOTE**: the _required_ Z88DK version to compile RAGE1 is now
 Z88DK 2.2 (the version must be exactly this one, not previous or later
@@ -43,9 +43,10 @@ versions).  Update your toolchain if you need to!
   processed as a single line. Very convenient for readability!
 
 - The hero speed can now be specified in fractional pixel increments, and
-  can be changed during the game. This allows gameplays where the hero speed
-  depends on game factors: game time, health level, ownership of a given
-  item, etc.
+  can be changed during the game.  This allows gameplays where the hero
+  speed depends on game factors: game time, health level, ownership of a
+  given item, etc.  Also, the diagonal speed has been fixed so that it's the
+  same as when it moves in just one direction
 
 - Enemies can now be enabled/disabled by flow rules. This means the enemies
   can show or not depending on game conditions: game time, hero health
