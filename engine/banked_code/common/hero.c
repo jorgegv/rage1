@@ -158,8 +158,13 @@ void hero_animate_and_move( void ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_up;
         }
+        // calculate new coordinate
+        // if we are moving diagonally, choose _diag increment, else choose normal increment
+        if ( controller & ( MOVE_LEFT | MOVE_RIGHT ) )
+            newy_ffp = pos->y.value - move->dy_diag.value;
+        else
+            newy_ffp = pos->y.value - move->dy.value;
         // check if can move to new coordinate
-        newy_ffp = pos->y.value - move->dy.value;
         if ( newy_ffp <= 256 * CELL_TO_PIXEL_COORD( GAME_AREA_TOP ) )
             pos->y.value  = 256 * CELL_TO_PIXEL_COORD( GAME_AREA_TOP );
         else
@@ -171,7 +176,15 @@ void hero_animate_and_move( void ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_down;
         }
-        newy_ffp = pos->y.value + move->dy.value;
+
+        // calculate new coordinate
+        // if we are moving diagonally, choose _diag increment, else choose normal increment
+        if ( controller & ( MOVE_LEFT | MOVE_RIGHT ) )
+            newy_ffp = pos->y.value + move->dy_diag.value;
+        else
+            newy_ffp = pos->y.value + move->dy.value;
+
+        // check if can move to new coordinate
         // coordinate of the bottommost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_BOTTOM + 1 ) - 1 - HERO_SPRITE_HEIGHT;
         if ( newy_ffp >= 256 * allowed )
@@ -185,7 +198,15 @@ void hero_animate_and_move( void ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_left;
         }
-        newx_ffp = pos->x.value - move->dx.value;
+
+        // calculate new coordinate
+        // if we are moving diagonally, choose _diag increment, else choose normal increment
+        if ( controller & ( MOVE_UP | MOVE_DOWN ) )
+            newx_ffp = pos->x.value - move->dx_diag.value;
+        else
+            newx_ffp = pos->x.value - move->dx.value;
+
+        // check if can move to new coordinate
         if ( newx_ffp <= 256 * CELL_TO_PIXEL_COORD( GAME_AREA_LEFT ) )
             pos->x.value = 256 * CELL_TO_PIXEL_COORD( GAME_AREA_LEFT );
         else
@@ -197,7 +218,15 @@ void hero_animate_and_move( void ) {
             anim->current_frame = 0;
             anim->current_sequence = anim->sequence_right;
         }
-        newx_ffp = pos->x.value + move->dx.value;
+
+        // calculate new coordinate
+        // if we are moving diagonally, choose _diag increment, else choose normal increment
+        if ( controller & ( MOVE_UP | MOVE_DOWN ) )
+            newx_ffp = pos->x.value + move->dx_diag.value;
+        else
+            newx_ffp = pos->x.value + move->dx.value;
+
+        // check if can move to new coordinate
         // coordinate of the rightmost pixel
         allowed = CELL_TO_PIXEL_COORD( GAME_AREA_RIGHT + 1 ) - 1 - HERO_SPRITE_WIDTH;
         if ( newx_ffp >= 256 * allowed )
