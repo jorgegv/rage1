@@ -65,6 +65,8 @@ struct hero_info_s hero_startup_data = {
         .last_direction = MOVE_NONE,
         .dx.value = HERO_MOVE_HSTEP,
         .dy.value = HERO_MOVE_VSTEP,
+        .dx_diag.value = HERO_MOVE_HSTEP_DIAG,
+        .dy_diag.value = HERO_MOVE_VSTEP_DIAG,
     },
     {	// health
         HERO_NUM_LIVES,

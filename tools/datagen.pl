@@ -1850,8 +1850,12 @@ sub generate_hero {
     my $delay			= $hero->{'animation_delay'};
     my $hstep			= $hero->{'hstep'};
     my $vstep			= $hero->{'vstep'};
-    my $hstep_ffp		= int( 256 * $hero->{'hstep'} );
-    my $vstep_ffp		= int( 256 * $hero->{'vstep'} );
+    my $hstep_diag		= $hero->{'hstep'} * cos( atan2( $vstep, $hstep ) );
+    my $vstep_diag		= $hero->{'vstep'} * sin( atan2( $vstep, $hstep ) );
+    my $hstep_ffp		= int( 256 * $hstep );
+    my $vstep_ffp		= int( 256 * $vstep );
+    my $hstep_diag_ffp		= int( 256 * $hstep_diag );
+    my $vstep_diag_ffp		= int( 256 * $vstep_diag );
     my $local_num_sprite	= $dataset_dependency{'home'}{'sprite_global_to_dataset_index'}{ $num_sprite };
     my $health_max		= $hero->{'damage_mode'}{'health_max'};
     my $enemy_damage		= $hero->{'damage_mode'}{'enemy_damage'};
@@ -1885,6 +1889,10 @@ sub generate_hero {
 #define	HERO_MOVE_HSTEP			$hstep_ffp
 // FFP value: 256 * $vstep
 #define	HERO_MOVE_VSTEP			$vstep_ffp
+// FFP value: 256 * $hstep_diag
+#define	HERO_MOVE_HSTEP_DIAG		$hstep_diag_ffp
+// FFP value: 256 * $vstep_diag
+#define	HERO_MOVE_VSTEP_DIAG		$vstep_diag_ffp
 #define	HERO_MOVE_XMIN			$move_xmin
 #define	HERO_MOVE_XMAX			$move_xmax
 #define	HERO_MOVE_YMIN			$move_ymin

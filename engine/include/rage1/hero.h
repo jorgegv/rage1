@@ -51,7 +51,8 @@ struct hero_animation_data_s {
 
 struct hero_movement_data_s {
     uint8_t last_direction;
-    ffp16_t dx,dy;
+    ffp16_t dx,dy;			// x,y increments when moving only in H or V dir
+    ffp16_t dx_diag,dy_diag;		// x,y increments when moving diagonally
 };
 
 // describes the damage mode for the hero
