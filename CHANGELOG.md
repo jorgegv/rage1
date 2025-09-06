@@ -60,7 +60,7 @@ versions).  Update your toolchain if you need to!
   and mirror), and MAPGEN will detect them and generate the BTILEs for you. 
   Just _draw your map_!
 
-- The hero autofire capability can be enabled/disabled fro flow rules
+- The hero autofire capability can be enabled/disabled from flow rules
 
 - ISR configuration in 128K mode has been parameterized. Now you can specify
   the ISR vector and address and leave more low memory for bigger datasets at
@@ -187,7 +187,7 @@ Plus, this RAGE1 version has _loads_ of new features for your adventure games!
 - New ANIMATED btiles: decorations can now also have animations, which are
   configured in the same way as sprite animations. Animated btiles go
   specially well with HARMFUL btiles, so that your player know that some
-  background that moves may harm te hero!
+  background that moves may harm the hero!
 
 - The hero shooting system is now optional!  You can design games where you
   don't need weapons, or where the weapon is acquired during the game.  You
