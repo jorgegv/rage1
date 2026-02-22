@@ -9,7 +9,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
-#include <games/sp1.h>
 #include <stdlib.h>
 
 #include "rage1/map.h"
@@ -22,13 +21,7 @@
 #include "game_data.h"
 
 #ifdef BUILD_FEATURE_SCREEN_TITLES
-struct sp1_pss title_ctx = {
-   &title_area,				// bounds
-   SP1_PSSFLAG_INVALIDATE,		// flags
-   0,0,					// initial position x,y
-   0, DEFAULT_BG_ATTR,			// attr mask and attribute
-   0,0					// RESERVED
-};
+gfx_print_ctx_t title_ctx = GFX_PRINT_CTX_INIT(title_area, DEFAULT_BG_ATTR);
 #endif // BUILD_FEATURE_SCREEN_TITLES
 
 // draw a given screen
@@ -39,7 +32,7 @@ void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall {
     struct btile_s *bt;
 
     // clear screen
-    sp1_ClearRectInv( &game_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    gfx_clear_rect( &game_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
 
     // clear btile types
     btile_clear_type_all_screen();
@@ -123,10 +116,10 @@ void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall {
 #endif // BUILD_FEATURE_INVENTORY
 
 #ifdef BUILD_FEATURE_SCREEN_TITLES
-    sp1_ClearRectInv( &title_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    gfx_clear_rect( &title_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
     if ( game_state.current_screen_ptr->title ) {
-        sp1_SetPrintPos( &title_ctx, 0, 0 );
-        sp1_PrintString( &title_ctx, game_state.current_screen_ptr->title );
+        gfx_print_set_pos( &title_ctx, 0, 0 );
+        gfx_print_string( &title_ctx, game_state.current_screen_ptr->title );
     }
 #endif // BUILD_FEATURE_SCREEN_TITLES
 
@@ -190,17 +183,17 @@ void map_exit_screen( struct map_screen_s *s ) __z88dk_fastcall {
 
 void map_allocate_sprites( struct map_screen_s *m ) __z88dk_fastcall {
     uint8_t i;
-    struct sp1_ss *s;
+    gfx_sprite_t *s;
     struct sprite_graphic_data_s *g;
 
     i = m->enemy_data.num_enemies;
     while ( i-- ) {
         g = dataset_get_banked_sprite_ptr( m->enemy_data.enemies[ i ].num_graphic );
-        s = sprite_allocate(
+        s = gfx_sprite_create(
             g->height >> 3,
             g->width >> 3
         );
-        sprite_set_color( s, m->enemy_data.enemies[ i ].color );
+        gfx_sprite_set_color( s, m->enemy_data.enemies[ i ].color );
         m->enemy_data.enemies[ i ].sprite = s;
     }
 }
@@ -212,5 +205,5 @@ void map_free_sprites( struct map_screen_s *s ) __z88dk_fastcall {
     uint8_t i;
     i = s->enemy_data.num_enemies;
     while ( i-- )
-        sp1_DeleteSpr( s->enemy_data.enemies[ i ].sprite );
+        gfx_sprite_destroy( s->enemy_data.enemies[ i ].sprite );
 }
