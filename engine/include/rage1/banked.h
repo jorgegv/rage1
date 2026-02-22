@@ -12,9 +12,6 @@
 #define _BANKED_H
 
 #include <stdint.h>
-#include <games/sp1.h>
-
-#include "features.h"
 
 #include "rage1/game_state.h"
 #include "rage1/screen.h"
