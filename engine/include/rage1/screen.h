@@ -11,16 +11,15 @@
 #ifndef _SCREEN_H
 #define _SCREEN_H
 
-#include <games/sp1.h>
 #include <stdint.h>
 
-#include "features.h"
+#include "rage1/gfx.h"
 
 // off-screen cell coords (used for "parking" sprites)
 #define OFF_SCREEN_ROW		24
 #define OFF_SCREEN_COLUMN	0
 
 // rectangle covering the full screen
-extern struct sp1_Rect full_screen;
+extern gfx_rect_t full_screen;
 
 #endif // _SCREEN_H

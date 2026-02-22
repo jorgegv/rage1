@@ -12,11 +12,9 @@
 #define _SPRITE_H
 
 #include <stdint.h>
-#include <games/sp1.h>
 
+#include "rage1/gfx.h"
 #include "rage1/animation.h"
-
-#include "features.h"
 
 //////////////////////////////////////////////////////////////////////////
 // structs for storing a single copy of each sprite graphics in memory
@@ -42,14 +40,14 @@ struct  sprite_graphic_data_s {
 //////////////////////////////////////////////////////////////////////////
 
 // move sprite off screen
-void sprite_move_offscreen( struct sp1_ss *s ) __z88dk_fastcall;
+void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall;
 
 // allocate/free a sprite
-struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols);
-void sprite_free( struct sp1_ss *s ) __z88dk_fastcall;
+gfx_sprite_t *sprite_allocate( uint8_t rows, uint8_t cols);
+void sprite_free( gfx_sprite_t *s ) __z88dk_fastcall;
 
 // set a sprite color
-void sprite_set_color( struct sp1_ss *s, uint8_t color );
+void sprite_set_color( gfx_sprite_t *s, uint8_t color );
 
 // callback function and static params to set a sprite attributes
 struct attr_param_s {
@@ -57,7 +55,6 @@ struct attr_param_s {
     uint8_t attr_mask;
 };
 
-//extern struct attr_param_s sprite_attr_param;
 void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c );
 
 #endif // _SPRITE_H
