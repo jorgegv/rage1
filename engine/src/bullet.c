@@ -47,7 +47,7 @@ void bullet_redraw_all( void ) {
                 game_state.bullet.active_bullets--;
             }
             if ( BULLET_NEEDS_REDRAW( *bs ) ) {
-                sp1_MoveSprPix( bs->sprite, &game_area, bs->frame, bs->position.x.part.integer, bs->position.y.part.integer );
+                gfx_sprite_move_pixel( bs->sprite, &game_area, bs->frame, bs->position.x.part.integer, bs->position.y.part.integer );
                 RESET_BULLET_FLAG( *bs, F_BULLET_NEEDS_REDRAW );
             }
         }
@@ -56,7 +56,7 @@ void bullet_redraw_all( void ) {
 
 void bullet_reset_all(void) {
     uint8_t i;
-    struct sp1_ss *save;
+    gfx_sprite_t *save;
 
     i = BULLET_MAX_BULLETS;
     while ( i-- ) {
@@ -96,15 +96,13 @@ struct bullet_info_s bullet_startup_data = {
 
 // Bullet Sprites initialization function
 void bullet_init_sprites(void) {
-    struct sp1_ss *bs;
+    gfx_sprite_t *bs;
     uint8_t i;
 
-    // SP1 sprite data
     i = BULLET_MAX_BULLETS;
     while ( i-- ) {
-	bullet_state_data[i].sprite = bs = sprite_allocate( 1, 1 );
-	bs->xthresh = BULLET_SPRITE_XTHRESH;
-	bs->ythresh = BULLET_SPRITE_YTHRESH;
+	bullet_state_data[i].sprite = bs = gfx_sprite_create( 1, 1 );
+	gfx_sprite_set_threshold( bs, BULLET_SPRITE_XTHRESH, BULLET_SPRITE_YTHRESH );
     }
 
     // initialize remaining game_state.bullet struct fields

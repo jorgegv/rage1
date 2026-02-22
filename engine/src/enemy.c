@@ -53,7 +53,7 @@ void enemy_reset_position_all( uint8_t num_enemies, struct enemy_info_s *enemies
 
         // move enemy to initial position, only if it is active
         if ( IS_ENEMY_ACTIVE( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state ) )
-            sp1_MoveSprPix( enemies[n].sprite, &game_area, g->frame_data.frames[0], enemies[n].position.x.part.integer, enemies[n].position.y.part.integer );
+            gfx_sprite_move_pixel( enemies[n].sprite, &game_area, g->frame_data.frames[0], enemies[n].position.x.part.integer, enemies[n].position.y.part.integer );
     }
 }
 
@@ -75,7 +75,7 @@ void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
 
             // move/animate sprite into new position
             // sprite may need update either because of animation, movement, or both
-            sp1_MoveSprPix( enemies[n].sprite, &game_area,
+            gfx_sprite_move_pixel( enemies[n].sprite, &game_area,
                 g->frame_data.frames[ g->sequence_data.sequences[ enemies[n].animation.current.sequence ].frame_numbers[ enemies[n].animation.current.sequence_counter ] ],
                 enemies[n].position.x.part.integer, enemies[n].position.y.part.integer );
             RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ enemies[n].state_index ].asset_state, F_ENEMY_NEEDS_REDRAW );
