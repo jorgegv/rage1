@@ -132,3 +132,9 @@ Configured in `etc/rage1-config.yml`. Key regions:
 ### Entry Point
 
 `engine/src/main.c`: initializes memory, SP1, interrupts, datasets, controllers, hero; then runs the main loop: `menu -> intro -> game_loop -> game_over/game_end` (repeating).
+
+## Coding requirements
+
+- No Co-Authored-by headers in commit
+- Commit messages should be terse but concise
+- Any changes should be tested before commit. Test games should build successfully.
