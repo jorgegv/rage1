@@ -10,11 +10,8 @@
 
 // hero.c
 
-#include <games/sp1.h>
 #include <input.h>
 #include <arch/spectrum.h>
-
-#include "features.h"
 
 #include "rage1/hero.h"
 #include "rage1/game_state.h"
@@ -99,7 +96,7 @@ void hero_reset_position(void) {
     // set initial position and move it there
     hero_set_position_x( &game_state.hero, game_state.current_screen_ptr->hero_data.startup_x );
     hero_set_position_y( &game_state.hero, game_state.current_screen_ptr->hero_data.startup_y );
-    sp1_MoveSprPix(
+    gfx_sprite_move_pixel(
         game_state.hero.sprite,
         &game_area,
         home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ HERO_SPRITE_STEADY_FRAME_DOWN ],
@@ -120,7 +117,7 @@ void hero_set_position_y( struct hero_info_s *h, uint8_t y ) {
 }
 
 // this is initialized on startup, it is used when resetting the hero state
-struct sp1_ss *hero_sprite;
+gfx_sprite_t *hero_sprite;
 
 // resets hero state at game startup
 void hero_reset_all(void) {
@@ -141,7 +138,7 @@ void hero_reset_all(void) {
 }
 
 void hero_draw( void ) {
-    sp1_MoveSprPix(
+    gfx_sprite_move_pixel(
         game_state.hero.sprite,
         &game_area,
         game_state.hero.animation.last_frame_ptr,
@@ -215,12 +212,12 @@ void hero_check_tiles_below(void) {
 
     // run all chars and search for items
 
-    i = game_state.hero.sprite->height;		// same comment as above!
+    i = gfx_sprite_get_height(game_state.hero.sprite);
     while ( i-- ) {
-        r = game_state.hero.sprite->row + i;
-        j = game_state.hero.sprite->width;
+        r = gfx_sprite_get_row(game_state.hero.sprite) + i;
+        j = gfx_sprite_get_width(game_state.hero.sprite);
         while ( j-- ) {
-            c = game_state.hero.sprite->col + j;
+            c = gfx_sprite_get_col(game_state.hero.sprite) + j;
             tile_type = GET_TILE_TYPE_AT( r, c );
 
 #ifdef BUILD_FEATURE_INVENTORY
@@ -296,20 +293,14 @@ void hero_check_tiles_below(void) {
 
 #ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
 // printing context
-struct sp1_pss lives_display_ctx = {
-   &lives_area,				// bounds
-   SP1_PSSFLAG_INVALIDATE,		// flags
-   0,0,					// initial position x,y
-   0, DEFAULT_BG_ATTR,			// attr mask and attribute
-   0,0					// RESERVED
-};
+gfx_print_ctx_t lives_display_ctx = GFX_PRINT_CTX_INIT(lives_area, DEFAULT_BG_ATTR);
 
 void hero_update_lives_display(void) {
     uint8_t col;
     uint8_t n;
 
     // clear the area
-    sp1_ClearRectInv( &lives_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    gfx_clear_rect( &lives_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
 
     // draw one tile per live
     col = LIVES_AREA_LEFT;
@@ -327,7 +318,7 @@ void hero_move_offscreen(void) {
 
 // Hero Sprites initialization function
 void hero_init_sprites(void) {
-    game_state.hero.sprite = hero_sprite = sprite_allocate(
+    game_state.hero.sprite = hero_sprite = gfx_sprite_create(
         HERO_SPRITE_HEIGHT >> 3,
         HERO_SPRITE_WIDTH >> 3
     );
