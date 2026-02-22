@@ -143,6 +143,7 @@ my @valid_game_functions = qw( menu intro game_end game_over user_init user_game
 my @default_build_features = qw(
     BTILE_2BIT_TYPE_MAP
     GAME_TIME
+    SPRITE_ENGINE_SP1
 );
 
 sub add_build_feature {
