@@ -2163,7 +2163,7 @@ sub generate_single_game_area {
     my $area = shift;
     return if not defined ( $game_config->{ $area } );
     push @c_game_data_lines, "\n" . join( "\n", map {
-        sprintf( "struct sp1_Rect %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
+        sprintf( "gfx_rect_t %s = { %s_TOP, %s_LEFT, %s_WIDTH, %s_HEIGHT };",
             $_, ( uc( $_ ) ) x 4 )
         } ( $area )
     ) . "\n";
@@ -2175,7 +2175,7 @@ sub generate_single_game_area {
             sprintf( "#define %s_RIGHT	%d\n", uc( $_ ), $game_config->{ $_ }{'right'} ) .
             sprintf( "#define %s_WIDTH	( %s_RIGHT - %s_LEFT + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
             sprintf( "#define %s_HEIGHT	( %s_BOTTOM - %s_TOP + 1 )\n", uc( $_ ), uc( $_ ), uc( $_ ) ) .
-            sprintf( "extern struct sp1_Rect %s;\n", $_ )
+            sprintf( "extern gfx_rect_t %s;\n", $_ )
         } ( $area )
     ) . "\n\n";
 }
@@ -2786,7 +2786,7 @@ sub generate_c_home_header {
 
 #include <arch/spectrum.h>
 #include <sound/bit.h>
-#include <arch/zx/sp1.h>
+#include "rage1/gfx.h"
 
 #include "rage1/inventory.h"
 #include "rage1/game_state.h"
@@ -3261,8 +3261,8 @@ sub generate_h_header {
 #define _GAME_DATA_H
 
 #include <stdint.h>
-#include <games/sp1.h>
 
+#include "rage1/gfx.h"
 #include "rage1/dataset.h"
 
 extern struct dataset_assets_s all_assets_dataset_home;
