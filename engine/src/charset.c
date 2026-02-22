@@ -10,11 +10,9 @@
 
 // charset.c
 
-#include <games/sp1.h>
 #include <arch/spectrum.h>
 
-#include "features.h"
-
+#include "rage1/gfx.h"
 #include "rage1/charset.h"
 
 #include "game_data.h"
@@ -29,7 +27,7 @@ void init_custom_charset( void ) {
     uint16_t offset = 0;
     uint8_t i = CUSTOM_CHARSET_MIN_CHAR;
     while( i <= CUSTOM_CHARSET_MAX_CHAR ) {
-        sp1_TileEntry( i, &custom_charset[ offset ] );
+        gfx_tile_register( i, &custom_charset[ offset ] );
         offset += 8;
         i++;
     }

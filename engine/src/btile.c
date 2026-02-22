@@ -9,9 +9,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
-#include <games/sp1.h>
-
-#include "features.h"
 
 #include "rage1/btile.h"
 #include "rage1/memory.h"
@@ -46,7 +43,7 @@ uint8_t screen_pos_tile_type_data[ TILE_TYPE_DATA_SIZE ];
 // implemented)
 
 #ifdef BUILD_FEATURE_ANIMATED_BTILES
-void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box, uint8_t num_frame ) {
+void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, gfx_rect_t *box, uint8_t num_frame ) {
     static uint8_t dr, dc, r, c, n, rmax, cmax;
     static uint8_t brmin, brmax, bcmin, bcmax;
 
@@ -64,16 +61,16 @@ void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type
             c = col + dc;
             if ( ( r >= brmin ) && ( r <= brmax ) && ( c >= bcmin ) && ( c <= bcmax ) )  {
 #ifdef BUILD_FEATURE_GAMEAREA_COLOR_FULL
-                sp1_PrintAtInv( r, c, b->frames[ num_frame ].attrs[ n ], (uint16_t)b->frames[ num_frame ].tiles[ n ] );
+                gfx_tile_put( r, c, b->frames[ num_frame ].attrs[ n ], (uint16_t)b->frames[ num_frame ].tiles[ n ] );
 #else
-                sp1_PrintAtInv( r, c, game_state.default_mono_attr, (uint16_t)b->frames[ num_frame ].tiles[ n ] );
+                gfx_tile_put( r, c, game_state.default_mono_attr, (uint16_t)b->frames[ num_frame ].tiles[ n ] );
 #endif
                 SET_TILE_TYPE_AT( r, c, type );
             }
         }
 }
 
-void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
+void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, gfx_rect_t *box ) {
     btile_draw_frame( row, col, b, type, box, 0 );	// frame number 0 always exists
 }
 
@@ -118,7 +115,7 @@ void btile_animate_all( void ) {
 
 #else // BUILD_FEATURE_ANIMATED_BTILES not defined
 
-void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box ) {
+void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, gfx_rect_t *box ) {
     static uint8_t dr, dc, r, c, n, rmax, cmax;
     static uint8_t brmin, brmax, bcmin, bcmax;
 
@@ -136,9 +133,9 @@ void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, stru
             c = col + dc;
             if ( ( r >= brmin ) && ( r <= brmax ) && ( c >= bcmin ) && ( c <= bcmax ) )  {
 #ifdef BUILD_FEATURE_GAMEAREA_COLOR_FULL
-                sp1_PrintAtInv( r, c, b->attrs[n], (uint16_t)b->tiles[n] );
+                gfx_tile_put( r, c, b->attrs[n], (uint16_t)b->tiles[n] );
 #else
-                sp1_PrintAtInv( r, c, game_state.default_mono_attr, (uint16_t)b->tiles[n] );
+                gfx_tile_put( r, c, game_state.default_mono_attr, (uint16_t)b->tiles[n] );
 #endif
                 SET_TILE_TYPE_AT( r, c, type );
             }
@@ -154,7 +151,7 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b ) {
     cmax = b->num_cols;
     for ( dr = 0; dr < rmax; ++dr )
         for ( dc = 0; dc < cmax; ++dc ) {
-            sp1_PrintAtInv( row + dr, col + dc, DEFAULT_BG_ATTR, ' ' );
+            gfx_tile_put( row + dr, col + dc, DEFAULT_BG_ATTR, ' ' );
             SET_TILE_TYPE_AT( row + dr, col + dc, TT_DECORATION );
         }
 }
