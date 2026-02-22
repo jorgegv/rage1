@@ -9,7 +9,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
-#include <games/sp1.h>
 #include <input.h>
 
 #include "rage1/debug.h"
@@ -22,19 +21,19 @@ uint8_t initialized = 0;
 
 uint16_t debug_flags = 0;
 
-struct sp1_pss debug_ctx = { &debug_area, SP1_PSSFLAG_INVALIDATE, 0, 0, 0, INK_WHITE | PAPER_BLACK, 0, 0 };
+gfx_print_ctx_t debug_ctx = GFX_PRINT_CTX_INIT(debug_area, INK_WHITE | PAPER_BLACK);
 
 void debug_out( char *txt ) {
     if ( ! initialized ) {
-        sp1_SetPrintPos( &debug_ctx, 0, 0 );
+        gfx_print_set_pos( &debug_ctx, 0, 0 );
         initialized++;
     }
     if ( *txt == '\n' ) {
-        sp1_ClearRectInv( &debug_area, INK_WHITE | PAPER_BLACK, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
-        sp1_SetPrintPos( &debug_ctx, 0, 0 );
+        gfx_clear_rect( &debug_area, INK_WHITE | PAPER_BLACK, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
+        gfx_print_set_pos( &debug_ctx, 0, 0 );
         txt++;
     }
-    sp1_PrintString( &debug_ctx, txt );
+    gfx_print_string( &debug_ctx, txt );
 }
 
 uint8_t *digits="0123456789abcdef";

@@ -13,8 +13,7 @@
 #include <input.h>
 #include <stdlib.h>
 
-#include "features.h"
-
+#include "rage1/gfx.h"
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"
 #include "rage1/screen.h"
@@ -151,9 +150,9 @@ void animate_btiles( void ) {
 
 void show_heartbeat(void) {
     if ( current_time.frame & 0x08 ) {
-        sp1_PrintAtInv(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, DEFAULT_BG_ATTR, ' ');
+        gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, DEFAULT_BG_ATTR, ' ');
     } else {
-        sp1_PrintAtInv(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, INK_YELLOW | PAPER_GREEN, ' ');
+        gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, INK_YELLOW | PAPER_GREEN, ' ');
     }
 }
 
@@ -262,7 +261,7 @@ void run_main_game_loop(void) {
 #endif
 
       // update screen
-      sp1_UpdateNow();
+      gfx_update();
 
       // do not add an intrinsic_halt() here - It will waste cycles.
       // if some of these previous functions do not need to be executed

@@ -13,9 +13,6 @@
 //
 
 #include <arch/spectrum.h>
-#include <games/sp1.h>
-
-#include "features.h"
 
 #include "rage1/inventory.h"
 #include "rage1/game_state.h"
@@ -48,7 +45,7 @@ void inventory_show(void) {
     uint8_t col, item_index;
 
     // clear the area
-    sp1_ClearRectInv( &inventory_area, DEFAULT_BG_ATTR, ' ', SP1_RFLAG_TILE | SP1_RFLAG_COLOUR );
+    gfx_clear_rect( &inventory_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
 
     // draw owned items, left to right
     col = INVENTORY_AREA_LEFT;
@@ -67,7 +64,7 @@ void inventory_show(void) {
     // drawn with different colors depending on the mono attr value when
     // they were grabbed.  To avoid this, we must reset the colors of the
     // inventory area to the original game default mono attr
-    sp1_ClearRectInv( &inventory_area, GAMEAREA_COLOR_MONO_ATTR, 0, SP1_RFLAG_COLOUR );
+    gfx_clear_rect( &inventory_area, GAMEAREA_COLOR_MONO_ATTR, 0, GFX_CLEAR_COLOUR );
 #endif
 }
 
