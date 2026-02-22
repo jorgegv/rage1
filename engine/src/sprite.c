@@ -2,12 +2,13 @@
 //
 // RAGE1 - Retro Adventure Game Engine, release 1
 // (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
-// 
+//
 // This code is published under a GNU GPL license version 3 or later.  See
 // LICENSE file in the distribution for details.
-// 
+//
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "rage1/gfx.h"
 #include "rage1/game_state.h"
 #include "rage1/sprite.h"
 #include "rage1/screen.h"
@@ -17,23 +18,25 @@
 
 #include "game_data.h"
 
-void sprite_move_offscreen( struct sp1_ss *s ) __z88dk_fastcall {
-    sp1_MoveSprAbs( s, &full_screen, NULL, OFF_SCREEN_ROW, OFF_SCREEN_COLUMN, 0, 0 );
+void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall {
+    gfx_sprite_move_cell( s, &full_screen, NULL, OFF_SCREEN_ROW, OFF_SCREEN_COLUMN );
 }
+
+#ifdef BUILD_FEATURE_SPRITE_ENGINE_SP1
 
 // standard hook to set sprite attributes. This is a strange function,
 // its parameters must be passed through 2 global variables, defined below :-/
 struct attr_param_s sprite_attr_param;
 
 #pragma disable_warning 85
-void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c ) {
+static void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c ) {
     c->attr		= sprite_attr_param.attr;
     c->attr_mask	= sprite_attr_param.attr_mask;
 }
 
-struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
+gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols ) {
     uint8_t c;
-    struct sp1_ss *s;
+    gfx_sprite_t *s;
 
     // create the sprite and first column
     s = sp1_CreateSpr(SP1_DRAW_MASK2LB, SP1_TYPE_2BYTE,
@@ -61,13 +64,15 @@ struct sp1_ss *sprite_allocate( uint8_t rows, uint8_t cols ) {
     return s;
 }
 
-void sprite_free( struct sp1_ss *s ) __z88dk_fastcall {
-        sp1_DeleteSpr( s );
-}
-
-void sprite_set_color( struct sp1_ss *s, uint8_t color ) {
+void gfx_sprite_set_color( gfx_sprite_t *s, uint8_t color ) {
     // add color
     sprite_attr_param.attr = color;
     sprite_attr_param.attr_mask = 0xF8;
     sp1_IterateSprChar( s, sprite_set_cell_attributes );
+}
+
+#endif // BUILD_FEATURE_SPRITE_ENGINE_SP1
+
+void sprite_free( gfx_sprite_t *s ) __z88dk_fastcall {
+    gfx_sprite_destroy( s );
 }

@@ -9,8 +9,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
-#include <games/sp1.h>
 
+#include "rage1/gfx.h"
 #include "rage1/sp1engine.h"
 #include "rage1/screen.h"
 #include "rage1/debug.h"
@@ -19,15 +19,22 @@
 
 /////////////////////////////////////
 //
-// SP1 library initialization
+// GFX library initialization
 //
 /////////////////////////////////////
 
-void init_sp1(void) {
-   // Initialize SP1.LIB
+#ifdef BUILD_FEATURE_SPRITE_ENGINE_SP1
+
+void gfx_init( uint8_t bg_attr, uint8_t bg_char ) {
    zx_border(INK_BLACK);
    sp1_Initialize(SP1_IFLAG_MAKE_ROTTBL | SP1_IFLAG_OVERWRITE_TILES | SP1_IFLAG_OVERWRITE_DFILE,
-      DEFAULT_BG_ATTR, ' ');
-   sp1_Invalidate(&full_screen);
-   sp1_UpdateNow();
+      bg_attr, bg_char);
+   gfx_invalidate(&full_screen);
+   gfx_update();
+}
+
+#endif // BUILD_FEATURE_SPRITE_ENGINE_SP1
+
+void init_sp1(void) {
+   gfx_init( DEFAULT_BG_ATTR, ' ' );
 }

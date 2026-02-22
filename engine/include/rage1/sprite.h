@@ -43,18 +43,16 @@ struct  sprite_graphic_data_s {
 void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall;
 
 // allocate/free a sprite
-gfx_sprite_t *sprite_allocate( uint8_t rows, uint8_t cols);
+#define sprite_allocate  gfx_sprite_create
 void sprite_free( gfx_sprite_t *s ) __z88dk_fastcall;
 
 // set a sprite color
-void sprite_set_color( gfx_sprite_t *s, uint8_t color );
+#define sprite_set_color  gfx_sprite_set_color
 
 // callback function and static params to set a sprite attributes
 struct attr_param_s {
     uint8_t attr;
     uint8_t attr_mask;
 };
-
-void sprite_set_cell_attributes( uint16_t count, struct sp1_cs *c );
 
 #endif // _SPRITE_H
