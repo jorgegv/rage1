@@ -42,12 +42,8 @@ struct  sprite_graphic_data_s {
 // move sprite off screen
 void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall;
 
-// allocate/free a sprite
-#define sprite_allocate  gfx_sprite_create
+// free a sprite
 void sprite_free( gfx_sprite_t *s ) __z88dk_fastcall;
-
-// set a sprite color
-#define sprite_set_color  gfx_sprite_set_color
 
 // callback function and static params to set a sprite attributes
 struct attr_param_s {
