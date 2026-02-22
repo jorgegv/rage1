@@ -10,7 +10,6 @@
 
 // hero.c
 
-#include <games/sp1.h>
 #include <input.h>
 #include <arch/spectrum.h>
 
