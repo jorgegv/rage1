@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <input.h>
 
-#include "features.h"
+#include "rage1/gfx.h"
 
 #ifdef BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA
 void debug_out( char * );
@@ -22,7 +22,7 @@ void debug_out( char * );
   #define debug_out(a) __DEBUG_AREA_should_be_defined_when_usng_debug_out__()
 #endif
 void debug_waitkey( void );
-#define debug_flush() sp1_UpdateNow()
+#define debug_flush() gfx_update()
 
 // debug panic will store the given panic code at fixed address $FFFF
 // and then will halt the machine with a fancy color screen. You will

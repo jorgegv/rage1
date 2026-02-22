@@ -12,9 +12,6 @@
 #define _BULLET_H
 
 #include <stdint.h>
-#include <games/sp1.h>
-
-#include "features.h"
 
 #include "rage1/types.h"
 #include "rage1/sprite.h"
@@ -25,7 +22,7 @@ struct bullet_movement_data_s {
 };
 
 struct bullet_state_data_s {
-    struct sp1_ss *sprite;
+    gfx_sprite_t *sprite;
     struct position_data_s position;
     int8_t dx, dy;		// current x and y increments
     uint8_t delay_counter;	// current delay counter

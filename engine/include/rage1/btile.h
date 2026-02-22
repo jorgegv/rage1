@@ -13,9 +13,8 @@
 
 #include <stdint.h>
 
+#include "rage1/gfx.h"
 #include "rage1/animation.h"
-
-#include "features.h"
 
 // Big tiles functions and definitions
 // A big tile is an array of regular 8x8 char tiles, arranged in
@@ -62,11 +61,11 @@ struct animated_btile_s {
 };
 
 #ifdef BUILD_FEATURE_ANIMATED_BTILES
-void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box, uint8_t num_frame );
+void btile_draw_frame( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, gfx_rect_t *box, uint8_t num_frame );
 void btile_animate_all( void );
 #endif
 
-void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, struct sp1_Rect *box );
+void btile_draw( uint8_t row, uint8_t col, struct btile_s *b, uint8_t type, gfx_rect_t *box );
 void btile_remove( uint8_t row, uint8_t col, struct btile_s *b );
 
 // tile types

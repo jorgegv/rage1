@@ -12,10 +12,7 @@
 #define _MAP_H
 
 #include <stddef.h>
-#include <games/sp1.h>
 #include <stdint.h>
-
-#include "features.h"
 
 #include "rage1/btile.h"
 #include "rage1/inventory.h"
@@ -81,7 +78,7 @@ struct map_screen_s {
     struct {
         uint8_t btile_num;
         uint8_t probability;
-        struct sp1_Rect box;
+        gfx_rect_t box;
     } background_data;
     // there used to be a 'flags' field here, but state (=flags) for each
     // screen is always at position 0 in the asset state table for that
