@@ -1251,3 +1251,4 @@ one-expression macros unless noted.
 - Try to work as autonomously as possible, but do not try so hard that you make huge modifications without advice
 - Commit messages should start with "JSP phase X: "
 - It's not needed to let me review on each commit. Just stop after each phase mandatorily, or if you feel you need advice.
+- Mark each task as done in the previous list when you commit that task
