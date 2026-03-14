@@ -1199,20 +1199,20 @@ one-expression macros unless noted.
 
 ### Phase 1 — JSP enhancements (JSP repository)
 
-- [ ] **P1-0** Add `uint8_t jsp_bat[768]` (BAT) to JSP data; update `jsp_init` to accept `default_attr` and pre-fill tile table entries 32–127 with ROM font pointers; update `jsp_redraw` to restore BAT attributes when redrawing dirty cells
-- [ ] **P1-1** Add `color`, `color_mask` fields (+11, +12) to `struct jsp_sprite_s`; add `parked` flag bit
-- [ ] **P1-2** Implement `jsp_sprite_set_color` and `jsp_apply_sprite_color` (C)
-- [ ] **P1-3** Update `jsp_move_sprite_mask2`, `jsp_draw_sprite_mask2`, LOAD1 variants: call `jsp_apply_sprite_color`; handle `flags.parked`
-- [ ] **P1-4** Implement `jsp_sprite_park`
-- [ ] **P1-5** Implement `jsp_sprite_pool_init`, `jsp_sprite_alloc`, `jsp_sprite_free` (C)
-- [ ] **P1-6** Implement `jsp_move_sprite_mask2_frame`, `jsp_move_sprite_load1_frame`, `jsp_move_sprite_frame`
-- [ ] **P1-7** Implement `jsp_sprite_in_rect`
-- [ ] **P1-8** Implement `jsp_tile_register` and `jsp_tile_put` (tile table lookup + pixel draw + BAT update for attribute)
-- [ ] **P1-9** Implement `jsp_clear_rect`
-- [ ] **P1-10** Implement `jsp_invalidate_rect`
-- [ ] **P1-11** Implement `struct jsp_print_ctx`, `JSP_PRINT_CTX_INIT`, `jsp_print_set_pos`, `jsp_print_string` (Option C: routes character codes through tile table)
-- [ ] **P1-12** Update `jsp.h` with all new declarations, constants, and the updated struct
-- [ ] **P1-13** Write JSP tests for new API (using JSP's existing `main.c` test framework)
+- [x] **P1-0** Add `uint8_t jsp_bat[768]` (BAT) to JSP data; update `jsp_init` to accept `default_attr` and pre-fill tile table entries 32–127 with ROM font pointers; update `jsp_redraw` to restore BAT attributes when redrawing dirty cells
+- [x] **P1-1** Add `color`, `color_mask` fields (+11, +12) to `struct jsp_sprite_s`; add `parked` flag bit
+- [x] **P1-2** Implement `jsp_sprite_set_color` and `jsp_apply_sprite_color` (C)
+- [x] **P1-3** Update `jsp_move_sprite_mask2`, `jsp_draw_sprite_mask2`, LOAD1 variants: call `jsp_apply_sprite_color`; handle `flags.parked`
+- [x] **P1-4** Implement `jsp_sprite_park`
+- [x] **P1-5** Implement `jsp_sprite_pool_init`, `jsp_sprite_alloc`, `jsp_sprite_free` (C)
+- [x] **P1-6** Implement `jsp_move_sprite_mask2_frame`, `jsp_move_sprite_load1_frame`, `jsp_move_sprite_frame`
+- [x] **P1-7** Implement `jsp_sprite_in_rect`
+- [x] **P1-8** Implement `jsp_tile_register` and `jsp_tile_put` (tile table lookup + pixel draw + BAT update for attribute)
+- [x] **P1-9** Implement `jsp_clear_rect`
+- [x] **P1-10** Implement `jsp_invalidate_rect`
+- [x] **P1-11** Implement `struct jsp_print_ctx`, `JSP_PRINT_CTX_INIT`, `jsp_print_set_pos`, `jsp_print_string` (Option C: routes character codes through tile table)
+- [x] **P1-12** Update `jsp.h` with all new declarations, constants, and the updated struct
+- [x] **P1-13** Write JSP tests for new API (using JSP's existing `main.c` test framework)
 
 ### Phase 2 — RAGE1 mapping layer (RAGE1 repository)
 
@@ -1249,6 +1249,6 @@ one-expression macros unless noted.
 - Keep commit messages concise but informative
 - Whenever you need to check if a given thing does what is intended, ask me for feedback if needed
 - Try to work as autonomously as possible, but do not try so hard that you make huge modifications without advice
-- Commit messages should start with "JSP phase X: "
+- Commit messages should start with "jsp: phase X: "
 - It's not needed to let me review on each commit. Just stop after each phase mandatorily, or if you feel you need advice.
 - Mark each task as done in the previous list when you commit that task
