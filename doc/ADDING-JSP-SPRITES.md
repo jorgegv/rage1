@@ -1013,19 +1013,53 @@ configuration must be adjusted to avoid overlap.
 | Region            | SP1 layout               | JSP layout               |
 |-------------------|--------------------------|--------------------------|
 | Rotation tables   | `0xF200–0xFFFF` (3.5 KB) | `0xF200–0xFFFF` (same)   |
-| SP1 update array  | `0xD200–0xEFFF` (7.7 KB) | — (eliminated)           |
 | SP1 tile array    | `0xF000–0xF1FF` (512 B)  | — (eliminated)           |
+| SP1 update array  | `0xD200–0xEFFF` (7.7 KB) | — (eliminated)           |
 | JSP BTT           | —                        | `0xEC00–0xF199` (1.5 KB) |
 | JSP DRT           | —                        | `0xE600–0xEB99` (1.5 KB) |
-| JSP DTT           | —                        | `0xE585–0xE5E4` (96 B)   |
-| Interrupt vector  | `0xD000–0xD100` (257 B)  | `0xE400–0xE500` (257 B)  |
-| Stack             | `~0xD101–0xD1D1`         | `0xE501–0xE584`          |
-| Available program | `0x5D00–0xCFFF` (~29 KB) | `0x5D00–0xE3FF` (~34 KB) |
+| JSP DTT           | —                        | `0xE5A0–0xE5FF` (96 B)   |
+| JSP FTT           | —                        | `0xE540–0xE59F` (96 B)   |
+| JSP BAT           | —                        | `0xE240–0xE53F` (768 B)  |
+| (unused)          | —                        | `0xE1E4-0xE23F` (92 B)   |
+| JP <ISR> opcode   | `0xD1D1-0xD1D3`          | `0xE1E1-0xE1E3`          |
+| (unused)          | `0xD101–0xD1D0`          | `0xE101–0xE1E0` (224 B)  |
+| Interrupt vector  | `0xD000–0xD100` (257 B)  | `0xE000–0xE100` (257 B)  |
+| Available program | `0x5D00–0xCFFF` (~29 KB) | `0x5D00–0xDFFF` (~33 KB) |
+
+Notes on the JSP layout:
+- **BTT/DRT/DTT/FTT/BAT** are fixed by the JSP library assembly and cannot be relocated.
+  The lowest JSP-owned address is `0xE240` (start of BAT).
+- **Interrupt vector** must be 256-byte aligned and placed entirely below `0xE240`.
+  `0xE000` is the natural choice (mirrors SP1's `0xD000`, just 4 KB higher).
+- JSP 48K gives RAGE1 ~33 KB of program space vs. SP1's ~29 KB — about 4 KB more.
+- Holes marked "(unused)" may be used for the stack or scratch memory
+
+**For 128K mode:**
+
+The layout is identical but shifted down 16 KB:
+
+| Region            | SP1 layout               | JSP layout               |
+|-------------------|--------------------------|--------------------------|
+| Rotation tables   | `0xF200–0xFFFF` (3.5 KB) | `0xB200–0xBFFF` (same)   |
+| SP1 update array  | `0xD200–0xEFFF` (7.7 KB) | — (eliminated)           |
+| SP1 tile array    | `0xF000–0xF1FF` (512 B)  | — (eliminated)           |
+| JSP BTT           | —                        | `0xAC00–0xB199` (1.5 KB) |
+| JSP DRT           | —                        | `0xA600–0xAB99` (1.5 KB) |
+| JSP DTT           | —                        | `0xA5A0–0xA5FF` (96 B)   |
+| JSP FTT           | —                        | `0xA540–0xA59F` (96 B)   |
+| JSP BAT           | —                        | `0xA240–0xA53F` (768 B)  |
+| (unused)          | —                        | `0xA1E4-0xA23F` (92 B)   |
+| JP <ISR> opcode   | `0xD1D1-0xD1D3`          | `0xA1A1-0xA1A3`          |
+| (unused)          | `0xD101–0xD1D0`          | `0xA101–0xA1A0` (160 B)  |
+| Interrupt vector  | `0xD000–0xD100` (257 B)  | `0xA000–0xA100` (257 B)  |
+| Available program | `0x5D00–0xCFFF` (~29 KB) | `0x5D00–0x9FFF` (~17 KB) |
+
+See risk §6.1 for the 128K program size implications.
 
 Files to update:
 - `Makefile-48`: update `org`, `IVTABLE_BASE`, stack address.
-- `Makefile-128`: same for 128K layout (JSP structures shift down 16 KB; program space
-  becomes ~18 KB instead of ~29 KB — see risk §6.1).
+- `Makefile-128`: same for 128K layout (JSP tables at `0xA240–0xBFFF`; program space
+  becomes ~17 KB instead of ~29 KB — see risk §6.1).
 - `etc/rage1-config.yml`: update `interrupt_vector_address` and related constants.
 
 Guard all changes with `ifeq ($(BUILD_SPRITE_ENGINE),jsp)` so SP1 builds are unaffected.
@@ -1061,10 +1095,11 @@ build-jsp:
 ## 6. Risks and Open Questions
 
 **1. JSP 128K program size regression.**
-JSP in 128K mode saves ~7.5 KB over SP1 but places BTT/DRT/DTT at `0xA400–0xBFFF`
-(below the banked window at `0xC000`), leaving ~18 KB for the main binary versus ~29 KB
+JSP in 128K mode places all tables (BTT/DRT/DTT/FTT/BAT) at `0xA240–0xBFFF`
+(below the banked window at `0xC000`), leaving ~17 KB for the main binary versus ~29 KB
 with SP1. Measure a representative 128K game's binary size before committing the 128K
-memory map changes. The JSP advantage is strongest in 48K mode.
+memory map changes. The JSP advantage is strongest in 48K mode. Nevertheless, JSP data
+structures leave the 0xC000 page completely free, which allows for easier banked code.
 
 **2. `jsp_sprite_park` transition correctness.**
 When a sprite transitions from parked back to active, `_jsp_draw_sprite` is called instead
