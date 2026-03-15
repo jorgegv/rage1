@@ -18,21 +18,24 @@
 
 #ifdef BUILD_FEATURE_SPRITE_ENGINE_JSP
 
-// Pool storage — sized by datagen.pl constants (emitted in game_data.h)
+// Pool storage.
+// _sprite_pdbs_flat uses uniform max sizing (transitional).
+// Phase 3 datagen.pl update will replace this with per-slot exact arrays.
 static struct jsp_sprite_s _sprite_pool[ GFX_JSP_MAX_SPRITES ];
-static uint8_t _sprite_pdbs[
-    GFX_JSP_MAX_SPRITES *
-    (GFX_JSP_MAX_SPRITE_ROWS + 1) * (GFX_JSP_MAX_SPRITE_COLS + 1) * 8 ];
+#define _SPRITE_PDB_SLOT_SIZE \
+    ((uint16_t)(GFX_JSP_MAX_SPRITE_ROWS + 1) * (GFX_JSP_MAX_SPRITE_COLS + 1) * 8)
+static uint8_t  _sprite_pdbs_flat[ GFX_JSP_MAX_SPRITES * _SPRITE_PDB_SLOT_SIZE ];
+static uint8_t *_sprite_pdbs[ GFX_JSP_MAX_SPRITES ];
 
 void gfx_init( uint8_t bg_attr, uint8_t bg_char ) {
     static const uint8_t blank[8] = {0,0,0,0,0,0,0,0};
+    uint8_t i;
     (void) bg_char;
+    for ( i = 0; i < GFX_JSP_MAX_SPRITES; i++ )
+        _sprite_pdbs[i] = _sprite_pdbs_flat + (uint16_t)i * _SPRITE_PDB_SLOT_SIZE;
     zx_border( INK_BLACK );
     jsp_init( (uint8_t *)blank, bg_attr );
-    jsp_sprite_pool_init( _sprite_pool, _sprite_pdbs,
-                          GFX_JSP_MAX_SPRITES,
-                          GFX_JSP_MAX_SPRITE_ROWS,
-                          GFX_JSP_MAX_SPRITE_COLS );
+    jsp_sprite_pool_init( _sprite_pool, _sprite_pdbs, GFX_JSP_MAX_SPRITES );
     gfx_invalidate( &full_screen );
     gfx_update();
 }
