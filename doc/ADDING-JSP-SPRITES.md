@@ -1251,9 +1251,9 @@ one-expression macros unless noted.
 
 ### Phase 2 — RAGE1 mapping layer (RAGE1 repository)
 
-- [ ] **P2-1** Create `engine/include/rage1/gfx_jsp.h` (type aliases, constants, macro mappings)
-- [ ] **P2-2** Create `engine/src/gfx_jsp.c` (`gfx_init`, `gfx_sprite_create`, `gfx_sprite_set_color`, `gfx_jsp_move_sprite_clipped`, pool arrays)
-- [ ] **P2-3** Add `#ifdef BUILD_FEATURE_SPRITE_ENGINE_JSP` block to `engine/include/rage1/gfx.h`
+- [x] **P2-1** Create `engine/include/rage1/gfx_jsp.h` (type aliases, constants, macro mappings)
+- [x] **P2-2** Create `engine/src/gfx_jsp.c` (`gfx_init`, `gfx_sprite_create`, `gfx_sprite_set_color`, `gfx_jsp_move_sprite_clipped`, pool arrays)
+- [x] **P2-3** Add `#ifdef BUILD_FEATURE_SPRITE_ENGINE_JSP` block to `engine/include/rage1/gfx.h`
 
 ### Phase 3 — RAGE1 toolchain and build changes
 
