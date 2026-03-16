@@ -128,6 +128,9 @@ build-sub_bufs_48:
 build-sub_bufs_128:
 	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/sub_bufs_128
 
+build-minimal_jsp:
+	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/minimal_jsp
+
 # just a target for the default game for completeness
 build-default: build
 

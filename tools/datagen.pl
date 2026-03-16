@@ -1339,26 +1339,23 @@ sub generate_sprite {
         $sprite->{'name'}, $using_jsp ? 'JSP' : 'SP1' );
 
     # prepare mask and bytes lists
-    # SP1: each column has a blank leading row, all sprite rows, then a shared trailing blank row
-    # JSP: each column has only the actual sprite rows (no blank padding rows)
+    # Both SP1 and JSP: each column has a blank leading row, all sprite rows, then a shared
+    # trailing blank row.  JSP's draw loop uses pix_ptr = sp->pixels - (ypos%8)*2, which reads
+    # up to 14 bytes before sp->pixels (the leading blank row provides this preamble).
     my @col_bytes;
     my @mask_bytes;
     foreach my $frm ( 0 .. ( $sprite_frames - 1 ) ) {
         foreach my $col ( 0 .. ( $sprite_cols - 1 ) ) {
-            if ( not $using_jsp ) {
-                push @col_bytes, (0) x 8;	# initial row with blank pixels and transparent mask
-                push @mask_bytes, (0xff) x 8;
-            }
+            push @col_bytes, (0) x 8;	# initial row with blank pixels and transparent mask
+            push @mask_bytes, (0xff) x 8;
             foreach my $row ( 0 .. ( $sprite_rows - 1 ) ) {
                 push @col_bytes, @{ $sprite->{'pixel_bytes'}[ ( $frm * $sprite_rows * $sprite_cols ) + $row * $sprite_cols + $col ] };
                 push @mask_bytes,@{ $sprite->{'mask_bytes'}[ ( $frm * $sprite_rows * $sprite_cols ) + $row * $sprite_cols + $col ] };
             }
         }
     }
-    if ( not $using_jsp ) {
-        push @col_bytes, (0) x 8;	# final row with blank pixels and transparent mask
-        push @mask_bytes, (0xff) x 8;
-    }
+    push @col_bytes, (0) x 8;	# final row with blank pixels and transparent mask
+    push @mask_bytes, (0xff) x 8;
 
     # group mask and pixel bytes by 16-byte lines for easier reading
     my @groups_of_2m;
@@ -1378,13 +1375,12 @@ sub generate_sprite {
         join( ",\n", map { join( ", ", map { sprintf( "0x%02x", $_ ) } @{$_} ) } @groups_of_2m ) );
 
     # output list of pointers to frames
-    # SP1: each frame is (rows+1)*cols*16 bytes; first frame starts at offset 16 (after top blank row)
-    # JSP: each frame is rows*cols*16 bytes; first frame starts at offset 0
+    # Both SP1 and JSP: each frame is (rows+1)*cols*16 bytes; first frame starts at offset 16
+    # (past the leading blank row of column 0), so sp->pixels - (ypos%8)*2 always lands within
+    # the blank preamble area for any sub-character vertical offset.
     my @frame_offsets;
-    my $frame_stride = $using_jsp
-        ? 16 * $sprite->{'rows'} * $sprite->{'cols'}
-        : 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
-    my $ptr = $using_jsp ? 0 : 16;
+    my $frame_stride = 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
+    my $ptr = 16;
     foreach ( 0 .. ( $sprite->{'frames'} - 1 ) ) {
         push @frame_offsets, $ptr;
         $ptr += $frame_stride;
