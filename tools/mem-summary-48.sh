@@ -26,12 +26,23 @@ MAIN_BSS_START=$( map_data $MAIN_MAP | grep -E '^__bss_compiler_head' | awk '{pr
 MAIN_BSS_END=$( map_data $MAIN_MAP | grep -E '^__bss_stdlib_tail' | awk '{print $3}' | hex2dec)
 MAIN_CODE_START=$( map_data $MAIN_MAP | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 MAIN_CODE_END=$( map_data $MAIN_MAP | grep -E '^__code_user_tail' | awk '{print $3}' | hex2dec )
-SP1_START=$( echo D1ED | hex2dec )
-SP1_END=$( echo FFFF | hex2dec )
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
 STARTUP_END=$MAIN_DATA_START
-INT_START=$( echo D000 | hex2dec )
-INT_END=$( echo D1D3 | hex2dec )
+
+# Detect sprite engine from features.h
+if grep -q 'BUILD_FEATURE_SPRITE_ENGINE_JSP' build/generated/features.h 2>/dev/null; then
+    SPRITE_DATA_LABEL=jspdata
+    SP1_START=$( echo E240 | hex2dec )
+    SP1_END=$( echo FFFF | hex2dec )
+    INT_START=$( echo E000 | hex2dec )
+    INT_END=$( echo E1E3 | hex2dec )
+else
+    SPRITE_DATA_LABEL=sp1data
+    SP1_START=$( echo D1ED | hex2dec )
+    SP1_END=$( echo FFFF | hex2dec )
+    INT_START=$( echo D000 | hex2dec )
+    INT_END=$( echo D1D3 | hex2dec )
+fi
 
 echo "Banks 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
@@ -41,7 +52,7 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" data $MAIN_DATA_START $MAIN_DATA_END $((
 printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $MAIN_BSS_START $MAIN_BSS_END $(( MAIN_BSS_END - MAIN_BSS_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" code $MAIN_CODE_START $MAIN_CODE_END $(( MAIN_CODE_END - MAIN_CODE_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
-printf "  %-12s  \$%04x  \$%04x  %5d\n" sp1data $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" $SPRITE_DATA_LABEL $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
 echo
 
 TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))

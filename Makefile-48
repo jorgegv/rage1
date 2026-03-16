@@ -18,6 +18,11 @@ TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(MAIN_TAP) $(
 
 -include Makefile.common
 
+# JSP 48K uses a different zpragma (different stack pointer; override after Makefile.common)
+ifeq ($(BUILD_SPRITE_ENGINE),jsp)
+    ZPRAGMA_INC = zpragma-48-jsp.inc
+endif
+
 .PHONY: taps
 
 # add SRC and OBJS for 48K build

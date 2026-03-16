@@ -178,6 +178,22 @@ sub get_zx_target {
     return '48'; # default
 }
 
+sub get_sprite_engine {
+    open GAME_CONFIG, $game_config_name or
+        die "** Error: could not open $game_config_name for reading\n";
+    while ( my $line = <GAME_CONFIG> ) {
+        chomp( $line );
+        $line =~ s/^\s*//g;
+        $line =~ s/\/\/.*$//g;
+        $line =~ s/\s*$//g;
+        next if $line eq '';
+        if ( $line =~ /^SPRITE_ENGINE\s+(\w+)$/i ) {
+            return lc($1);
+        }
+    }
+    return 'sp1'; # default
+}
+
 # get the size of the main.bin file
 sub get_main_bin_size {
     my @stat_results = stat( $main_bin_filename );
@@ -235,9 +251,10 @@ EOF_BANK0
     # load main program code at base code address and start execution
     my $main_code_start;
     if ( get_zx_target eq '128' ) {
-        $main_code_start = sprintf( '0x%04x', ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
-            hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
-            $cfg->{'interrupts_128'}{'base_code_address'}
+        my $int_key = ( get_sprite_engine() eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
+        $main_code_start = sprintf( '0x%04x', ( $cfg->{ $int_key }{'base_code_address'} =~ /^0x/ ?
+            hex( $cfg->{ $int_key }{'base_code_address'} ) :
+            $cfg->{ $int_key }{'base_code_address'}
         ) );
     } else {
         $main_code_start = '0x5f00';

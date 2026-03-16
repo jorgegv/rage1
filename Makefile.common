@@ -30,6 +30,13 @@ TEST_GAMES_DIR		= games
 DEFAULT_TARGET_GAME	= $(TEST_GAMES_DIR)/default
 TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
 
+# sprite engine selection: read from game config .gdata (same pattern as ZX_TARGET)
+# defaults to 'sp1' when not specified
+BUILD_SPRITE_ENGINE	:= $(shell grep -E '^\s*SPRITE_ENGINE\s+\w+' \
+			   $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null | \
+			   grep -vP '^\s*//' | head -1 | awk '{print tolower($$2)}')
+BUILD_SPRITE_ENGINE	:= $(or $(BUILD_SPRITE_ENGINE),sp1)
+
 # Main sources and objs
 CSRC 			= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC			= $(wildcard $(ENGINE_DIR)/src/*.asm) $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
@@ -85,8 +92,11 @@ BAS_LOADER_TAP		= $(BAS_LOADER:.bas=.tap)
 # Main binary and tap
 MAIN_BIN		= main.bin
 MAIN_TAP		= $(MAIN_BIN:.bin=.tap)
-BASE_CODE_ADDRESS_128	= $(shell grep -Ev '^#' etc/rage1-config.yml | grep base_code_address | awk '{print $$2}')
-ISR_VECTOR_ADDRESS_128	= $(shell grep -Ev '^#' etc/rage1-config.yml | grep isr_vector_address | awk '{print $$2}')
+_INT128_KEY		= $(if $(filter jsp,$(BUILD_SPRITE_ENGINE)),interrupts_128_jsp,interrupts_128)
+BASE_CODE_ADDRESS_128	= $(shell perl -MYAML -e \
+			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); print $$c->{"$(_INT128_KEY)"}{"base_code_address"}')
+ISR_VECTOR_ADDRESS_128	= $(shell perl -MYAML -e \
+			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); print $$c->{"$(_INT128_KEY)"}{"isr_vector_address"}')
 
 # Final game TAP
 FINAL_TAP		= game.tap
@@ -112,6 +122,15 @@ DATAGEN			= ./tools/datagen.pl
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
+
+# JSP sprite engine: add library sources and include path
+JSP_DIR			= ../../../jsp
+ifeq ($(BUILD_SPRITE_ENGINE),jsp)
+    CSRC		+= $(wildcard $(JSP_DIR)/lib/*.c)
+    ASMSRC		+= $(wildcard $(JSP_DIR)/lib/*.asm)
+    INC			+= -I$(JSP_DIR)/include
+endif
+
 CFLAGS			= -vn -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
 #CFLAGS			= -v -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
 CFLAGS_TO_ASM		= -a

@@ -31,12 +31,23 @@ MAIN_BSS_START=$( map_data $MAIN_MAP | grep -E '^__bss_compiler_head' | awk '{pr
 MAIN_BSS_END=$( map_data $MAIN_MAP | grep -E '^__bss_stdlib_tail' | awk '{print $3}' | hex2dec)
 MAIN_CODE_START=$( map_data $MAIN_MAP | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
 MAIN_CODE_END=$( map_data $MAIN_MAP | grep -E '^__code_user_tail' | awk '{print $3}' | hex2dec )
-SP1_START=$( echo D1ED | hex2dec )
-SP1_END=$( echo FFFF | hex2dec )
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
 STARTUP_END=$(( MAIN_DATA_START - 1 ))
-INT_START=$( grep -Ev '^#' etc/rage1-config.yml | grep iv_table_addr | awk '{print $2}' | sed 's/^0x//g' | hex2dec )
-INT_END=$(( "$( grep -Ev '^#' etc/rage1-config.yml | grep base_code_address | awk '{print $2}' | sed 's/^0x//g' | hex2dec )" - 1 ))
+
+# Detect sprite engine from features.h; select correct YAML section and sprite data region
+if grep -q 'BUILD_FEATURE_SPRITE_ENGINE_JSP' build/generated/features.h 2>/dev/null; then
+    SPRITE_DATA_LABEL=jspdata
+    SP1_START=$( echo A240 | hex2dec )
+    SP1_END=$( echo BFFF | hex2dec )
+    INT_KEY=interrupts_128_jsp
+else
+    SPRITE_DATA_LABEL=sp1data
+    SP1_START=$( echo D1ED | hex2dec )
+    SP1_END=$( echo FFFF | hex2dec )
+    INT_KEY=interrupts_128
+fi
+INT_START=$( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); print \$c->{'$INT_KEY'}{'iv_table_addr'}" | sed 's/^0x//g' | hex2dec )
+INT_END=$(( "$( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); print \$c->{'$INT_KEY'}{'base_code_address'}" | sed 's/^0x//g' | hex2dec )" - 1 ))
 HEAP_START=$(( 22576 + DATASET_MAX_SIZE ))
 HEAP_END=$(( INT_START - 1 ))
 
@@ -52,13 +63,14 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" startup $STARTUP_START $STARTUP_END $(( 
 printf "  %-12s  \$%04x  \$%04x  %5d\n" data $MAIN_DATA_START $MAIN_DATA_END $(( MAIN_DATA_END - MAIN_DATA_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $MAIN_BSS_START $MAIN_BSS_END $(( MAIN_BSS_END - MAIN_BSS_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" code $MAIN_CODE_START $MAIN_CODE_END $(( MAIN_CODE_END - MAIN_CODE_START ))
-printf "  %-12s  \$%04x  \$%04x  %5d\n" sp1data $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" $SPRITE_DATA_LABEL $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
 echo
 
 TOTAL=$(( MAIN_CODE_END - 16384 + 1 + SP1_END - SP1_START + 1))
-#TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
+# For JSP 128K the engine data ends at 0xBFFF (not 0xFFFF), so FREE calculation uses 0xC000 boundary
+UPPER_BOUND=$(( SP1_END + 1 ))
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
-printf "$RED  FREE                       %6d  $RESET\n" $(( 49152 - TOTAL ))
+printf "$RED  FREE                       %6d  $RESET\n" $(( UPPER_BOUND - 16384 - TOTAL ))
 echo
 
 # banked.map

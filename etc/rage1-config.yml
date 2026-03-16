@@ -24,11 +24,20 @@ tools:
 ## So the real code starts at ISR address + 3.
 ##
 
-# standard RAGE1 map
+# standard RAGE1 map (SP1 sprite engine)
 interrupts_128:
   iv_table_addr: 0x8000
   isr_vector_byte: 0x81
   isr_vector_address: 0x8181
+  base_code_address: 0x8184
+
+# JSP sprite engine: IV table moves to 0xA000 (JSP tables occupy 0xA240-0xBFFF)
+# Code still starts at 0x8184 (loader at 0x8000 unchanged); available code: 0x8184-0x9FFF (~7.8 KB)
+# Stack pointer at 0xA1A1 (ISR vector address); stack grows into unused 0xA101-0xA1A0
+interrupts_128_jsp:
+  iv_table_addr: 0xa000
+  isr_vector_byte: 0xa1
+  isr_vector_address: 0xa1a1
   base_code_address: 0x8184
 
 #

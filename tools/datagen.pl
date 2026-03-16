@@ -140,10 +140,10 @@ my @valid_game_functions = qw( menu intro game_end game_over user_init user_game
 ######################################
 
 # build features that always selected no matter what
+# SPRITE_ENGINE_* is NOT here - it is added in generate_game_config based on game data
 my @default_build_features = qw(
     BTILE_2BIT_TYPE_MAP
     GAME_TIME
-    SPRITE_ENGINE_SP1
 );
 
 sub add_build_feature {
@@ -154,6 +154,11 @@ sub add_build_feature {
 sub is_build_feature_enabled {
     my $f = shift;
     return defined( $conditional_build_features{ $f } );
+}
+
+sub get_sprite_engine {
+    return ( defined( $game_config ) && defined( $game_config->{'sprite_engine'} ) )
+        ? $game_config->{'sprite_engine'} : 'sp1';
 }
 
 sub add_default_build_features {
@@ -767,6 +772,13 @@ sub read_input_data {
                     add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
                     next;
                 }
+                if ( $line =~ /^SPRITE_ENGINE\s+(\w+)$/ ) {
+                    my $engine = lc($1);
+                    die "SPRITE_ENGINE: $file, line $current_line: must be 'SP1' or 'JSP'\n"
+                        if $engine ne 'sp1' and $engine ne 'jsp';
+                    $game_config->{'sprite_engine'} = $engine;
+                    next;
+                }
                 if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
                     $game_config->{'default_bg_attr'} = $1;
                     next;
@@ -1322,23 +1334,31 @@ sub generate_sprite {
     my $sprite_frames = $sprite->{'frames'};
     my $sprite_name = $sprite->{'name'};
 
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (required by SP1)\n\n", $sprite->{'name'} );
+    my $using_jsp = ( get_sprite_engine() eq 'jsp' );
+    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (%s format)\n\n",
+        $sprite->{'name'}, $using_jsp ? 'JSP' : 'SP1' );
 
     # prepare mask and bytes lists
+    # SP1: each column has a blank leading row, all sprite rows, then a shared trailing blank row
+    # JSP: each column has only the actual sprite rows (no blank padding rows)
     my @col_bytes;
     my @mask_bytes;
     foreach my $frm ( 0 .. ( $sprite_frames - 1 ) ) {
         foreach my $col ( 0 .. ( $sprite_cols - 1 ) ) {
-            push @col_bytes, (0) x 8;		# initial row with blank pixels and transparent mask
-            push @mask_bytes, (0xff) x 8;
+            if ( not $using_jsp ) {
+                push @col_bytes, (0) x 8;	# initial row with blank pixels and transparent mask
+                push @mask_bytes, (0xff) x 8;
+            }
             foreach my $row ( 0 .. ( $sprite_rows - 1 ) ) {
                 push @col_bytes, @{ $sprite->{'pixel_bytes'}[ ( $frm * $sprite_rows * $sprite_cols ) + $row * $sprite_cols + $col ] };
                 push @mask_bytes,@{ $sprite->{'mask_bytes'}[ ( $frm * $sprite_rows * $sprite_cols ) + $row * $sprite_cols + $col ] };
             }
         }
     }
-    push @col_bytes, (0) x 8;		# final row with blank pixels and transparent mask
-    push @mask_bytes, (0xff) x 8;
+    if ( not $using_jsp ) {
+        push @col_bytes, (0) x 8;	# final row with blank pixels and transparent mask
+        push @mask_bytes, (0xff) x 8;
+    }
 
     # group mask and pixel bytes by 16-byte lines for easier reading
     my @groups_of_2m;
@@ -1358,11 +1378,16 @@ sub generate_sprite {
         join( ",\n", map { join( ", ", map { sprintf( "0x%02x", $_ ) } @{$_} ) } @groups_of_2m ) );
 
     # output list of pointers to frames
+    # SP1: each frame is (rows+1)*cols*16 bytes; first frame starts at offset 16 (after top blank row)
+    # JSP: each frame is rows*cols*16 bytes; first frame starts at offset 0
     my @frame_offsets;
-    my $ptr = 16;	# initial frame: 8 bytes pixel + 8 bytes mask for the top blank row
+    my $frame_stride = $using_jsp
+        ? 16 * $sprite->{'rows'} * $sprite->{'cols'}
+        : 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
+    my $ptr = $using_jsp ? 0 : 16;
     foreach ( 0 .. ( $sprite->{'frames'} - 1 ) ) {
         push @frame_offsets, $ptr;
-        $ptr += 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
+        $ptr += $frame_stride;
     }
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
         $sprite_name,
@@ -3279,6 +3304,9 @@ GAME_DATA_H_4
 }
 
 sub generate_game_config {
+    # emit SPRITE_ENGINE build feature (defaults to SP1 if not set in game config)
+    add_build_feature( 'SPRITE_ENGINE_' . uc( get_sprite_engine() ) );
+
     push @h_game_data_lines, "\n// game configuration data\n";
     push @h_game_data_lines, sprintf( "#define MAP_NUM_SCREENS\t%d\n", scalar( @all_screens ) );
     push @h_game_data_lines, sprintf( "#define MAP_INITIAL_SCREEN\t%d\n", $screen_name_to_index{ $game_config->{'screen'}{'initial'} } );
@@ -3322,15 +3350,30 @@ sub generate_game_config {
         $max_spritechars += $hero->{'bullet'}{'max_bullets'} * ( $bs->{'rows'} + 1 ) * ( $bs->{'cols'} + 1 );
     }
 
+    # JSP pool-sizing constants (only emitted when sprite engine is JSP)
+    if ( get_sprite_engine() eq 'jsp' ) {
+        my $max_sprite_rows = ( sort { $b <=> $a } map { $_->{'rows'} } @all_sprites )[0];
+        my $max_sprite_cols = ( sort { $b <=> $a } map { $_->{'cols'} } @all_sprites )[0];
+        push @h_game_data_lines, <<EOF_JSP_POOL
+// JSP sprite pool sizing constants
+#define GFX_JSP_MAX_SPRITES		$max_sprites
+#define GFX_JSP_MAX_SPRITE_ROWS		$max_sprite_rows
+#define GFX_JSP_MAX_SPRITE_COLS		$max_sprite_cols
+
+EOF_JSP_POOL
+;
+    }
+
     # 20 bytes for a safety margin, plus 6 bytes per allocation, plus 20
     # bytes per sprite, plus 24 bytes per sprite char
     my $max_heap_usage = 20 + $max_sprites * (20 + 6) + $max_spritechars * (24 + 6);
 
     # max dataset size: memory from $5B00->$7FFF minus the heap
+    my $int_key = ( get_sprite_engine() eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
     my $max_dataset_size = (
-        ( $cfg->{'interrupts_128'}{'base_code_address'} =~ /^0x/ ?
-            hex( $cfg->{'interrupts_128'}{'base_code_address'} ) :
-            $cfg->{'interrupts_128'}{'base_code_address'} )
+        ( $cfg->{ $int_key }{'base_code_address'} =~ /^0x/ ?
+            hex( $cfg->{ $int_key }{'base_code_address'} ) :
+            $cfg->{ $int_key }{'base_code_address'} )
          - 0x5B00 ) - $max_heap_usage;
 
     push @h_game_data_lines, <<EOF_BLDCFG1
@@ -3924,10 +3967,11 @@ sub generate_game_events_rule_table {
 
 sub generate_configuration_values {
 
-    # interrupt configuration values
+    # interrupt configuration values: select section based on sprite engine
+    my $int_key = ( get_sprite_engine() eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
     push @h_game_data_lines, "// Interrupt configuration\n";
     foreach my $k ( qw( iv_table_addr isr_vector_byte base_code_address ) ) {
-        my $value = $cfg->{'interrupts_128'}{ $k };
+        my $value = $cfg->{ $int_key }{ $k };
         if ( $value =~ /^0x/ ) {
             $value = hex( $value );
         }
