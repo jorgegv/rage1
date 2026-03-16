@@ -46,8 +46,8 @@ else
     SP1_END=$( echo FFFF | hex2dec )
     INT_KEY=interrupts_128
 fi
-INT_START=$( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); print \$c->{'$INT_KEY'}{'iv_table_addr'}" | sed 's/^0x//g' | hex2dec )
-INT_END=$(( "$( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); print \$c->{'$INT_KEY'}{'base_code_address'}" | sed 's/^0x//g' | hex2dec )" - 1 ))
+INT_START=$( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); my \$v=\$c->{'$INT_KEY'}{'iv_table_addr'}; printf '%d', \$v=~/^0x/i ? hex(\$v) : \$v" )
+INT_END=$(( $( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); my \$v=\$c->{'$INT_KEY'}{'base_code_address'}; printf '%d', \$v=~/^0x/i ? hex(\$v) : \$v" ) - 1 ))
 HEAP_START=$(( 22576 + DATASET_MAX_SIZE ))
 HEAP_END=$(( INT_START - 1 ))
 
