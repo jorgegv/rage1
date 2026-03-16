@@ -1362,14 +1362,14 @@ one-expression macros unless noted.
 
 ### Phase 3 — RAGE1 toolchain and build changes
 
-- [ ] **P3-1** Add `sprite_engine` key parsing to `datagen.pl`; emit correct `BUILD_FEATURE_SPRITE_ENGINE_*`
-- [ ] **P3-2** Add pool-sizing constant emission to `datagen.pl` (`GFX_JSP_MAX_SPRITES`, `_ROWS`, `_COLS`)
-- [ ] **P3-3** Add JSP sprite frame data format to `datagen.pl` (JSP mode: `rows` cells/column, not `rows+1`)
-- [ ] **P3-4** Add `BUILD_SPRITE_ENGINE` variable to `Makefile.common` (grep `sprite_engine` from `.gdata`, like `ZX_TARGET`; add JSP build, include path, `gfx_jsp.c`)
-- [ ] **P3-5** Update `Makefile-48` with JSP memory map (guarded by `BUILD_SPRITE_ENGINE = jsp`)
-- [ ] **P3-6** Update `Makefile-128` with JSP 128K memory map
-- [ ] **P3-7** Add `interrupts_128_jsp:` section to `rage1-config.yml`; update `datagen.pl`, `loadertool.pl`, and `Makefile.common` to select the correct interrupt section based on `sprite_engine` (see §5.5)
-- [ ] **P3-8** Update `tools/mem-summary-48.sh` and `tools/mem-summary-128.sh` for JSP memory map (detect JSP from `features.h`; replace `sp1data` row with `jspdata` at correct addresses; fix TOTAL/FREE in 128K script)
+- [x] **P3-1** Add `sprite_engine` key parsing to `datagen.pl`; emit correct `BUILD_FEATURE_SPRITE_ENGINE_*`
+- [x] **P3-2** Add pool-sizing constant emission to `datagen.pl` (`GFX_JSP_MAX_SPRITES`, `_ROWS`, `_COLS`)
+- [x] **P3-3** Add JSP sprite frame data format to `datagen.pl` (JSP mode: `rows` cells/column, not `rows+1`)
+- [x] **P3-4** Add `BUILD_SPRITE_ENGINE` variable to `Makefile.common` (grep `sprite_engine` from `.gdata`, like `ZX_TARGET`; add JSP build, include path, `gfx_jsp.c`)
+- [x] **P3-5** Update `Makefile-48` with JSP memory map (guarded by `BUILD_SPRITE_ENGINE = jsp`)
+- [x] **P3-6** Update `Makefile-128` with JSP 128K memory map
+- [x] **P3-7** Add `interrupts_128_jsp:` section to `rage1-config.yml`; update `datagen.pl`, `loadertool.pl`, and `Makefile.common` to select the correct interrupt section based on `sprite_engine` (see §5.5)
+- [x] **P3-8** Update `tools/mem-summary-48.sh` and `tools/mem-summary-128.sh` for JSP memory map (detect JSP from `features.h`; replace `sp1data` row with `jspdata` at correct addresses; fix TOTAL/FREE in 128K script)
 
 ### Phase 4 — Integration testing
 
