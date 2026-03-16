@@ -992,14 +992,8 @@ When `sprite_engine: jsp`, generate frame data with `rows` cells per column (not
 The per-cell content is unchanged. The emitted C array for each frame has `rows*cols*16`
 bytes instead of `(rows+1)*cols*16` bytes.
 
-**e) Makefile fragment**
-
-Emit `build/generated/sprite_engine.mk` containing:
-```makefile
-BUILD_SPRITE_ENGINE = jsp   # or sp1
-```
-This allows Makefiles to select the correct memory map and library without parsing
-`.gdata` files.
+Items b)–d) are the only `datagen.pl` outputs. The Makefile reads `sprite_engine`
+directly from the `.gdata` config (see §5.4); no additional generated file is needed.
 
 ---
 
@@ -1057,12 +1051,13 @@ The layout is identical but shifted down 16 KB:
 See risk §6.1 for the 128K program size implications.
 
 Files to update:
-- `Makefile-48`: update `org`, `IVTABLE_BASE`, stack address.
+- `Makefile-48`: update `org`, `IVTABLE_BASE`, stack address (P3-5).
 - `Makefile-128`: same for 128K layout (JSP tables at `0xA240–0xBFFF`; program space
-  becomes ~17 KB instead of ~29 KB — see risk §6.1).
-- `etc/rage1-config.yml`: update `interrupt_vector_address` and related constants.
+  becomes ~17 KB instead of ~29 KB — see risk §6.1) (P3-6).
+- `etc/rage1-config.yml`: add a JSP interrupt section and update all consumers (P3-7;
+  see §5.5 for details).
 
-Guard all changes with `ifeq ($(BUILD_SPRITE_ENGINE),jsp)` so SP1 builds are unaffected.
+Guard all Makefile changes with `ifeq ($(BUILD_SPRITE_ENGINE),jsp)` so SP1 builds are unaffected.
 
 ---
 
@@ -1071,8 +1066,11 @@ Guard all changes with `ifeq ($(BUILD_SPRITE_ENGINE),jsp)` so SP1 builds are una
 In `Makefile.common`:
 
 ```makefile
-# Include sprite engine selection (written by datagen.pl)
-include $(BUILD_DIR)/generated/sprite_engine.mk
+# Read sprite engine selection directly from game config (same pattern as ZX_TARGET)
+BUILD_SPRITE_ENGINE = $(shell grep -E '^\s*sprite_engine\s+jsp\s*$$' \
+    $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null | \
+    head -1 | awk '{print $$2}')
+BUILD_SPRITE_ENGINE ?= sp1
 
 ifeq ($(BUILD_SPRITE_ENGINE),jsp)
     JSP_DIR      := $(RAGE1_DIR)/../../../jsp
@@ -1089,6 +1087,113 @@ step. When building a 128K target, pass `-DSPECTRUM_128` to the JSP build:
 build-jsp:
     $(MAKE) -C $(JSP_DIR) $(if $(filter 128,$(ZX_TARGET)),CFLAGS=-DSPECTRUM_128,)
 ```
+
+#### `tools/mem-summary-*.sh` updates
+
+The memory-report scripts must be updated so `make mem` shows accurate information for
+JSP builds.  Both scripts currently hardcode the SP1 data region as a single `sp1data`
+row.  When JSP is active those addresses are wrong.
+
+Detection: read `BUILD_FEATURE_SPRITE_ENGINE_JSP` from
+`build/generated/features.h`.
+
+**`tools/mem-summary-48.sh`** — replace the `sp1data` constants:
+
+| Variable      | SP1 value  | JSP value  |
+|---------------|-----------|------------|
+| `SP1_START`   | `$D1ED`   | `$E240`    |
+| `SP1_END`     | `$FFFF`   | `$FFFF`    |
+
+Row label should change from `sp1data` to `jspdata` when JSP is active.
+
+**`tools/mem-summary-128.sh`** — replace the `sp1data` constants:
+
+| Variable      | SP1 value  | JSP value  |
+|---------------|-----------|------------|
+| `SP1_START`   | `$D1ED`   | `$A240`    |
+| `SP1_END`     | `$FFFF`   | `$BFFF`    |
+
+Row label should change from `sp1data` to `jspdata` when JSP is active. The
+`TOTAL` and `FREE` calculations in the 128K script must also be updated to use
+`$BFFF` as the upper bound instead of `$FFFF` when JSP is in use (the bank-6
+region above `$C000` is not owned by the engine in 128K JSP mode).
+
+---
+
+### 5.5 `etc/rage1-config.yml` changes (P3-7)
+
+The YAML config currently holds only one `interrupts_128:` section, which carries the
+SP1 128K interrupt layout.  JSP shifts the interrupt vector table from `0xD000` to
+`0xA000` (128K), so a separate section is needed.
+
+**a) New YAML section**
+
+Add `interrupts_128_jsp:` alongside the existing `interrupts_128:` key:
+
+```yaml
+# JSP 128K interrupt layout (IV table moved up to make room for JSP tables)
+interrupts_128_jsp:
+  iv_table_addr:       0xA000
+  isr_vector_byte:     0xA1
+  isr_vector_address:  0xA1A1
+  base_code_address:   0x8000   # code below IV table; upper bound 0x9FFF (~8 KB)
+```
+
+`base_code_address` is set to `0x8000`: in JSP 128K the interrupt machinery moves
+to `0xA000+`, so the region `0x8000–0x9FFF` is now available for code (previously it
+was occupied by the IV table).  The exact value may need slight adjustment after
+measuring the actual binary size.
+
+The 48K interrupt layout is **not** in the YAML (it is hardcoded in `Makefile-48`)
+and is handled separately in P3-5.
+
+**b) `datagen.pl` — `generate_configuration_values`**
+
+The function (around line 3929) currently hardcodes the key `'interrupts_128'`.
+Conditionally select the key based on the `sprite_engine` game config value:
+
+```perl
+my $int_key = ( $sprite_engine eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
+foreach my $k ( qw( iv_table_addr isr_vector_byte base_code_address ) ) {
+    my $value = $cfg->{ $int_key }{ $k };
+    ...
+}
+```
+
+**c) `tools/loadertool.pl` — load address for the main binary**
+
+Around line 238 the tool reads `$cfg->{'interrupts_128'}{'base_code_address'}` to
+know where to `LD IX` the main binary.  Apply the same conditional key selection:
+
+```perl
+my $int_key = ( get_sprite_engine() eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
+$main_code_start = sprintf( '0x%04x',
+    hex_or_int( $cfg->{ $int_key }{'base_code_address'} ) );
+```
+
+**d) `Makefile.common` — `BASE_CODE_ADDRESS_128` and `ISR_VECTOR_ADDRESS_128`**
+
+The two existing `grep`-based shell assignments (lines 88–89) search for
+`base_code_address` / `isr_vector_address` by keyword.  When two YAML sections
+contain the same sub-keys, `grep` returns both matches and `head -1` picks the first
+one, which may be wrong depending on YAML ordering.
+
+Replace with a small `perl` one-liner (Perl is already a mandatory project
+dependency) that explicitly selects the correct section:
+
+```makefile
+_INT_KEY = $(if $(filter jsp,$(BUILD_SPRITE_ENGINE)),interrupts_128_jsp,interrupts_128)
+
+BASE_CODE_ADDRESS_128 = $(shell perl -MYAML -e \
+    'my $$c=YAML::LoadFile("etc/rage1-config.yml"); print $$c->{"$(_INT_KEY)"}{"base_code_address"}')
+
+ISR_VECTOR_ADDRESS_128 = $(shell perl -MYAML -e \
+    'my $$c=YAML::LoadFile("etc/rage1-config.yml"); print $$c->{"$(_INT_KEY)"}{"isr_vector_address"}')
+```
+
+This is more robust than the current `grep | awk` chain and handles two sections
+without ambiguity.  `mem-summary-128.sh` also reads these YAML keys but is treated
+separately in P3-8.
 
 ---
 
@@ -1174,11 +1279,11 @@ is needed. Confirm this causes no visible difference at startup.
 | P3-1 | Add `sprite_engine` key parsing to `datagen.pl`; emit correct `BUILD_FEATURE_SPRITE_ENGINE_*`  | Small   |
 | P3-2 | Add pool-sizing constant emission to `datagen.pl` (`GFX_JSP_MAX_SPRITES`, `_ROWS`, `_COLS`)    | Small   |
 | P3-3 | Add JSP sprite frame data format to `datagen.pl` (JSP mode: `rows` cells/column, not `rows+1`) | Medium  |
-| P3-4 | Emit `build/generated/sprite_engine.mk` from `datagen.pl`                                      | Trivial |
-| P3-5 | Update `Makefile.common` (include sprite_engine.mk, JSP build, include path, `gfx_jsp.c`)      | Small   |
-| P3-6 | Update `Makefile-48` with JSP memory map (guarded by `BUILD_SPRITE_ENGINE = jsp`)              | Medium  |
-| P3-7 | Update `Makefile-128` with JSP 128K memory map                                                 | Medium  |
-| P3-8 | Update `etc/rage1-config.yml` interrupt vector and stack addresses for JSP layout              | Small   |
+| P3-4 | Add `BUILD_SPRITE_ENGINE` variable to `Makefile.common` (grep `sprite_engine` from `.gdata`, like `ZX_TARGET`; add JSP build, include path, `gfx_jsp.c`) | Small   |
+| P3-5 | Update `Makefile-48` with JSP memory map (guarded by `BUILD_SPRITE_ENGINE = jsp`)              | Medium  |
+| P3-6 | Update `Makefile-128` with JSP 128K memory map                                                 | Medium  |
+| P3-7 | Add `interrupts_128_jsp:` section to `rage1-config.yml`; update `datagen.pl`, `loadertool.pl`, and `Makefile.common` to select the correct section based on `sprite_engine` (see §5.5) | Small   |
+| P3-8 | Update `tools/mem-summary-48.sh` and `tools/mem-summary-128.sh`: detect JSP vs SP1 from `features.h`, replace `sp1data` row addresses and label with JSP values (`$E240–$FFFF` for 48K, `$A240–$BFFF` for 128K), fix TOTAL/FREE calculation in 128K script | Small |
 
 ### Phase 4 — Integration testing
 
@@ -1260,11 +1365,11 @@ one-expression macros unless noted.
 - [ ] **P3-1** Add `sprite_engine` key parsing to `datagen.pl`; emit correct `BUILD_FEATURE_SPRITE_ENGINE_*`
 - [ ] **P3-2** Add pool-sizing constant emission to `datagen.pl` (`GFX_JSP_MAX_SPRITES`, `_ROWS`, `_COLS`)
 - [ ] **P3-3** Add JSP sprite frame data format to `datagen.pl` (JSP mode: `rows` cells/column, not `rows+1`)
-- [ ] **P3-4** Emit `build/generated/sprite_engine.mk` from `datagen.pl`
-- [ ] **P3-5** Update `Makefile.common` (include `sprite_engine.mk`, JSP build, include path, `gfx_jsp.c`)
-- [ ] **P3-6** Update `Makefile-48` with JSP memory map (guarded by `BUILD_SPRITE_ENGINE = jsp`)
-- [ ] **P3-7** Update `Makefile-128` with JSP 128K memory map
-- [ ] **P3-8** Update `etc/rage1-config.yml` interrupt vector and stack addresses for JSP layout
+- [ ] **P3-4** Add `BUILD_SPRITE_ENGINE` variable to `Makefile.common` (grep `sprite_engine` from `.gdata`, like `ZX_TARGET`; add JSP build, include path, `gfx_jsp.c`)
+- [ ] **P3-5** Update `Makefile-48` with JSP memory map (guarded by `BUILD_SPRITE_ENGINE = jsp`)
+- [ ] **P3-6** Update `Makefile-128` with JSP 128K memory map
+- [ ] **P3-7** Add `interrupts_128_jsp:` section to `rage1-config.yml`; update `datagen.pl`, `loadertool.pl`, and `Makefile.common` to select the correct interrupt section based on `sprite_engine` (see §5.5)
+- [ ] **P3-8** Update `tools/mem-summary-48.sh` and `tools/mem-summary-128.sh` for JSP memory map (detect JSP from `features.h`; replace `sp1data` row with `jspdata` at correct addresses; fix TOTAL/FREE in 128K script)
 
 ### Phase 4 — Integration testing
 
