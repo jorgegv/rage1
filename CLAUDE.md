@@ -138,3 +138,8 @@ Configured in `etc/rage1-config.yml`. Key regions:
 - No Co-Authored-by headers in commit
 - Commit messages should be terse but concise
 - Any changes should be tested before commit. Test games should build successfully.
+
+## Working with RAGE1
+
+- Always test the changes before commit
+- Always launch an independent reviewer before non-trivial changes

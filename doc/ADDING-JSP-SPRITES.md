@@ -24,6 +24,8 @@
   - [5.2 `datagen.pl` changes](#52-datagenpl-changes)
   - [5.3 Memory map](#53-memory-map)
   - [5.4 Build system](#54-build-system)
+    - [`tools/mem-summary-*.sh` updates](#toolsmem-summary-sh-updates)
+  - [5.5 `etc/rage1-config.yml` changes (P3-7)](#55-etcrage1-configyml-changes-p3-7)
 - [6. Risks and Open Questions](#6-risks-and-open-questions)
 - [7. Complete Task List](#7-complete-task-list)
   - [Phase 1 — JSP enhancements (changes in the JSP repository)](#phase-1--jsp-enhancements-changes-in-the-jsp-repository)
