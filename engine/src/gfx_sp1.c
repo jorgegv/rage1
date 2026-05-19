@@ -11,7 +11,6 @@
 #include <arch/spectrum.h>
 
 #include "rage1/gfx.h"
-#include "rage1/sp1engine.h"
 #include "rage1/screen.h"
 #include "rage1/debug.h"
 
@@ -34,7 +33,3 @@ void gfx_init( uint8_t bg_attr, uint8_t bg_char ) {
 }
 
 #endif // BUILD_FEATURE_SPRITE_ENGINE_SP1
-
-void init_sp1(void) {
-   gfx_init( DEFAULT_BG_ATTR, ' ' );
-}

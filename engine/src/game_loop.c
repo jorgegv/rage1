@@ -19,7 +19,6 @@
 #include "rage1/screen.h"
 #include "rage1/beeper.h"
 #include "rage1/controller.h"
-#include "rage1/sp1engine.h"
 #include "rage1/sprite.h"
 #include "rage1/collision.h"
 #include "rage1/bullet.h"

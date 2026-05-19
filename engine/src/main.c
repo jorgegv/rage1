@@ -13,7 +13,6 @@
 #include "features.h"
 
 #include "rage1/memory.h"
-#include "rage1/sp1engine.h"
 #include "rage1/interrupts.h"
 #include "rage1/controller.h"
 #include "rage1/screen.h"
@@ -34,7 +33,7 @@ void init_program(void) {
 
    // from this point, RAGE1 takes full control of the machine and memory
    init_memory();
-   init_sp1();
+   init_gfx();
    init_interrupts();
    init_datasets();
 

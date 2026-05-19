@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 //
 // RAGE1 - Retro Adventure Game Engine, release 1
 // (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
@@ -8,13 +8,12 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef _SP1ENGINE_H
-#define _SP1ENGINE_H
+#include <arch/spectrum.h>
 
-#include <stdint.h>
+#include "rage1/gfx.h"
 
-#include "features.h"
+#include "game_data.h"
 
-void init_sp1(void);
-
-#endif // _SP1ENGINE_H
+void init_gfx(void) {
+   gfx_init( DEFAULT_BG_ATTR, ' ' );
+}

@@ -69,4 +69,7 @@ void gfx_init( uint8_t bg_attr, uint8_t bg_char );
 gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols );
 void gfx_sprite_set_color( gfx_sprite_t *s, uint8_t color );
 
+// global initialization
+void init_gfx( void );
+
 #endif // _GFX_H
