@@ -1,0 +1,17 @@
+BEGIN_BTILE
+	NAME	MagicKey
+	ROWS	1
+	COLS	1
+
+	PIXELS	..############..
+	PIXELS	####........####
+	PIXELS	####........####
+	PIXELS	..############..
+	PIXELS	......####......
+	PIXELS	......######....
+	PIXELS	......####......
+	PIXELS	......######....
+
+	ATTR	INK_GREEN | PAPER_BLACK | BRIGHT
+END_BTILE
+

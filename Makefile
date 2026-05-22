@@ -131,6 +131,9 @@ build-sub_bufs_128:
 build-minimal_jsp:
 	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/minimal_jsp
 
+build-default_jsp:
+	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/default_jsp
+
 # just a target for the default game for completeness
 build-default: build
 

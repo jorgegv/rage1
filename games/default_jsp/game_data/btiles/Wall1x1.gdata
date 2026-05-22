@@ -1,0 +1,17 @@
+BEGIN_BTILE
+	NAME	Wall1x1
+	ROWS	1
+	COLS	1
+
+	PIXELS	................
+	PIXELS	..######..######
+	PIXELS	..######..######
+	PIXELS	..######..######
+	PIXELS	................
+	PIXELS	####..######..##
+	PIXELS	####..######..##
+	PIXELS	####..######..##
+
+	ATTR	INK_RED | PAPER_WHITE
+END_BTILE
+
