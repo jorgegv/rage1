@@ -26,7 +26,7 @@ gfx_print_ctx_t title_ctx = GFX_PRINT_CTX_INIT(title_area, DEFAULT_BG_ATTR);
 
 // draw a given screen
 void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall {
-    uint8_t r,c, maxr, maxc, btwidth, btheight;
+    uint8_t i,r,c, maxr, maxc, btwidth, btheight;
     uint16_t ti;
     struct btile_pos_s *t;
     struct btile_s *bt;
