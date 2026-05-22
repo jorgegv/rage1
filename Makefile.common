@@ -227,6 +227,10 @@ show:
 ## Run options
 ##
 
+# JNEXT emulator binary and SD-card image (override via env or command line)
+JNEXT		?= $(HOME)/src/spectrum/jnext/build/gui-release/jnext
+JNEXT_SD_CARD	?= $(HOME)/src/spectrum/jnext/roms/nextzxos-1gb-fat32fix.img
+
 run:
 	fuse $(FUSE_RUN_OPTS) $(FINAL_TAP) --debugger-command ''
 
@@ -235,6 +239,10 @@ debug:
 
 runz:
 	../zesarux/src/zesarux $(FINAL_TAP)
+
+# run the built game in the JNEXT emulator (GUI); --machine follows ZX_TARGET
+run-jnext:
+	$(JNEXT) --sd-card $(JNEXT_SD_CARD) --machine $(ZX_TARGET)k --load $(FINAL_TAP)
 
 ##
 ## Tests
