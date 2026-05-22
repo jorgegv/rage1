@@ -56,6 +56,7 @@ typedef struct sp1_pss   gfx_print_ctx_t;
 
 //--- Text printing ---
 #define gfx_print_set_pos(ctx,r,c)             sp1_SetPrintPos((ctx),(r),(c))
+#define gfx_print_set_clip(ctx,rect)           ((ctx)->bounds = (rect))
 #define gfx_print_string(ctx,str)              sp1_PrintString((ctx),(str))
 
 #endif // _GFX_SP1_H

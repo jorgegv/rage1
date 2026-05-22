@@ -47,6 +47,7 @@
 //     gfx_tile_register(index, graphic)
 //     gfx_clear_rect(rect, attr, ch, flags)
 //     gfx_print_set_pos(ctx, row, col)
+//     gfx_print_set_clip(ctx, rect)
 //     gfx_print_string(ctx, str)
 //
 /////////////////////////////////////////////////////////////////////

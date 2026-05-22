@@ -56,6 +56,7 @@ typedef struct jsp_print_ctx     gfx_print_ctx_t;
 
 //--- Text printing ---
 #define gfx_print_set_pos(ctx,r,c)          jsp_print_set_pos((ctx),(r),(c))
+#define gfx_print_set_clip(ctx,rect)        ((ctx)->clip = (rect))
 #define gfx_print_string(ctx,str)           jsp_print_string((ctx),(str))
 
 // Forward declaration for the clipping wrapper (defined in gfx_jsp.c)
