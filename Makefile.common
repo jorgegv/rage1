@@ -307,8 +307,15 @@ mem_bank:
 
 mem-old: mem_main mem_bank
 
+# memory usage report — pick the script specific to this game's sprite
+# engine and target; the scripts themselves contain no detection logic
 mem:
-	./tools/mem-summary.sh
+	./tools/mem-summary-$(BUILD_SPRITE_ENGINE)-$(ZX_TARGET).sh
+
+# SP1 vs JSP 128K memory comparison — builds games/default (SP1) and
+# games/default_jsp (JSP) and reports the memory-footprint difference
+mem-compare:
+	./tools/mem-compare.sh
 
 linecount: clean
 	echo -n "Lines of Code (C):         "

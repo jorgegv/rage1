@@ -34,18 +34,13 @@ MAIN_CODE_END=$( map_data $MAIN_MAP | grep -E '^__code_user_tail' | awk '{print 
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
 STARTUP_END=$(( MAIN_DATA_START - 1 ))
 
-# Detect sprite engine from features.h; select correct YAML section and sprite data region
-if grep -q 'BUILD_FEATURE_SPRITE_ENGINE_JSP' build/generated/features.h 2>/dev/null; then
-    SPRITE_DATA_LABEL=jspdata
-    SP1_START=$( echo A240 | hex2dec )
-    SP1_END=$( echo BFFF | hex2dec )
-    INT_KEY=interrupts_128_jsp
-else
-    SPRITE_DATA_LABEL=sp1data
-    SP1_START=$( echo D1ED | hex2dec )
-    SP1_END=$( echo FFFF | hex2dec )
-    INT_KEY=interrupts_128
-fi
+# SP1 sprite engine — 128K fixed memory layout.
+# Spritelib+target specific: the Makefile 'mem' target selects this script
+# from BUILD_SPRITE_ENGINE and ZX_TARGET. Do NOT add detection logic here.
+SPRITE_DATA_LABEL=sp1data
+SPRITE_START=$( echo D1ED | hex2dec )
+SPRITE_END=$( echo FFFF | hex2dec )
+INT_KEY=interrupts_128
 INT_START=$( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); my \$v=\$c->{'$INT_KEY'}{'iv_table_addr'}; printf '%d', \$v=~/^0x/i ? hex(\$v) : \$v" )
 INT_END=$(( $( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); my \$v=\$c->{'$INT_KEY'}{'base_code_address'}; printf '%d', \$v=~/^0x/i ? hex(\$v) : \$v" ) - 1 ))
 HEAP_START=$(( 22576 + DATASET_MAX_SIZE ))
@@ -55,7 +50,7 @@ echo "BANKS 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
 echo
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
 
-printf "  %-12s  \$%04x  \$%04x  %5d\n" screen 16384 22575 6912
+printf "  %-12s  \$%04x  \$%04x  %5d\n" screen 16384 23295 6912
 printf "  %-12s  \$%04x  \$%04x  %5d\n" databuf 22576 $(( 22576 + DATASET_MAX_SIZE - 1 )) $DATASET_MAX_SIZE
 printf "  %-12s  \$%04x  \$%04x  %5d\n" heap $HEAP_START $HEAP_END $(( HEAP_END - HEAP_START + 1 ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
@@ -63,12 +58,12 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" startup $STARTUP_START $STARTUP_END $(( 
 printf "  %-12s  \$%04x  \$%04x  %5d\n" data $MAIN_DATA_START $MAIN_DATA_END $(( MAIN_DATA_END - MAIN_DATA_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $MAIN_BSS_START $MAIN_BSS_END $(( MAIN_BSS_END - MAIN_BSS_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" code $MAIN_CODE_START $MAIN_CODE_END $(( MAIN_CODE_END - MAIN_CODE_START ))
-printf "  %-12s  \$%04x  \$%04x  %5d\n" $SPRITE_DATA_LABEL $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" $SPRITE_DATA_LABEL $SPRITE_START $SPRITE_END $(( SPRITE_END - SPRITE_START + 1 ))
 echo
 
-TOTAL=$(( MAIN_CODE_END - 16384 + 1 + SP1_END - SP1_START + 1))
-# For JSP 128K the engine data ends at 0xBFFF (not 0xFFFF), so FREE calculation uses 0xC000 boundary
-UPPER_BOUND=$(( SP1_END + 1 ))
+TOTAL=$(( MAIN_CODE_END - 16384 + 1 + SPRITE_END - SPRITE_START + 1))
+# SP1 128K engine data ends at 0xFFFF; UPPER_BOUND is the byte after SPRITE_END
+UPPER_BOUND=$(( SPRITE_END + 1 ))
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
 printf "$RED  FREE                       %6d  $RESET\n" $(( UPPER_BOUND - 16384 - TOTAL ))
 echo

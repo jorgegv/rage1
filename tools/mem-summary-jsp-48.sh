@@ -1,4 +1,12 @@
 #!/bin/bash
+#
+# Memory usage report — JSP sprite engine, 48K target.
+# Spritelib+target specific: the Makefile 'mem' target selects this script
+# from BUILD_SPRITE_ENGINE and ZX_TARGET. Do NOT add detection logic here.
+#
+# jspdata region $e240-$ffff holds the JSP tables (BAT, FTT, DTT, BTT,
+# rotation table). The recompositing redesign dropped the DRT, leaving a
+# free 1536-byte hole at $e600-$ebff inside the region.
 
 MAIN_MAP=main.map
 
@@ -29,20 +37,12 @@ MAIN_CODE_END=$( map_data $MAIN_MAP | grep -E '^__code_user_tail' | awk '{print 
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
 STARTUP_END=$MAIN_DATA_START
 
-# Detect sprite engine from features.h
-if grep -q 'BUILD_FEATURE_SPRITE_ENGINE_JSP' build/generated/features.h 2>/dev/null; then
-    SPRITE_DATA_LABEL=jspdata
-    SP1_START=$( echo E240 | hex2dec )
-    SP1_END=$( echo FFFF | hex2dec )
-    INT_START=$( echo E000 | hex2dec )
-    INT_END=$( echo E1E3 | hex2dec )
-else
-    SPRITE_DATA_LABEL=sp1data
-    SP1_START=$( echo D1ED | hex2dec )
-    SP1_END=$( echo FFFF | hex2dec )
-    INT_START=$( echo D000 | hex2dec )
-    INT_END=$( echo D1D3 | hex2dec )
-fi
+# JSP sprite engine — 48K fixed memory layout
+SPRITE_DATA_LABEL=jspdata
+SPRITE_START=$( echo E240 | hex2dec )
+SPRITE_END=$( echo FFFF | hex2dec )
+INT_START=$( echo E000 | hex2dec )
+INT_END=$( echo E1E3 | hex2dec )
 
 echo "Banks 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
 printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
@@ -52,11 +52,14 @@ printf "  %-12s  \$%04x  \$%04x  %5d\n" data $MAIN_DATA_START $MAIN_DATA_END $((
 printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $MAIN_BSS_START $MAIN_BSS_END $(( MAIN_BSS_END - MAIN_BSS_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" code $MAIN_CODE_START $MAIN_CODE_END $(( MAIN_CODE_END - MAIN_CODE_START ))
 printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
-printf "  %-12s  \$%04x  \$%04x  %5d\n" $SPRITE_DATA_LABEL $SP1_START $SP1_END $(( SP1_END - SP1_START + 1 ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" $SPRITE_DATA_LABEL $SPRITE_START $SPRITE_END $(( SPRITE_END - SPRITE_START + 1 ))
 echo
 
-TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SP1_END - SP1_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
+TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN_CODE_END - MAIN_CODE_START + SPRITE_END - SPRITE_START + 1 + INT_END - INT_START + STARTUP_END - STARTUP_START ))
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
 # 41216 = 64k - $5F00 (__Start)
 printf "$RED  FREE                       %6d  $RESET\n" $(( 65536 - STARTUP_START - TOTAL ))
+echo
+echo "  note: jspdata includes a free 1536 B hole at \$e600-\$ebff (ex-DRT,"
+echo "        reclaimable by repacking the JSP tables)"
 echo

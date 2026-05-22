@@ -1,0 +1,158 @@
+#!/bin/bash
+
+MAIN_MAP=main.map
+BANKED_MAP=engine/banked_code/banked_code.map
+
+# ansi color sequences
+RED='\e[41m\e[37;1m'
+GREEN='\e[42m\e[37;1m'
+BLUE='\e[44m\e[37;1m'
+RESET='\e[0m'
+
+
+function map_data {
+	grep -E '^__' "$1" |sort|uniq|sort -k3|sed 's/= \$/= /g'
+}
+
+function hex2dec {
+	read -r n && printf "%d" "0x$n"
+}
+
+echo
+echo -e "${GREEN}    MEMORY AND BANK USAGE REPORT     ${RESET}"
+echo
+
+DATASET_MAX_SIZE=$( grep BUILD_MAX_DATASET_SIZE build/generated/game_data.h | awk '{print $3'} )
+
+# main.map (banks 5,2,0, 49152 bytes)
+MAIN_DATA_START=$( map_data $MAIN_MAP | grep -E '^__data_compiler_head' | awk '{print $3}' | hex2dec )
+MAIN_DATA_END=$( map_data $MAIN_MAP | grep -E '^__data_stdlib_tail' | awk '{print $3}' | hex2dec )
+MAIN_BSS_START=$( map_data $MAIN_MAP | grep -E '^__bss_compiler_head' | awk '{print $3}' | hex2dec )
+MAIN_BSS_END=$( map_data $MAIN_MAP | grep -E '^__bss_stdlib_tail' | awk '{print $3}' | hex2dec)
+MAIN_CODE_START=$( map_data $MAIN_MAP | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
+MAIN_CODE_END=$( map_data $MAIN_MAP | grep -E '^__code_user_tail' | awk '{print $3}' | hex2dec )
+STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
+STARTUP_END=$(( MAIN_DATA_START - 1 ))
+
+# JSP sprite engine — 128K fixed memory layout.
+# Spritelib+target specific: the Makefile 'mem' target selects this script
+# from BUILD_SPRITE_ENGINE and ZX_TARGET. Do NOT add detection logic here.
+# jspdata region $a240-$bfff holds the JSP tables; the recompositing
+# redesign dropped the DRT, leaving a free 1536-byte hole at $a600-$abff.
+SPRITE_DATA_LABEL=jspdata
+SPRITE_START=$( echo A240 | hex2dec )
+SPRITE_END=$( echo BFFF | hex2dec )
+INT_KEY=interrupts_128_jsp
+INT_START=$( perl -MYAML -e "my \$c=YAML::LoadFile('etc/rage1-config.yml'); my \$v=\$c->{'$INT_KEY'}{'iv_table_addr'}; printf '%d', \$v=~/^0x/i ? hex(\$v) : \$v" )
+# JSP 128K: the IV table + ISR + stack sit just below jspdata (at $a000),
+# above the code area — unlike SP1 128K where they sit just below the code
+# base. So intstk spans iv_table_addr .. jspdata_start-1.
+INT_END=$(( SPRITE_START - 1 ))
+HEAP_START=$(( 22576 + DATASET_MAX_SIZE ))
+# heap / lowmem buffer ends just below the resident binary ($Start)
+HEAP_END=$(( STARTUP_START - 1 ))
+
+echo "BANKS 5,2,0 [Screen + RAGE1 Heap + Lowmem]"
+echo
+printf "  %-12s  %-5s  %-5s  %5s\n" SECTION START END SIZE
+
+printf "  %-12s  \$%04x  \$%04x  %5d\n" screen 16384 23295 6912
+printf "  %-12s  \$%04x  \$%04x  %5d\n" databuf 22576 $(( 22576 + DATASET_MAX_SIZE - 1 )) $DATASET_MAX_SIZE
+printf "  %-12s  \$%04x  \$%04x  %5d\n" heap $HEAP_START $HEAP_END $(( HEAP_END - HEAP_START + 1 ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" startup $STARTUP_START $STARTUP_END $(( STARTUP_END - STARTUP_START + 1 ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" data $MAIN_DATA_START $MAIN_DATA_END $(( MAIN_DATA_END - MAIN_DATA_START ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" bss $MAIN_BSS_START $MAIN_BSS_END $(( MAIN_BSS_END - MAIN_BSS_START ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" code $MAIN_CODE_START $MAIN_CODE_END $(( MAIN_CODE_END - MAIN_CODE_START ))
+echo
+echo "  reserved regions embedded within the code span (not additive):"
+printf "  %-12s  \$%04x  \$%04x  %5d\n" intstk $INT_START $INT_END $(( INT_END - INT_START + 1 ))
+printf "  %-12s  \$%04x  \$%04x  %5d\n" $SPRITE_DATA_LABEL $SPRITE_START $SPRITE_END $(( SPRITE_END - SPRITE_START + 1 ))
+echo
+
+# JSP 128K layout differs fundamentally from SP1: jspdata ($a240-$bfff, in
+# fixed bank 2) and the IV/stack region sit *within* the resident binary's
+# address span — the code continues above jspdata into the home bank, up to
+# $ffff. So used memory is everything from $4000 to the code tail (jspdata
+# and intstk are already inside that span); free memory is the gap above it.
+TOTAL=$(( MAIN_CODE_END - 16384 + 1 ))
+printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
+printf "$RED  FREE                       %6d  $RESET\n" $(( 65536 - 16384 - TOTAL ))
+echo
+echo "  note: jspdata includes a free 1536 B hole at \$a600-\$abff (ex-DRT,"
+echo "        reclaimable by repacking the JSP tables)"
+echo
+
+# banked.map
+BANKED_SIZE=$( ls -l engine/banked_code/banked_code.bin | awk '{print $5}' )
+
+echo "BANK 4 [RAGE1 code/dataset]"
+echo
+echo "  SECTION                      SIZE"
+printf "  %-12s                %5d\n" rage1_code $BANKED_SIZE
+echo
+
+DATASETS_TOTAL=0
+if ( grep -qE "^dataset 4" build/generated/bank_bins.cfg ) then
+	echo "  DATASET              SIZE   CSIZE"
+	for dataset in $( grep -P "^dataset 4" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
+		comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
+		uncomp_size=$( stat "build/generated/datasets/dataset_$dataset.bin.save" -t|awk '{print $2}' )
+		printf "  %-10s         %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
+		DATASETS_TOTAL=$(( DATASETS_TOTAL + comp_size ))
+	done
+
+	echo
+	echo "  Max. allowed dataset size: $DATASET_MAX_SIZE"
+	echo
+fi
+
+TOTAL=$(( BANKED_SIZE + DATASETS_TOTAL ))
+printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
+printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - TOTAL ))
+echo
+
+# banks, except bank 4
+BANKS=$( grep -E '^\w' build/generated/bank_bins.cfg | awk '{print $2}' | sort | grep -v 4 | uniq )
+
+# codeset/dataset banks
+for bank_num in $BANKS; do
+	echo "BANK $bank_num [codeset/dataset]"
+	echo
+
+	BANK_TOTAL=0
+
+	codeset_num=$( grep -P "^codeset $bank_num" build/generated/bank_bins.cfg | awk '{print $4}' )
+	if [ -n "$codeset_num" ]; then
+		codeset_map=build/generated/codesets/codeset_$codeset_num.map
+		CODESET_DATA_START=$( map_data $codeset_map | grep -E '^__data_compiler_head' | awk '{print $3}' | hex2dec )
+		CODESET_DATA_END=$( map_data $codeset_map | grep -E '^__data_compiler_tail' | awk '{print $3}' | hex2dec )
+		CODESET_BSS_START=$( map_data $codeset_map | grep -E '^__bss_compiler_head' | awk '{print $3}' | hex2dec )
+		CODESET_BSS_END=$( map_data $codeset_map | grep -E '^__bss_compiler_tail' | awk '{print $3}' | hex2dec)
+		CODESET_CODE_START=$( map_data $codeset_map | grep -E '^__code_compiler_head' | awk '{print $3}' | hex2dec )
+		CODESET_CODE_END=$( map_data $codeset_map | grep -E '^__code_compiler_tail' | awk '{print $3}' | hex2dec )
+
+		CODESET_SIZE=$( ls -l build/generated/codesets/codeset_$codeset_num.bin | awk '{print $5}' )
+		echo "  SECTION                      SIZE"
+		printf "  %-12s                %5d\n" codeset_$codeset_num $CODESET_SIZE
+		BANK_TOTAL=$(( BANK_TOTAL + CODESET_SIZE ))
+		echo
+	fi
+
+	if ( grep -qE "^dataset $bank_num" build/generated/bank_bins.cfg ) then
+		echo "  DATASET              SIZE   CSIZE"
+		for dataset in $( grep -P "^dataset $bank_num" build/generated/bank_bins.cfg | cut -f4- -d' ' ); do
+			comp_size=$( stat "build/generated/datasets/dataset_$dataset.zx0" -t|awk '{print $2}' )
+			uncomp_size=$( stat "build/generated/datasets/dataset_$dataset.bin.save" -t|awk '{print $2}' )
+			printf "  %-10s         %6d  %6d\n" "dataset_$dataset" $uncomp_size $comp_size
+			BANK_TOTAL=$(( BANK_TOTAL + comp_size ))
+		done
+
+		echo
+		echo "  Max. allowed dataset size: $DATASET_MAX_SIZE"
+		echo
+	fi
+
+	printf "$GREEN  TOTAL                      %6d  $RESET\n" $BANK_TOTAL
+	printf "$RED  FREE                       %6d  $RESET\n" $(( 16384 - BANK_TOTAL ))
+	echo
+done
