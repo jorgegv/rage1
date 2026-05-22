@@ -251,7 +251,8 @@ EOF_BANK0
     # load main program code at base code address and start execution
     my $main_code_start;
     if ( get_zx_target eq '128' ) {
-        my $int_key = ( get_sprite_engine() eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
+        # 128K interrupt config is the same for both sprite engines
+        my $int_key = 'interrupts_128';
         $main_code_start = sprintf( '0x%04x', ( $cfg->{ $int_key }{'base_code_address'} =~ /^0x/ ?
             hex( $cfg->{ $int_key }{'base_code_address'} ) :
             $cfg->{ $int_key }{'base_code_address'}

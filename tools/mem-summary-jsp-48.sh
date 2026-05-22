@@ -4,9 +4,12 @@
 # Spritelib+target specific: the Makefile 'mem' target selects this script
 # from BUILD_SPRITE_ENGINE and ZX_TARGET. Do NOT add detection logic here.
 #
-# jspdata region $e240-$ffff holds the JSP tables (BAT, FTT, DTT, BTT,
-# rotation table). The recompositing redesign dropped the DRT, leaving a
-# free 1536-byte hole at $e600-$ebff inside the region.
+# JSP memory map — RAGE1 uses JSPDATA_SLOT3 (JSP's default): the JSP
+# sprite-engine data tables (rotation table, BTT, BAT, DTT, FTT) sit at the
+# top of memory, the jspdata region $e840-$ffff, with free RAM below it.
+# The SLOT setting only selects the address — jspdata lives at the same
+# place ($e840-$ffff) in both 48K and 128K. (JSPDATA_SLOT2 would place the
+# tables at $a840-$bfff instead — unused by RAGE1.)
 
 MAIN_MAP=main.map
 
@@ -39,7 +42,7 @@ STARTUP_END=$MAIN_DATA_START
 
 # JSP sprite engine — 48K fixed memory layout
 SPRITE_DATA_LABEL=jspdata
-SPRITE_START=$( echo E240 | hex2dec )
+SPRITE_START=$( echo E840 | hex2dec )
 SPRITE_END=$( echo FFFF | hex2dec )
 INT_START=$( echo E000 | hex2dec )
 INT_END=$( echo E1E3 | hex2dec )
@@ -59,7 +62,4 @@ TOTAL=$(( MAIN_DATA_END - MAIN_DATA_START + MAIN_BSS_END - MAIN_BSS_START + MAIN
 printf "$GREEN  TOTAL                      %6d  $RESET\n" $TOTAL
 # 41216 = 64k - $5F00 (__Start)
 printf "$RED  FREE                       %6d  $RESET\n" $(( 65536 - STARTUP_START - TOTAL ))
-echo
-echo "  note: jspdata includes a free 1536 B hole at \$e600-\$ebff (ex-DRT,"
-echo "        reclaimable by repacking the JSP tables)"
 echo

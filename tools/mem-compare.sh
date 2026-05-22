@@ -58,31 +58,25 @@ row() {   # $1 = label, $2 = sp1 value, $3 = jsp value
     printf "  %-14s %9s %9s %11s\n" "$1" "${2:--}" "${3:--}" "$d"
 }
 
-# JSP's 'code' section address span contains the embedded intstk + jspdata
-# reserved holes; subtract them so 'code' is real machine code, directly
-# comparable to SP1's 'code'. With this the SP1-JSP column sums to the
-# TOTAL delta.
-JI=$( sect "$TMP/jsp.txt" intstk )
-JD=$( sect "$TMP/jsp.txt" jspdata )
-JC=$(( $( sect "$TMP/jsp.txt" code ) - JI - JD ))
-
+# Both engines keep their sprite-engine data at the top of the visible
+# memory (banks 5,2,0): SP1 as sp1data, JSP as jspdata (JSPDATA_SLOT3).
+# So the comparison is a straight per-section diff; the SP1-JSP column
+# sums to the TOTAL delta.
 echo
 echo -e "${GREEN}   SP1 vs JSP MEMORY DIFFERENCE  (banks 5,2,0, 128K)   ${RESET}"
 echo
 printf "  %-14s %9s %9s %11s\n" SECTION SP1 JSP "SP1 - JSP"
-for s in screen databuf heap startup data bss; do
+for s in screen databuf heap intstk startup data bss code; do
     row "$s" "$( sect "$TMP/sp1.txt" "$s" )" "$( sect "$TMP/jsp.txt" "$s" )"
 done
-row code          "$( sect "$TMP/sp1.txt" code )"    "$JC"
-row intstk        "$( sect "$TMP/sp1.txt" intstk )"  "$JI"
-row "sprite data" "$( sect "$TMP/sp1.txt" sp1data )" "$JD"
+row "sprite data" "$( sect "$TMP/sp1.txt" sp1data )" "$( sect "$TMP/jsp.txt" jspdata )"
 echo "  --------------------------------------------------------"
 TS=$( hdln "$TMP/sp1.txt" TOTAL ); TJ=$( hdln "$TMP/jsp.txt" TOTAL )
 row TOTAL "$TS" "$TJ"
 row FREE  "$( hdln "$TMP/sp1.txt" FREE )" "$( hdln "$TMP/jsp.txt" FREE )"
 echo
-echo "  ('code' is real machine code — JSP's figure excludes the embedded"
-echo "  intstk + jspdata regions, shown as their own rows.)"
+echo "  ('sprite data' = SP1's sp1data vs JSP's jspdata — both at the top of"
+echo "  the visible memory; the smaller jspdata is the bulk of JSP's saving.)"
 if [ -n "$TS" ] && [ -n "$TJ" ]; then
     echo
     echo -e "  ${GREEN} => JSP uses $(( TS - TJ )) bytes less than SP1 for the same game ${RESET}"

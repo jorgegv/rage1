@@ -3365,7 +3365,8 @@ EOF_JSP_POOL
     my $max_heap_usage = 20 + $max_sprites * (20 + 6) + $max_spritechars * (24 + 6);
 
     # max dataset size: memory from $5B00->$7FFF minus the heap
-    my $int_key = ( get_sprite_engine() eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
+    # 128K interrupt config is the same for both sprite engines
+    my $int_key = 'interrupts_128';
     my $max_dataset_size = (
         ( $cfg->{ $int_key }{'base_code_address'} =~ /^0x/ ?
             hex( $cfg->{ $int_key }{'base_code_address'} ) :
@@ -3963,8 +3964,8 @@ sub generate_game_events_rule_table {
 
 sub generate_configuration_values {
 
-    # interrupt configuration values: select section based on sprite engine
-    my $int_key = ( get_sprite_engine() eq 'jsp' ) ? 'interrupts_128_jsp' : 'interrupts_128';
+    # interrupt configuration values (same for both sprite engines)
+    my $int_key = 'interrupts_128';
     push @h_game_data_lines, "// Interrupt configuration\n";
     foreach my $k ( qw( iv_table_addr isr_vector_byte base_code_address ) ) {
         my $value = $cfg->{ $int_key }{ $k };
