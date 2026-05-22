@@ -125,7 +125,8 @@ DATAGEN			= ./tools/datagen.pl
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
 
 # JSP sprite engine: add library sources and include path
-JSP_DIR			= ../../../jsp
+# JSP is vendored as a git submodule at external/jsp
+JSP_DIR			= external/jsp
 ifeq ($(BUILD_SPRITE_ENGINE),jsp)
     CSRC		+= $(wildcard $(JSP_DIR)/lib/*.c)
     ASMSRC		+= $(wildcard $(JSP_DIR)/lib/*.asm)

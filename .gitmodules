@@ -1,0 +1,4 @@
+[submodule "external/jsp"]
+	path = external/jsp
+	url = https://github.com/jorgegv/jsp.git
+	branch = main

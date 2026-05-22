@@ -19,6 +19,8 @@ jobs:
 
       - name: Checkout RAGE1 repo
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Build test games
         run: |
