@@ -59,25 +59,28 @@ The table below classifies every documented API element:
 | `GFX_PSS_INVALIDATE` | sp1.h:24 / jsp.h:24 | **(a)** | JSP already shows it can be a no-op (0x00). |
 | `GFX_PRINT_CTX_INIT(area, attr)` | sp1.h:25-26 / jsp.h:25 | **(c) ZX-specific** | Used at file scope to initialise static print contexts (e.g. `engine/src/debug.c:24`, `engine/src/hero.c:296`, `engine/src/map.c:24`). Each backend must provide its own. CPC can follow the JSP pattern (cleaner, just `{ &area, attr, 0, 0 }`). |
 | **Init / frame** | | | |
-| `gfx_init(bg_attr, bg_char)` | gfx.h:69 | **(b) generalisable** | `bg_attr` is a packed Spectrum attribute; `bg_char` is a glyph in the ROM/UDG charset. Needs an attribute abstraction. |
+| `gfx_init(bg_attr, bg_char)` | gfx.h:69 | **(a) already agnostic** | `bg_attr` is a packed Spectrum attribute; `bg_char` is a glyph in the charset. Per the two-layer model (§1.2 obs 4): ZX consumes `bg_attr`; CPC ignores it (uses backend default pens from `cpc-renderer.md`). `bg_char` is universal (charset glyph index). |
 | `gfx_invalidate(rect)` | sp1.h:30 / jsp.h:29 | **(a)** | Generic notion: dirty-rect for next redraw. |
 | `gfx_update()` | sp1.h:31 / jsp.h:30 | **(a)** | "Flush back-buffer to screen." Universal. |
 | **Sprite lifecycle** | | | |
-| `gfx_sprite_create(rows, cols)` | gfx.h:70 | **(b)** | Units are 8×8 cells. Generalisable but on CPC mode 1 a "cell" is 8 hardware pixels horizontally = 4 logical (mode-1) pixels — the *count* maps fine, the per-pixel resolution differs. |
+| `gfx_sprite_create(rows, cols)` | gfx.h:70 | **(a) already agnostic** | Units are 8×8 cells, where a cell is 8×8 pixels in the platform's own pixel coordinate system — 8×8 ZX pixels on ZX (32×24 grid), 8×8 mode-1 pixels on CPC mode 1 (40×25 grid). Count semantics are identical across platforms; backends translate cell counts into native byte layouts internally. |
+
 | `gfx_sprite_destroy(s)` | sp1.h:35 / jsp.h:34 | **(a)** | Universal. |
-| `gfx_sprite_set_color(s, color)` | gfx.h:71 | **(b)** | `color` is a Spectrum attribute byte. Generalises to "platform attribute" once we have the abstraction. |
+| `gfx_sprite_set_color(s, color)` | gfx.h:71 | **(a) already agnostic** | `color` is a `gfx_attr_t`. Per the two-layer model (§1.2 obs 4): ZX consumes it (Spectrum attribute byte); CPC ignores it (sprite colour is baked into the sprite pixel data emitted by the asset pipeline). |
 | `gfx_sprite_set_threshold(s, xt, yt)` | sp1.h:37-38 / jsp.h:36 | **(c) ZX-specific** | SP1-only sub-pixel optimisation. JSP no-ops it. CPC will no-op. Keep as a no-op call (cheap to leave in API). |
 | **Sprite movement** | | | |
-| `gfx_sprite_move_pixel(s, clip, frame, x, y)` | sp1.h:41 / jsp.h:39-40 | **(c) ZX-specific signature** | `x, y` are `uint8_t`. ZX screen is 256×192, fits in a byte each. **CPC mode 1 is 320×200 — x overflows uint8_t**. This is the most concrete blocker. |
+| `gfx_sprite_move_pixel(s, clip, frame, x, y)` | sp1.h:41 / jsp.h:39-40 | **(b) generalisable** | `x, y` widened to per-platform typedef `gfx_xpos_t`/`gfx_ypos_t` (Phase G4): `uint8_t` on ZX (256×192 fits a byte; ZX backends use only the lower byte and short-circuit accordingly to avoid 16-bit cost); `uint16_t` on CPC (320×200) and on future ZX Next layer-2 (320×256), which both overflow `uint8_t` in x. |
+
 | `gfx_sprite_move_cell(s, clip, frame, row, col)` | sp1.h:42 / jsp.h:41-42 | **(a) effectively** | Cell coords (uint8_t each). ZX max 32×24, CPC mode-1 40×25 — both fit in uint8_t. |
 | **Sprite query** | | | |
 | `gfx_sprite_get_row(s)` / `_get_col(s)` | sp1.h:45-46 / jsp.h:45-46 | **(a)** | Returns cell coords. SP1 reads `s->row/col`; JSP computes `ypos/8`, `xpos/8`. CPC will do similarly. |
 | `gfx_sprite_get_width(s)` / `_get_height(s)` | sp1.h:47-48 / jsp.h:47-48 | **(a)** | Returns cell count. Universal. |
 | **Tile drawing** | | | |
-| `gfx_tile_put(r, c, attr, tile)` | sp1.h:51 / jsp.h:51 | **(c) ZX-specific** | `tile` parameter type leaks: it is `uint16_t` carrying either a 1-byte tile ID (UDG/ROM charset) or a 16-bit ROM-graphic pointer (SP1's "address-specified" tile). The `attr` is a Spectrum attribute byte. Both need abstracting. |
-| `gfx_tile_register(idx, graphic)` | sp1.h:52 / jsp.h:52 | **(c) ZX-specific** | `idx` is a single byte (256 tile slots). `graphic` is an 8-byte UDG (8×8 mono pixels, attribute stored separately). CPC has no native UDG concept — backend must internally maintain a glyph cache and a separate attribute store. |
+| `gfx_tile_put(r, c, attr, tile)` | sp1.h:51 / jsp.h:51 | **(b) generalisable** | `tile` is `gfx_tile_id_t` (`uint16_t`) — value <256 means registered mono glyph slot; value ≥256 means pointer to pre-converted platform-native bytes (see §2.3). `attr` follows the two-layer model (§1.2 obs 4): ZX consumes it; CPC ignores it. |
+| `gfx_tile_register(idx, graphic)` | sp1.h:52 / jsp.h:52 | **(a) already agnostic** | `idx` is a single byte (256 tile slots). `graphic` is **always an 8-byte mono UDG pattern** (8 rows × 1 byte = 8×8 1-bit-per-pixel mono pixels) — an API-level invariant on every backend, not a ZX detail. ZX backends (SP1/JSP) store the 8 bytes as-is (native UDG). CPC backend converts at register-time (or first draw) by bit-expanding 1bpp → mode-1 2bpp, using the backend's fixed default pen pair (per `cpc-renderer.md`; see §1.2 obs 4 — `attr` is ignored on CPC), producing a 16-byte mode-1 block (4 pixels/byte × 8 rows × 2 bytes/row). Cache is keyed by `idx`. Scope: this covers single-colour / text / charset tiles. Multi-colour BTile graphics use the address-specified pointer flavour above and carry pre-converted, platform-native bytes from the asset pipeline (owned by `assets.md`). |
+
 | **Rectangle ops** | | | |
-| `gfx_clear_rect(rect, attr, ch, flags)` | sp1.h:55 / jsp.h:55 | **(b) generalisable** | `ch` is a glyph in the charset; `attr` is platform attribute; `flags` are the `GFX_CLEAR_*` bitmask. Universal once attribute is abstracted. |
+| `gfx_clear_rect(rect, attr, ch, flags)` | sp1.h:55 / jsp.h:55 | **(a) already agnostic** | `ch` is a charset glyph; `flags` are the `GFX_CLEAR_*` bitmask (universal). `attr` follows the two-layer model (§1.2 obs 4): ZX consumes it; CPC ignores it (CPC clears to backend default pen). |
 | **Text printing** | | | |
 | `gfx_print_set_pos(ctx, r, c)` | sp1.h:58 / jsp.h:58 | **(a)** | Cell coords. Universal. |
 | `gfx_print_set_clip(ctx, rect)` | sp1.h:59 / jsp.h:59 | **(b)** | Currently a direct struct-field write (`ctx->bounds = rect` for SP1; `ctx->clip = rect` for JSP). The fact that it has to be a macro that knows the field name is the only abstraction issue — CPC backend just supplies its own field-named macro. |
@@ -110,39 +113,84 @@ strategy in Section 2.
    The *infrastructure* is parameterised; only the **default** is ZX.
 
 3. **`OFF_SCREEN_ROW = 24`** at `engine/include/rage1/screen.h:19`.
-   Anchored to 24 rows. Becomes wrong on CPC where the grid is 25
-   rows tall — though for CPC the off-screen row could equally be 25
-   or any value ≥ playfield height.
+   Engine code currently leaks the parking row by referencing this
+   constant directly (e.g. `sprite_move_offscreen`). Phase G5
+   introduces `gfx_sprite_park(s)` as a first-class HAL entrypoint
+   (per Q5); the parking row becomes backend-internal (ZX row 24,
+   CPC row 25, ZX Next row 32), and engine code stops referencing
+   `OFF_SCREEN_ROW` entirely.
 
-4. **Spectrum attribute byte** as the universal colour-carrying type.
-   `uint8_t attr` with `PAPER|INK|BRIGHT|FLASH` layout flows through
-   `gfx_init`, `gfx_tile_put`, `gfx_clear_rect`, `GFX_PRINT_CTX_INIT`,
-   and the field-attribute parameter on `gfx_sprite_set_color`. The
-   `0xF8` INK-mask in `engine/src/sprite.c:70` and
-   `engine/src/gfx_jsp.c:43-44` is the most-explicit example. CPC has
-   pen/paper indices on top of mode-dependent palette tables — utterly
-   different.
+4. **Two-layer colour model — attribute layer is optional / ZX-only**.
+   RAGE1's graphics surface is decomposed into two layers:
+   - **Bitmap layer** (universal): every backend consumes opaque
+     pixel-data bytes. ZX backends consume 1bpp mono UDG bytes (and
+     address-specified UDG pointers). CPC backend consumes either
+     pre-baked colour-in-pixel bytes (mode-1 packed, from the asset
+     pipeline) for multi-colour BTiles, or mono UDG bytes converted
+     at register-time to a mode-1 block using a fixed default pen
+     pair (for text glyphs — see `gfx_tile_register` row and §2.3).
+     Engine code never inspects the bitmap bytes — it carries them
+     by tile-ID or address-specified pointer.
+   - **Attribute layer** (OPTIONAL, ZX-only): the `uint8_t attr`
+     parameter (PAPER|INK|BRIGHT|FLASH layout) flowing through
+     `gfx_init`, `gfx_tile_put`, `gfx_clear_rect`, `GFX_PRINT_CTX_INIT`
+     and `gfx_sprite_set_color` is **consumed by SP1/JSP exactly as
+     today, and silently ignored on CPC**. The CPC backend accepts
+     the `attr` parameter on the API surface for source-compatibility
+     but does nothing with it. CPC colour comes entirely from the
+     bitmap data plus a fixed/per-game pen palette owned by
+     `cpc-renderer.md`. The `0xF8` INK-mask in
+     `engine/src/sprite.c:70` and `engine/src/gfx_jsp.c:43-44` is a
+     ZX-internal concern, not part of the HAL.
+
+   **Trade-off:** per-call colour change (e.g. "draw this digit
+   yellow this frame, red next") is transparent on ZX via `attr`,
+   but not on CPC — on CPC the colour is baked into the registered
+   tile data, so per-call variation requires either (a) multiple
+   registered tiles, one per colour variant, or (b) a CPC-specific
+   palette-swap effect (mode-1 only has 4 pens, so pen-cycling is
+   cheap). Engine cases that rely on per-call `attr` variation stay
+   ZX-only or get a documented CPC-side workaround in
+   `cpc-renderer.md`.
+
+   The single exception where `attr` IS consumed on CPC is
+   `gfx_set_border` — see §2.7.
 
 5. **`DEFAULT_BG_ATTR`, `INK_*`, `PAPER_*`** macros: pulled in from
    `<arch/spectrum.h>` (and from `game_data.h`, generated by
    `datagen.pl`). Used as raw `uint8_t` values at call sites: e.g.
    `engine/src/map.c:35`, `engine/src/game_loop.c:152-154`,
-   `engine/src/hero.c:303`, `engine/src/inventory.c:48,67`. These leak
-   from the include `arch/spectrum.h` into engine code with no `gfx_*`
-   indirection.
+   `engine/src/hero.c:303`, `engine/src/inventory.c:48,67`. Per the
+   two-layer model (obs 4), these macros stay ZX-only — the CPC
+   backend never references them. The leak from `<arch/spectrum.h>`
+   into engine code is acceptable as long as either the call sites
+   sit in ZX-only code paths, or the macros expand to inert values
+   on CPC. Phase G3 picks one approach.
+
 
 6. **Attribute clash model**. The 0xF8 INK-replacement mask
    (`engine/src/sprite.c:70` and the comment at
    `engine/src/gfx_jsp.c:42-44`) assumes "ink+paper+bright share one
-   byte per 8×8 cell". On CPC mode 0/1, each pixel has its own pen,
-   no clash, no shared attribute. The HAL must hide this difference.
+   byte per 8×8 cell". This is a ZX-internal concern that lives
+   entirely inside the SP1/JSP backends and does NOT cross the HAL.
+   On CPC mode 0/1 each pixel has its own pen, no clash, no shared
+   attribute, and `attr` is ignored anyway (per obs 4). The HAL
+   doesn't need to abstract clash semantics — the two-layer model
+   keeps the concept ZX-internal.
 
 7. **1-byte tile IDs**. `gfx_tile_register(idx, gfx)` `idx` is a `uint8_t`
    = 256 max distinct UDGs. SP1's `sp1_PrintAtInv` also accepts a
    16-bit "tile" which is actually a ROM glyph address for IDs ≥256.
    `engine/src/btile.c:64,136` casts `(uint16_t)b->tiles[n]`. JSP
    replicates the same dual-purpose semantics. CPC has neither concept
-   natively — the backend will need to maintain its own glyph table.
+   natively, but the mono-UDG contract is platform-neutral — the CPC
+   backend maintains its own glyph table by bit-expanding the 8-byte
+   mono pattern to a 16-byte mode-1 block at register-time (using a
+   fixed default pen pair; see §1.2 obs 4 and `gfx_tile_register`
+   row). The two flavours of `tile` argument — small ID (registered
+   mono glyph) vs 16-bit pointer (pre-converted multi-colour BTile
+   bytes from the asset pipeline) — are an unambiguous discriminator
+   in both ZX and CPC backends.
 
 8. **BAT (Background Attribute Table) semantics**. SP1 maintains a
    shadow of the screen attribute byte per cell. `sp1_PrintAtInv`,
@@ -168,19 +216,28 @@ strategy in Section 2.
 11. **Pixel coordinates are `uint8_t`**. `gfx_sprite_move_pixel(s,
     clip, frame, x, y)` uses `uint8_t x, y`. **ZX screen 256×192 fits;
     CPC mode-1 320×200 *overflows in x*** (max x can be 319). This is
-    a hard ABI break — either the parameter type widens to `uint16_t`
-    on platforms that need it, or callers convert. This is the
-    single most concrete signature change required.
+    a hard ABI break — the parameter type widens to a per-platform
+    typedef `gfx_xpos_t`/`gfx_ypos_t` (Phase G4): `uint8_t` on
+    ZX48/ZX128 (so the ZX build pays no 16-bit cost for an
+    always-zero high byte; backends short-circuit accordingly via
+    compile-time specialisation), `uint16_t` on CPC and on future
+    ZX Next layer-2 (320×256, x ALSO overflows uint8_t). The
+    widening is therefore not CPC-only — it is the right answer for
+    any ≥256-wide future platform. This is the single most concrete
+    signature change required.
 
 12. **Sprite frame pointer ABI**. `gfx_sprite_move_pixel(..., uint8_t
     *frame, ...)` — `frame` is a raw pointer into a backend-specific
-    pixel-data layout. SP1 expects an interleaved mask+graphic
-    `(rows+1) * 16 * cols` byte stream (`engine/src/sprite.c:42-61`).
-    JSP expects a different layout. CPC will expect another. The
-    *type* is opaque, but the per-platform asset converter must emit
-    the right bytes. *Asset-side concern — see assets.md*; for `gfx_*`
-    the contract "callers hand `gfx_*` an opaque `uint8_t *` produced
-    by the platform's asset pipeline" already holds.
+    pixel-data layout. SP1 and JSP share the same interleaved
+    mask+graphic `(rows+1) * 16 * cols` byte stream
+    (`engine/src/sprite.c:42-61`); sprite assets are interchangeable
+    between the two ZX backends. CPC will use a different layout
+    (mode-1 pre-baked pixel bytes). The *type* is opaque, but the
+    per-platform asset converter must emit the right bytes.
+    *Asset-side concern — see assets.md*; for `gfx_*` the contract
+    "callers hand `gfx_*` an opaque `uint8_t *` produced by the
+    platform's asset pipeline" already holds.
+
 
 ### 1.3 Caller inventory (engine code using `gfx_*`)
 
@@ -239,10 +296,31 @@ themselves). The full list of call sites:
 - `engine/include/rage1/debug.h:25` — `#define debug_flush() gfx_update()`
 
 **Notable absences**: no `gfx_*` calls in `engine/banked_code/` or
-`engine/lowmem/`. Banked code touches state flags and animation; the
-actual graphics primitives all run from low memory. Good — this means
-the `gfx_*` HAL surface only needs `#include`-visibility in low-memory
-TU compilation units, not in banked TUs.
+`engine/lowmem/`. This is **structural on ZX128**: SP1's data region
+lives inside the `0xC000` 16 KB slot (roughly 0xD1ED..0xFFFF per
+`etc/rage1-config.yml`) — the slot that ZX128 paging swaps. Any
+`gfx_*` call ultimately touches SP1 data, so it cannot run from code
+that lives in a swapped-in bank: that bank would also have to be
+paging over SP1's storage. JSP is **not** structurally bound to that
+region (its data could live below 0xC000), but in RAGE1 it is
+configured with the same memory layout for symmetry with SP1, so
+the constraint applies uniformly across both ZX backends today.
+
+**On CPC the constraint is not hardware-forced**: CPC6128 has four
+independent 16 KB paging windows (0x0000, 0x4000, 0x8000, 0xC000)
+that can each page to any of 8 RAM banks. A `gfx_*` data region in
+one window can be reachable from banked code that swaps a *different*
+window — so `gfx_*`-from-banked-code is a placement decision, not a
+hardware prohibition. The CPC memory layout (owned by
+`cpc-renderer.md`) and the CPC paging-window allocation (owned by
+`banking.md`) together decide whether the CPC build takes advantage
+of that flexibility or keeps the ZX discipline for portability. The
+safe default is to keep the discipline uniform: relax it on CPC only
+if a concrete use case asks for it.
+
+In both cases the `gfx_*` HAL surface only needs `#include`-visibility
+in the TUs that call it.
+
 
 **Total active call sites**: roughly **45** `gfx_*` function/macro
 invocations (excluding type-only uses, include lines, and member-
@@ -285,39 +363,58 @@ ZX-specific surface identified in §1.2. The strategy throughout is:
 
 ### 2.1 Attribute abstraction — `gfx_attr_t`
 
-Replace `uint8_t` colour parameters with a typedef `gfx_attr_t` whose
-storage size is backend-defined:
+Per the two-layer model (§1.2 obs 4), the attribute layer is
+**optional and ZX-only**. We do NOT try to project ZX attribute
+semantics onto CPC. `gfx_attr_t` exists purely for ABI hygiene
+(callers stop saying `uint8_t` and start naming the parameter type);
+its semantics are entirely backend-defined:
 
-- SP1 / JSP: `typedef uint8_t gfx_attr_t;` (Spectrum attribute byte).
-- CPC: `typedef uint8_t gfx_attr_t;` if a single packed
-  ink/paper-index encoding is workable, or `typedef uint16_t
-  gfx_attr_t;` if pen+paper+style won't fit. **The exact encoding is
-  CPC-backend territory — see `cpc-renderer.md`**. From the HAL's
-  perspective the type is opaque.
+- **SP1 / JSP**: `typedef uint8_t gfx_attr_t;` — Spectrum attribute
+  byte (`PAPER|INK|BRIGHT|FLASH` layout). Consumed by every
+  attribute-taking HAL call exactly as today.
+- **CPC**: `typedef uint8_t gfx_attr_t;` — **inert**. The CPC
+  backend accepts the value on the API for source-compatibility but
+  does nothing with it (`(void) attr;`). The one exception is
+  `gfx_set_border( gfx_attr_t color )`, where the value is consumed
+  as a pen index in the current CPC palette (see §2.7).
 
-A platform-portable constructor in the backend header lets engine code
-build attribute values without naming Spectrum constants:
+This resolves Q2 (storage width): `uint8_t` on every platform, since
+the type is inert on CPC and there is no encoding to widen.
+
+CPC colour for `gfx_*`-rendered output comes from two places that
+neither involve the `attr` argument:
+- The **bitmap layer** carries colour-in-pixels for multi-colour
+  BTiles (asset pipeline emits CPC-native bytes).
+- Mono UDG glyphs (text, charset) bit-expand to mode-1 using a
+  **backend default pen pair**, configured at init time and owned
+  by `cpc-renderer.md`.
+
+Per-call colour variation (e.g. flashing tint) is a ZX-only
+ergonomic; CPC games that need per-tile colour variation either
+register multiple tiles (one per colour variant) or use a CPC-
+specific palette-cycle effect — see `cpc-renderer.md`.
+
+A portable constructor macro stays useful on ZX so engine call sites
+don't name `INK_*` / `PAPER_*` directly:
 
 ```c
 // gfx_sp1.h / gfx_jsp.h
 #define GFX_ATTR( ink, paper, bright, flash )   /* pack into 1 byte */
 #define GFX_DEFAULT_BG_ATTR                     DEFAULT_BG_ATTR
 
-// gfx_cpc.h (sketch)
-#define GFX_ATTR( ink, paper, bright, flash )   /* pack pen/paper, ignore bright/flash */
-#define GFX_DEFAULT_BG_ATTR                     GFX_ATTR(15, 0, 0, 0)
+// gfx_cpctel.h
+#define GFX_ATTR( ink, paper, bright, flash )   0   /* inert on CPC */
+#define GFX_DEFAULT_BG_ATTR                     0
 ```
 
-Engine call sites stop saying `INK_YELLOW | PAPER_GREEN` and start
-saying `GFX_ATTR(GFX_YELLOW, GFX_GREEN, 0, 0)` (or use a precomputed
-`GFX_ATTR_HEARTBEAT_ON` constant per game in `game_config`). The
-colour-palette enums (`GFX_BLACK..GFX_WHITE`) are an 8-colour common
-denominator across ZX (8 inks/8 papers) and CPC mode 1 (4 pens picked
-from a 27-colour palette, indirectly mapped). **Mapping
-table per platform lives in the backend.**
+Engine call sites use `GFX_ATTR(GFX_YELLOW, GFX_GREEN, 0, 0)` (or a
+precomputed `GFX_ATTR_HEARTBEAT_ON` constant per game) instead of
+`INK_YELLOW | PAPER_GREEN`. On ZX the macro expands to a packed
+attribute byte; on CPC it expands to `0` and is discarded inside
+the backend. No CPC pen-mapping table is required.
 
-`game_state.default_mono_attr`
-(`engine/src/btile.c:66,138`) becomes `gfx_attr_t` typed.
+`game_state.default_mono_attr` (`engine/src/btile.c:66,138`) becomes
+`gfx_attr_t` typed.
 
 ### 2.2 Pixel coordinate widening — `gfx_xpos_t` / `gfx_ypos_t`
 
@@ -328,7 +425,7 @@ Introduce typedefs for sprite pixel coordinates:
 typedef uint8_t  gfx_xpos_t;
 typedef uint8_t  gfx_ypos_t;
 
-// gfx_cpc.h  (CPC mode 1: 320×200, x needs 9 bits)
+// gfx_cpctel.h  (CPC mode 1: 320×200, x needs 9 bits)
 typedef uint16_t gfx_xpos_t;
 typedef uint8_t  gfx_ypos_t;
 ```
@@ -351,33 +448,49 @@ items; flagged as Phase G4 below.
 
 ### 2.3 Tile / glyph abstraction
 
-Three semantic flavours flow through `gfx_tile_put` today:
+Tile data flowing through `gfx_tile_put` has **two distinct flavours**,
+distinguished unambiguously by the form of the `tile` argument
+(small ID vs 16-bit pointer):
 
-- **Small tile ID** (0-255): index into the registered tile / UDG / ROM
-  charset table. Used for text and small decoration BTiles.
-- **Address-specified tile** (16-bit graphic pointer ≥256): raw
-  pointer to an 8-byte UDG pattern. Used by BTiles assembled from
-  pre-converted graphics (`engine/src/btile.c:64,136` casts a `uint8_t
-  *` to `uint16_t`).
-- **Special characters** in printed strings, via `gfx_print_string`.
+- **Mono UDG tile** — `tile` argument in `0..255`: index into the
+  glyph slot registered via `gfx_tile_register(idx, graphic)`. The
+  registered `graphic` is **always 8 bytes of 1-bit-per-pixel mono
+  pattern** (UDG-shape, 8 rows × 1 byte), an API invariant on every
+  backend. Used for text glyphs, charset, and small single-colour
+  decoration tiles. ZX backends (SP1/JSP) store the 8 bytes natively;
+  the CPC backend bit-expands 1bpp → mode-1 2bpp at register-time
+  (or first draw) producing a 16-byte mode-1 block, using a fixed
+  default pen pair (per `cpc-renderer.md`; the `attr` parameter is
+  ignored on CPC — see §1.2 obs 4).
+- **Multi-colour pre-converted tile** — `tile` argument ≥ 256:
+  16-bit pointer to platform-native pre-converted pixel bytes
+  emitted by the asset pipeline (`engine/src/btile.c:64,136` casts a
+  `uint8_t *` to `uint16_t`). Used by BTiles assembled from
+  pre-converted graphics. Layout is platform-specific (ZX:
+  interleaved mask+graphic UDG bytes; CPC: mode-1 packed pixel
+  bytes), owned by `assets.md`.
+
+(`gfx_print_string` consumes characters that resolve to small IDs
+via the registered charset; same flavour as the mono UDG case.)
 
 Replace the polysemic `uint16_t tile` parameter with an explicit type:
 
 ```c
-typedef uint16_t gfx_tile_id_t;     // ZX backend: keeps SP1 semantics
+typedef uint16_t gfx_tile_id_t;     // <256: mono glyph slot
+                                    // >=256: native-bytes pointer
 
 void gfx_tile_put( uint8_t row, uint8_t col,
                    gfx_attr_t attr, gfx_tile_id_t tile );
 
-void gfx_tile_register( uint8_t idx, uint8_t *graphic );
+void gfx_tile_register( uint8_t idx, uint8_t *graphic );  // graphic = 8 mono UDG bytes
 ```
 
-For the CPC backend `gfx_tile_id_t` will be a backend-internal cache
-index. The asset pipeline emits CPC-native pixel bytes for each
-registered tile; the runtime maps `idx` → cached pixel block at draw
-time. **The asset-side machinery is owned by `assets.md`**; from the
-HAL's perspective the contract is "calls match the ZX semantics, the
-backend implements its own caching".
+For the CPC backend `gfx_tile_id_t` discriminates by value range
+exactly as on ZX: small ID → look up the cached mode-1 block produced
+from the registered mono UDG bytes; pointer ≥256 → consume the
+pre-converted CPC-native pixel bytes from the asset pipeline. **The
+asset-side machinery for the multi-colour case is owned by
+`assets.md`**; the mono case is handled entirely inside the backend.
 
 Open question (Q1): do we need a separate `gfx_glyph_register` for
 text glyphs vs `gfx_tile_register` for background tiles? On ZX they
@@ -422,7 +535,7 @@ Backend headers define the constants:
 #define GFX_SCREEN_COLS   32
 #define GFX_SCREEN_ROWS   24
 
-// gfx_cpc.h
+// gfx_cpctel.h
 #define GFX_SCREEN_COLS   40
 #define GFX_SCREEN_ROWS   25
 ```
@@ -445,8 +558,11 @@ specify it. The current `attr_param_s` struct and the
 `gfx_sprite_set_color(s, color)` is already the correct caller-visible
 contract.
 
-The CPC backend may not need a mask at all (per-pixel pens), so it
-just stores the colour and applies it on draw.
+The colour mask is a ZX-only concern. On CPC, sprite colour is baked
+into the sprite pixel data emitted by the asset pipeline; the CPC
+backend's `gfx_sprite_set_color` accepts the `color` parameter for
+source-compatibility and discards it (per the two-layer model,
+§1.2 obs 4). No CPC mask, no per-cell attribute store.
 
 ### 2.7 Border colour
 
@@ -454,16 +570,33 @@ just stores the colour and applies it on draw.
 `engine/src/gfx_jsp.c:28` (also in `engine/src/debug.c:75-79` for
 visual panic output).
 
-Introduce a `gfx_set_border( gfx_attr_t color )` HAL function. Each
-backend wraps its native call. Debug-panic flash code becomes
-backend-portable too.
+Introduce a `gfx_set_border( gfx_attr_t color )` HAL function. This
+is the **documented exception** to the "attr is ignored on CPC" rule
+(§1.2 obs 4): the border has to be some colour somewhere, so the
+`color` argument IS consumed on every backend, with backend-defined
+meaning:
+- **ZX (SP1/JSP)**: `color` is a Spectrum colour (0..7); the backend
+  wraps `zx_border()`.
+- **CPC**: `color` is a pen index in the current palette (typically
+  pen 0, with palette setup owned by `cpc-renderer.md`).
+
+Raster-bar / split-raster effects (visual panics, alarms) are NOT
+part of the HAL — games that want them implement platform-specific
+custom code. Debug-panic flash code becomes backend-portable for the
+single-colour case only.
 
 ### 2.8 Feature-flag rename: `BUILD_FEATURE_GFX_BACKEND_*`
 
 `BUILD_FEATURE_SPRITE_ENGINE_*` is misleading now that the backend
 owns tiles, text, and clear/invalidate in addition to sprites. Rename
-to `BUILD_FEATURE_GFX_BACKEND_*` (values: `SP1`, `JSP`, `CPC`, future
-`ALT` for experiments). Mechanical rename across:
+to `BUILD_FEATURE_GFX_BACKEND_*` with values matching the GFX_BACKEND
+short-name = library short-name rule (toolchain.md §3.1): `SP1`,
+`JSP`, `CPCTEL` (cpctelera), and `CPCRS` reserved for cpcrslib as a
+future entrant. Per the project-wide backwards-compat policy, the
+old `BUILD_FEATURE_SPRITE_ENGINE_*` macros remain emitted alongside
+the new ones indefinitely so external games that `#ifdef` on them
+continue to build. Mechanical rename across:
+
 
 - `engine/include/rage1/gfx.h:56,60,64`
 - `engine/src/gfx_sp1.c:25,35` / `gfx_jsp.c:19,61`
@@ -513,8 +646,8 @@ linkage.
 Mirror the SP1 / JSP pattern:
 
 ```
-engine/include/rage1/gfx_cpc.h     # backend header: typedefs, macros
-engine/src/gfx_cpc.c               # multi-step real bodies:
+engine/include/rage1/gfx_cpctel.h     # backend header: typedefs, macros
+engine/src/gfx_cpctel.c               # multi-step real bodies:
                                    #   gfx_init, gfx_sprite_create,
                                    #   gfx_sprite_set_color,
                                    #   any other CPC-only helpers
@@ -523,12 +656,12 @@ engine/src/gfx_cpc.c               # multi-step real bodies:
 `engine/include/rage1/gfx.h` gains a third `#ifdef`:
 
 ```c
-#ifdef BUILD_FEATURE_GFX_BACKEND_CPC
-    #include "rage1/gfx_cpc.h"
+#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL
+    #include "rage1/gfx_cpctel.h"
 #endif
 ```
 
-### 3.2 What `gfx_cpc.h` must provide
+### 3.2 What `gfx_cpctel.h` must provide
 
 Same contract as the existing two — every typedef/constant/macro
 declared in the `gfx.h:18-66` comment block. Concretely:
@@ -560,12 +693,12 @@ typedef uint16_t               gfx_tile_id_t;       // see §2.3
 // ... and so on for every gfx_* macro the contract requires
 ```
 
-### 3.3 What `gfx_cpc.c` must provide
+### 3.3 What `gfx_cpctel.c` must provide
 
 The three multi-step real functions, guarded by the new feature flag:
 
 ```c
-#ifdef BUILD_FEATURE_GFX_BACKEND_CPC
+#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL
 
 void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
     // 1. set CPC mode 1 (or whatever mode the game chose)
@@ -589,18 +722,23 @@ void gfx_set_border( gfx_attr_t color ) {
     // wrap renderer-library border-set
 }
 
-#endif // BUILD_FEATURE_GFX_BACKEND_CPC
+#endif // BUILD_FEATURE_GFX_BACKEND_CPCTEL
 ```
 
 ### 3.4 What the CPC renderer library must offer (HAL-side
 requirements)
 
 This list defines the **minimum contract** the chosen library must
-satisfy or that `gfx_cpc.c` must paper over. The detailed evaluation
+satisfy or that `gfx_cpctel.c` must paper over. The detailed evaluation
 against candidates is in `cpc-renderer.md`.
 
-- **Mode 1 (or mode 0) screen setup**, double-buffered or with
-  dirty-rect support.
+- **Mode 1 (or mode 0) screen setup** with dirty-rect support
+  (engine contract is `gfx_invalidate` + `gfx_update`, matching
+  SP1/JSP — no double buffering on any backend). A candidate CPC
+  library may internally use a back-buffer to implement its
+  dirty-rect updates; that is an implementation detail behind the
+  same invalidate+update API surface RAGE1 consumes.
+
 - **8×8 tile blit**: stamp an 8×8 pixel block at a cell coord.
 - **Sprite blit with mask** at pixel (x, y), arbitrary size in cells.
 - **Sprite-park / off-screen handling** (or a way to skip the blit
@@ -613,7 +751,7 @@ against candidates is in `cpc-renderer.md`.
 - **Clear rect (tile + colour)**.
 - **Invalidate + flush** (or an immediate-mode write surface).
 
-Anything the library does not natively offer, `gfx_cpc.c` synthesises
+Anything the library does not natively offer, `gfx_cpctel.c` synthesises
 on top, but the more the library provides the smaller the backend.
 
 ### 3.5 Wiring into the build
@@ -624,7 +762,7 @@ on top, but the more the library provides the smaller the backend.
   added by toolchain.md Phase T0; see [cpc-renderer.md §4.2](cpc-renderer.md)
   for the exact glob list).
 - `tools/datagen.pl` — emit
-  `BUILD_FEATURE_GFX_BACKEND_CPC` when the `.gdata` selects `cpc`.
+  `BUILD_FEATURE_GFX_BACKEND_CPCTEL` when the `.gdata` selects `cpctel`.
 - **Platform / backend selection rule**: the `gfx_*` backend is one
   axis (SP1, JSP, CPC). The *target machine* is another (ZX48, ZX128,
   CPC464, CPC6128 — CPC664 runs the cpc464 binary; covered by
@@ -636,8 +774,11 @@ on top, but the more the library provides the smaller the backend.
 
 - That CPC has pens vs Spectrum's INK. Once `gfx_attr_t` is in place
   the engine is colour-agnostic.
-- The CPC video memory layout (mode-1 4-bit pixels packed two-per-byte
-  with an interleaved scan-line order, etc.). The backend hides it.
+- The CPC video memory layout (mode-1 2-bit pixels packed
+  four-per-byte, mode-0 4-bit pixels packed two-per-byte, with
+  interleaved scan-line order driven by the CRTC, etc.). The backend
+  hides it.
+
 - Whether the renderer library is cpctelera or anything else.
 
 ---
@@ -724,10 +865,12 @@ but mechanical and low-risk.
 
 ### Phase G3 — Attribute & border abstraction
 
-Goal: get colour values out of engine code as raw Spectrum constants.
+Goal: get colour values out of engine code as raw Spectrum constants,
+so the same engine source compiles unchanged on CPC where the attr
+layer is inert (per §1.2 obs 4 / §2.1 two-layer model).
 
-- **G3-1** Introduce `gfx_attr_t` typedef in all three (well, two —
-  CPC not landed yet) backend headers.
+- **G3-1** Introduce `gfx_attr_t` typedef in the ZX backend headers
+  (CPC backend lands its own in Phase G7).
   - What: add `typedef uint8_t gfx_attr_t;` to `gfx_sp1.h` and
     `gfx_jsp.h`. Migrate any function signature that takes an
     attribute byte: `gfx_init(uint8_t,uint8_t)` →
@@ -736,17 +879,19 @@ Goal: get colour values out of engine code as raw Spectrum constants.
     typedef is `uint8_t` so the binary is unchanged.
   - Test: all builds + regression green.
 - **G3-2** Introduce `GFX_ATTR(ink, paper, bright, flash)` and
-  `GFX_DEFAULT_BG_ATTR` in backend headers.
+  `GFX_DEFAULT_BG_ATTR` in ZX backend headers.
   - What: define the macro in `gfx_sp1.h` and `gfx_jsp.h` (both expand
     to the standard packed byte). Update `gfx.c:18` to use
-    `GFX_DEFAULT_BG_ATTR`.
+    `GFX_DEFAULT_BG_ATTR`. The CPC backend (Phase G7) will define both
+    to expand to `0` (inert).
   - Test: builds green; binary unchanged.
 - **G3-3** Migrate every engine call site away from raw `INK_*` /
   `PAPER_*` / `DEFAULT_BG_ATTR` to `GFX_ATTR()` or named `GFX_ATTR_*`
   constants. Sites listed in §1.2 item 5.
   - What: substitute. Each substitution is one or two lines.
   - Test: regression green at the end. Mid-task ZX visuals unchanged.
-- **G3-4** Introduce `gfx_set_border( gfx_attr_t )`.
+- **G3-4** Introduce `gfx_set_border( gfx_attr_t )`. This is the
+  documented exception where `color` IS consumed on CPC (per §2.7).
   - What: add to `gfx_sp1.h` (wraps `zx_border`), `gfx_jsp.h`
     (likewise). Replace the two `zx_border()` calls inside backends'
     `gfx_init` with `gfx_set_border()`. Replace the calls inside
@@ -764,7 +909,11 @@ Goal: enable CPC's 320-pixel horizontal range without breaking ZX
 binaries.
 
 - **G4-1** Introduce `gfx_xpos_t` / `gfx_ypos_t` typedefs in backend
-  headers; default `uint8_t` on ZX backends.
+  headers: `uint8_t` on ZX48/ZX128 backends (256×192 fits a byte; ZX
+  builds avoid 16-bit cost), `uint16_t` on CPC backends (320×200 in
+  mode 1, wider in mode 0/2) and on future ZX Next layer-2 backends
+  (320×256). ZX backends must internally use only the lower byte and
+  short-circuit codegen accordingly (compile-time specialisation).
 - **G4-2** Update `gfx_sprite_move_pixel` declaration in `gfx.h:70`
   (no — the signature is currently in the macro mappings; lift it to
   a real declaration if needed for type-checking).
@@ -812,9 +961,17 @@ Goal: lift hard-coded 32×24 / OFF_SCREEN_ROW=24 out of engine code.
 - **G5-3** Confirm `tools/datagen.pl` still emits the right area
   rectangles — `game_area`, `lives_area`, etc. come from `.gdata` and
   should not be affected; only the engine-side fallbacks change.
+- **G5-4** Introduce `gfx_sprite_park(gfx_sprite_t *s)` as a
+  first-class HAL entrypoint (resolves Q5). Each backend hard-codes
+  its own parking row (`OFF_SCREEN_ROW` becomes backend-internal):
+  SP1/JSP row 24, CPC mode-1 row 25, future ZX Next layer-2 row 32.
+  Replace every `sprite_move_offscreen` callsite and every direct
+  `OFF_SCREEN_ROW` reference in engine code with `gfx_sprite_park(s)`.
 - **Phase-exit criteria**:
   - `grep -rn '\b32\b\|\b24\b' engine/include engine/src` — manually
     verify remaining literals are not screen-geometry.
+  - `grep -rn 'OFF_SCREEN_ROW' engine/include engine/src` returns
+    empty (the constant is now backend-internal).
   - ZX regression green.
 
 ### Phase G6 — Tile / glyph abstraction
@@ -837,13 +994,13 @@ Goal: dispel the polysemic `uint16_t` tile parameter.
 Goal: prove the integration shape works with a no-op CPC backend
 target. **Still no real CPC rendering**; this is the framing.
 
-- **G7-1** Add `engine/include/rage1/gfx_cpc.h` providing the full
+- **G7-1** Add `engine/include/rage1/gfx_cpctel.h` providing the full
   contract (typedefs, constants, macros — all stubbed). Macros may
   expand to empty `do{}while(0)` or to a `cpc_*` symbol that resolves
   to a no-op extern.
-- **G7-2** Add `engine/src/gfx_cpc.c` with `gfx_init`,
+- **G7-2** Add `engine/src/gfx_cpctel.c` with `gfx_init`,
   `gfx_sprite_create`, `gfx_sprite_set_color` as stubs guarded by
-  `#ifdef BUILD_FEATURE_GFX_BACKEND_CPC`.
+  `#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL`.
 - **G7-3** Add `cpc` as a recognised value to `tools/datagen.pl` and
   to `Makefile.common`'s `BUILD_GFX_BACKEND` matcher. Build target
   may not link yet (no actual library) but the C source must compile.
@@ -880,7 +1037,7 @@ This is where the CPC renderer library lands as live engine code.
   include path and source glob of the active `Makefile-cpc-flat`
   (or `-banked`). No new vendoring at this phase; G8 consumes what
   T0/R1 already shipped.
-- **G8-2** Implement `gfx_cpc.c` real bodies on top of the library.
+- **G8-2** Implement `gfx_cpctel.c` real bodies on top of the library.
 - **G8-3** Build a CPC target: `make build target_game=games/minimal
   GFX_BACKEND=cpc PLATFORM=cpc6128` (exact knob names defined in
   `toolchain.md`). Output: a CDT or DSK image.
@@ -948,23 +1105,34 @@ surfaced.
   platform. Verify generated assembler size before/after.
 
 - **R4 — Tile-ID polysemy on CPC.**  
-  *Impact*: `gfx_tile_put` accepts both 0-255 (charset index) and
-  ≥256 (UDG pointer). On CPC the backend has to translate the
-  pointer to a cached pixel block — costly per-call.  
-  *Mitigation*: CPC backend builds a tile-pointer → cache-slot map
-  at `gfx_tile_register` time (when ZX would store a UDG pointer,
-  the CPC backend stores a converted pixel block) and at run time
-  does a hash-or-direct-array lookup. Falls into the asset pipeline
-  (assets.md) for the conversion proper; here we just acknowledge
-  the lookup cost.
+  *Impact*: `gfx_tile_put` accepts both `0..255` (mono glyph index)
+  and ≥256 (pointer to pre-converted multi-colour bytes). On CPC
+  each flavour takes a different path inside the backend (see §2.3).  
+  *Mitigation*: discrimination is by value range — small ID dispatches
+  to a direct array lookup of the cached mode-1 block produced from
+  the registered mono UDG bytes (CPC backend bit-expands 1bpp → 2bpp
+  at register-time); pointer ≥256 dispatches to consuming the
+  pre-converted CPC-native bytes emitted by the asset pipeline
+  (`assets.md`). Per-call cost is one branch on `tile < 256` plus the
+  selected path. No hash-table lookup required — the asset pipeline
+  pre-allocates the cache slots and bakes the right pointer/ID values
+  into BTile definitions at build time.
 
 - **R5 — Banked-code accidentally calls `gfx_*`.**  
-  *Impact*: Today no banked TU touches `gfx_*` (verified §1.3). If a
-  future feature adds such a call from banked memory the bank-switch
-  semantics break.  
+  *Impact*: Today no banked TU touches `gfx_*` (verified §1.3). On
+  ZX128 this is a **hardware constraint** — SP1 data lives in the
+  `0xC000` bank-switched slot, so banked code paging that slot
+  cannot safely call `gfx_*` (see §1.3 "Notable absences"). On CPC
+  it is a **portability convention** — CPC's independent paging
+  windows make the placement legal in principle, but the engine
+  keeps the same discipline by default to preserve cross-platform
+  parity.  
   *Mitigation*: keep banked TUs free of `gfx_*` includes; add a
   CI grep guard: `grep -r 'gfx_' engine/banked_code/` must return
-  empty.
+  empty. The guard enforces the portability rule uniformly; if the
+  CPC build later relaxes the rule for a specific case
+  (`banking.md` / `cpc-renderer.md` decision), the guard's scope
+  narrows accordingly.
 
 - **R6 — `gfx_*` macros that perform raw struct-field writes.**  
   *Impact*: `gfx_print_set_clip(ctx, rect)` writes `ctx->bounds` on
@@ -1011,72 +1179,96 @@ surfaced.
 These need user resolution before or during execution. Numbered for
 cross-reference from the parent plan.
 
-- **Q1 — Glyph vs tile register entrypoint.**  
-  Do we keep one `gfx_tile_register` for both text glyphs and BTile
-  cells, or split into `gfx_glyph_register` (text, ID 0-255) and
-  `gfx_tile_register` (background, may exceed 255)? Default answer:
-  one entrypoint, CPC backend partitions internally. Confirm before
-  G6.
+- **Q1 — Glyph vs tile register entrypoint.** RESOLVED: one entrypoint
+  (`gfx_tile_register`). **BTile cells are ALWAYS 16-bit pointers,
+  never small IDs.** The form of the `tile` argument to `gfx_tile_put`
+  (1-byte ID vs 16-bit pointer) is itself the discriminator: small ID
+  → registered mono glyph; pointer ≥256 → pre-converted bitmap from
+  the asset pipeline. CPC backend partitions accordingly with no API
+  change. See §2.3 for the two-flavour contract.
 
-- **Q2 — `gfx_attr_t` storage width.**  
-  Stay `uint8_t` on all platforms (including CPC), or let CPC widen
-  to `uint16_t` for pen+paper+effects in one value? Default: `uint8_t`
-  everywhere if CPC's encoding fits; switch to `uint16_t` *only* if
-  the CPC backend genuinely needs it. Decide during G3.
 
-- **Q3 — Backwards-compat window for `SPRITE_ENGINE` keyword.**  
-  How long do we accept the old `.gdata` keyword as an alias? One
-  release? Until G7? Permanently? Default suggestion: one full
-  release after G2 exit, then remove. Confirm.
+- **Q2 — `gfx_attr_t` storage width.** RESOLVED: `uint8_t` on every
+  platform. The two-layer model (§1.2 obs 4 / §2.1) makes the type
+  inert on CPC — there is no encoding to widen. ZX keeps the
+  Spectrum attribute byte semantics; CPC discards the value
+  (`(void) attr;`) except for the single-pen `gfx_set_border`
+  exception (§2.7) where it's interpreted as a CPC pen index, which
+  also fits in a byte.
 
-- **Q4 — BTile geometry generalisation ownership.**  
-  BTile data (in `.gdata`) is currently authored for a 32×24 screen
-  with 8×8 cells. On CPC mode 1 (40×25) a "minimal" game's screen
-  doesn't fit the same canvas. Does the asset pipeline auto-extend
-  the screen-data lines, or does the per-platform overlay supply
-  CPC-shaped BTile data? **Owned by `assets.md`** but flagged here
-  because it affects whether `gfx_*` ever sees out-of-range cell
-  coordinates. The HAL contract should *not* attempt to render
-  out-of-screen cells; engine-side clipping (already done via
-  `box`/`clip` rects) handles this.
+- **Q3 — Backwards-compat window for `SPRITE_ENGINE` keyword.**
+  RESOLVED: **indefinite**. `SPRITE_ENGINE` stays accepted forever as
+  a `.gdata` alias for `GFX_BACKEND`; `datagen.pl` maps it silently;
+  `BUILD_FEATURE_SPRITE_ENGINE_*` macros stay emitted alongside the
+  new `BUILD_FEATURE_GFX_BACKEND_*` ones. No removal scheduled. Per
+  the project-wide policy "backwards compatibility is indefinite" —
+  there are external games already using RAGE1 and the project does
+  not require their migration.
 
-- **Q5 — Off-screen sprite parking strategy.**  
-  Today `sprite_move_offscreen` uses `OFF_SCREEN_ROW = 24` (one row
-  beyond ZX's 24-row playfield). On CPC the equivalent is row 25 or
-  beyond. Should the HAL expose `gfx_sprite_park(s)` as a dedicated
-  entrypoint, removing the need for engine code to know off-screen
-  coordinates at all? JSP already does internal parking
-  (`engine/src/gfx_jsp.c:51,55`). Recommendation: add
-  `gfx_sprite_park` as a first-class API in G5. Confirm.
 
-- **Q6 — Border colour API.**  
-  Confirm `gfx_set_border( gfx_attr_t )` is the right shape. Some
-  games may want border-cycle effects (raster bars on ZX, CPC split-
-  raster equivalents). Default: API is single-shot border set;
-  per-platform "raster bar" support is *not* part of `gfx_*` and goes
-  through user-game custom code. Confirm.
+- **Q4 — BTile geometry generalisation ownership.** RESOLVED:
+  per-platform overlays. Two patterns are supported: (1) same 32×24
+  layout on both ZX and CPC (CPC uses a 32×24 subset of its 40×25
+  screen; no overlay needed); (2) different layouts per platform,
+  with the CPC variant living in `<cpc-platform>/game_data/` per the
+  standard overlay mechanism (assets.md §2.1, README.md §5.3). No
+  auto-extension; the game author opts in to per-platform layouts by
+  supplying an overlay. HAL contract unchanged: `gfx_*` never renders
+  out-of-screen cells; engine-side clipping (`box`/`clip` rects)
+  handles bounds on both platforms.
 
-- **Q7 — Multi-mode CPC.**  
-  CPC has modes 0 (160×200, 16 colours), 1 (320×200, 4 colours), 2
-  (640×200, 2 colours). Mode 1 is the obvious match for a ZX
-  8×8-cell engine. Do we plan for mode-0 or mode-2 games on CPC at
-  all? Default: **mode 1 only** in Phase 1; mode-0 / mode-2 are open
-  research, would require their own `gfx_cpc_*` variants. Confirm.
 
-- **Q8 — MSX / C64 placeholder.**  
-  Per the parent task, MSX and C64 are sketch-only. The HAL design
-  here generalises cleanly to MSX VDP screen modes (tile-based, no
-  attribute byte but per-row colour table for screen 1; per-tile
-  pattern + colour for screen 2). For C64 it does *not* generalise
-  to bitmap mode without significant rework, and the 6502 toolchain
-  is a separate axis. Is any HAL choice here disqualifying for
-  either? Best-effort answer: no, but C64 will need a different
-  backend file pattern (no z88dk).
+- **Q5 — Off-screen sprite parking strategy.** RESOLVED: add
+  `gfx_sprite_park(gfx_sprite_t *s)` as a first-class HAL entrypoint
+  in Phase G5. Each backend parks at its own row, kept entirely
+  backend-internal: SP1/JSP row 24, CPC mode-1 row 25, ZX Next
+  layer-2 row 32 (future) — generally "one row beyond the visible
+  cell-row count". Engine code drops all `OFF_SCREEN_ROW` and
+  hard-coded row-24 references.
 
-- **Q9 — Pixel coordinate widening default.**  
-  The §2.2 strategy commits to **parallel typedef per platform**
-  (ZX stays `uint8_t`, CPC widens to `uint16_t`). Q9 is recorded
-  here only as the explicit decision point — if a future review
-  prefers a uniform `uint16_t` everywhere (simpler code, marginal
-  ZX cost), revisit §2.2 + Phase G4 scope accordingly. Default
-  stands unless contested.
+
+- **Q6 — Border colour API.** RESOLVED:
+  `gfx_set_border(gfx_attr_t color)` is the HAL entrypoint —
+  single-shot border set. The argument is interpreted per-platform:
+  ZX = Spectrum colour 0..7; CPC = pen index in the current palette.
+  This is the documented exception to the "attr is ignored on CPC"
+  rule (§1.2 obs 4) — the border has to land somewhere on CPC, so
+  the value is consumed here. See §2.7 for the backend wrappers.
+  Raster-bar / split-raster effects are NOT part of the HAL; games
+  that want them implement platform-specific custom code.
+
+
+- **Q7 — Multi-mode CPC.** RESOLVED for Phase 1: **mode 1 only**.
+  Modes 0 (160×200, 16 colours) and 2 (640×200, 2 colours) are
+  deferred, but the HAL is explicitly designed to accommodate them
+  later without API change: the two-layer model (§1.2 obs 4 / §2.1)
+  makes the bitmap layer opaque to the engine, so future modes are
+  a backend-internal mode-parameter concern; cell-quantum (8×8
+  platform-pixels) and pixel-coord widening (G4: `uint16_t` on CPC)
+  already work for all three modes (mode 0 grid = 20×25, mode 1 =
+  40×25, mode 2 = 80×25; mode-2's 640-wide max x fits in uint16_t).
+  When a future phase adds modes 0/2, the backend grows a mode
+  parameter at init time — no separate `gfx_cpctel_modeN_*` variants
+  required. Per-mode asset emission is owned by `assets.md`
+  (converter takes a mode param); per-mode palette setup is owned
+  by `cpc-renderer.md`.
+
+
+- **Q8 — MSX option.** RESOLVED: MSX is kept as an open future
+  option (Z80 + VDP, tile-based, fits the 8×8-cell model — the HAL
+  generalises cleanly to MSX VDP screen 1/2 without rework). Phase 1
+  does not add MSX, but every HAL choice in this doc must stay
+  MSX-friendly. **C64 is OUT OF SCOPE** for this project entirely —
+  its 6502 architecture and sprite+bitmap graphics model would
+  require a separate porting project, not a backend within this
+  design.
+
+
+- **Q9 — Pixel coordinate widening default.** RESOLVED: per-platform
+  typedef. `gfx_xpos_t` / `gfx_ypos_t` = `uint8_t` on ZX48/ZX128
+  (256×192 fits a byte), `uint16_t` on CPC (320×200 or larger) and
+  on future ZX Next layer-2 (320×256). Chosen for efficiency — ZX
+  builds avoid paying 16-bit arithmetic cost for an always-zero
+  high byte. Engine code uses the typedefs uniformly; the only ABI
+  break to engine code is the typedef widening on CPC/Next.
+
