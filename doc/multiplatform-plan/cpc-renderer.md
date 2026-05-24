@@ -11,7 +11,7 @@ It sits inside the wider multi-platform plan:
 - The HAL surface that this backend implements (`gfx_*` API, including any
   audit changes to remove ZX assumptions) is owned by `gfx.md`. This
   document only assumes such a surface exists and that the CPC backend
-  file is `gfx_cpc.c` (paralleling the existing `engine/src/gfx_sp1.c` and
+  file is `gfx_cpctel.c` (paralleling the existing `engine/src/gfx_sp1.c` and
   `engine/src/gfx_jsp.c`).
 - The general asset pipeline (shared `.gdata` core, per-platform overlays,
   `datagen.pl` / `mapgen.pl` / `btilegen.pl` changes) is owned by
@@ -199,21 +199,21 @@ Three serious candidates plus one quick disqualification.
 
 ### 1.3 Comparison summary
 
-| Property | cpctelera | CPCRSlib | z88dk +cpc | Crocolib |
-|---|---|---|---|---|
-| Sprite blits (masked / unmasked / blended) | yes, multiple variants | yes (asm) | basic only | yes |
-| Easy tilemaps | yes (`cpct_etm_*`) | yes | no | yes |
-| AY music + SFX (Arkos) | yes | partial | no | yes |
-| Keyboard scan | yes (fast) | yes | yes | yes |
-| Asset converters (PNG → tileset/sprite) | yes (`cpct_img2*`) | no | no | partial |
-| CDT / DSK packaging | yes (bundled iDSK + 2cdt) | no | yes (`appmake`) | via z88dk |
-| C / asm split | 86% / 14% | 6% / 93% | mixed | C-heavy |
-| Implementation language fit (C-leaning) | best | worst | good | good |
-| Licence | LGPL-3.0 | MIT | BSD-ish | unclear |
-| Latest activity (as of 2026-05) | May 2026 master fix; active `development` | low | very active | very low |
-| Community size | moderate (250+ stars) | small | large (z88dk) | tiny |
-| Documentation | extensive reference manual | sparse | moderate (wiki) | sparse, French |
-| Build-system collision risk | high (own Makefile template) | low | low (we already use it) | medium |
+| Property                                   | cpctelera                                 | CPCRSlib  | z88dk +cpc              | Crocolib       |
+|--------------------------------------------|-------------------------------------------|-----------|-------------------------|----------------|
+| Sprite blits (masked / unmasked / blended) | yes, multiple variants                    | yes (asm) | basic only              | yes            |
+| Easy tilemaps                              | yes (`cpct_etm_*`)                        | yes       | no                      | yes            |
+| AY music + SFX (Arkos)                     | yes                                       | partial   | no                      | yes            |
+| Keyboard scan                              | yes (fast)                                | yes       | yes                     | yes            |
+| Asset converters (PNG → tileset/sprite)    | yes (`cpct_img2*`)                        | no        | no                      | partial        |
+| CDT / DSK packaging                        | yes (bundled iDSK + 2cdt)                 | no        | yes (`appmake`)         | via z88dk      |
+| C / asm split                              | 86% / 14%                                 | 6% / 93%  | mixed                   | C-heavy        |
+| Implementation language fit (C-leaning)    | best                                      | worst     | good                    | good           |
+| Licence                                    | LGPL-3.0                                  | MIT       | BSD-ish                 | unclear        |
+| Latest activity (as of 2026-05)            | May 2026 master fix; active `development` | low       | very active             | very low       |
+| Community size                             | moderate (250+ stars)                     | small     | large (z88dk)           | tiny           |
+| Documentation                              | extensive reference manual                | sparse    | moderate (wiki)         | sparse, French |
+| Build-system collision risk                | high (own Makefile template)              | low       | low (we already use it) | medium         |
 
 ---
 
@@ -231,7 +231,7 @@ Specifically:
    `cpctelera/cpctelera/src/**/*.{c,s,asm,c.s}` with z88dk's `zcc +cpc`,
    the same way `Makefile.common:127-134` already does for JSP.
 3. Map RAGE1's `gfx_*` HAL to cpctelera primitives via a new file
-   `engine/src/gfx_cpc.c` + header `engine/include/rage1/gfx_cpc.h`.
+   `engine/src/gfx_cpctel.c` + header `engine/include/rage1/gfx_cpctel.h`.
 4. Drive cpctelera's asset converters (`cpct_img2tileset`,
    `cpct_img2sprites`) as subprocesses from RAGE1's CPC-side asset
    pipeline.
@@ -365,13 +365,24 @@ permission.)
    do **not** vendor `cpctelera/tools/` — see section 4.1 — so this
    does not enter our distribution. Documenting that omission is part
    of the integration plan.
-2. **Bundled Arkos player**. Arkos Tracker's player code (under
-   `cpctelera/src/audio/`) is LGPL-3.0 along with the rest of the
-   cpctelera src tree, but has additional attribution requirements
-   ("Music done with Arkos Tracker by Targhan/Arkos"). To be confirmed
-   during phase R1: we read the in-tree licence headers and add the
-   required notice in `doc/credits.md` (or equivalent). This is owned
-   by `audio.md` overall.
+2. **Arkos attribution (cross-platform).** RAGE1 already vendors its
+   own copy of the Arkos AT2 AKG player for ZX AY music. The CPC
+   audio backend reuses that integration: Arkos supports CPC
+   natively via a CPC-flavoured player `.asm` variant (CPC's AY is
+   reached via the i8255 PPI on ports `0xF400-0xF7FF` rather than
+   the ZX 128 direct-port wiring at `0xFFFD/0xBFFD`), and the
+   AKG-format music data itself is platform-agnostic. We therefore
+   do **not** vendor or compile cpctelera's bundled Arkos player
+   under `cpctelera/src/audio/`. The Arkos attribution requirement
+   ("Music done with Arkos Tracker by Targhan/Arkos") applies
+   because we use Arkos at all, and is satisfied by a single notice
+   in `doc/credits.md` (or equivalent) covering both ZX and CPC use.
+   Owned by `audio.md`; R1 should explicitly verify that the
+   existing RAGE1 Arkos player retargets to the CPC AY-via-PPI
+   wiring without pulling in cpctelera's audio sources. Fall-back
+   (only if the retarget proves expensive): use cpctelera's bundled
+   Arkos player and absorb the additional vendoring.
+
 3. **Asset-converter executables** (`cpct_img2tileset` etc. and the
    underlying Img2CPC binary): if we ship pre-built binaries we must
    ship their LICENSE files too. Simpler: require the developer/CI to
@@ -760,16 +771,16 @@ and runs on a CPC emulator. If this fails, the whole plan changes.
     arrays.
   - ZX builds still green.
 
-### Phase R4 — gfx_cpc.c skeleton + minimal CPC test game
+### Phase R4 — gfx_cpctel.c skeleton + minimal CPC test game
 
-- **R4-1** Create `engine/include/rage1/gfx_cpc.h` and
-  `engine/src/gfx_cpc.c`, mapping the audited `gfx_*` HAL onto
+- **R4-1** Create `engine/include/rage1/gfx_cpctel.h` and
+  `engine/src/gfx_cpctel.c`, mapping the audited `gfx_*` HAL onto
   cpctelera primitives.
   - *What to change*: two new files; `Makefile-cpc-flat` /
     `Makefile-cpc-banked` select them instead of `gfx_sp1.c` /
     `gfx_jsp.c`.
   - *What to test*: file compiles, no link errors.
-- **R4-2** Add a `BUILD_FEATURE_GFX_BACKEND_CPC` (or whatever the
+- **R4-2** Add a `BUILD_FEATURE_GFX_BACKEND_CPCTEL` (or whatever the
   `gfx.md` audit decides on) macro family so the right backend is
   selected per platform target.
 - **R4-3** Create a `games/minimal_cpc/` (or `tests/minimal_cpc/`)
@@ -858,44 +869,45 @@ and runs on a CPC emulator. If this fails, the whole plan changes.
 
 ## 8. Open Questions
 
-- **OQ-1**. Which CPC pixel mode is RAGE1's default — Mode 0 (160×200,
-  16 colours, 4 bpp) or Mode 1 (320×200, 4 colours, 2 bpp)? This
-  affects sprite encoding choices, asset converter flags, and tile
-  cell size in `gfx.md`'s HAL audit. Recommend: **Mode 1** as default
-  because its 320×200 pixel grid maps reasonably onto ZX's 256×192
-  and its 4-colour palette is the most useful CPC default for tile-
-  based action games. Mode 0 deferred to a per-game opt-in.
-- **OQ-2**. Do we pin a commit on cpctelera's `development` branch
-  or on `master`? Both branches are dormant in absolute terms
-  (master: 3-year gap then one commit; development: last touched
-  Nov 2025). Recommend: a **specific commit on `development`**,
-  because that branch carries the bulk of post-1.4.2 work and the
-  `v1.5/dev` marker. Branch choice matters less than commit choice
-  since we pin a SHA either way; the open decision is which SHA.
-- **OQ-3**. Do we want cpctelera's Arkos audio in RAGE1, or do we
-  pick a different AY player? Decision belongs to `audio.md`. If
-  yes, the audio submodule is "free" via cpctelera; if no, we
-  exclude `external/cpctelera/cpctelera/src/audio/` from the source
-  glob.
-- **OQ-4**. Do we want cpctelera's keyboard scan, or stick to
-  `appmake`'s/our own? Decision belongs to `input.md`. cpctelera's
-  scan is fast and well-tested; default expectation is yes.
-- **OQ-5**. Do we use cpctelera's `iDSK` + `2cdt` or z88dk's
-  `appmake`? Decision belongs to `toolchain.md`. Recommendation
-  here: **`appmake`** for consistency, unless it lacks a feature we
-  need.
-- **OQ-6**. Confirm cpctelera's expected `--org` address (CPC
-  default user-code area is typically **0x4000** after the BASIC
-  HIMEM-managed region; **0xC000** is screen RAM and therefore not
-  a code-org candidate) and how it interacts with RAGE1's memory
-  map and banking model (see `banking.md`). To be answered in R2:
-  build the PoC with the default ORG and inspect; cross-check
-  against the chosen RAGE1 CPC memory map.
-- **OQ-7**. Is there value in maintaining a thin compatibility shim
-  so a future contributor can swap cpctelera for CPCRSlib (or vice
-  versa) at the HAL-backend level? Tentative answer: **no** — the
-  HAL is already that shim. Backend swap is "fork `gfx_cpc.c` to
-  `gfx_cpc_rslib.c`", not a runtime concern.
+- **OQ-1** ✅ — Default CPC pixel mode. **RESOLVED (2026-05-25)**:
+  **Mode 1** in Phase 1. Mirrors the gfx.md Q7 resolution (the
+  two-layer model from README §5.5 keeps modes 0/2 open as a
+  backend-internal mode parameter for a future phase, with no HAL
+  change). Mode 0 / Mode 2 are deferred; cross-link:
+  [gfx.md Q7](gfx.md), [README §5.5](README.md).
+- **OQ-2** ✅ — cpctelera pin branch. **RESOLVED (2026-05-25)**:
+  pin a **specific commit on `development`**. That branch carries
+  the bulk of post-1.4.2 work and the `v1.5/dev` marker; the precise
+  SHA is chosen during Phase R1 verification.
+- **OQ-3** ✅ — cpctelera Arkos vs RAGE1's own. **RESOLVED
+  (2026-05-25)**: **reuse RAGE1's existing Arkos integration** on
+  CPC (Arkos supports CPC natively via its CPC-flavoured player
+  `.asm` variant; AKG music data is platform-agnostic). Do NOT
+  vendor cpctelera's `cpctelera/src/audio/` — exclude it from the
+  source glob. R1 verifies the retarget is cheap; if it isn't, the
+  fall-back is cpctelera's bundled Arkos. See §4 Caveats item 2.
+  Owned by `audio.md`.
+- **OQ-4** — cpctelera keyboard scan vs our own. **Provisional
+  (2026-05-25)**: lean towards **cpctelera's** scan (fast and
+  well-tested). Final decision belongs to `input.md`.
+- **OQ-5** ✅ — DSK/CDT packaging. **RESOLVED (2026-05-25)**: use
+  z88dk's **`appmake`** for consistency (CDT via `2cdt` as a small
+  external tool per toolchain.md; DSK native via
+  `appmake +cpc -subtype=disk`). Avoids the cpctelera `iDSK` /
+  `2cdt` integration. Cross-link: [toolchain.md §4.2](toolchain.md).
+- **OQ-6** — cpctelera `--org` address vs RAGE1 memory map.
+  Deferred to `banking.md` (the CPC memory map decision lives there;
+  the `--org` is a downstream consequence). R2 PoC builds with
+  cpctelera's default ORG and inspects; the final value is
+  cross-checked against the banking.md CPC memory map.
+- **OQ-7** ✅ — Compatibility shim for swapping cpctelera ↔
+  CPCRSlib. **RESOLVED (2026-05-25)**: **no shim**. The HAL is
+  already that abstraction. A future CPCRSlib backend is a new
+  first-class backend named per the README §5.4 naming rule —
+  `cpcrs`, sources at `engine/{include/rage1,src}/gfx_cpcrs.{h,c}`,
+  feature macro `BUILD_FEATURE_GFX_BACKEND_CPCRS` — selected at
+  build time via `GFX_BACKEND`. Not a runtime concern, not a shim
+  problem.
 
 ---
 
