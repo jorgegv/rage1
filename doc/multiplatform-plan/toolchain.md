@@ -14,8 +14,12 @@ The plan respects the architectural anchors set in the task spec:
 - CPC backend wraps a vendored CPC graphics library (selected in
   `cpc-renderer.md`); toolchain.md must accommodate whichever library is chosen
   but does not itself choose it.
-- The `PLATFORM` variable, not piecemeal `ZX_TARGET`/`SPRITE_ENGINE` flags,
-  becomes the single entry point of the build matrix.
+- `PLATFORM` replaces the ad-hoc `ZX_TARGET` dispatch as the **primary
+  axis** of the build matrix. The secondary axis, `GFX_BACKEND` (renamed
+  from `SPRITE_ENGINE`), selects the sprite/graphics library *within* a
+  platform — today `sp1`/`jsp` on ZX and `cpctel` (cpctelera) on CPC,
+  with room for alternate CPC libs (e.g. `cpcrs` for cpcrslib) added
+  later under the same axis.
 
 ---
 
@@ -65,20 +69,20 @@ through the `zcc` driver and `z88dk-appmake`. Key configuration:
 **Baked-in ZX assumptions in the build system** (audit summary; each is a
 later refactor target):
 
-| Location | Assumption |
-| --- | --- |
-| `Makefile.common:121` | `ZCC_TARGET = +zx` |
-| `Makefile.common:214` | screen.tap built with `z88dk-appmake +zx --org 16384` |
-| `Makefile-48:61,81,90` | every appmake call uses `+zx`, plus 48K orgs `0x5E00`/`0x5F00` |
-| `Makefile-128:121,123,173,178,183` | every appmake call uses `+zx`, plus orgs `0xC000`, `0x8000`, `BASE_CODE_ADDRESS_128` |
-| `engine/loader48/loader.bas`, `engine/loader128/loader.bas` | Sinclair BASIC (`CLEAR`, `LOAD ""`, `RANDOMIZE USR`) |
-| every `game_src/sub_*/Makefile` | `zcc +zx`, `z88dk-appmake +zx` |
-| `tools/datagen.pl` (search `getopts "b:d:ct:s:"` ≈line 4363; validation ≈line 768-772) | `-t` option restricted to `48`/`128` only |
-| `tools/loadertool.pl:33-34` | hard-coded `loader_org_48 = 0x5E00`, `loader_org_128 = 0x8000` |
-| `Makefile-128:51` | `memory_switch_bank` named as a ZX-specific lowmem symbol |
-| `Makefile.common:206-214` | loading-SCREEN$ pipeline uses ZX SCR format (6912 bytes) via `tools/png2scr.pl` |
-| `Makefile-128:13` | hard-coded `MYMAKE -j8` (cosmetic; not portable issue) |
-| `Makefile.common:233-247` | run targets use `fuse` (ZX) and `jnext` (ZXN) only |
+| Location                                                                               | Assumption                                                                           |
+|----------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
+| `Makefile.common:121`                                                                  | `ZCC_TARGET = +zx`                                                                   |
+| `Makefile.common:214`                                                                  | screen.tap built with `z88dk-appmake +zx --org 16384`                                |
+| `Makefile-48:61,81,90`                                                                 | every appmake call uses `+zx`, plus 48K orgs `0x5E00`/`0x5F00`                       |
+| `Makefile-128:121,123,173,178,183`                                                     | every appmake call uses `+zx`, plus orgs `0xC000`, `0x8000`, `BASE_CODE_ADDRESS_128` |
+| `engine/loader48/loader.bas`, `engine/loader128/loader.bas`                            | Sinclair BASIC (`CLEAR`, `LOAD ""`, `RANDOMIZE USR`)                                 |
+| every `game_src/sub_*/Makefile`                                                        | `zcc +zx`, `z88dk-appmake +zx`                                                       |
+| `tools/datagen.pl` (search `getopts "b:d:ct:s:"` ≈line 4363; validation ≈line 768-772) | `-t` option restricted to `48`/`128` only                                            |
+| `tools/loadertool.pl:33-34`                                                            | hard-coded `loader_org_48 = 0x5E00`, `loader_org_128 = 0x8000`                       |
+| `Makefile-128:51`                                                                      | `memory_switch_bank` named as a ZX-specific lowmem symbol                            |
+| `Makefile.common:206-214`                                                              | loading-SCREEN$ pipeline uses ZX SCR format (6912 bytes) via `tools/png2scr.pl`      |
+| `Makefile-128:13`                                                                      | hard-coded `MYMAKE -j8` (cosmetic; not portable issue)                               |
+| `Makefile.common:233-247`                                                              | run targets use `fuse` (ZX) and `jnext` (ZXN) only                                   |
 
 The `+zx` and Sinclair-loader hard-coding is consistent and pervasive but
 **isolated to the toolchain layer** (Makefiles plus a small number of Perl
@@ -218,12 +222,19 @@ z88dk-appmake source):
 - Default `CRT_ORG_CODE` is `0x1200`; overrideable with `-zorg=` or
   `-pragma-define:CRT_ORG_CODE=...` — identical mechanism to the ZX 128K
   build (`Makefile-128:21`).
-- Banking on CPC6128 is supported via `#pragma bank NN` (`NN` 0..7).
-  Banked applications are emittable in both CAS and DSK formats per the
-  z88dk wiki. This is the *same* `#pragma bank` mechanism used in z88dk
-  for ZX128, with different numbers. (How RAGE1's dataset/codeset/SUB
-  emission maps onto this is `banking.md`'s problem; from the toolchain
-  side, the linker accepts the same pragma family.)
+- Banking on CPC6128 is supported via z88dk's `#pragma bank NN` (`NN`
+  0..7), with banked applications emittable in both CAS and DSK formats
+  per the z88dk wiki. z88dk exposes the same `#pragma bank` family for
+  ZX128 (different numbers). **However, RAGE1 does not currently use
+  z88dk's `#pragma bank` mechanism** — it has its own banking
+  implementation: custom dataset/codeset/SUB emission, `banktool.pl`
+  page-policy lists, and a hand-rolled asmloader (emitted by
+  `loadertool.pl`) that does the bank switching directly. Whether to
+  keep RAGE1's own banking model and extend it to CPC, or migrate both
+  sides to z88dk's `#pragma bank`, is a decision owed by `banking.md`
+  (tracked here as OQ-T11). From the toolchain side either path is
+  feasible; this doc accommodates whichever banking.md picks.
+
 - Output packaging: `z88dk-appmake +cpc` produces:
   - **AMSDOS-headed `.cpc` binary** (default `-create-app`),
   - **`.dsk` disk image** (subtype `disk`),
@@ -307,12 +318,12 @@ The chosen architecture is therefore:
                   -clib=sdcc_iy                      -clib=sdcc_iy
                        │                                  │
    engine/src  ────────┤                                  ├──── engine/src
-   gfx_sp1 ───────────┤    one shared C corpus           │
-   gfx_jsp ───────────┤    + per-platform backends ───────┤───── gfx_cpc
-   external/jsp/lib ──┘                                  └──── external/cpctelera/lib
+    gfx_sp1 ───────────┤    one shared C corpus           │
+    gfx_jsp ───────────┤    + per-platform backends ──────┤───── gfx_cpctel
+    external/jsp/lib ──┘                                  └──── external/cpctelera/lib
 
       ↓ link                                                  ↓ link
-      ↓                                                        ↓
+      ↓                                                       ↓
    main.bin (+ bank N TAPs, sub TAPs, dataset/codeset)    main.bin (+ banks)
       ↓ z88dk-appmake +zx                                     ↓ z88dk-appmake +cpc
    game.tap                                                .cpc / .dsk / .cdt
@@ -328,12 +339,12 @@ The chosen architecture is therefore:
 Introduce a single new top-level variable, **`PLATFORM`**, with these
 allowed values:
 
-| `PLATFORM` value | Meaning | z88dk target | Memory model |
-| --- | --- | --- | --- |
-| `zx48` | ZX Spectrum 48K | `+zx` | flat 48K, no banking |
-| `zx128` | ZX Spectrum 128K | `+zx` | banked (datasets, codesets, SUBs) |
-| `cpc464` | Amstrad CPC 464 (also runs on CPC664) | `+cpc` | flat 64K, no banking |
-| `cpc6128` | Amstrad CPC 6128 | `+cpc` | banked (CPC ext-RAM model) |
+| `PLATFORM` value | Meaning                               | z88dk target | Memory model                      |
+|------------------|---------------------------------------|--------------|-----------------------------------|
+| `zx48`           | ZX Spectrum 48K                       | `+zx`        | flat 48K, no banking              |
+| `zx128`          | ZX Spectrum 128K                      | `+zx`        | banked (datasets, codesets, SUBs) |
+| `cpc464`         | Amstrad CPC 464 (also runs on CPC664) | `+cpc`       | flat 64K, no banking              |
+| `cpc6128`        | Amstrad CPC 6128                      | `+cpc`       | banked (CPC ext-RAM model)        |
 
 **CPC664 is not a separate `PLATFORM` value.** CPC464 and CPC664 share
 the same 64K memory model and the same screen hardware; they differ
@@ -349,12 +360,12 @@ own `Makefile-cpc-banked` and `zpragma-cpc-banked.inc`.
 - `ZX_TARGET` remains a *.gdata* field name (backwards-compatible) but
   is reinterpreted as one component of the platform tuple, mapped:
 
-  | game_config field | PLATFORM derivation |
-  | --- | --- |
-  | `ZX_TARGET 48` | `PLATFORM=zx48` |
-  | `ZX_TARGET 128` | `PLATFORM=zx128` |
-  | `PLATFORM cpc464` | `PLATFORM=cpc464` (new direct field; also covers CPC664) |
-  | `PLATFORM cpc6128` | `PLATFORM=cpc6128` (new direct field) |
+  | game_config field  | PLATFORM derivation                                      |
+  |--------------------|----------------------------------------------------------|
+  | `ZX_TARGET 48`     | `PLATFORM=zx48`                                          |
+  | `ZX_TARGET 128`    | `PLATFORM=zx128`                                         |
+  | `PLATFORM cpc464`  | `PLATFORM=cpc464` (new direct field; also covers CPC664) |
+  | `PLATFORM cpc6128` | `PLATFORM=cpc6128` (new direct field)                    |
 
   **Two-axis spelling.** Phase 1 has 4 build-time platform identities
   (`zx48 | zx128 | cpc464 | cpc6128`), all on the *machine-identity
@@ -397,18 +408,20 @@ own `Makefile-cpc-banked` and `zpragma-cpc-banked.inc`.
 Rename `SPRITE_ENGINE` → **`GFX_BACKEND`** at the Makefile/.gdata level
 (see also `gfx.md`). Default still `sp1`. Allowed values per platform:
 
-| PLATFORM | Default `GFX_BACKEND` | Allowed |
-| --- | --- | --- |
-| `zx48` | `sp1` | `sp1`, `jsp` |
-| `zx128` | `sp1` | `sp1`, `jsp` |
-| `cpc464` | `cpc` | `cpc` (others if added later) |
-| `cpc6128` | `cpc` | `cpc` |
+| PLATFORM  | Default `GFX_BACKEND` | Allowed                                   |
+|-----------|-----------------------|-------------------------------------------|
+| `zx48`    | `sp1`                 | `sp1`, `jsp`                              |
+| `zx128`   | `sp1`                 | `sp1`, `jsp`                              |
+| `cpc464`  | `cpctel`              | `cpctel` (future: `cpcrs`, other CPC libs)|
+| `cpc6128` | `cpctel`              | `cpctel` (future: `cpcrs`, other CPC libs)|
 
-The `cpc` backend value names the **backend identity**, not the
-underlying library — cpctelera is the library that the `cpc`
-backend wraps (see [cpc-renderer.md](cpc-renderer.md)). Engine code
-gates with `#ifdef BUILD_FEATURE_GFX_BACKEND_CPC`, matching
-`gfx.md`'s usage.
+**Backend naming rule**: a `GFX_BACKEND` value is the **short name of
+the underlying library**, never a generic platform tag. ZX backends
+follow this today (`sp1`, `jsp`); CPC backends do the same — `cpctel`
+for cpctelera, `cpcrs` reserved for cpcrslib, `cpc<lib>` for any other
+CPC graphics library added later. Engine code gates with
+`#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL` (and parallel macros for
+future entrants), matching `gfx.md`'s usage.
 
 `SPRITE_ENGINE` (old name) remains accepted at the `.gdata` level as an
 alias for `GFX_BACKEND` for one release cycle. The Makefile-side
@@ -553,9 +566,9 @@ Unchanged in shape, just renamed. Pipeline:
 loader.bas ─┐
             ├─ bas2tap ─→ loader.tap ─┐
 asmloader.asm ─ zcc → asmloader.bin ─→ +zx appmake → asmloader.tap ─┤
-main.bin   ─ +zx appmake (--org MAIN_ORG) ─→ main.tap              ├─ cat → game.tap
-bank_N.bin ─ +zx appmake (--org 0xC000)   ─→ bank_N.tap            │
-sub_N.bin  ─ +zx appmake (--org 0x0000)   ─→ sub_N.tap             ┘
+main.bin   ─ +zx appmake (--org MAIN_ORG) ─-> main.tap              ├─ cat → game.tap
+bank_N.bin ─ +zx appmake (--org 0xC000)   ─-> bank_N.tap            │
+sub_N.bin  ─ +zx appmake (--org 0x0000)   ─-> sub_N.tap             ┘
 ```
 
 ### 4.2 Amstrad CPC
@@ -566,9 +579,9 @@ Pipeline (logical equivalent):
 loader.bas ─ Locomotive BASIC source in engine/loader-cpc/
            ─ converted with `tools/bas2cpc.pl` (new, small) ────┐
                                                                 ├─ z88dk-appmake +cpc ─→ game.cpc
-asmloader.asm ─ zcc +cpc → asmloader.bin                       │   (AMSDOS file)
-main.bin      ─ zcc +cpc (--no-crt) → main.bin                 │
-bank_N.bin    ─ zcc +cpc (--no-crt, --org as per banking.md)   ┘
+asmloader.asm ─ zcc +cpc -> asmloader.bin                       │   (AMSDOS file)
+main.bin      ─ zcc +cpc (--no-crt) -> main.bin                 │
+bank_N.bin    ─ zcc +cpc (--no-crt, --org as per banking.md)    ┘
                                                                 ├─ z88dk-appmake +cpc -subtype=disk ─→ game.dsk
                                                                 │
                                                                 └─ 2cdt ─→ game.cdt
@@ -595,19 +608,28 @@ Three deltas from the ZX pipeline:
      CI image.
 3. **Loader semantics**: the asmloader's job (load each block into the
    right bank, JP into code) requires different firmware calls on CPC.
-   `tools/loadertool.pl` learns a `--platform=cpc-flat|cpc-banked` option
-   and emits an alternate template. The two templates live at
+   `tools/loadertool.pl` is refactored in Phase T1 (see T1-11) into a
+   uniform **template-driven** engine: each platform owns an
+   `asmloader.asm.in` template under
+   `engine/loader-<platform>/`, and the tool loads the template,
+   substitutes placeholders, and writes `asmloader.asm`. CPC bring-up
+   then **adds two more templates** rather than introducing a new
+   mechanism. The four templates that exist after Phase T3 are:
+   `engine/loader-zx48/asmloader.asm.in`,
+   `engine/loader-zx128/asmloader.asm.in`,
    `engine/loader-cpc-flat/asmloader.asm.in` and
-   `engine/loader-cpc-banked/asmloader.asm.in`. Detailed design in
-   `cpc-renderer.md` / `banking.md`.
+   `engine/loader-cpc-banked/asmloader.asm.in`. `loadertool.pl` carries
+   no platform-specific inline loader text. The CPC template bodies
+   themselves are designed in `cpc-renderer.md` / `banking.md`.
+
 
 ### 4.3 Loader stack
 
-| Platform | BASIC loader source | Tokenisation | Boot mechanism |
-| --- | --- | --- | --- |
-| zx48 / zx128 | `engine/loader-zx{48,128}/loader.bas` (Sinclair) | `bas2tap` | `RANDOMIZE USR <addr>` |
+| Platform             | BASIC loader source                                                                                                                 | Tokenisation                | Boot mechanism         |
+|----------------------|-------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|------------------------|
+| zx48 / zx128         | `engine/loader-zx{48,128}/loader.bas` (Sinclair)                                                                                    | `bas2tap`                   | `RANDOMIZE USR <addr>` |
 | cpc464 (also CPC664) | none (boot via AMSDOS-headed `.cpc` — CPC464 via tape, CPC664 via either) — or trivial Locomotive `MEMORY` + `LOAD` + `CALL` script | (none) or pre-assembled asm | AMSDOS `RUN"FILE.CPC"` |
-| cpc6128 | small Locomotive script that sets up memory and `CALL`s asmloader, or pure asmloader entry | same | AMSDOS `RUN"FILE.CPC"` |
+| cpc6128              | small Locomotive script that sets up memory and `CALL`s asmloader, or pure asmloader entry                                          | same                        | AMSDOS `RUN"FILE.CPC"` |
 
 The directory rename `engine/loader{48,128}/` → `engine/loader-zx{48,128}/`
 happens as part of Phase T1 (introducing PLATFORM symmetry); new dirs
@@ -761,11 +783,27 @@ phase; correctness is verified by all-green ZX tests at phase exit.
   for `zx48`/`zx128` the behaviour is identical to today (default
   values match). *Test*: `make all-test-builds`. *Done*: option in
   place, default unchanged.
+- **T1-11** Refactor `tools/loadertool.pl` into a uniform
+  **template-driven** engine: the tool loads
+  `engine/loader-<platform>/asmloader.asm.in`, substitutes
+  placeholders, and writes `asmloader.asm`. Extract the current inline
+  ZX48 and ZX128 loader bodies into
+  `engine/loader-zx48/asmloader.asm.in` and
+  `engine/loader-zx128/asmloader.asm.in` respectively. The tool must
+  carry no platform-specific inline loader text — all loader bodies
+  live in the templates. *Test*: `make all-test-builds` green;
+  `tests/00regression/` screenshot tests green for ZX games; emitted
+  `asmloader.asm` is byte-identical (or functionally equivalent) to
+  the pre-refactor output. *Done*: ZX loaders driven by templates, no
+  inline loader text remains in `loadertool.pl`, CPC bring-up in T2/T3
+  becomes "add new template" rather than "introduce new mechanism".
 - **Phase-exit criteria**:
   - `make all-test-builds` green.
   - `tests/00regression/` screenshot tests green for ZX games.
   - No literal `+zx` outside the per-platform Makefile files.
   - `Makefile.common` references `ZCC_TARGET` only, never `+zx`.
+  - `loadertool.pl` contains no platform-specific inline loader text;
+    all loader bodies live in `engine/loader-<platform>/asmloader.asm.in`.
 
 ### Phase T2 — CPC464/664 bring-up (cpc-flat, no banking)
 
@@ -988,7 +1026,7 @@ stages.
 - **OQ-T4** — Which CPC graphics library is vendored? toolchain.md
   assumes cpctelera (or equivalent) but the decision lives in
   `cpc-renderer.md`. A non-cpctelera choice (e.g. CPCRSlib, or a
-  minimal hand-rolled `gfx_cpc` library) changes Phase T0's spike
+  minimal hand-rolled `gfx_<libname>` library) changes Phase T0's spike
   target and Phase T2's CRT pragma but not the build-matrix design.
 - **OQ-T5** — How are CPC test-game artifacts validated in CI? The
   current ZX path uses FUSE for `make run` and JNEXT for screenshots
@@ -1015,3 +1053,12 @@ stages.
   game-side `make build-cpc6128` shortcut, or do they always go
   through `make build` with `.gdata`-declared `PLATFORM`? Plan
   currently assumes the latter (less surface). Confirm before T2.
+- **OQ-T11** — Does RAGE1 keep its own custom banking implementation
+  and extend it to CPC (datagen/banktool/loadertool learn CPC bank
+  numbers + paging ports; z88dk `#pragma bank` not used on either
+  side), or migrate ZX128 to z88dk's `#pragma bank` model first and
+  then reuse the same mechanism on CPC6128 (one banking strategy
+  across both platforms, smaller toolchain surface)? Owned by
+  `banking.md`; toolchain.md accommodates either choice. The §2.1
+  `#pragma bank` discussion notes both alternatives. Resolution
+  required before Phase T3.
