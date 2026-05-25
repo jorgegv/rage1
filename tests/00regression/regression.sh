@@ -117,11 +117,16 @@ for test_name in "${ALL_TESTS[@]}"; do
     diff_img="$test_dir/diff.png"
 
     # Reset and source per-test config
-    TARGET_GAME=""; MACHINE=""; DELAY_FRAMES=""; EXTRA_ARGS=""
+    TARGET_GAME=""; MACHINE=""; DELAY_FRAMES=""; EXTRA_ARGS=""; SKIP_REGRESSION=""
     # shellcheck disable=SC1090
     source "$conf"
 
     printf "  %-25s " "[$test_name]"
+
+    if [[ "$SKIP_REGRESSION" == "true" ]]; then
+        echo -e "${YELLOW}SKIP${RESET} (SKIP_REGRESSION=true in test.conf)"
+        continue
+    fi
 
     if [[ -z "$TARGET_GAME" || -z "$MACHINE" || -z "$DELAY_FRAMES" ]]; then
         echo -e "${RED}FAIL${RESET} (test.conf missing TARGET_GAME/MACHINE/DELAY_FRAMES)"

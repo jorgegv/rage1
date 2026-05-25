@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help
+.PHONY: data all build clean clean-config data_depend build-data help regression
 
 help:
 	echo "============================================================"
@@ -155,3 +155,19 @@ all-test-builds:
 		echo "All tests succeeded"; \
 		exit 0; \
 	fi
+
+###############################################
+##
+## SCREENSHOT REGRESSION
+##
+###############################################
+
+# Run the JNEXT-driven screenshot regression suite over every game under
+# tests/00regression/. Each <game>/test.conf is built (clean + make build
+# target_game=...) and compared against its checked-in reference.png.
+#
+# See tests/00regression/README.md for prerequisites (JNEXT binary, SD-card
+# image, ImageMagick `compare`) and for the workflow to add or refresh
+# baselines.
+regression:
+	bash tests/00regression/regression.sh

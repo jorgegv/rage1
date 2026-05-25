@@ -8,7 +8,7 @@ against a checked-in baseline.
 ## Quick start
 
 ```bash
-# Run the full suite
+# Run the full suite (also exposed as `make regression` from the repo root)
 bash tests/00regression/regression.sh
 
 # Run only specific tests
@@ -40,7 +40,12 @@ TARGET_GAME=games/minimal     # arg to `make build target_game=...`
 MACHINE=48k                   # 48k | 128k | next
 DELAY_FRAMES=300              # emulated frames before screenshot
 EXTRA_ARGS=""                 # optional JNEXT flags
+SKIP_REGRESSION=true          # optional: skip the comparison (see below)
 ```
+
+`SKIP_REGRESSION=true` makes the runner skip the test entirely (no build, no
+emulator run, no comparison). Use it for games that have no deterministic
+post-boot frame yet — see "Non-deterministic baselines" below.
 
 ## Requirements
 
@@ -59,8 +64,83 @@ EXTRA_ARGS=""                 # optional JNEXT flags
 2. Write `tests/00regression/<name>/test.conf`
 3. `bash tests/00regression/regression.sh --update <name>`
 4. **Inspect `tests/00regression/<name>/reference.png` visually** — make
-   sure it shows the game in the expected state
-5. Commit `test.conf` + `reference.png` together
+   sure it shows the game in the expected state (not `LOAD ""`, not a
+   tape-loading screen, not a mid-animation frame). If the capture is
+   wrong, tune `DELAY_FRAMES` (or add a `--delayed-keypress-frames N KEY`
+   to `EXTRA_ARGS` — see "Driving past a key wait" below) and re-run
+   `--update`.
+5. Re-run `bash tests/00regression/regression.sh <name>` (without
+   `--update`) to confirm the new baseline reproduces against itself
+   bit-for-bit (0 px diff).
+6. Commit `test.conf` + `reference.png` together, one game per commit.
+
+### Driving past a key wait
+
+RAGE1 games configured with `LOADING_SCREEN ... WAIT_ANY_KEY=1` halt on the
+loading-screen image until a key is pressed. The screenshot will sit on the
+loading screen forever otherwise. Inject a keypress with JNEXT's
+`--delayed-keypress-frames`:
+
+```bash
+EXTRA_ARGS="--delayed-keypress-frames 700 SPACE"
+DELAY_FRAMES=1000
+```
+
+The keypress at frame 700 dismisses the loading screen on 128k builds; the
+screenshot at frame 1000 captures the controller-select / first-screen state.
+Tune the two numbers up if the game needs more time after the keypress, down
+if it animates quickly past the desired frame.
+
+### Non-deterministic baselines
+
+Some games may not have any stable post-boot frame — e.g. a continuously
+animated intro that never settles into a quiet state, or a state that
+depends on uninitialised memory. For these, do **not** check in a baseline
+that flakes. Instead, mark the test as skipped:
+
+```bash
+# tests/00regression/<name>/test.conf
+# SKIP: <name> intro animates from frame 1; no quiet frame to baseline.
+# Revisit once the intro has a deterministic settle point.
+TARGET_GAME=games/<name>
+MACHINE=128k
+DELAY_FRAMES=1000
+SKIP_REGRESSION=true
+```
+
+Always include a comment explaining **why** the test is skipped. Skip is
+not an outage — it is a documented decision that the regression suite
+should not assert on this game today. Audit `SKIP_REGRESSION` entries
+periodically and convert them to real baselines as soon as the game grows
+a settle point.
+
+## When to update baselines
+
+Update an existing `reference.png` only when the visual change is
+**intentional**:
+
+- A renderer/engine change deliberately alters output (new palette,
+  new tile layout, bug fix that corrects a glyph, etc.).
+- A game's `.gdata` was edited and the new content is the canonical
+  rendering.
+- A toolchain bump (z88dk, SDCC, JSP, SP1) produces a different but
+  still-correct pixel layout, and the change has been reviewed and
+  approved.
+
+To update:
+
+```bash
+bash tests/00regression/regression.sh --update <name>
+```
+
+Then **eyeball the new `reference.png` against the old one** (e.g. with
+`compare old.png new.png diff.png` or by reviewing the diff on the PR).
+Commit the new baseline in the same commit as the code/data change that
+caused the diff, with a message that explains the visual delta.
+
+Do **not** update baselines to mask a regression: if a test starts failing
+and you don't understand why, the answer is to investigate, not to
+re-capture.
 
 ## How DELAY_FRAMES works
 
