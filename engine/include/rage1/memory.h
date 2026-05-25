@@ -33,6 +33,10 @@ void init_memory(void);
     // etc/rage1-config.yml.
     #ifdef BUILD_FEATURE_PLATFORM_ZX128
         #define ENGINE_CODE_MEMORY_BANK		4
+        // base address of the bank-switched 16K window where the engine
+        // banked-function table lives. Mirrors banking.zx128.swap_window
+        // in etc/rage1-config.yml.
+        #define BANKED_FUNCTION_TABLE_BASE	0xC000
     #endif
 
     // function type definitions

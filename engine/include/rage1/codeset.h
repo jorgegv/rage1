@@ -49,6 +49,14 @@ struct codeset_assets_s {
 // mapped
 extern struct codeset_assets_s *codeset_assets;
 
+// B1-5: base address at which a bank-switched codeset is mapped. The
+// codeset_assets_s struct always lives at the very start of a codeset
+// bank, so this is also the value assigned to codeset_assets at init
+// time. Mirrors banking.<platform>.swap_window in etc/rage1-config.yml.
+#ifdef BUILD_FEATURE_PLATFORM_ZX128
+    #define CODESET_ASSETS_BASE		0xC000
+#endif
+
 ///////////////////////////////////////////////////////////
 //
 // Definitions for Global Data that goes into low memory
