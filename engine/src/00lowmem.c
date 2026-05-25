@@ -21,7 +21,7 @@
 // trampoline function to call banked functions
 void memory_call_banked_function( uint8_t function_id ) {
     // pointer to table of functions in bank
-    banked_function_t *run_function = (banked_function_t *) 0xC000;
+    banked_function_t *run_function = (banked_function_t *) BANKED_FUNCTION_TABLE_BASE;
 
     uint8_t previous_memory_bank;
 
@@ -38,7 +38,7 @@ void memory_call_banked_function( uint8_t function_id ) {
 
 void memory_call_banked_function_a16( uint8_t function_id, uint16_t arg ) {
     // pointer to table of functions in bank
-    banked_function_a16_t *run_function = (banked_function_a16_t *) 0xC000;
+    banked_function_a16_t *run_function = (banked_function_a16_t *) BANKED_FUNCTION_TABLE_BASE;
 
     uint8_t previous_memory_bank;
 
@@ -57,7 +57,7 @@ uint8_t memory_call_banked_function_a16_a8_r8( uint8_t function_id, uint16_t arg
 
 
     // pointer to table of functions in bank
-    banked_function_a16_a8_r8_t *run_function = (banked_function_a16_a8_r8_t *) 0xC000;
+    banked_function_a16_a8_r8_t *run_function = (banked_function_a16_a8_r8_t *) BANKED_FUNCTION_TABLE_BASE;
 
     uint8_t previous_memory_bank;
     uint8_t retval;

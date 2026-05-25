@@ -542,7 +542,7 @@ Example `GAME_CONFIG` definition:
 ```
 BEGIN_GAME_CONFIG
         NAME            TestGame
-	ZX_TARGET	48
+	PLATFORM	zx48
 	LOADING_SCREEN	PNG=loadscreen.png WAIT_ANY_KEY=1
 	CUSTOM_CHARSET	FILE=character_data.ch8 RANGE=32-90
         SCREEN          INITIAL=1
@@ -575,8 +575,17 @@ END_GAME_CONFIG
 
 * `NAME`: the name of the game (Imagine :-)
 
-* `ZX_TARGET`: set this to `48` or `128` to compile in those modes. `128`
-  mode includes automatic memory banking of assets.
+* `PLATFORM`: set this to `zx48` or `zx128` to compile for those ZX Spectrum
+  models. `zx128` mode includes automatic memory banking of assets. This is
+  the preferred multiplatform directive (added in the cross-platform
+  refactor); accepted values will be extended in later phases (Phase A5
+  introduces CPC values).
+
+* `ZX_TARGET`: **permanent silent alias** for `PLATFORM` — accepts `48` or
+  `128` and maps internally to `PLATFORM zx48` / `PLATFORM zx128`. Kept
+  forever (per cross-platform plan README §5.6) so external games and
+  existing tooling that still spell the directive `ZX_TARGET` continue to
+  build without any warning. New games should prefer `PLATFORM`.
 
 * `LOADING_SCREEN`: allows to specify a 256x192 PNG/SCR image which will be used
   as a loading screen. One of `PNG` or `SCR` is mandatory, and only one can

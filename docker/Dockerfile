@@ -2,6 +2,13 @@
 #   $ docker build -t rage1-z88dk -f rage1-z88dk.Dockerfile .
 # To run the container:
 #   $ docker run -v ${PWD}:/src/ -it rage1-z88dk <command>
+#
+# Phase T0 (cross-platform plan) additions:
+#   - gcc / gcc-c++: needed to build cpctelera's bundled host tools
+#     (2cdt, iDSK, hex2bin, dskgen, img2cpc) under external/cpctelera/
+#     on demand from the submodule. No system-wide install of cpctelera.
+#   - The cpctelera submodule itself is brought in via the workspace
+#     checkout (CI uses `submodules: recursive`); no clone happens here.
 
 FROM fedora:latest
 
@@ -14,7 +21,8 @@ RUN \
 	dnf install -y git perl perl-Data-Compare perl-List-MoreUtils perl-File-Copy perl-GD perl-YAML m4 make \
 	bison flex libxml2-devel boost-devel texinfo perl-Template-Toolkit perl-App-cpanminus gmp-devel ragel re2c ccache \
 	dos2unix curl diffutils perl-Algorithm-FastPermute perl-local-lib perl-Digest-SHA1 \
-	&& cpanm -l $HOME/perl5 --no-wget Template::Plugin::YAML 
+	gcc gcc-c++ \
+	&& cpanm -l $HOME/perl5 --no-wget Template::Plugin::YAML
 
 RUN \
 	git clone --recursive https://github.com/z88dk/z88dk.git ${Z88DK_PATH} \
