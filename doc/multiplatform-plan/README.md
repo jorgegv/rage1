@@ -110,8 +110,15 @@ build-side concerns); then `banking.md` (memory maps that everyone
 plugs into); then `audio.md`, `input.md` in either order; then
 `testing.md` last (it tests everything else).
 
-For a graphical view of phase dependencies (master Gantt + per-phase
-Gantts + cross-subsystem DAG + critical path), see [gantt.md](gantt.md).
+Execution-tracking artefacts live under
+[management/](management/):
+
+- [management/00tasklist.md](management/00tasklist.md) — flat
+  checkbox view of the 56 phases (the file to tick as work
+  completes).
+- [management/gantt.md](management/gantt.md) — graphical view of
+  phase dependencies (master Gantt + per-phase Gantts + cross-
+  subsystem DAG + critical path).
 
 ## 4. Cross-cutting phase sequence
 

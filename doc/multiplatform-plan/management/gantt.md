@@ -1,6 +1,6 @@
 # RAGE1 cross-platform plan — Gantt / dependency charts
 
-Graphical companion to [README §4](README.md). The 54 subsystem
+Graphical companion to [README §4](../README.md). The 56 subsystem
 phases are grouped into 6 chronological **top-level phases**
 (Phase 1 … Phase 6). Durations on every chart below are uniform
 placeholders — the load-bearing content is **dependency topology**
@@ -11,13 +11,13 @@ and **phase ordering**, not calendar time.
 | **Phase 1** | Foundation (preparation) | 4 | no | n/a (no engine changes) |
 | **Phase 2** | HAL & asset scaffolding (ZX-only, additive) | 10 | no | yes |
 | **Phase 3** | HAL generalisation | 10 | no | yes |
-| **Phase 4** | CPC bring-up (flat first, then banked) | 19 | yes | yes (ZX track preserved) |
+| **Phase 4** | CPC bring-up (flat first, then banked) | 18 | yes | yes (ZX track preserved) |
 | **Phase 5** | Hardening + CI matrix expansion | 7 | yes | yes |
 | **Phase 6** | Cleanup | 7 | yes | yes |
 
 ---
 
-## 1. Master Gantt — all subsystems, all 54 phases
+## 1. Master Gantt — all subsystems, all 56 phases
 
 Swim lanes are subsystems. Horizontal position is determined by
 `after` dependencies — top-level phases appear as visible vertical
@@ -206,7 +206,7 @@ proceeds unless they succeed.
 - **T0** — z88dk `+cpc` + sdcc_iy + a trivial cpctelera build,
   outside RAGE1. If T0 fails, the entire toolchain story is
   unsound; the plan returns to library survey
-  ([cpc-renderer.md](cpc-renderer.md)).
+  ([cpc-renderer.md](../cpc-renderer.md)).
 - **R2** — cpctelera-SDCC-3.6.8-vs-z88dk-SDCC-4.3 hello-world.
   Most CPC work is gated on R2 succeeding; fallback is the
   cpc-renderer.md alternatives survey (CPCRSlib).
@@ -428,7 +428,7 @@ CI for ZX deterministic builds.
 ### 3.6 Phase 6 — Cleanup
 
 Phase 6 is documentation, polishing, and stub retirement. Per
-[README §5.6](README.md), **no user-visible surfaces are removed**
+[README §5.6](../README.md), **no user-visible surfaces are removed**
 — old `.gdata` keywords, Makefile aliases, and forwarding stubs
 stay accepted indefinitely. Phase 6 is mostly docs and the merge of
 `games/minimal_cpc` back into `games/minimal`.
