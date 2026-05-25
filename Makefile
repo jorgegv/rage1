@@ -56,13 +56,23 @@ config:
 	cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
 	$(MYMAKE) show	# shows game name and build configuration
 
-# build: starts a build of the 'default' game in the mode specified in the game config
+# A1-4: resolve target platform from the game's .gdata.
+#   - PLATFORM directive (preferred): zx48 / zx128 (maps to 48 / 128 internally)
+#   - ZX_TARGET directive (permanent silent alias per README §5.6): 48 / 128
+# A1-6: tools/detect-platform.sh layers the platform-selection rule
+# (CLI override > declared default; rejection if resolved platform has
+# no overlay) on top of the same lookup, and prints the internal
+# ZX_TARGET token on success.
+_RESOLVED_ZX_TARGET	= $(shell ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM) 2>/dev/null)
+_DETECT_PLATFORM_RC	= $(shell ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM) >/dev/null 2>&1; echo $$?)
+
+# build: starts a build of the target game in the mode specified in the game config
 build:
-	if [ -z "$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}')" ]; then echo "** Error: ZX_TARGET must be configured in the game if using default build"; exit 1; fi
+	if [ "$(_DETECT_PLATFORM_RC)" != "0" ]; then ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM); exit 1; fi
 	$(MYMAKE) clean
-	$(MYMAKE) ZX_TARGET=$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') config
-	$(MYMAKE) ZX_TARGET=$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') data
-	$(MYMAKE) -f Makefile-$(shell grep -E 'ZX_TARGET.+(48|128)$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null|head -1|awk '{print $$2}') build
+	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) config
+	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) data
+	$(MYMAKE) -f Makefile-$(_RESOLVED_ZX_TARGET) build
 
 # forced config build for 48 mode
 build48:

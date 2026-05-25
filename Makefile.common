@@ -102,8 +102,14 @@ ISR_VECTOR_ADDRESS_128	= $(shell perl -MYAML -e \
 # Final game TAP
 FINAL_TAP		= game.tap
 
-# the default zx target matches the one in datagen.pl when no target is defined
-ZX_TARGET		= $(shell grep -E 'ZX_TARGET.+(48|128)$$' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|grep -vP '^\s*//'|head -1|awk '{print $$2}')
+# A1-4: read PLATFORM from game .gdata (preferred); fall back to legacy
+# ZX_TARGET (permanent silent alias per README §5.6). The PLATFORM
+# directive carries 'zx48' / 'zx128'; we map back to the legacy
+# 48 / 128 internal token so the Makefile-48 / Makefile-128 selection
+# (and every other ZX_TARGET-keyed lookup downstream) keeps working.
+_PLATFORM_RAW		= $(shell grep -E '^\s*PLATFORM\s+(zx48|zx128)\s*$$' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|grep -vP '^\s*//'|head -1|awk '{print $$2}')
+_ZXTARGET_RAW		= $(shell grep -E '^\s*ZX_TARGET\s+(48|128)\s*$$' $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null|grep -vP '^\s*//'|head -1|awk '{print $$2}')
+ZX_TARGET		= $(if $(_PLATFORM_RAW),$(if $(filter zx48,$(_PLATFORM_RAW)),48,128),$(_ZXTARGET_RAW))
 
 # the TAP for the loading SCREEN$ if the game is configured for it
 LOADING_SCREEN_TAP	= $(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_data/game_config/*.gdata && echo "screen.tap")
