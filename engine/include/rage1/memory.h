@@ -37,6 +37,11 @@ void init_memory(void);
         // banked-function table lives. Mirrors banking.zx128.swap_window
         // in etc/rage1-config.yml.
         #define BANKED_FUNCTION_TABLE_BASE	0xC000
+        // base address from which a dataset is read when its bank is
+        // paged into the swap window. Same physical window as the
+        // banked-function table; named separately so dataset code reads
+        // semantically (it loads a dataset, not a function table).
+        #define DATASET_LOAD_BASE		0xC000
     #endif
 
     // function type definitions
