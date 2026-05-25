@@ -1,4 +1,42 @@
 ##
+## Banking configuration (per-platform)
+##
+## Phase B1 of the cross-platform plan externalises the banking constants
+## that the build tools and the engine used to hard-code. New platforms
+## (e.g. CPC) add their own sub-key under `banking:`; ZX 128 keeps its
+## historic values verbatim.
+##
+## Fields (per platform):
+##   dataset_valid_banks
+##     Ordered list of physical RAM banks where datasets may be placed.
+##     The order encodes the storage preference used by `banktool.pl`
+##     when laying out datasets (first entry tried first). For ZX 128
+##     the contended banks come first so non-contended banks remain
+##     available for code that benefits from no-wait-state access.
+##   codeset_valid_banks
+##     Ordered list of physical RAM banks where codesets may be placed.
+##     Same ordering semantics as `dataset_valid_banks` but inverted:
+##     non-contended banks come first because codesets execute code and
+##     benefit most from being uncontended.
+##   engine_code_memory_bank
+##     RAM bank that holds the engine's banked-function table and the
+##     engine banked code. Switched in at `swap_window` whenever the
+##     trampolines in `engine/src/00lowmem.c` are entered. Must NOT
+##     appear in `codeset_valid_banks` (codesets use a different bank).
+##   swap_window
+##     Z80 address at which the bank-switched 16K window appears. For
+##     ZX 128 this is 0xC000 (the upper 16K page). The banked-function
+##     table and the codeset_assets_s struct are both anchored at this
+##     address.
+##
+banking:
+  zx128:
+    dataset_valid_banks:    [ 1, 3, 7, 6, 4 ]
+    codeset_valid_banks:    [ 6, 1, 3, 7 ]
+    engine_code_memory_bank: 4
+    swap_window:             0xC000
+
+##
 ## build configuration
 ##
 build:

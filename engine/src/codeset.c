@@ -35,7 +35,7 @@ void init_codesets( void ) {
     // Setup codeset_assets pointer.  The codeset assets struct is always
     // placed at the beginning of the codeset memory bank, which is mapped
     // at 0xC000
-    codeset_assets = ( struct codeset_assets_s *) 0xC000;
+    codeset_assets = ( struct codeset_assets_s *) CODESET_ASSETS_BASE;
 
     // call init functions for all codesets
     for ( i = 0; i < NUM_CODESETS; i++ ) {

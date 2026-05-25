@@ -17,17 +17,25 @@ use Data::Dumper;
 use Getopt::Std;
 use Algorithm::FastPermute qw( permute );
 
-# The following two lists show the preference for storing elements in them. 
+use FindBin qw( $Bin );
+use lib "$Bin/../lib";
+require RAGE::Config;
+
+# The following two lists show the preference for storing elements in them.
 # Data/code is stored in each bank starting by the first one on the relevant
-# list
+# list.
+#
+# As of B1-2 the values are sourced from etc/rage1-config.yml under
+# banking.<platform>.{dataset_valid_banks,codeset_valid_banks}; the literal
+# arrays below remain as a fallback (with a deprecation warning) for
+# backwards compatibility if the YAML section is missing.
 
-# banks allowed for codesets. All allowed, but non-contended are listed first
-my @codeset_valid_banks = ( 6, 1, 3, 7 );
+# fallback values (used if the YAML banking section is missing)
+my @fallback_codeset_valid_banks = ( 6, 1, 3, 7 );
+my @fallback_dataset_valid_banks = ( 1, 3, 7, 6, 4 );
 
-# banks allowed for datasets. All allowed, but contended are listed first
-my @dataset_valid_banks = ( 1, 3, 7, 6, 4 );
-
-my $num_available_banks = scalar( @dataset_valid_banks );
+# the actual lists, populated from YAML in the main block below
+my ( @codeset_valid_banks, @dataset_valid_banks );
 
 my $max_bank_size = 16384;
 
@@ -46,14 +54,34 @@ my $basic_loader_name = 'loader.bas';
 ##
 
 # parse command options
-our( $opt_i, $opt_o, $opt_b, $opt_s, $opt_l, $opt_c );
-getopts("i:o:s:l:c:");
+our( $opt_i, $opt_o, $opt_b, $opt_s, $opt_l, $opt_c, $opt_p );
+getopts("i:o:s:l:c:p:");
 ( defined( $opt_i ) and defined( $opt_o ) and defined( $opt_c ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -c <codeset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-l <lowmem_output_dir>]\n";
+    die "usage: $0 -i <dataset_bin_dir> -c <codeset_bin_dir> -o <output_dir> -s <bank_switcher_binary> [-l <lowmem_output_dir>] [-p <platform>]\n";
 
 # if $lowmem_output_dir is not specified, use same as $output_dir
 my ( $input_dir_ds, $input_dir_cs, $output_dir, $lowmem_output_dir ) = ( $opt_i, $opt_c, $opt_o, $opt_l || $opt_o );
 my $bank_switcher_binary = $opt_s;
+
+# platform defaults to zx128 (B1-2: only ZX 128 banking config exists today)
+my $platform = $opt_p // 'zx128';
+
+# load banking config from etc/rage1-config.yml; fall back to legacy
+# hard-coded values with a deprecation warning if the section is missing.
+{
+    my $cfg = rage1_get_config();
+    my $bank_cfg = $cfg->{'banking'}{ $platform };
+    if ( defined( $bank_cfg )
+            and defined( $bank_cfg->{'dataset_valid_banks'} )
+            and defined( $bank_cfg->{'codeset_valid_banks'} ) ) {
+        @dataset_valid_banks = @{ $bank_cfg->{'dataset_valid_banks'} };
+        @codeset_valid_banks = @{ $bank_cfg->{'codeset_valid_banks'} };
+    } else {
+        warn "** banktool.pl: banking.$platform missing from rage1-config.yml; using deprecated hard-coded fallback (will be removed in a future release)\n";
+        @dataset_valid_banks = @fallback_dataset_valid_banks;
+        @codeset_valid_banks = @fallback_codeset_valid_banks;
+    }
+}
 
 # gather datasets
 # datasets are files under build/generated/datasets/ with names dataset_N.bin

@@ -20,11 +20,35 @@ use lib "$Bin/../lib";
 require RAGE::Config;
 require RAGE::BuildFeatures;
 
+use Getopt::Std;
 use Data::Dumper;
+
+# parse command options (B1-3: -p <platform> selects banking section,
+# default zx128 so existing call sites are unaffected)
+our( $opt_p );
+getopts("p:");
+my $platform = $opt_p // 'zx128';
 
 # get all configs
 my $cfg = rage1_get_config();
 my %features = ( map { $_ => 1 } rage1_build_features_get_all() );
+
+# resolve the bank-switch window address from banking.<platform>.swap_window
+# (fall back to the historic 0xC000 with a one-line deprecation warning if
+# the YAML key is missing).
+my $swap_window;
+{
+    my $bank_cfg = $cfg->{'banking'}{ $platform };
+    if ( defined( $bank_cfg ) and defined( $bank_cfg->{'swap_window'} ) ) {
+        # YAML.pm decodes 0xNNNN as a string; coerce via oct() so it works
+        # whether the user wrote 0xC000, 49152, or quoted variants.
+        my $raw = $bank_cfg->{'swap_window'};
+        $swap_window = ( $raw =~ /^0[xX]/ ) ? oct( $raw ) : $raw + 0;
+    } else {
+        warn "** generate_banked_function_defs.pl: banking.$platform.swap_window missing from rage1-config.yml; using deprecated 0xC000 fallback\n";
+        $swap_window = 0xC000;
+    }
+}
 
 # file names
 my $asm_table = $cfg->{'build'}{'banked_functions'}{'asm_table_filename'};
@@ -52,11 +76,7 @@ open ASM, ">$asm_table" or
     die "Could not open $asm_table for writing\n";
 
 my $function_index = 0;
-print ASM <<ASM1
-        section	code_compiler
-        org	0xC000
-ASM1
-;
+printf ASM "        section\tcode_compiler\n        org\t0x%04X\n", $swap_window;
 
 printf ASM join( '', map { sprintf( "extern  _%s\n", $_->{'name'} ) } @functions );
 

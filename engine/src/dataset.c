@@ -39,7 +39,7 @@ void dataset_activate( uint8_t d ) __z88dk_fastcall {
     // copy dataset data into LOWMEM buffer
     // data is ZX0 compressed, so decompress to destination address
     // beware: dzx0_* arguments are (source,dest), unlike memcpy and friends!
-    dzx0_standard( (void *) ( 0xC000 + dataset_info[ d ].offset ), (void *) BANKED_DATASET_BASE_ADDRESS );
+    dzx0_standard( (void *) ( DATASET_LOAD_BASE + dataset_info[ d ].offset ), (void *) BANKED_DATASET_BASE_ADDRESS );
 
     // switch back to previous memory bank
     memory_switch_bank( previous_memory_bank );

@@ -27,7 +27,22 @@ void init_memory(void);
     uint8_t memory_switch_bank( uint8_t bank_num ) __z88dk_fastcall;
 
     // reserved memory bank for banked functions in engine code
-    #define ENGINE_CODE_MEMORY_BANK		4
+    // B1-4: gated on PLATFORM_ZX128; other platforms (e.g. CPC) will
+    // define their own ENGINE_CODE_MEMORY_BANK under their own platform
+    // macro. Value 4 mirrors banking.zx128.engine_code_memory_bank in
+    // etc/rage1-config.yml.
+    #ifdef BUILD_FEATURE_PLATFORM_ZX128
+        #define ENGINE_CODE_MEMORY_BANK		4
+        // base address of the bank-switched 16K window where the engine
+        // banked-function table lives. Mirrors banking.zx128.swap_window
+        // in etc/rage1-config.yml.
+        #define BANKED_FUNCTION_TABLE_BASE	0xC000
+        // base address from which a dataset is read when its bank is
+        // paged into the swap window. Same physical window as the
+        // banked-function table; named separately so dataset code reads
+        // semantically (it loads a dataset, not a function table).
+        #define DATASET_LOAD_BASE		0xC000
+    #endif
 
     // function type definitions
     // types for all different function signatures used must be defined here
