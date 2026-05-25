@@ -136,6 +136,84 @@ my $syntax = {
 my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop crumb_action custom );
 
 ######################################
+## A1-7: generic FG/BG colour token vocabulary (README §5.10)
+######################################
+#
+# Platform-neutral colour tokens accepted in shared `.gdata` for the
+# global mono-mode directives `GAMEAREA_ATTR` (inside the COLOR
+# directive) and `DEFAULT_BG_ATTR`. Per README §5.10, the FG_/BG_
+# prefix picks the role, the colour name indexes the table, and
+# `BRIGHT` / `FLASH` are modifiers. Compound spellings like
+# `BRIGHT_BLUE` are accepted (the inner BRIGHT_ unfolds to a separate
+# BRIGHT modifier).
+#
+# OQ-A9: the CPC firmware-colour column on the right of the
+# canonical table at README §5.10 lines 556-573 must be verified
+# (cross-checked against actual cpctelera firmware-colour numbers and
+# nominal RGB matches) before Phase A5's CPC bring-up uses these
+# resolutions to drive the mono-mode pen palette and the blit-time
+# LUT. Until then, A1-7 is ZX-side only: the resolver below only
+# emits ZX `INK_*` / `PAPER_*` / `BRIGHT` / `FLASH` tokens (byte-
+# identical to the legacy spelling) and the CPC column lives only in
+# this comment.
+#
+# CPC firmware-colour mapping (FOR REFERENCE — NOT YET CONSUMED):
+#   BLACK        → 0    BLUE         → 1    RED          → 3
+#   MAGENTA      → 4    GREEN        → 9    CYAN         → 10
+#   YELLOW       → 12   WHITE        → 13
+#   BRIGHT BLACK → 0    BRIGHT BLUE  → 2    BRIGHT RED   → 6
+#   BRIGHT MAGENTA → 8  BRIGHT GREEN → 18   BRIGHT CYAN  → 20
+#   BRIGHT YELLOW → 24  BRIGHT WHITE → 26
+
+# canonical colour name set used by FG_/BG_ tokens (the lone names
+# also valid inside BRIGHT_<COLOR> compounds)
+my %_canonical_colors = map { ( $_ => 1 ) }
+    qw( BLACK BLUE RED MAGENTA GREEN CYAN YELLOW WHITE );
+
+# resolve a single token to its ZX text-form (returns the same string
+# unchanged for unknown tokens, so existing INK_*/PAPER_*/BRIGHT/FLASH
+# spellings pass through byte-identically).
+sub _resolve_color_token {
+    my $tok = shift;
+    $tok =~ s/^\s+|\s+$//g;
+    return $tok if $tok eq '';
+
+    # FG_<COLOR> or FG_BRIGHT_<COLOR>
+    if ( $tok =~ /^FG_(.+)$/ ) {
+        my $rest = $1;
+        if ( $rest =~ /^BRIGHT_(.+)$/ and exists $_canonical_colors{ $1 } ) {
+            return "INK_$1 | BRIGHT";
+        }
+        if ( exists $_canonical_colors{ $rest } ) {
+            return "INK_$rest";
+        }
+        return $tok;  # not a recognized colour name — leave to C compiler
+    }
+    # BG_<COLOR> or BG_BRIGHT_<COLOR>
+    if ( $tok =~ /^BG_(.+)$/ ) {
+        my $rest = $1;
+        if ( $rest =~ /^BRIGHT_(.+)$/ and exists $_canonical_colors{ $1 } ) {
+            return "PAPER_$1 | BRIGHT";
+        }
+        if ( exists $_canonical_colors{ $rest } ) {
+            return "PAPER_$rest";
+        }
+        return $tok;
+    }
+    # BRIGHT, FLASH, INK_*, PAPER_*, raw numeric expressions, etc.
+    return $tok;
+}
+
+# resolve a full pipe-separated expression like "FG_WHITE | BG_BLACK | BRIGHT"
+sub resolve_color_tokens {
+    my $expr = shift;
+    return $expr if not defined $expr;
+    my @parts = split /\|/, $expr;
+    @parts = map { _resolve_color_token( $_ ) } @parts;
+    return join( ' | ', @parts );
+}
+
+######################################
 ## Build Feature functions
 ######################################
 
@@ -809,7 +887,10 @@ sub read_input_data {
                     next;
                 }
                 if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
-                    $game_config->{'default_bg_attr'} = $1;
+                    # A1-7: resolve generic FG_/BG_ tokens to their ZX
+                    # INK_*/PAPER_*/BRIGHT/FLASH form (byte-identical;
+                    # legacy spellings pass through unchanged).
+                    $game_config->{'default_bg_attr'} = resolve_color_tokens( $1 );
                     next;
                 }
                 if ( $line =~ /^HERO\s+(\w.*)$/ ) {
@@ -1098,6 +1179,13 @@ sub read_input_data {
                     if ( not defined( $item->{'mode'} ) ) {
                         die "COLOR: $file, line $current_line: missing MODE argument\n";
                     }
+                    # A1-7: resolve generic FG_/BG_ tokens in the
+                    # GAMEAREA_ATTR value to their ZX form. Legacy
+                    # INK_*/PAPER_*/BRIGHT/FLASH spellings pass through
+                    # byte-identically.
+                    if ( defined( $item->{'gamearea_attr'} ) ) {
+                        $item->{'gamearea_attr'} = resolve_color_tokens( $item->{'gamearea_attr'} );
+                    }
                     $game_config->{'color'} = $item;
                     next;
                 }
@@ -1132,11 +1220,53 @@ sub read_input_data {
                     add_build_feature( 'SINGLE_USE_BLOB' );
                     next;
                 }
+                # A1-7: BEGIN_CPC_COLOR_MAP ... END_CPC_COLOR_MAP block.
+                # Per README §5.10 / §5.6, the block is platform-overlay-
+                # scoped: ZX builds parse and silently drop it. Phase A5
+                # CPC bring-up will consume the parsed map. OQ-A9
+                # (canonical FG/BG → CPC firmware-colour mapping) must
+                # be verified before CPC bring-up uses these values.
+                if ( $line =~ /^BEGIN_CPC_COLOR_MAP$/ ) {
+                    $state = 'CPC_COLOR_MAP';
+                    $game_config->{'cpc_color_map'} ||= {};
+                    next;
+                }
                 if ( $line =~ /^END_GAME_CONFIG$/ ) {
                     $state = 'NONE';
                     next;
                 }
                 die "Syntax error: $file, line $current_line: '$line' not recognized (GAME_CONFIG section)\n";
+
+            } elsif ( $state eq 'CPC_COLOR_MAP' ) {
+                # A1-7: each line maps one colour token (with or without
+                # BRIGHT) to an explicit CPC firmware-colour number.
+                # Format:  <COLOR_TOKEN>   FW=<n>
+                # Unspecified tokens fall back to the canonical table
+                # (README §5.10). ZX builds keep the map but never emit
+                # it. CPC builds will consume it in Phase A5.
+                if ( $line =~ /^END_CPC_COLOR_MAP$/ ) {
+                    $state = 'GAME_CONFIG';
+                    # A1-7: heads-up warning on ZX builds — the block is
+                    # parsed and stored but never emitted to features.h /
+                    # game_data.h on ZX. Authors usually want this in a
+                    # CPC overlay's game_config/, not in shared .gdata.
+                    my $platform = $game_config->{'platform'} // '';
+                    if ( $platform =~ /^zx/ or $platform eq '' ) {
+                        warn "CPC_COLOR_MAP: $file: block defined on a non-CPC build (platform=" .
+                             ( $platform || '<unset>' ) .
+                             "); parsed and dropped. Move it to a CPC overlay's game_config/ to take effect.\n";
+                    }
+                    next;
+                }
+                if ( $line =~ /^(\w+)\s+FW=(\d+)$/ ) {
+                    my ( $tok, $fw ) = ( uc( $1 ), $2 + 0 );
+                    if ( $fw < 0 or $fw > 26 ) {
+                        die "CPC_COLOR_MAP: $file, line $current_line: FW must be a CPC firmware-colour number 0..26 (got $fw)\n";
+                    }
+                    $game_config->{'cpc_color_map'}{ $tok } = $fw;
+                    next;
+                }
+                die "Syntax error: $file, line $current_line: '$line' not recognized (CPC_COLOR_MAP section)\n";
 
             } elsif ( $state eq 'RULE' ) {
                 if ( $line =~ /^SCREEN\s+(\w+)$/ ) {
