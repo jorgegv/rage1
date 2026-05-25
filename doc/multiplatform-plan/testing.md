@@ -442,7 +442,7 @@ platforms it covers and store a baseline for each.
 
 Two layout options:
 
-**Option A — flat per-platform suffixes** (chosen):
+**Option A — flat per-platform suffixes**:
 ```
 tests/00regression/<name>/
 ├── test.conf
@@ -455,28 +455,52 @@ tests/00regression/<name>/
 └── diff_<platform>.png  # gitignored
 ```
 
-**Option B — subdirectory per platform**:
+**Option B — subdirectory per platform** (chosen):
 ```
 tests/00regression/<name>/
 ├── test.conf
 ├── zx48/reference.png
+├── zx48/actual.png      # gitignored
+├── zx48/diff.png        # gitignored
+├── zx128/reference.png
 ├── cpc464/reference.png
+├── cpc6128/reference.png
 └── ...
 ```
 
-We choose **Option A** because:
+We choose **Option B** because:
 
-- It is one fewer level of `cd` / `ls` for human eyeballing of diffs.
-- It mirrors the file-name suffix convention already used by RAGE1
-  tooling for per-target memory reports
-  (`tools/mem-summary-<engine>-<target>.sh`, §1.6).
-- It is a smaller diff to the existing structure: today's `reference.png`
-  becomes `reference_zx48.png` (the dominant case at migration time).
-- `git status` clearly shows which platform baselines have changed.
+- **Better scaling with the number of platforms.** 4 platforms × 3
+  file types (reference + actual + diff) = 12 top-level files per
+  test under Option A; Option B groups them naturally per platform.
+- **Clean per-platform `git status` / diff scoping.** Changing a
+  CPC baseline only touches `cpc464/`; ZX baselines stay untouched
+  in their own subdir. Reviewers can spot per-platform changes at
+  a glance.
+- **Easier wholesale operations.** `rm -rf tests/00regression/*/cpc464/`
+  deletes every CPC baseline in one command; under Option A the
+  equivalent is a `find` invocation matching `reference_cpc464.png`.
+- **Simpler `.gitignore`.** Per-platform `actual.png` / `diff.png`
+  become plain filenames inside the platform subdir; the globs are
+  `tests/00regression/*/*/actual.png` and
+  `tests/00regression/*/*/diff.png`.
+- **Symmetric with the assets-md sibling-tree convention.** The
+  project's established per-platform layout pattern
+  (`<platform>/game_data/`) already uses subdirectories;
+  consistency wins.
 
-The migration of existing `reference.png` files happens in Phase TS1-2
-below; until then, `reference.png` continues to work as an implicit-zx48
-fallback (TS1-2 makes the suffix mandatory).
+Option A (file-name suffix convention, matching
+`tools/mem-summary-<engine>-<target>.sh`) was considered and
+rejected — the suffix idiom doesn't scale as cleanly with 4+
+platforms, and a single test directory ending up with a dozen
+`.png` files at the top level becomes hard to eyeball.
+
+The migration of existing `reference.png` files into per-platform
+subdirectories happens in Phase TS1-2 below. Per the project-wide
+backwards-compat-indefinite policy (README §5.6), the top-level
+`reference.png` is **retained indefinitely** as an implicit-zx48
+fallback; tests that haven't migrated yet (or that only ever
+needed a single ZX baseline) keep working unchanged.
 
 ### 3.2 Script changes (`regression.sh`)
 
@@ -504,14 +528,14 @@ The runner becomes platform-aware. Concrete changes:
    - Dispatch to the right emulator: a helper function
      `run_emulator_<platform>(artefact, frames, out_png)` that hides
      the JNEXT-vs-Caprice32 difference.
-   - Compare against `reference_$PLATFORM.png`.
+   - Compare against `$PLATFORM/reference.png`.
    - Accumulate pass/fail counts per platform; final report breaks down
      pass/fail by platform.
 
 3. **`--update` mode**. Today refreshes a single `reference.png`;
-   becomes per-platform — refreshes every `reference_<platform>.png`
-   for the selected test(s), or only one if `--platform $PLATFORM` is
-   passed.
+   becomes per-platform — refreshes `<platform>/reference.png` under
+   every selected test, for every platform the test declares, or
+   restricted to one platform if `--platform $PLATFORM` is passed.
 
 4. **New CLI filters**: `--platform zx48 minimal_jsp` runs only that
    platform of the named test. Default is all-platforms-all-tests.
@@ -538,8 +562,11 @@ The runner becomes platform-aware. Concrete changes:
    CPC lane) to acknowledge that emulator-accuracy differences may
    make pixel-perfect CPC regression flaky in practice. See §3.4.
 
-8. **Artefact cleanup**. `actual_*.png`, `diff_*.png`, `game.tap`,
-   `game.dsk`, `game.cdt` all added to the test-local `.gitignore`.
+8. **Artefact cleanup**. `<platform>/actual.png`, `<platform>/diff.png`,
+   `game.tap`, `game.dsk`, `game.cdt` all added to the test-local
+   `.gitignore` (the actual/diff globs become
+   `tests/00regression/*/*/actual.png` and
+   `tests/00regression/*/*/diff.png`).
 
 ### 3.3 First CPC test game (coordination with `gfx.md` / `cpc-renderer.md`)
 
@@ -555,7 +582,7 @@ baseline. Concretely (in Phase TS3 below):
 - `tests/00regression/minimal_cpc/` is created with `test.conf`
   declaring `TARGET_GAME=games/minimal_cpc`, `PLATFORMS=cpc6128`,
   `DELAY_FRAMES_CPC6128=<TBD>`.
-- A `reference_cpc6128.png` is captured by running the regression
+- A `cpc6128/reference.png` is captured by running the regression
   script with `--update --platform cpc6128 minimal_cpc`.
 - The reviewer eyeballs the captured PNG against the expected state of
   the game on a CPC mode-1 screen before committing it.
@@ -565,8 +592,9 @@ yet), `PLATFORMS=cpc6128` is the only entry. As `assets.md` Phase A2-3
 matures (sibling overlays + auto-conversion of shared assets), the
 existing `games/minimal/` will gain a CPC overlay and become a
 two-platform test (`PLATFORMS="zx48 cpc6128"`); at that point
-`tests/00regression/minimal/` grows a `reference_cpc6128.png` and
-`minimal_cpc/` **will be retired in Phase TS6 once the CPC overlay on
+`tests/00regression/minimal/` grows a `cpc6128/reference.png`
+alongside its existing `zx48/reference.png`, and `minimal_cpc/`
+**will be retired in Phase TS6 once the CPC overlay on
 `games/minimal/` matures** (see TS6-1).
 
 ### 3.4 Tolerance / comparison policy (pixel-exact vs perceptual)
@@ -584,7 +612,7 @@ For CPC the situation is less clear:
   CRTC / Gate Array timing fixes between releases may shift pixels at
   the edges of scan lines. Pinning the Caprice32 version in the CI
   image (§4.2) is therefore mandatory.
-- cpctelera's sprite blits, on top of which `gfx_cpc.c` lives
+- cpctelera's sprite blits, on top of which `gfx_cpctel.c` lives
   (`cpc-renderer.md` §4.2), are byte-deterministic. The pipeline is
   reproducible end-to-end.
 
@@ -620,6 +648,20 @@ machinery**, as long as no overlay actually adds CPC content. This is
 verified by a byte-compare of `game.tap` against a pre-overlay
 checked-in baseline.
 
+**Determinism prerequisite.** The TAP-byte invariant assumes the
+build pipeline is deterministic — same sources → same bytes, every
+time. In principle this holds, but `banktool.pl` / `loadertool.pl`'s
+bank-packing has not been audited for determinism (e.g. iteration
+order of Perl hashes when assigning datasets / codesets to banks).
+**If a TAP-byte mismatch surfaces in practice, the first response is
+to investigate and fix any non-determinism in tooling**, not to
+treat the mismatch as a legitimate regression. Non-determinism in
+the build is a bug worth fixing; the invariant is the contract that
+forces that bug to surface. Phase TS4 below adds a determinism
+pre-flight check (rebuild N times, compare SHAs) so the invariant
+gains a stable foundation before being wired into CI as a gate.
+
+
 This invariant complements the screenshot regression: screenshot regression
 proves visual behaviour; the TAP-byte invariant proves no compiled-output
 drift. The testing framework should run **both** at phase boundaries.
@@ -631,8 +673,9 @@ bash tests/00regression/regression.sh --tap-byte-check
 ```
 
 Which after each build runs `sha256sum` on the produced `game.tap` and
-compares it to a checked-in `reference_zx48.tap.sha256` (or similar) in
-the test directory. This is **distinct from** the screenshot test.
+compares it to a checked-in `zx48/reference.tap.sha256` (or similar)
+under the test's per-platform subdir. This is **distinct from** the
+screenshot test.
 
 The two knobs play distinct roles:
 
@@ -660,23 +703,23 @@ The matrix is "every game × every platform it opts into". Today's
 games and their post-multi-platform-plan target set (proposed, to be
 refined by `assets.md` per-game during Phase A2):
 
-| Game | zx48 | zx128 | cpc464 | cpc6128 | Notes |
-|---|---|---|---|---|---|
-| `minimal` | ✓ | — | ✓ | ✓ | core happy-path; "the" reference (cpc464 binary also runs on CPC664) |
-| `minimal_jsp` | ✓ | — | — | — | ZX-only — JSP is a ZX sprite library; no CPC analogue |
-| `default` | — | ✓ | — | ✓ | bigger demo game; 128/6128 only |
-| `default_jsp` | — | ✓ | — | — | ZX-128 only — JSP |
-| `blobs` | ✓ | — | ✓ | ✓ | enemy interactions; good for collision tests |
-| `crumbs` | ✓ | — | — | ✓ | item-pickup logic |
-| `mapgen` | ✓ | — | ✓ | ✓ | exercises mapgen.pl + btilegen.pl pipeline |
-| `damage_mode` | ✓ | — | — | — | ZX-only feature, may port later |
-| `get_weapon` | ✓ | — | — | — | ZX-only feature, may port later |
-| `monochrome` | ✓ | — | — | ✓ | colour-model edge case; CPC mode-1 monochrome equivalent useful |
-| `vortex2` | — | ✓ | — | — | ZX-128 specific (banking-heavy) |
-| `sub_bufs_48` | ✓ | — | — | — | SUB infrastructure test, ZX |
-| `sub_bufs_128` | — | ✓ | — | ✓ | SUB + banking, CPC analogue useful but late |
-| `minimal_cpc` (new) | — | — | ✓ | ✓ | first CPC RAGE1 game; created by `cpc-renderer.md` R4 |
-| `cpc-hello` (new) | — | — | ✓ | ✓ | toolchain smoke from `toolchain.md` T2-10 — engine-stub level |
+| Game                | zx48 | zx128 | cpc464 | cpc6128 | Notes                                                                |
+|---------------------|------|-------|--------|---------|----------------------------------------------------------------------|
+| `minimal`           | ✓    | —     | ✓      | ✓       | core happy-path; "the" reference (cpc464 binary also runs on CPC664) |
+| `minimal_jsp`       | ✓    | —     | —      | —       | ZX-only — JSP is a ZX sprite library; no CPC analogue                |
+| `default`           | —    | ✓     | —      | ✓       | bigger demo game; 128/6128 only                                      |
+| `default_jsp`       | —    | ✓     | —      | —       | ZX-128 only — JSP                                                    |
+| `blobs`             | ✓    | —     | ✓      | ✓       | enemy interactions; good for collision tests                         |
+| `crumbs`            | ✓    | —     | —      | ✓       | item-pickup logic                                                    |
+| `mapgen`            | ✓    | —     | ✓      | ✓       | exercises mapgen.pl + btilegen.pl pipeline                           |
+| `damage_mode`       | ✓    | —     | —      | —       | ZX-only feature, may port later                                      |
+| `get_weapon`        | ✓    | —     | —      | —       | ZX-only feature, may port later                                      |
+| `monochrome`        | ✓    | —     | —      | ✓       | colour-model edge case; CPC mode-1 monochrome equivalent useful      |
+| `vortex2`           | —    | ✓     | —      | —       | ZX-128 specific (banking-heavy)                                      |
+| `sub_bufs_48`       | ✓    | —     | —      | —       | SUB infrastructure test, ZX                                          |
+| `sub_bufs_128`      | —    | ✓     | —      | ✓       | SUB + banking, CPC analogue useful but late                          |
+| `minimal_cpc` (new) | —    | —     | ✓      | ✓       | first CPC RAGE1 game; created by `cpc-renderer.md` R4                |
+| `cpc_hello` (new)   | —    | —     | ✓      | ✓       | toolchain smoke from `toolchain.md` T2-10 — engine-stub level        |
 
 CPC664 is not a separate column because it is a runtime target of
 the `cpc464` build, not a build identity (see [README.md §1](README.md)
@@ -958,13 +1001,15 @@ binary).
     absent).
   - Per-platform inner loop over the test.
   - Emulator dispatch helpers (`run_emulator_<platform>`).
-  - Per-platform reference baselines: `reference_<platform>.png`.
+  - Per-platform reference baselines:
+    `<test>/<platform>/reference.png`.
   - CLI: `--platform <name>` filter.
-  - Rename existing `reference.png` files to `reference_zx48.png`
+  - Move existing `reference.png` files to `<test>/zx48/reference.png`
     in every test directory checked in during TS1.
-  - Keep backwards-compat: if `reference.png` exists and
-    `reference_zx48.png` doesn't, use the former as the zx48 baseline
-    and warn (one-cycle deprecation).
+  - Keep backwards-compat **indefinitely** (README §5.6): if
+    top-level `reference.png` exists and `zx48/reference.png` does
+    not, use the former as the implicit zx48 baseline and continue
+    to support it for tests that haven't migrated.
 - **TS3-2** Update the `:test` Docker image and `regression.yaml`
   workflow (Phase TS2 leftover): create `regression.yaml` (new
   workflow) that runs `bash tests/00regression/regression.sh` after
@@ -975,7 +1020,7 @@ binary).
     `PLATFORMS=cpc6128`, suitable `DELAY_FRAMES_CPC6128` (probably
     600+; cpctelera + AMSDOS boot is slower than ZX 48 ROM — tune
     empirically).
-  - Capture `reference_cpc6128.png` via `--update`.
+  - Capture `cpc6128/reference.png` via `--update`.
   - Eyeball it: it must show the `games/minimal_cpc/` hero + tile.
 - **TS3-4** Confirm `regression.yaml` is green on master with the new
   CPC test.
@@ -988,7 +1033,7 @@ binary).
   - `bash tests/00regression/regression.sh` runs every ZX baseline
     and the one CPC baseline, all green.
   - `regression.yaml` CI workflow is green on master.
-  - Every renamed `reference_zx48.png` matches its predecessor
+  - Every moved `zx48/reference.png` matches its predecessor
     `reference.png` byte-for-byte (we verify via git history).
   - `games/minimal_cpc/` has a committed baseline.
 
@@ -997,18 +1042,29 @@ binary).
 **Goal**: add the byte-identical TAP invariant (per `assets.md`) and
 generalise `make mem` to per-platform scripts.
 
+- **TS4-1a** **Determinism pre-flight** (per §3.5). Before wiring
+  `--tap-byte-check` into CI as a gate, verify the build pipeline
+  is deterministic on a stable source tree: rebuild N times (e.g.
+  5), `sha256sum` each `game.tap`, confirm all SHAs match. If any
+  mismatch surfaces, file a determinism bug (likely `banktool.pl`
+  hash-iteration / map-ordering — see banking.md) and **block
+  TAP-byte mode** until the tooling fix lands. This makes the
+  invariant land on a stable foundation.
 - **TS4-1** Add `--tap-byte-check` mode to `regression.sh` per §3.5.
   Per test, after building, compute `sha256sum game.tap` and compare
-  to a checked-in `reference_zx48.tap.sha256`. The mode is gated by
-  the existence of the reference hash file.
+  to a checked-in `zx48/reference.tap.sha256`. The mode is gated by
+  the existence of the reference hash file AND by TS4-1a's
+  determinism pre-flight passing.
 - **TS4-2** Land the TAP-byte hashes for every ZX test that has a
   baseline today. (Some games' TAPs may not be byte-stable due to
   timestamp embedding or similar; investigate per-game and only commit
   the hash for the deterministic ones.)
 - **TS4-3** Rename `tools/mem-summary-{sp1,jsp}-{48,128}.sh` to
   `tools/mem-summary-{sp1,jsp}-zx{48,128}.sh`. Keep one-line
-  forwarding stubs at the old names with a deprecation message for
-  one release cycle. Update `Makefile.common:315` accordingly.
+  forwarding stubs at the old names **indefinitely** per the
+  project-wide backwards-compat policy (README §5.6) — silent
+  acceptance, no deprecation banner. Update `Makefile.common:315`
+  accordingly.
 - **TS4-4** Add `tools/mem-summary-cpc-cpc464.sh` and
   `tools/mem-summary-cpc-cpc6128.sh`, modelled on the ZX equivalents
   but with CPC memory-region constants. The CPC464 script also
@@ -1059,8 +1115,8 @@ generalise `make mem` to per-platform scripts.
   `games/minimal` (CPC-overlay) — i.e. once `assets.md` Phase A2
   matures and `games/minimal/` can produce both ZX and CPC binaries
   from one `.gdata` set — retire `games/minimal_cpc/`. Move its CPC
-  baseline into `tests/00regression/minimal/` under the
-  `reference_cpc6128.png` name. Delete the stub game directory.
+  baseline into `tests/00regression/minimal/cpc6128/reference.png`.
+  Delete the stub game directory.
 - **TS6-2** Same for `games/cpc-hello/` (created by `toolchain.md`
   T2-10) once the toolchain Makefile rewrite settles.
 - **TS6-3** Same for `games/00cpc-compile-test/` (created by `gfx.md`
@@ -1135,7 +1191,7 @@ generalise `make mem` to per-platform scripts.
   program to hit a known break/trap) over `CAP32_DELAY` for tests
   where boot timing is variable. Engine-side support: emit a known
   trap instruction (e.g. `RST $38` then a magic byte) in
-  `gfx_cpc.c`'s post-init path that Caprice32 can wait on. Coordinate
+  `gfx_cpctel.c`'s post-init path that Caprice32 can wait on. Coordinate
   with `gfx.md` Phase G8.
 
 - **R7 — Mid-phase ZX regression goes unnoticed because not every
@@ -1190,72 +1246,55 @@ generalise `make mem` to per-platform scripts.
 
 ## 8. Open Questions
 
-- **OQ-TS1 — Caprice32 autocmd token availability in the pinned
-  version**.  
-  This document uses `CAP32_SCRNSHOT`, `CAP32_DELAY`, `CAP32_WAITBREAK`,
-  and `CAP32_EXIT` as the autocmd vocabulary; all four are documented
-  in the Caprice32 issue #110 example, so the spellings are not in
-  doubt. Phase TS2-2 must instead **verify these tokens still exist in
-  the version we pin**, confirm their exact **parameterisation** (e.g.
-  whether `CAP32_DELAY` takes an integer arg via `=` or via the next
-  autocmd), and check whether the pinned version offers a single
-  **combined screenshot-and-exit shortcut** (so the sketch in §2.4 can
-  collapse two autocmds into one). If a needed token has been removed
-  or renamed in the pinned version, do we patch upstream, fork, or
-  accept the limitation?
+- **OQ-TS1** — Caprice32 autocmd token availability in the pinned
+  version. **Deferred (2026-05-26)**: do not pre-emptively
+  investigate. If TS2-2 (or any later phase) finds a needed token
+  has been removed or renamed in the pinned Caprice32, handle the
+  problem when it surfaces — patch upstream, fork, or accept the
+  limitation depending on the specifics. No work scheduled now.
 
-- **OQ-TS2 — Should the CI `regression.yaml` workflow gate PR merges?**  
-  Today CI is build-only and gates merges. After TS3 ships
-  regression, screenshot failures will block merges by default.
-  Some teams prefer regression as advisory (artefact only, not a
-  failing check). Recommend: **gate by default**, with a
-  `[skip-regression]` PR-title escape hatch for emergency fixes.
+- **OQ-TS2** ✅ — CI `regression.yaml` workflow gating.
+  **Resolved (2026-05-26)**: **gate PR merges by default**, with
+  a `[skip-regression]` PR-title escape hatch for emergency fixes.
 
-- **OQ-TS3 — CPC tolerance default**.  
-  §3.4 recommends a default tolerance of 0 (pixel-perfect) on
-  CPC, same as ZX. Some reviewers may argue for a small non-zero
-  default (e.g. 50 px) to absorb cpctelera-version churn during
-  bring-up. Confirm before TS3-3.
+- **OQ-TS3** ✅ — CPC tolerance default. **Resolved (2026-05-26)**:
+  **default tolerance 0 (pixel-perfect) on CPC**, same as ZX. The
+  per-test `TOLERANCE_<platform>` knob exists for explicit
+  per-test acknowledgement when a CPC test genuinely needs slack.
 
-- **OQ-TS4 — NextZXOS SD-card image distribution**.  
-  Can the file `nextzxos-1gb-fat32fix.img` be redistributed inside
-  our public Docker image? If not, we either fetch it at CI start
-  time from a known URL or restrict the regression workflow to
-  self-hosted runners. The licensing of NextZXOS needs explicit
-  confirmation.
+- **OQ-TS4** ✅ — NextZXOS SD-card image distribution.
+  **Resolved (2026-05-26)**: **download `nextzxos-1gb-fat32fix.img`
+  at CI start time** from a known URL rather than redistributing
+  it inside our Docker image. Sidesteps the licensing question.
+  TS2-3 records the download URL.
 
-- **OQ-TS5 — Where does the Caprice32 binary come from in the image?**  
-  Options: (a) build from source in the Dockerfile, pinning a
-  specific commit / tag; (b) install via Fedora's package manager
-  (if available — `dnf search caprice32` may not return a recent
-  enough version); (c) install via Snap (unreliable in CI Docker);
-  (d) download a pre-built binary from a known release. Recommend:
-  **(a) build from source** — gives us version control and avoids
-  package-availability surprises. Confirm in TS2-3.
+- **OQ-TS5** ✅ — Caprice32 binary source. **Resolved (2026-05-26)**:
+  **option (a) — build from source in the Dockerfile**, pinning a
+  specific commit / tag. Gives us version control and avoids
+  package-availability surprises.
 
-- **OQ-TS6 — Should the regression framework also support
-  cycle-deterministic capture?**  
-  Today JNEXT captures at frame N. cycle-deterministic capture
-  (capture at *T cycles* since reset) would be more reproducible
-  across emulator versions but neither JNEXT nor Caprice32 expose
-  it cleanly today. Not blocking for Phase 1; flag for future
-  research.
+- **OQ-TS6** ✅ — Cycle-deterministic capture. **Resolved
+  (2026-05-26): explore in the future.** Not blocking for Phase 1;
+  flagged as a future research item once Phase 1 is stable. Today's
+  frame-N capture is sufficient for the screenshot regression
+  contract.
 
-- **OQ-TS7 — Mapgen / btilegen test coverage on CPC**.  
-  `games/mapgen` exercises `tools/mapgen.pl` and
-  `tools/btilegen.pl`. On CPC, these tools currently emit ZX-shaped
-  outputs. Do we want a `games/cpc-mapgen` analogue at all in
-  Phase TS5, or does `assets.md`'s overlay machinery make this
-  redundant? Owned partially by `assets.md`.
+- **OQ-TS7** ✅ — Mapgen / btilegen test coverage on CPC.
+  **Resolved (2026-05-26)**: **handle via the existing overlay
+  machinery; no separate `games/cpc-mapgen` analogue is needed.**
+  `games/mapgen` gains a CPC overlay through the standard
+  `assets.md` sibling-tree mechanism when `tools/mapgen.pl` /
+  `tools/btilegen.pl` learn to emit CPC-shaped outputs. The
+  regression test grows a `cpc6128/reference.png` alongside the
+  ZX baseline at that point. No new test directory required.
 
-- **OQ-TS8 — `make run-cpc`?**  
-  We have `make run` (FUSE for ZX) and `make run-jnext` (JNEXT for
-  ZX/Next). Do we want a corresponding `make run-cpc` (Caprice32
-  GUI) target for developer interactive testing? Recommend: yes,
-  symmetric with the ZX side; the recipe is one line.
-  Implementation owned by `toolchain.md`. Confirm.
+- **OQ-TS8** ✅ — `make run-cpc`. **Resolved (2026-05-26)**:
+  **yes, add `make run-cpc`** (Caprice32 GUI) for developer
+  interactive testing, symmetric with `make run` (FUSE) and
+  `make run-jnext` (JNEXT). One-line recipe. Implementation owned
+  by `toolchain.md`.
 
-- **OQ-TS9 — CPC664 distinct testing**.  
+- **OQ-TS9 — CPC664 distinct testing**.
   Phase 1 treats CPC664 as a *runtime target* of the CPC464 build,
   not as a separate `PLATFORM` identity (per `toolchain.md` §3.1
   and `README.md` §1). The OQ remains: do we want any explicit
@@ -1264,9 +1303,8 @@ generalise `make mem` to per-platform scripts.
   separate baselines in Phase 1 — add CPC664 smoke testing only if
   a 664-specific bug surfaces; cross-link to `toolchain.md` R-T9.
 
-- **OQ-TS10 — Image variant split versus single image**.  
-  §4.2 recommends a `:build`/`:test` variant split. The alternative
-  is one big `:latest` image with everything. Trade-off: split saves
-  ~hundreds of MB of pull time per PR build job; single is simpler
-  to reason about. Recommend split, but confirm with the team
-  before TS2-3.
+- **OQ-TS10** ✅ — Image variant split versus single image.
+  **Resolved (2026-05-26)**: **split `:build` / `:test` Docker
+  image variants** per §4.2. Saves ~hundreds of MB of pull time
+  per PR build job; the slightly more complex multi-stage
+  Dockerfile is acceptable.
