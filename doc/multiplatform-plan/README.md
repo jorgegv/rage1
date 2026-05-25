@@ -110,16 +110,15 @@ build-side concerns); then `banking.md` (memory maps that everyone
 plugs into); then `audio.md`, `input.md` in either order; then
 `testing.md` last (it tests everything else).
 
-For a graphical view of phase dependencies (master Gantt + per-Greek-
-phase Gantts + cross-subsystem DAG + critical path), see
-[gantt.md](gantt.md).
+For a graphical view of phase dependencies (master Gantt + per-phase
+Gantts + cross-subsystem DAG + critical path), see [gantt.md](gantt.md).
 
 ## 4. Cross-cutting phase sequence
 
 Each subsystem's phases are numbered with its own prefix (G/A/T/R/
 AU/IN/B/TS). The high-level sequence across all subsystems:
 
-**Phase α — Foundation (no CPC code; pure preparation).**
+**Phase 1 — Foundation (no CPC code; pure preparation).**
 
 - `TS1` — backfill ZX regression baselines (≥80 % of test games)
 - `T0` — toolchain spike: prove z88dk `+cpc` + sdcc_iy + a tiny
@@ -128,7 +127,7 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
   `etc/rage1-config.yml` (ZX byte-identical)
 - `G1` — `gfx_*` audit completion & baseline pin
 
-**Phase β — HAL & asset-pipeline scaffolding (ZX-only, additive).**
+**Phase 2 — HAL & asset-pipeline scaffolding (ZX-only, additive).**
 
 - `G2` — `SPRITE_ENGINE` → `GFX_BACKEND` mechanical rename
 - `A1` — introduce `PLATFORM` directive (`zx48`, `zx128` only)
@@ -140,7 +139,7 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
 - `AU1`, `AU2` — audio audit + HAL aliases
 - `R1` — cpctelera submodule add (vendored but not yet compiled)
 
-**Phase γ — HAL generalisation (ZX byte-identical).**
+**Phase 3 — HAL generalisation (ZX byte-identical).**
 
 - `G3–G6` — attribute / pixel coords / geometry / tile-ID abstraction
 - `A3–A4` — per-platform dispatch seam in `datagen.pl`; overlay
@@ -151,7 +150,7 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
   `beeper_*` / `tracker_*` / `BUILD_FEATURE_TRACKER_*` spellings
   stay as permanent silent aliases per §5.6)
 
-**Phase δ — CPC bring-up (cpc-flat first, then cpc-banked).**
+**Phase 4 — CPC bring-up (cpc-flat first, then cpc-banked).**
 
 - `R2` — cpctelera + z88dk hello-world PoC (gating test)
 - `R3` — `cpct_img2tileset` asset-converter wiring
@@ -170,7 +169,7 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
 - `B6–B7` — cpc-banked banking infrastructure + tooling
 - `T3` — cpc-banked Makefile; first banked `.dsk` build
 
-**Phase ε — Hardening + CI matrix expansion.**
+**Phase 5 — Hardening + CI matrix expansion.**
 
 - `R5` — cpctelera hardening, upstream feedback
 - `G9` — CPC backend across 3+ games (blobs / crumbs / mapgen)
@@ -179,7 +178,7 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
 - `B8` — SUBs on CPC
 - `TS4–TS5` — TAP-byte invariant mode; CI matrix expansion
 
-**Phase ζ — Cleanup.**
+**Phase 6 — Cleanup.**
 
 - `A6–A7` — platform-scoped patches
 - `T4` — matrix completion (legacy aliases like `ZX_TARGET`,

@@ -1,26 +1,26 @@
 # RAGE1 cross-platform plan — Gantt / dependency charts
 
 Graphical companion to [README §4](README.md). The 54 subsystem
-phases are grouped into 6 chronological **Greek phases** (α…ζ).
-Durations on every chart below are uniform placeholders — the
-load-bearing content is **dependency topology** and **phase
-ordering**, not calendar time.
+phases are grouped into 6 chronological **top-level phases**
+(Phase 1 … Phase 6). Durations on every chart below are uniform
+placeholders — the load-bearing content is **dependency topology**
+and **phase ordering**, not calendar time.
 
-| Greek phase | Theme | Count | CPC code? | ZX byte-identical? |
+| Phase | Theme | Count | CPC code? | ZX byte-identical? |
 |---|---|---|---|---|
-| **α** | Foundation (preparation) | 4 | no | n/a (no engine changes) |
-| **β** | HAL & asset scaffolding (ZX-only, additive) | 10 | no | yes |
-| **γ** | HAL generalisation | 10 | no | yes |
-| **δ** | CPC bring-up (flat first, then banked) | 19 | yes | yes (ZX track preserved) |
-| **ε** | Hardening + CI matrix expansion | 7 | yes | yes |
-| **ζ** | Cleanup | 7 | yes | yes |
+| **Phase 1** | Foundation (preparation) | 4 | no | n/a (no engine changes) |
+| **Phase 2** | HAL & asset scaffolding (ZX-only, additive) | 10 | no | yes |
+| **Phase 3** | HAL generalisation | 10 | no | yes |
+| **Phase 4** | CPC bring-up (flat first, then banked) | 19 | yes | yes (ZX track preserved) |
+| **Phase 5** | Hardening + CI matrix expansion | 7 | yes | yes |
+| **Phase 6** | Cleanup | 7 | yes | yes |
 
 ---
 
 ## 1. Master Gantt — all subsystems, all 54 phases
 
 Swim lanes are subsystems. Horizontal position is determined by
-`after` dependencies — Greek phases appear as visible vertical
+`after` dependencies — top-level phases appear as visible vertical
 bands. Tasks marked `crit` (red) are gating: their failure blocks
 all CPC work that follows.
 
@@ -112,57 +112,57 @@ not draw explicit arrows. The flowchart below shows the
 **critical cross-subsystem dependencies** — the spine that
 serialises CPC bring-up. Arrows go from prerequisite to consumer.
 
-Greek phases colour the boxes; the gating tasks (`T0`, `R2`,
+Top-level phases colour the boxes; the gating tasks (`T0`, `R2`,
 `TS1`) sit on the critical path.
 
 ```mermaid
 flowchart LR
-  classDef alpha fill:#e8f0ff,stroke:#3a5fcd,color:#000
-  classDef beta  fill:#e6ffe6,stroke:#2e8b2e,color:#000
-  classDef gamma fill:#fffce6,stroke:#b8a300,color:#000
-  classDef delta fill:#ffe6e6,stroke:#b22222,color:#000
-  classDef eps   fill:#f3e6ff,stroke:#7a3fbf,color:#000
-  classDef zeta  fill:#eaeaea,stroke:#666,color:#000
-  classDef gate  fill:#ff6b6b,stroke:#900,color:#fff,stroke-width:3px
+  classDef phase1 fill:#e8f0ff,stroke:#3a5fcd,color:#000
+  classDef phase2 fill:#e6ffe6,stroke:#2e8b2e,color:#000
+  classDef phase3 fill:#fffce6,stroke:#b8a300,color:#000
+  classDef phase4 fill:#ffe6e6,stroke:#b22222,color:#000
+  classDef phase5 fill:#f3e6ff,stroke:#7a3fbf,color:#000
+  classDef phase6 fill:#eaeaea,stroke:#666,color:#000
+  classDef gate   fill:#ff6b6b,stroke:#900,color:#fff,stroke-width:3px
 
-  %% Alpha
+  %% Phase 1
   TS1[TS1 ZX baselines]:::gate
   T0[T0 toolchain spike]:::gate
-  B1[B1 banking config]:::alpha
-  G1[G1 gfx audit]:::alpha
+  B1[B1 banking config]:::phase1
+  G1[G1 gfx audit]:::phase1
 
-  %% Beta
-  G2[G2 GFX_BACKEND]:::beta
-  A1[A1 PLATFORM ZX]:::beta
-  A2[A2 overlay copy]:::beta
-  T1[T1 PLATFORM Makefile]:::beta
-  B2[B2 ISR YAML]:::beta
-  R1[R1 cpctelera submod]:::beta
+  %% Phase 2
+  G2[G2 GFX_BACKEND]:::phase2
+  A1[A1 PLATFORM ZX]:::phase2
+  A2[A2 overlay copy]:::phase2
+  T1[T1 PLATFORM Makefile]:::phase2
+  B2[B2 ISR YAML]:::phase2
+  R1[R1 cpctelera submod]:::phase2
 
-  %% Gamma
-  G6[G6 tile-ID]:::gamma
-  A4[A4 overlay E2E]:::gamma
-  B3[B3 lowmem]:::gamma
+  %% Phase 3
+  G6[G6 tile-ID]:::phase3
+  A4[A4 overlay E2E]:::phase3
+  B3[B3 lowmem]:::phase3
 
-  %% Delta - the gating PoC
+  %% Phase 4 - the gating PoC
   R2[R2 hello-world PoC]:::gate
-  R3[R3 img2tileset]:::delta
-  R4[R4 gfx_cpctel real]:::delta
-  T2[T2 cpc-flat Makefile]:::delta
-  G7[G7 cpctel stub]:::delta
-  G8[G8 cpctel real]:::delta
-  A5[A5 CPC assets]:::delta
-  B7[B7 cpc-banked tools]:::delta
-  T3[T3 cpc-banked Makefile]:::delta
-  TS2[TS2 Caprice32+Docker]:::delta
-  TS3[TS3 first CPC baseline]:::delta
+  R3[R3 img2tileset]:::phase4
+  R4[R4 gfx_cpctel real]:::phase4
+  T2[T2 cpc-flat Makefile]:::phase4
+  G7[G7 cpctel stub]:::phase4
+  G8[G8 cpctel real]:::phase4
+  A5[A5 CPC assets]:::phase4
+  B7[B7 cpc-banked tools]:::phase4
+  T3[T3 cpc-banked Makefile]:::phase4
+  TS2[TS2 Caprice32+Docker]:::phase4
+  TS3[TS3 first CPC baseline]:::phase4
 
-  %% Epsilon
-  G9[G9 CPC 3+ games]:::eps
-  TS5[TS5 CI matrix]:::eps
+  %% Phase 5
+  G9[G9 CPC 3+ games]:::phase5
+  TS5[TS5 CI matrix]:::phase5
 
-  %% Zeta
-  TS6[TS6 retire stubs]:::zeta
+  %% Phase 6
+  TS6[TS6 retire stubs]:::phase6
 
   %% Dependencies
   G1 --> G2 --> G6
@@ -213,17 +213,17 @@ proceeds unless they succeed.
 
 ---
 
-## 3. Per-Greek-phase Gantts
+## 3. Per-phase Gantts
 
-### 3.1 Phase α — Foundation
+### 3.1 Phase 1 — Foundation
 
-All four α phases are independent and run in parallel. Their
+All four Phase 1 tasks are independent and run in parallel. Their
 purpose is to prepare the ground without touching the engine
 beyond config files.
 
 ```mermaid
 gantt
-  title Phase α — Foundation (no CPC code; preparation)
+  title Phase 1 — Foundation (no CPC code; preparation)
   dateFormat YYYY-MM-DD
   axisFormat W%V
   section testing
@@ -236,20 +236,21 @@ gantt
   G1 gfx_* audit completion             :g1, 2026-01-05, 7d
 ```
 
-**Phase-α exit signals:** ZX regression suite covers enough games
+**Phase 1 exit signals:** ZX regression suite covers enough games
 to detect future byte-level drift; `+cpc` toolchain proven outside
 RAGE1; `etc/rage1-config.yml` carries everything; `gfx_*` audit
 baseline frozen.
 
-### 3.2 Phase β — HAL & asset scaffolding (ZX-only, additive)
+### 3.2 Phase 2 — HAL & asset scaffolding (ZX-only, additive)
 
-β introduces new vocabulary (PLATFORM, GFX_BACKEND, HAL skeletons,
-sibling-tree overlay machinery) without changing engine
-semantics. Every existing ZX game must still build byte-identical.
+Phase 2 introduces new vocabulary (PLATFORM, GFX_BACKEND, HAL
+skeletons, sibling-tree overlay machinery) without changing
+engine semantics. Every existing ZX game must still build
+byte-identical.
 
 ```mermaid
 gantt
-  title Phase β — HAL & asset scaffolding (ZX-only, additive)
+  title Phase 2 — HAL & asset scaffolding (ZX-only, additive)
   dateFormat YYYY-MM-DD
   axisFormat W%V
 
@@ -278,21 +279,22 @@ gantt
   B2 per-platform ISR YAML    :b2, after b1, 7d
 ```
 
-**Phase-β exit signals:** every ZX game still byte-identical;
+**Phase 2 exit signals:** every ZX game still byte-identical;
 `PLATFORM` recognised; sibling-overlay copy mechanism in place
 (empty overlay trees still allowed); `external/cpctelera/` vendored
 but not compiled; audio/input HAL aliases compile but route to
 existing implementations.
 
-### 3.3 Phase γ — HAL generalisation (ZX byte-identical)
+### 3.3 Phase 3 — HAL generalisation (ZX byte-identical)
 
-γ removes ZX-derived assumptions from the engine's HAL surface
-without introducing CPC code. The engine becomes structurally
-ready to plug in a CPC backend, but no CPC backend yet exists.
+Phase 3 removes ZX-derived assumptions from the engine's HAL
+surface without introducing CPC code. The engine becomes
+structurally ready to plug in a CPC backend, but no CPC backend
+yet exists.
 
 ```mermaid
 gantt
-  title Phase γ — HAL generalisation (ZX byte-identical)
+  title Phase 3 — HAL generalisation (ZX byte-identical)
   dateFormat YYYY-MM-DD
   axisFormat W%V
 
@@ -317,21 +319,21 @@ gantt
   AU3 audio_* names live      :au3, after au2, 7d
 ```
 
-**Phase-γ exit signals:** `gfx_*`, `audio_*`, `input_*` HALs no
+**Phase 3 exit signals:** `gfx_*`, `audio_*`, `input_*` HALs no
 longer carry ZX-only types; datagen.pl has a per-platform
 dispatcher branch (currently only ZX populated); ZX byte-identical
 invariant survives across the whole sweep.
 
-### 3.4 Phase δ — CPC bring-up (cpc-flat first, then cpc-banked)
+### 3.4 Phase 4 — CPC bring-up (cpc-flat first, then cpc-banked)
 
-δ is the biggest phase (19 sub-phases). CPC code lands here. The
-phase **internally serialises** — the first half brings up
+Phase 4 is the biggest phase (19 sub-phases). CPC code lands here.
+The phase **internally serialises** — the first half brings up
 cpc-flat (no banking, CPC464 binary that runs on CPC664 too), the
 second half adds cpc-banked (CPC6128).
 
 ```mermaid
 gantt
-  title Phase δ — CPC bring-up (cpc-flat first)
+  title Phase 4 — CPC bring-up (cpc-flat first)
   dateFormat YYYY-MM-DD
   axisFormat W%V
 
@@ -369,7 +371,7 @@ gantt
 
 ```mermaid
 gantt
-  title Phase δ — CPC bring-up (cpc-banked, second wave)
+  title Phase 4 — CPC bring-up (cpc-banked, second wave)
   dateFormat YYYY-MM-DD
   axisFormat W%V
 
@@ -381,20 +383,20 @@ gantt
   T3 cpc-banked Makefile      :t3, after b7 t2, 7d
 ```
 
-**Phase-δ exit signals:** `make build-cpc464` + `make build-cpc6128`
+**Phase 4 exit signals:** `make build-cpc464` + `make build-cpc6128`
 both produce loadable images; `games/minimal_cpc/` runs on
 Caprice32 and has its first regression baseline; ZX track
 unchanged; cpc-flat AND cpc-banked builds both work.
 
-### 3.5 Phase ε — Hardening + CI matrix expansion
+### 3.5 Phase 5 — Hardening + CI matrix expansion
 
-ε broadens the CPC track from the first stub game to three+ real
-games, adds the SOUND_MAP cross-platform layer, lights up SUBs on
-CPC, and expands CI to run the full matrix.
+Phase 5 broadens the CPC track from the first stub game to three+
+real games, adds the SOUND_MAP cross-platform layer, lights up
+SUBs on CPC, and expands CI to run the full matrix.
 
 ```mermaid
 gantt
-  title Phase ε — Hardening + CI matrix expansion
+  title Phase 5 — Hardening + CI matrix expansion
   dateFormat YYYY-MM-DD
   axisFormat W%V
 
@@ -418,22 +420,22 @@ gantt
   TS5 CI matrix expansion     :ts5, after ts4, 7d
 ```
 
-**Phase-ε exit signals:** `games/blobs`, `games/crumbs`,
+**Phase 5 exit signals:** `games/blobs`, `games/crumbs`,
 `games/mapgen` running on CPC; CI matrix covers
 `zx48 × zx128 × cpc464 × cpc6128`; TAP-byte invariant wired into
 CI for ZX deterministic builds.
 
-### 3.6 Phase ζ — Cleanup
+### 3.6 Phase 6 — Cleanup
 
-ζ is documentation, polishing, and stub retirement. Per
+Phase 6 is documentation, polishing, and stub retirement. Per
 [README §5.6](README.md), **no user-visible surfaces are removed**
 — old `.gdata` keywords, Makefile aliases, and forwarding stubs
-stay accepted indefinitely. ζ is mostly docs and the merge of
+stay accepted indefinitely. Phase 6 is mostly docs and the merge of
 `games/minimal_cpc` back into `games/minimal`.
 
 ```mermaid
 gantt
-  title Phase ζ — Cleanup (docs + stub retirement, no removals)
+  title Phase 6 — Cleanup (docs + stub retirement, no removals)
   dateFormat YYYY-MM-DD
   axisFormat W%V
 
@@ -457,7 +459,7 @@ gantt
   TS6 retire CPC-only stubs   :ts6, after ts5 g9, 7d
 ```
 
-**Phase-ζ exit signals:** `games/minimal_cpc` merged back into
+**Phase 6 exit signals:** `games/minimal_cpc` merged back into
 `games/minimal` (shared game, two platforms); all docs reflect the
 post-multi-platform state; CHANGELOG.md records every rename;
 plan-execution loop closes.
@@ -495,7 +497,7 @@ plan; the HAL design is library-agnostic.
 - **Durations are placeholders** — every box is "7 days" so the
   topology is visible without claiming false precision. Real
   durations come from execution-time tracking, not this doc.
-- **Greek phases are vertical bands** in the master Gantt
+- **Top-level phases are vertical bands** in the master Gantt
   (§1) — they're not separately drawn, but every task's horizontal
   position falls inside one band by virtue of its predecessors.
 - For per-task detail (sub-task IDs like `G2-3`, `R4-2`, etc.) see
