@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Memory usage report — SP1 sprite engine, 48K target.
-# Spritelib+target specific: the Makefile 'mem' target selects this script
-# from BUILD_SPRITE_ENGINE and ZX_TARGET. Do NOT add detection logic here.
+# Memory usage report — SP1 gfx backend, 48K target.
+# Backend+target specific: the Makefile 'mem' target selects this script
+# from BUILD_GFX_BACKEND and ZX_TARGET. Do NOT add detection logic here.
 
 MAIN_MAP=main.map
 

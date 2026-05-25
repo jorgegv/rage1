@@ -218,7 +218,8 @@ sub resolve_color_tokens {
 ######################################
 
 # build features that always selected no matter what
-# SPRITE_ENGINE_* is NOT here - it is added in generate_game_config based on game data
+# GFX_BACKEND_* / SPRITE_ENGINE_* are NOT here - they are added in
+# generate_game_config based on game data
 my @default_build_features = qw(
     BTILE_2BIT_TYPE_MAP
     GAME_TIME
@@ -234,9 +235,9 @@ sub is_build_feature_enabled {
     return defined( $conditional_build_features{ $f } );
 }
 
-sub get_sprite_engine {
-    return ( defined( $game_config ) && defined( $game_config->{'sprite_engine'} ) )
-        ? $game_config->{'sprite_engine'} : 'sp1';
+sub get_gfx_backend {
+    return ( defined( $game_config ) && defined( $game_config->{'gfx_backend'} ) )
+        ? $game_config->{'gfx_backend'} : 'sp1';
 }
 
 sub add_default_build_features {
@@ -879,11 +880,15 @@ sub read_input_data {
                     add_build_feature( sprintf( "PLATFORM_ZX%s", $game_config->{'zx_target'} ) );
                     next;
                 }
-                if ( $line =~ /^SPRITE_ENGINE\s+(\w+)$/ ) {
-                    my $engine = lc($1);
-                    die "SPRITE_ENGINE: $file, line $current_line: must be 'SP1' or 'JSP'\n"
+                # GFX_BACKEND is the canonical name; SPRITE_ENGINE is the
+                # legacy alias, accepted indefinitely as a silent synonym
+                # (per doc/multiplatform-plan/gfx.md §5.6 / README §5.6).
+                if ( $line =~ /^(GFX_BACKEND|SPRITE_ENGINE)\s+(\w+)$/ ) {
+                    my $keyword = $1;
+                    my $engine = lc($2);
+                    die "$keyword: $file, line $current_line: must be 'SP1' or 'JSP'\n"
                         if $engine ne 'sp1' and $engine ne 'jsp';
-                    $game_config->{'sprite_engine'} = $engine;
+                    $game_config->{'gfx_backend'} = $engine;
                     next;
                 }
                 if ( $line =~ /^DEFAULT_BG_ATTR\s+(.*)$/ ) {
@@ -1493,7 +1498,7 @@ sub generate_sprite {
     my $sprite_frames = $sprite->{'frames'};
     my $sprite_name = $sprite->{'name'};
 
-    my $using_jsp = ( get_sprite_engine() eq 'jsp' );
+    my $using_jsp = ( get_gfx_backend() eq 'jsp' );
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (%s format)\n\n",
         $sprite->{'name'}, $using_jsp ? 'JSP' : 'SP1' );
 
@@ -3459,13 +3464,15 @@ GAME_DATA_H_4
 }
 
 sub generate_game_config {
-    # emit SPRITE_ENGINE build feature (defaults to SP1 if not set in game config)
-    # Also emit the new GFX_BACKEND_* alias (Phase G1-2): both names compile, so
-    # engine code can be migrated to BUILD_FEATURE_GFX_BACKEND_* incrementally in
-    # Phase G2 without flipping every backend at once.
-    my $engine_upper = uc( get_sprite_engine() );
-    add_build_feature( 'SPRITE_ENGINE_' . $engine_upper );
+    # Emit the BUILD_FEATURE_GFX_BACKEND_<X> macro (defaults to SP1 if not
+    # set in game config). The legacy BUILD_FEATURE_SPRITE_ENGINE_<X>
+    # macro is also emitted as a silent, indefinite alias — old engine
+    # code and external games can keep using either spelling forever
+    # (per doc/multiplatform-plan/gfx.md §5.6 / README §5.6). No removal
+    # is scheduled.
+    my $engine_upper = uc( get_gfx_backend() );
     add_build_feature( 'GFX_BACKEND_'   . $engine_upper );
+    add_build_feature( 'SPRITE_ENGINE_' . $engine_upper );
 
     push @h_game_data_lines, "\n// game configuration data\n";
     push @h_game_data_lines, sprintf( "#define MAP_NUM_SCREENS\t%d\n", scalar( @all_screens ) );
@@ -3510,8 +3517,8 @@ sub generate_game_config {
         $max_spritechars += $hero->{'bullet'}{'max_bullets'} * ( $bs->{'rows'} + 1 ) * ( $bs->{'cols'} + 1 );
     }
 
-    # JSP pool-sizing constants (only emitted when sprite engine is JSP)
-    if ( get_sprite_engine() eq 'jsp' ) {
+    # JSP pool-sizing constants (only emitted when gfx backend is JSP)
+    if ( get_gfx_backend() eq 'jsp' ) {
         my $max_sprite_rows = ( sort { $b <=> $a } map { $_->{'rows'} } @all_sprites )[0];
         my $max_sprite_cols = ( sort { $b <=> $a } map { $_->{'cols'} } @all_sprites )[0];
         push @h_game_data_lines, <<EOF_JSP_POOL
