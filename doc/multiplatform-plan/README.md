@@ -110,6 +110,10 @@ build-side concerns); then `banking.md` (memory maps that everyone
 plugs into); then `audio.md`, `input.md` in either order; then
 `testing.md` last (it tests everything else).
 
+For a graphical view of phase dependencies (master Gantt + per-Greek-
+phase Gantts + cross-subsystem DAG + critical path), see
+[gantt.md](gantt.md).
+
 ## 4. Cross-cutting phase sequence
 
 Each subsystem's phases are numbered with its own prefix (G/A/T/R/
