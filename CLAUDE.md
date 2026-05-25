@@ -138,8 +138,20 @@ Configured in `etc/rage1-config.yml`. Key regions:
 - No Co-Authored-by headers in commit
 - Commit messages should be terse but concise
 - Any changes should be tested before commit. Test games should build successfully.
-
-## Working with RAGE1
-
-- Always test the changes before commit
-- Always launch an independent reviewer before non-trivial changes
+- Always launch an independent reviewer before committing non-trivial changes
+- Skills needed:
+  - C/C++ expert developer
+  - ZX Spectrum expert
+  - Amstrad CPC expert
+  - Perl expert
+  - RAGE1 expert0
+- Try to parallelize work on different agents for independent tasks
+- Use an Agent Team when working on different tasks. You can launch up to 3 parallel agents.
+- When launching Agent Teams, the Manager agent should NOT write or touch any code
+- When launching Agent Teams, each independent function should be worked on in a different branch, to avoid code trashing between agents. When code is ready on each branch, they should be merged to main. If merge problems occur, the agent responsible for fixing them is the one that tried to merge last, and it should try to fix them on their own branch.
+- Agents should NOT write to the main branch, ever. Only on their own branches and worktrees!
+- When a new feature or bugfix is developed, ALWAYS schedule an additional agent for code review, with the same expertise as the original one. The code review should NEVER be done by the same agent that created the code in the first place. Make the reviewer agent be very critic with the code created, ensuring that code passes tests and that no regressions are introduced. Also review code style and conformance to our best practices.
+- When reading daily prompt files (in directory `.prompts`, they contains tasks for the daily work), always keep a Task Completion Status section in each of them. Update this section whenever a task is finished.
+- **NEVER push to origin without explicit user authorization.** This applies to the manager AND every spawned agent. Local commits, rebases, and merges on owned branches/worktrees are fine; `git push`, `git push -u`, `git push --force`, `gh pr create`, and any equivalent are all forbidden unless the user explicitly says "push" or "open a PR".
+- Update task status on the main plan whenever a task is finished
+- When the user tells you to prepare for a session handvover, immediately save your memories

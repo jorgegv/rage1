@@ -23,6 +23,32 @@ contact with reality.
 
 ---
 
+## Table of contents
+
+- [Table of contents](#table-of-contents)
+- [1. Phase 1 platforms](#1-phase-1-platforms)
+- [2. Architectural anchors (decided before drafting; the plan reflects, does not re-analyse)](#2-architectural-anchors-decided-before-drafting-the-plan-reflects-does-not-re-analyse)
+- [3. Subsystem documents](#3-subsystem-documents)
+- [4. Cross-cutting phase sequence](#4-cross-cutting-phase-sequence)
+- [5. Cross-doc decisions reconciled here](#5-cross-doc-decisions-reconciled-here)
+  - [5.1 CPC asset conversion: cpctelera subprocess, not Perl-side encoders](#51-cpc-asset-conversion-cpctelera-subprocess-not-perl-side-encoders)
+  - [5.2 Per-platform overlay tree: sibling, not sub-tree](#52-per-platform-overlay-tree-sibling-not-sub-tree)
+  - [5.3 Platform-selection rule: CLI \> Game.gdata; no fallback](#53-platform-selection-rule-cli--gamegdata-no-fallback)
+  - [5.4 GFX\_BACKEND naming rule: value = library short-name](#54-gfx_backend-naming-rule-value--library-short-name)
+  - [5.5 Two-layer colour model: bitmap universal, attribute ZX-only](#55-two-layer-colour-model-bitmap-universal-attribute-zx-only)
+  - [5.6 Backwards compatibility is INDEFINITE](#56-backwards-compatibility-is-indefinite)
+  - [5.7 C64 is OUT OF SCOPE](#57-c64-is-out-of-scope)
+  - [5.8 BTile cell data flavour discriminator](#58-btile-cell-data-flavour-discriminator)
+  - [5.9 CPC mono game mode reuses the existing mono path with 1bpp BTile cells](#59-cpc-mono-game-mode-reuses-the-existing-mono-path-with-1bpp-btile-cells)
+  - [5.10 Generic FG/BG colour token vocabulary](#510-generic-fgbg-colour-token-vocabulary)
+  - [5.11 Generalised PATCH directives across .gdata sections](#511-generalised-patch-directives-across-gdata-sections)
+- [6. Consolidated Risks index](#6-consolidated-risks-index)
+- [7. Consolidated Open Questions index](#7-consolidated-open-questions-index)
+- [8. Progress tracking](#8-progress-tracking)
+- [9. How to read and revise this plan](#9-how-to-read-and-revise-this-plan)
+
+---
+
 ## 1. Phase 1 platforms
 
 In scope (the plan covers these in depth):
@@ -431,8 +457,11 @@ separate registration entrypoint, no out-of-band flag):
 - `≥256` → 16-bit pointer to pre-converted, platform-native bitmap
   bytes emitted by the asset pipeline. **BTile cells are ALWAYS
   16-bit pointers**, never small IDs. Layout is platform-specific
-  (ZX: interleaved mask+graphic UDG bytes; CPC: mode-1 packed pixel
-  bytes).
+  (ZX: 8 bytes mono UDG per cell, no mask — BTiles are opaque and
+  carry no mask data, in contrast to sprites; per-BTile `attrs` are
+  held separately under `BUILD_FEATURE_GAMEAREA_COLOR_FULL`. CPC
+  full-colour: mode-1 packed pixel bytes, 16 bytes/cell. CPC mono:
+  8 bytes mono UDG per cell, same as ZX — see §5.9).
 
 **Why**: makes the API agnostic at the source level (callers don't
 need to know which flavour they're using); makes the CPC backend's
@@ -445,6 +474,236 @@ into [assets.md](assets.md) (asset pipeline emits platform-native
 bytes only for the pointer flavour) and
 [cpc-renderer.md](cpc-renderer.md) (1bpp → 2bpp conversion routine,
 default pen pair configuration).
+
+### 5.9 CPC mono game mode reuses the existing mono path with 1bpp BTile cells
+
+**Decision (2026-05-26)**: when a game is in mono mode (existing
+`BUILD_FEATURE_GAMEAREA_COLOR_MONO` build feature, emitted by
+`datagen.pl` from the absence of per-BTile colour data — see
+[tools/datagen.pl:2741-2743](../../tools/datagen.pl#L2741-L2743)),
+the CPC backend keeps BTile cell graphic data as **1bpp UDG bytes
+(8 bytes/cell, byte-identical to the ZX version)** and expands each
+cell to a 16-byte mode-1 block **at blit time** via a 512-byte
+lookup table built once at game init from the game's resolved CPC
+pen pair (§5.10).
+
+Concrete shape on CPC:
+
+- **BTile cell data layout** under mono mode: 8 bytes/cell, same UDG
+  bytes the ZX build uses. Pre-baked 2bpp mode-1 data is **not**
+  emitted by the asset pipeline for mono CPC games — `cpct_img2tileset`
+  is skipped for BTiles in mono mode; the shared UDG bytes flow
+  straight to both platforms.
+- **LUT**: 256 entries × 2 bytes = 512 bytes, indexed by the 1bpp
+  input byte, yielding the two mode-1 output bytes that encode the
+  same 8 pixels. Built at game init from the resolved mono pen pair;
+  cached in always-resident memory. One LUT per game (single global
+  pen pair → single LUT).
+- **`gfx_tile_put` on CPC mono**: one LUT lookup per row × 8 rows
+  per cell (~320 cycles/cell). Full-screen redraw at screen-enter
+  ≈ 4–8 frames at 50 Hz — acceptable for the existing transition
+  pause; no per-frame cost during gameplay.
+- **Sprites stay 2bpp pre-baked** under mono CPC. The asset pipeline
+  bakes sprite cells using the resolved mono pen pair, so sprite
+  blits remain memcpy-fast (no per-frame conversion).
+- **Full-colour CPC games** (`BUILD_FEATURE_GAMEAREA_COLOR_FULL`):
+  BTile cell data stays 2bpp pre-baked via `cpct_img2tileset` as
+  today's plan; the LUT path is mono-only.
+- **BTile struct shape on CPC** under mono mode is identical to ZX
+  mono: the `#ifdef BUILD_FEATURE_GAMEAREA_COLOR_FULL`-gated `attrs`
+  field stays compiled out
+  ([engine/include/rage1/btile.h:42-44](../../engine/include/rage1/btile.h#L42-L44));
+  no per-BTile colour metadata on either platform.
+
+**Why**: CPC mode-1 doubles BTile graphic bytes vs ZX (16 vs 8); on
+cpc-banked, dataset capacity is the dominant constraint. Reusing the
+existing mono path on CPC reclaims ~50 % of BTile graphic bytes for
+mono games (the typical retro-adventure content shape) at the cost
+of a tiny blit-time conversion absorbed in the screen-enter pause.
+The mechanism reuses an already-tested engine code path with the
+same build-feature surface — no new author-facing decision.
+
+**Where it lives**: defined here; implemented in
+[cpc-renderer.md](cpc-renderer.md) (LUT routine + screen-enter
+budget); referenced by [gfx.md §2.3](gfx.md) (the §5.8 cell-layout
+note for CPC mono); referenced by [assets.md](assets.md) (mono CPC
+games skip the `cpct_img2tileset` BTile pass).
+
+### 5.10 Generic FG/BG colour token vocabulary
+
+**Decision (2026-05-26)**: colour-bearing directives in shared
+`.gdata` use platform-neutral tokens (`FG_*` / `BG_*` + `BRIGHT` /
+`FLASH` modifiers). `datagen.pl` resolves the per-platform emission
+from a canonical token-to-encoding table. The existing ZX-spelled
+tokens (`INK_*`, `PAPER_*`) stay accepted forever as silent aliases
+for the new spelling per §5.6.
+
+**Phase 1 scope**: applies to the **global mono-mode directives
+only** — `gamearea_attr` (the `BUILD_FEATURE_GAMEAREA_COLOR_MONO`
+reference attr, see
+[tools/datagen.pl:3425](../../tools/datagen.pl#L3425)) and
+`DEFAULT_BG_ATTR` ([tools/datagen.pl:782-783, :3309](../../tools/datagen.pl#L782-L783)).
+Per-BTile attrs (full-colour ZX mode) and per-sprite attrs are not
+unified — full-colour CPC bakes colour into the bitmap layer (§5.5),
+and synthesised per-BTile colour tokens are out of scope on CPC
+(assets.md Q2). The vocabulary may be extended in later phases if
+needed.
+
+**Canonical token → platform mapping** (one row per `FG_*` / `BG_*`
+token; the `FG_` and `BG_` prefixes pick role, not colour, so the
+table indexes on the colour name alone):
+
+| Colour token | ZX encoding | CPC firmware colour |
+|---|---|---|
+| `BLACK` | INK/PAPER 0 | 0 (Black) |
+| `BLUE` | INK/PAPER 1 | 1 (Blue) |
+| `RED` | INK/PAPER 2 | 3 (Red) |
+| `MAGENTA` | INK/PAPER 3 | 4 (Magenta) |
+| `GREEN` | INK/PAPER 4 | 9 (Green) |
+| `CYAN` | INK/PAPER 5 | 10 (Cyan) |
+| `YELLOW` | INK/PAPER 6 | 12 (Yellow) |
+| `WHITE` | INK/PAPER 7 | 13 (White / 50 % grey) |
+| `BLACK` + `BRIGHT` | INK/PAPER 0 + BRIGHT | 0 (no brighter black) |
+| `BLUE` + `BRIGHT` | INK/PAPER 1 + BRIGHT | 2 (Bright Blue) |
+| `RED` + `BRIGHT` | INK/PAPER 2 + BRIGHT | 6 (Bright Red) |
+| `MAGENTA` + `BRIGHT` | INK/PAPER 3 + BRIGHT | 8 (Bright Magenta) |
+| `GREEN` + `BRIGHT` | INK/PAPER 4 + BRIGHT | 18 (Bright Green) |
+| `CYAN` + `BRIGHT` | INK/PAPER 5 + BRIGHT | 20 (Bright Cyan) |
+| `YELLOW` + `BRIGHT` | INK/PAPER 6 + BRIGHT | 24 (Bright Yellow) |
+| `WHITE` + `BRIGHT` | INK/PAPER 7 + BRIGHT | 26 (Bright White) |
+
+CPC firmware colour numbers are the values accepted by the firmware
+`SET INK` / `SCR SET INK` calls (also the values cpctelera's pen-
+setup helpers consume). The mapping picks the CPC firmware colour
+whose nominal RGB best matches the ZX colour's nominal RGB
+(`0xC0` per "on" channel non-bright; `0xFF` bright).
+
+**`FLASH` on CPC**: silently dropped (no hardware FLASH in mode 1;
+emulation via palette cycling is out of Phase 1 scope). Authors who
+need a flashing effect on CPC implement it explicitly via a per-
+platform overlay.
+
+**Per-game palette override** — `CPC_COLOR_MAP` directive in the
+game's CPC overlay (`cpc6128/game_data/game_config/` or via
+`PATCH_GAME_CONFIG`, §5.11):
+
+```
+BEGIN_CPC_COLOR_MAP
+    YELLOW            FW=15    # render as Orange instead of canonical 12
+    BRIGHT_BLUE       FW=11    # render as Sky Blue instead of canonical 2
+END_CPC_COLOR_MAP
+```
+
+Each entry maps one colour token (with or without `BRIGHT`) to an
+explicit CPC firmware colour number. Unspecified tokens fall back
+to the canonical table. The override is platform-overlay-scoped —
+ZX builds ignore it.
+
+**CPC palette construction from tokens**: in mono mode, the CPC
+backend's 4-pen mode-1 palette is auto-derived: pen 0 = `gamearea_attr`'s
+BG colour, pen 1 = `gamearea_attr`'s FG colour, pens 2-3 = black
+(unused). Games that need a richer mono palette can add a more
+explicit `CPC_PALETTE` directive (assets.md Q5) to override the
+auto-derived palette. For `BUILD_FEATURE_GAMEAREA_COLOR_FULL` games
+on CPC, `CPC_PALETTE` is the authoritative palette source and the
+FG/BG token vocabulary is irrelevant to asset bytes (colour is
+baked into bitmap bytes by `cpct_img2tileset`).
+
+**Why**: single source of truth for colour intent in shared
+`.gdata`; eliminates the "are the ZX and CPC values visually
+equivalent?" risk that an explicit-per-platform value-pair approach
+would carry; preserves explicit-override escape hatches
+(`CPC_COLOR_MAP`, `CPC_PALETTE`, full per-platform `gamearea_attr`
+override via `PATCH_GAME_CONFIG`) for games that need non-canonical
+mappings.
+
+**Where it lives**: defined here; implemented in
+[assets.md](assets.md) (token parser + canonical table + the
+`CPC_COLOR_MAP` directive in `datagen.pl`); cross-referenced by §5.9
+(the mono LUT's pen pair is the resolved CPC pen pair from this
+table) and assets.md Q5 (`CPC_PALETTE` stays as the explicit-palette
+authority for full-colour games).
+
+### 5.11 Generalised PATCH directives across .gdata sections
+
+**Decision (2026-05-26)**: extend the existing `PATCH_SCREEN`
+machinery in `datagen.pl` to cover every named `.gdata` section
+that could plausibly be partially overridden by either a same-
+platform `patches/` file or a per-platform overlay's `patches/`.
+
+Today the patch mechanism is **screen-only**
+([tools/datagen.pl:250-258](../../tools/datagen.pl#L250-L258),
+[assets.md §1.4](assets.md)). Phase 1 of the multiplatform refactor
+adds at minimum:
+
+- `PATCH_GAME_CONFIG` — surgical override of individual `GAME_CONFIG`
+  fields without rewriting the whole config.
+- `PATCH_BTILE NAME=…` — replace or augment a BTile's frames, attrs,
+  or cells.
+- `PATCH_SPRITE NAME=…` — same for sprites.
+- `PATCH_HERO NAME=…` — same for heroes.
+
+`PATCH_RULE` is **not** added in Phase 1 — flow rules already append
+by default through their normal `BEGIN_RULE` blocks (no rule has a
+stable identity beyond its `(screen, when)` bucket; see
+[assets.md §1.4](assets.md)), so adding new rules via overlay or
+patch files works today without explicit `PATCH_RULE` machinery.
+Adding it would require giving rules stable IDs — a deeper change
+out of scope here.
+
+**Semantics** (mirroring `PATCH_SCREEN`):
+
+- The named entity must already exist when the `PATCH_*` directive
+  is encountered. Load order is the existing Makefile contract —
+  regular files first, patches last
+  ([Makefile.common GDATA_FILES / GDATA_PATCHES](../../Makefile.common)).
+- `PATCH_*` puts the parser into the matching section's state with
+  `$cur_*` pointing at the already-loaded struct (no copy), and
+  sets a `*_patching` flag that suppresses the normal "push new
+  struct" path at the matching `END_*`.
+- Per-section semantics decide which directives **replace by key**
+  vs **append to list**. For `GAME_CONFIG`, every directive is
+  replace-by-key (idempotent on shared base + overlay). For
+  `BTILE` / `SPRITE` / `HERO`, frame-list directives append, attr
+  scalars and cell-data directives replace by row/col.
+
+**Why**: the per-platform overlay model (§5.2) does file-level
+shadowing today — a `cpc6128/game_data/game_config/game_config.gdata`
+overlay has to restate the entire shared config to change one field
+(e.g. just to add a `CPC_COLOR_MAP` block per §5.10). That's
+brittle: any later edit to the shared file silently diverges from
+the overlay. `PATCH_*` directives turn overlays into **surgical
+merges**: the overlay file restates only what changes, and the rest
+stays inherited.
+
+This is the natural landing site for §5.10's `CPC_COLOR_MAP` and
+any other per-platform tweak that touches only a small subset of a
+section's fields.
+
+**Implementation**: small parser extension in `datagen.pl`. The
+state-machine already dispatches on `BEGIN_*` directives; the new
+`PATCH_*` variants look up the named entity in the already-
+populated index and reuse the existing state-handler code paths
+with the `*_patching` flag. The Makefile's `GDATA_PATCHES` glob
+extends to include `patches/game_config/*.gdata`,
+`patches/btiles/*.gdata`, `patches/sprites/*.gdata`,
+`patches/heroes/*.gdata` (and the per-platform overlay's `patches/`
+subdirs follow the same shape).
+
+**Removal semantics out of scope (Phase 1)**: matching the existing
+`PATCH_SCREEN` precedent, all `PATCH_*` directives in Phase 1 are
+**additive / replace-by-key**, with no syntax for removing list
+elements. If a future need arises (e.g. "remove this BTile from
+this screen on CPC"), a separate `UNPATCH_*` or `REMOVE_*` family
+can be added — not Phase 1.
+
+**Where it lives**: defined here; implemented in
+[assets.md](assets.md) §1.4 (current mechanism description gains an
+"and the Phase 1 generalisation" sub-section) and in a new Phase A
+task (folded into A1 or split as a new A-task, TBD when assets.md
+is amended). Cross-referenced by §5.10 (overlay ergonomics depend
+on this) and §5.2 (sibling-tree overlays gain surgical-merge
+semantics).
 
 ## 6. Consolidated Risks index
 
@@ -530,6 +789,7 @@ user should be ready to make at the relevant phase boundary:
 | (assets) **Q6** ✅ | `patches/flow/` policy | [assets.md](assets.md) | **Resolved (2026-05-23)**: keep existing `patches/{map,flow}/` mechanism as-is; extend to `<platform>/game_data/patches/{map,flow}/` |
 | (assets) **Q7** ✅ | PNG path resolution under overlays | [assets.md](assets.md) | **Resolved (2026-05-23)**: invoke `datagen.pl` with `cwd = build/` so overlay-copied PNGs are resolved |
 | (assets) **Q8** ✅ | CPC `SOUND` mapping | [assets.md](assets.md), [audio.md](audio.md) | **Re-resolved (2026-05-26, supersedes 2026-05-23)**: **Option C** — backend-agnostic event IDs in shared `Game.gdata` (e.g. `SOUND ENEMY_KILLED=SFX_HIT`) + per-platform `SOUND_MAP` overlay at `<platform>/game_data/game_config/sound_map.gdata` (audio.md §3.3). Old plan (per-platform `SOUND_<PLATFORM>` directive) rejected — would proliferate suffixes across 4 platforms |
+| (assets) **OQ-A9** | Canonical FG/BG token → CPC firmware-colour mapping table (§5.10) | [assets.md](assets.md) | **Open (2026-05-26)** — verify each row of the proposed 16-entry table against a definitive CPC firmware-palette reference before merging A1-7. Override mechanism (`CPC_COLOR_MAP`, §5.10) lets per-game disagreements be fixed without rebuilding the table. Resolution gate: A1-7 implementation |
 | (gfx) **Q1** ✅ | Single `gfx_tile_register` vs split | [gfx.md](gfx.md) | **Resolved (2026-05-25)**: single entrypoint; BTile cells are ALWAYS 16-bit pointers (§5.8) |
 | (gfx) **Q2** ✅ | `gfx_attr_t` storage width | [gfx.md](gfx.md) | **Resolved (2026-05-25)**: `uint8_t` on every platform (inert on CPC per §5.5) |
 | (gfx) **Q3** ✅ | Backwards-compat window for `SPRITE_ENGINE` | [gfx.md](gfx.md) | **Resolved (2026-05-25)**: indefinite (§5.6) |

@@ -193,6 +193,18 @@ clean and small, the load order is a Makefile concern (so it can be
 generalised under `toolchain.md`), and the only new datagen knowledge
 needed is "process files in this order".
 
+**Phase 1 generalisation** (per [README §5.11](README.md#511-generalised-patch-directives-across-gdata-sections)):
+the screen-only scope is extended to cover `PATCH_GAME_CONFIG`,
+`PATCH_BTILE NAME=…`, `PATCH_SPRITE NAME=…`, and `PATCH_HERO NAME=…`,
+mirroring `PATCH_SCREEN` semantics (named entity must already exist;
+replace-by-key for scalars, append for lists; no removal in Phase 1).
+`PATCH_RULE` is deliberately deferred — flow rules already append by
+default via their `BEGIN_RULE` blocks, and giving rules stable IDs is
+a deeper change out of scope here. The Makefile's `GDATA_PATCHES`
+glob extends to cover `patches/game_config/`, `patches/btiles/`,
+`patches/sprites/`, `patches/heroes/`. Implementation lands in Phase
+A2 (see task A2-4).
+
 ### 1.5 Inventory of asset kinds — shared vs per-platform
 
 Going through every `.gdata` directive, what is inherently shared vs
@@ -234,7 +246,15 @@ inherently platform-coupled:
 - BTile / sprite **attribute / palette** information. ZX uses an
   attribute byte per 8×8 cell. CPC uses per-mode palette indexes and
   has no attribute clash.
-- The `INK_x | PAPER_y` attribute *expressions* — they are ZX vocabulary.
+- The `INK_x | PAPER_y` attribute *expressions* — they are ZX
+  vocabulary. **Phase 1** introduces a platform-neutral
+  `FG_* | BG_*` (+ `BRIGHT` / `FLASH`) token vocabulary
+  ([README §5.10](README.md#510-generic-fgbg-colour-token-vocabulary))
+  as the preferred spelling in shared `.gdata`; `INK_*` / `PAPER_*`
+  stay accepted forever as silent aliases per
+  [README §5.6](README.md#56-backwards-compatibility-is-indefinite).
+  The new tokens resolve to ZX bytes or CPC firmware-colour numbers
+  via a canonical mapping table at `datagen.pl` time.
 - Loading screen format (`.scr` is ZX-only; CPC has `.scr` files of its
   own but the byte format is different; both are 6912 vs 16384 bytes
   and have entirely different geometries).
@@ -506,6 +526,7 @@ when the active `PLATFORM` matches the suffix.
 | `GAME_AREA …`   | `GAME_AREA_CPC …`     | Screen-area rectangle. ZX assumes 32×24; CPC mode-1 cells are 40×25, so authors typically need a different rectangle. Phase A1 adds the `_CPC` suffix; other platforms add their own suffix as needed. |
 | `SOUND <E>=<S>` | ~~`SOUND_CPC <E>=<S>`~~ — **superseded 2026-05-26**, see OQ8 | SFX symbol bindings. Old (2026-05-23) plan was per-platform `SOUND_CPC` suffixed directives; new plan (audio.md §3.3, OQ8 re-resolved 2026-05-26) is **backend-agnostic event IDs + per-platform `SOUND_MAP` overlay** at `<platform>/game_data/game_config/sound_map.gdata`. Shared `Game.gdata` carries `SOUND ENEMY_KILLED=SFX_HIT`; per-platform overlay carries `SOUND_MAP SFX_HIT=BEEPFX_HIT_3` (ZX) / `SOUND_MAP SFX_HIT=2` (CPC). |
 | `CPC_PALETTE …` | n/a (CPC-only)        | Explicit CPC firmware-palette indices (or `.gpl` reference) passed to `cpct_img2tileset` for PNG-to-CPC conversion. Per OQ5: defaults to standard CPC firmware palette when absent.                  |
+| `BEGIN_CPC_COLOR_MAP … END_CPC_COLOR_MAP` | n/a (CPC-only) | Per-game override of the canonical FG/BG token → CPC firmware-colour mapping (README §5.10). Lines inside the block have the form `<TOKEN> FW=<n>` (e.g. `YELLOW FW=15`, `BRIGHT_BLUE FW=11`). Both compound spelling (`BRIGHT_BLUE`) and modifier spelling (`BLUE` + `BRIGHT`) are accepted on the LHS. Unspecified tokens fall back to the canonical table. No effect on ZX builds — silently parsed and ignored. Typical home: `cpc6128/game_data/game_config/` overlay, applied via `PATCH_GAME_CONFIG` to avoid restating the whole config (see §5.11 / A2-4). |
 
 The dispatch is done in `datagen.pl`: when parsing `BEGIN_GAME_CONFIG`,
 a directive `<NAME>_<PLATFORM_UPPERCASE>` shadows the base `<NAME>`
@@ -514,11 +535,31 @@ is general — adding another per-platform variant later (e.g.
 `SCREEN_DIMENSIONS_CPC` if it turns out to be useful separately
 from `GAME_AREA`) is just one more table entry.
 
-**No other syntax extensions in Phase A1.** Specifically:
+**Other Phase 1 syntax additions** (landing across A1 and A2, not
+all in A1):
+
+- **Generic FG/BG colour tokens** (A1; see task A1-7): `FG_<COLOUR>`,
+  `BG_<COLOUR>` (+ `BRIGHT` / `FLASH` modifiers) in shared `.gdata`,
+  applied to `gamearea_attr` (the `BUILD_FEATURE_GAMEAREA_COLOR_MONO`
+  reference attr) and `DEFAULT_BG_ATTR`. `INK_*` / `PAPER_*` stay as
+  permanent silent aliases per README §5.6.
+- **Generalised PATCH directives** (A2; see task A2-4):
+  `PATCH_GAME_CONFIG`, `PATCH_BTILE NAME=…`, `PATCH_SPRITE NAME=…`,
+  `PATCH_HERO NAME=…`. Semantics mirror `PATCH_SCREEN` (per README
+  §5.11 and §1.4 above). `PATCH_RULE` is deferred.
+- **`BEGIN_CPC_COLOR_MAP … END_CPC_COLOR_MAP`** (A1; see task A1-7):
+  optional CPC overlay directive that overrides individual entries
+  in the canonical FG/BG-token → CPC-firmware-colour mapping. ZX
+  builds parse and ignore.
+
+**Not in Phase 1**:
 
 - No `PLATFORM_IF zx128 … END_PLATFORM_IF` blocks.
-- No new `PATCH_*` directives beyond the existing `PATCH_SCREEN`.
-- BTile / sprite / hero `.gdata` files remain syntactically unchanged.
+- No `PATCH_RULE` (deferred — rules have no stable identity yet).
+- No removal syntax for any `PATCH_*` directive (additive / replace-
+  by-key only; matches existing `PATCH_SCREEN` precedent).
+- BTile / sprite / hero `.gdata` files remain syntactically unchanged
+  beyond the new `PATCH_*` entry points.
 
 **Optional later extensions (deferred — track as Open Questions)**:
 
@@ -866,6 +907,33 @@ No CPC work yet.
   the rejection. Build the same game with `make build` (no
   suffix); observe success.
 
+- **A1-7** Implement the **generic FG/BG colour token vocabulary**
+  (README §5.10) in `datagen.pl`. The parser accepts `FG_<COLOUR>`
+  and `BG_<COLOUR>` tokens (+ `BRIGHT` / `FLASH` modifiers; also
+  compound spellings like `BRIGHT_BLUE`) for the global mono-mode
+  directives `gamearea_attr` and `DEFAULT_BG_ATTR`. Tokens resolve
+  per-platform via a canonical table (see Open Question OQ-A9 for
+  the verification gate):
+  - On ZX, tokens emit the existing `INK_x | PAPER_y | BRIGHT` byte.
+  - On CPC, tokens resolve to a CPC firmware-colour number; the
+    backend uses the pair to set the mono palette + build the
+    blit-time LUT (per [README §5.9](README.md#59-cpc-mono-game-mode-reuses-the-existing-mono-path-with-1bpp-btile-cells)).
+  Also implement `BEGIN_CPC_COLOR_MAP … END_CPC_COLOR_MAP` parsing
+  in `BEGIN_GAME_CONFIG`. Each line maps one token to an explicit
+  CPC firmware-colour number; unspecified tokens fall back to the
+  canonical table. ZX builds parse the block and ignore it. `INK_*`
+  and `PAPER_*` continue to work as permanent silent aliases.
+  *Test*: pick one game (e.g. `games/minimal`), rewrite its
+  `gamearea_attr` from `INK_WHITE | PAPER_BLACK | BRIGHT` to
+  `FG_WHITE | BG_BLACK | BRIGHT`, build, diff generated `features.h`
+  and game-config byte values against the pre-change build — byte
+  identical on ZX. Build the same game with the original `INK_*`
+  spelling alongside (different game), confirm identical bytes.
+  *Expected outcome*: shared `.gdata` colour intent is platform-
+  neutral; ZX byte output unchanged; CPC token-resolution table is
+  in place and unit-tested via a Perl test under `tests/datagen/`.
+  *Depends on*: OQ-A9 resolution before merging the canonical table.
+
 **Phase-exit criteria for A1**:
 - `make all-test-builds` green.
 - `tests/00regression/` ZX screenshot tests green.
@@ -873,6 +941,9 @@ No CPC work yet.
 - `ZX_TARGET` still accepted as a permanent silent alias for
   external games (per README §5.6); no warning emitted.
 - The CLI-override + overlay-required rule is enforced (A1-6).
+- Generic FG/BG tokens resolve ZX byte-identically to their
+  `INK_*` / `PAPER_*` aliases (A1-7); `CPC_COLOR_MAP` is parsed
+  and ignored on ZX without errors.
 
 ### Phase A2 — Sibling tree + overlay copy
 
@@ -905,11 +976,53 @@ exists).
   overlay file is what lands in `build/game_data/music/music1.asm`.
   Remove the smoke test file.
   *Test*: local ad-hoc; nothing checked in.
-- **A2-4** Document the sibling-tree convention in
+- **A2-4** Implement the **generalised PATCH directives** in
+  `datagen.pl` per [README §5.11](README.md#511-generalised-patch-directives-across-gdata-sections)
+  and §1.4 above. Add the following top-level directives, each
+  mirroring the existing `PATCH_SCREEN` pattern
+  ([tools/datagen.pl:250-258](../../tools/datagen.pl#L250-L258)):
+  - `PATCH_GAME_CONFIG` — looks up the existing `$game_config`,
+    enters `GAME_CONFIG` state, replace-by-key for every directive
+    inside.
+  - `PATCH_BTILE NAME=…` — looks up the existing BTile in the
+    name-index, enters `BTILE` state. Frame-list directives
+    append; attr scalars and cell-data lines replace by row/col.
+  - `PATCH_SPRITE NAME=…` — same shape for sprites.
+  - `PATCH_HERO NAME=…` — same shape for heroes.
+  All four die with a clear "name not found" error if the named
+  entity hasn't been loaded yet. No `PATCH_RULE`, no removal
+  syntax (deferred — see §1.4).
+  Extend the Makefile's `GDATA_PATCHES` glob (`Makefile.common:182`)
+  to add `patches/game_config/*.gdata`, `patches/btiles/*.gdata`,
+  `patches/sprites/*.gdata`, `patches/heroes/*.gdata`. Load order
+  stays "regular files first, patches last" (Makefile is the
+  contract; datagen itself stays directory-unaware).
+  *Test*: ad-hoc per directive — for `PATCH_GAME_CONFIG`, drop a
+  `patches/game_config/override.gdata` in `games/minimal` that
+  flips one field (e.g. `LIVES_AREA` rectangle), build, confirm
+  generated `features.h` / config bytes reflect the override but
+  the rest of the config is unchanged. For `PATCH_BTILE NAME=…`,
+  add a patch that flips one cell's attr in a known BTile,
+  confirm the engine renders the patched version. Smoke files
+  are added under each game's `patches/` subdirs for the regression
+  test in A2-5 below; non-patched games are unaffected.
+  *Expected outcome*: per-platform overlays gain surgical-merge
+  semantics for `game_config`, BTile, sprite, and hero data —
+  overlay files restate only what changes.
+- **A2-5** Add a regression smoke test that exercises
+  `PATCH_GAME_CONFIG` end-to-end: a test game's CPC overlay (or
+  a synthetic ZX-side overlay if CPC isn't standing yet) carries
+  only a `patches/game_config/override.gdata` that adds a
+  `BEGIN_CPC_COLOR_MAP` block; build succeeds, the rest of the
+  config is inherited verbatim from shared.
+  *Test*: under `tests/00regression/` or a new `tests/datagen/`
+  dir, depending on what's available at A2 time.
+- **A2-6** Document the sibling-tree convention in
   `doc/DATAGEN.md` and in `doc/multiplatform-plan/README.md`
-  (cross-link).
+  (cross-link). Include a short worked example of
+  `PATCH_GAME_CONFIG` in an overlay file.
   *Test*: doc-only.
-- **A2-5** Confirm `--game-data-dir` for `mapgen.pl` still points
+- **A2-7** Confirm `--game-data-dir` for `mapgen.pl` still points
   at the **shared** `game_data/` (overlay mechanics are at copy
   time, not at tool-author time): no change to mapgen invocations
   expected.
@@ -918,6 +1031,9 @@ exists).
 **Phase-exit criteria for A2**:
 - Overlay mechanism exists for `game_data/` and `game_src/`
   (verified via A2-2/A2-3 smoke tests).
+- Generalised PATCH directives (`PATCH_GAME_CONFIG`, `PATCH_BTILE`,
+  `PATCH_SPRITE`, `PATCH_HERO`) work end-to-end (verified by A2-4
+  and A2-5).
 - `make all-test-builds` green.
 - `tests/00regression/` green.
 
@@ -1238,9 +1354,12 @@ story.
 ## 6. Open Questions
 
 All 8 questions raised during the initial drafting were resolved
-during the first user review (2026-05-23). The questions and their
-resolutions are preserved below for the historical record; the
-plan body has been updated accordingly.
+during the first user review (2026-05-23 / 2026-05-26). The
+questions and their resolutions are preserved below for the
+historical record; the plan body has been updated accordingly.
+
+New questions introduced by Phase 1 follow-ups appear at the end of
+this list.
 
 1. **Screen dimensions: per-platform or parametrised?**
    ZX = 32×24 cells. CPC mode-1 = 40×25 cells. mapgen already
@@ -1333,6 +1452,41 @@ plan body has been updated accordingly.
    `Game.gdata` shadow (Option A) remains a valid escape hatch
    for games that want to diverge harder. See §2.3 and
    `audio.md` §3.3.
+
+9. **OQ-A9 — Canonical FG/BG token → CPC firmware-colour mapping
+   table (verification gate for A1-7).**
+   The mapping table in [README §5.10](README.md#510-generic-fgbg-colour-token-vocabulary)
+   pairs each ZX colour token (with and without `BRIGHT`) to a CPC
+   firmware-colour number whose nominal RGB best matches the ZX
+   colour's nominal RGB. The proposed table is:
+
+   | Token | CPC firmware | Token + BRIGHT | CPC firmware |
+   |---|---|---|---|
+   | `BLACK` | 0 | `BLACK` + BRIGHT | 0 |
+   | `BLUE` | 1 | `BLUE` + BRIGHT | 2 |
+   | `RED` | 3 | `RED` + BRIGHT | 6 |
+   | `MAGENTA` | 4 | `MAGENTA` + BRIGHT | 8 |
+   | `GREEN` | 9 | `GREEN` + BRIGHT | 18 |
+   | `CYAN` | 10 | `CYAN` + BRIGHT | 20 |
+   | `YELLOW` | 12 | `YELLOW` + BRIGHT | 24 |
+   | `WHITE` | 13 | `WHITE` + BRIGHT | 26 |
+
+   These numbers were drafted from the AMSTRAD CPC firmware
+   reference (the values consumed by firmware `SCR SET INK` /
+   cpctelera pen-setup helpers). Before merging A1-7, verify each
+   entry against a definitive reference (the AMSTRAD CPC firmware
+   manual, the cpctelera firmware-colour table in
+   `external/cpctelera/cpctelera/cfg/cpct_firmware_palette.h` once
+   the submodule is vendored under Phase R1, or a screenshot
+   comparison on a Caprice32 emulator). Specifically check the
+   "dark vs bright" pairing assumption (e.g. firmware 3 vs 6 for
+   non-bright vs bright red) — it is the most likely place for an
+   off-by-one slip.
+   **Status (2026-05-26): open.** Resolution gate: A1-7
+   implementation. The override mechanism (`CPC_COLOR_MAP`) means
+   any per-game disagreement with the canonical table can be fixed
+   without rebuilding the table itself, but the default mapping
+   should still be visually correct out of the box.
 
 ---
 
