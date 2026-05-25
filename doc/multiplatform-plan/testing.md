@@ -720,11 +720,11 @@ refined by `assets.md` per-game during Phase A2):
 | `sub_bufs_128`      | —    | ✓     | —      | ✓       | SUB + banking, CPC analogue useful but late                          |
 | `minimal_cpc` (new) | —    | —     | ✓      | ✓       | first CPC RAGE1 game; created by `cpc-renderer.md` R4                |
 | `cpc_hello` (new)   | —    | —     | ✓      | ✓       | toolchain smoke from `toolchain.md` T2-10 — engine-stub level        |
+| `00cpc-compile-test` (new) | — | — | ✓ | ✓ | gfx.md G7 compile-only target; **not** a regression test            |
 
 CPC664 is not a separate column because it is a runtime target of
 the `cpc464` build, not a build identity (see [README.md §1](README.md)
 and OQ-TS9 below).
-| `00cpc-compile-test` (new) | — | — | — | — | ✓ | gfx.md G7 compile-only target; **not** a regression test |
 
 A "✓" means: that game is in the build matrix for that platform; CI
 attempts to build it and (if a baseline exists) screenshot-regress it.
@@ -785,7 +785,7 @@ this; mitigation is to **split the image into tagged variants**:
 - `zxjogv/rage1-z88dk:test` — adds JNEXT, Caprice32, Xvfb, ImageMagick,
   SD-card image. Used by a new `regression.yaml` workflow.
 
-Split decided in Phase TS3-1. The `:latest` tag becomes an alias for
+Split decided in Phase TS2-3 (and toolchain.md T0-5). The `:latest` tag becomes an alias for
 `:test` (the superset) for developer convenience.
 
 ### 4.3 Build-vs-regression split per CI job

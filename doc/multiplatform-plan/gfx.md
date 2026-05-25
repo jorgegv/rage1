@@ -772,8 +772,9 @@ on top, but the more the library provides the smaller the backend.
   axis (SP1, JSP, CPCTEL). The *target machine* is another (ZX48, ZX128,
   CPC464, CPC6128 — CPC664 runs the cpc464 binary; covered by
   `toolchain.md`). The matrix is
-  constrained: `cpc` backend implies a CPC machine target; SP1/JSP
-  imply a ZX machine target. `datagen.pl` should validate.
+  constrained: any CPC graphics backend (`cpctel` today, future
+  `cpcrs`) implies a CPC machine target; SP1/JSP imply a ZX machine
+  target. `datagen.pl` should validate.
 
 ### 3.6 What the engine does *not* need to know
 
@@ -1044,8 +1045,20 @@ target. **Still no real CPC rendering**; this is the framing.
 
 ### Phase G8 — Real CPC backend wiring
 
-Goal: a renderable, playable CPC build of at least `games/minimal`.
-This is where the CPC renderer library lands as live engine code.
+Goal: a renderable, playable CPC build of `games/minimal_cpc` (the
+dedicated CPC stub game created by `cpc-renderer.md` R4-3). This is
+where the CPC renderer library lands as live engine code.
+
+> **Note on the two `minimal*` games.** During Phase 1, RAGE1 keeps
+> **both** `games/minimal` (ZX-only) and `games/minimal_cpc`
+> (CPC-only) as independent stubs. The split avoids forcing
+> `games/minimal` to grow CPC overlays before the engine's
+> cross-platform plumbing (assets / overlays / HAL split) is mature
+> enough to keep a single game building on both platforms. Once that
+> plumbing is solid — typically late Phase G9 / Phase A6 — the two
+> are merged into a single `games/minimal` that opts into both ZX
+> and CPC. `testing.md` TS6 owns the retirement of CPC-only stubs.
+> See [testing.md §4.1](testing.md) and [cpc-renderer.md R4](cpc-renderer.md).
 
 - **G8-1** Confirm `external/cpctelera/` (added in toolchain.md Phase
   T0, configured/pinned in cpc-renderer.md Phase R1) is on the
@@ -1053,21 +1066,26 @@ This is where the CPC renderer library lands as live engine code.
   (or `-banked`). No new vendoring at this phase; G8 consumes what
   T0/R1 already shipped.
 - **G8-2** Implement `gfx_cpctel.c` real bodies on top of the library.
-- **G8-3** Build a CPC target: `make build target_game=games/minimal
+- **G8-3** Build a CPC target: `make build target_game=games/minimal_cpc
   GFX_BACKEND=cpctel PLATFORM=cpc6128` (exact knob names defined in
-  `toolchain.md`). Output: a CDT or DSK image.
+  `toolchain.md`). Output: a CDT or DSK image. `games/minimal_cpc/`
+  is the CPC-only stub created by `cpc-renderer.md` R4-3;
+  `games/minimal` remains the ZX-only reference and is not built
+  for CPC during Phase G8.
 - **G8-4** Add CPC screenshot regression alongside ZX regression
-  (machinery extended in `testing.md`). Initial coverage: `minimal`.
+  (machinery extended in `testing.md`). Initial coverage:
+  `minimal_cpc`.
 - **G8-5** Iterate on visual parity: hero / enemies / BTiles render
   correctly. Crisp parity with the ZX reference screenshot is *not*
   required (different palette, different attribute model); the
   acceptance criterion is **functional**: same game logic produces
   same gameplay state.
 - **Phase-exit criteria**:
-  - `games/minimal` builds and runs on a CPC emulator (Caprice32 or
-    similar) with hero / enemy movement and one screen of BTiles
-    rendered correctly.
-  - All ZX test games still build and screenshot-match.
+  - `games/minimal_cpc` builds and runs on a CPC emulator
+    (Caprice32 or similar) with hero / enemy movement and one
+    screen of BTiles rendered correctly.
+  - `games/minimal` (ZX) and all other ZX test games still build
+    and screenshot-match.
 
 ### Phase G9 — CPC backend hardening
 

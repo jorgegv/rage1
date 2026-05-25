@@ -143,7 +143,9 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
   precedence proven end-to-end on ZX
 - `B3` — parameterise lowmem threshold checks
 - `IN3–IN4` — engine ↔ HAL migration; per-game `kbd.c` consolidation
-- `AU3` — migrate to `audio_*` names; remove aliases
+- `AU3` — migrate engine + games to `audio_*` names (legacy
+  `beeper_*` / `tracker_*` / `BUILD_FEATURE_TRACKER_*` spellings
+  stay as permanent silent aliases per §5.6)
 
 **Phase δ — CPC bring-up (cpc-flat first, then cpc-banked).**
 
@@ -283,6 +285,19 @@ backend symbol prefix `gfx_cpctel_*`, feature macro
 `cpc` is retained for build targets (`make build-cpc`, etc.) and
 Makefile filenames (`Makefile-cpc-flat`, `Makefile-cpc-banked`) —
 those are platform tags, not backend names.
+
+**Scope: gfx-only by design.** The library-short-name rule applies
+to `GFX_BACKEND` only. The `input_*` and `audio_*` HALs use
+platform/hardware tags in their backend filenames and feature
+macros (`input_cpc.{h,c}` + `BUILD_FEATURE_INPUT_BACKEND_CPC`;
+`audio_cpc_ay.{h,c}` + `BUILD_FEATURE_AUDIO_*_BACKEND_CPC_AY`)
+because there is no competing CPC library to disambiguate against
+on those axes today: input goes straight through cpctelera's
+keyboard scan, and audio goes straight through the AY chip via
+AT2's AKG generic player. If a second CPC input or audio library
+ever appears as a first-class alternative, those HALs adopt the
+same library-short-name pattern at that point. Until then, the
+asymmetry is intentional.
 
 **Where it lives**: rule defined in [toolchain.md §3.1](toolchain.md);
 applied in [gfx.md §2.8 + §3.1–§3.3](gfx.md); ripples into
@@ -452,8 +467,32 @@ holding in mind:
   OQ-1, `banking.md` OQ-B4).
 - **Cross-doc — CPC raster IRQ is hardware-fixed at 300 Hz.** Only
   the divide-by-six to 50 Hz is software-tunable. RAGE1's existing
-  50 Hz frame semantics survive but every ISR-using subsystem
+  50 Hz frame semantics survive, but every ISR-using subsystem
   (audio, input, banking) must coordinate to the 300 Hz tick.
+  Specifically on **cpc-banked**: the 300 Hz ISR fires up to six
+  times more often than ZX128's 50 Hz tick, so any work that runs
+  inside a swapped-in codeset (audio mixer tick, music player tick,
+  flow-rule eval) competes with the banked-function dispatcher's
+  DI/EI window around bank switch. The two interactions worth
+  budgeting at Phase B6 / Phase AU5: (a) worst-case dispatcher
+  latency × 300 Hz must leave headroom for the music player's
+  per-tick CPU budget, and (b) ISR-driven audio tick (if hosted in
+  a codeset) needs the dispatcher to be re-entrancy-safe or the
+  audio code must live in always-resident memory (Page A or
+  always-mapped low RAM). Default plan: AT2 AKG player lives in
+  always-resident memory; flow-rule eval stays banked. Phase B6 /
+  AU5 verifies the budget on real hardware.
+- **Cross-doc — cpc-banked Page A engine-code budget is TBD until
+  Phase B4-1's z88dk +cpc CRT walk.** The cpc-banked memory shape
+  assumes the engine fits below 0x4000 (Page A) with comfortable
+  headroom after the +cpc clib's CRT support routines. If the CRT
+  footprint turns out larger than estimated (banking.md §3.1.4 / R9),
+  the engine still has **Page C** (0xC000–0xFFFF, minus the dataset
+  swap area at the top) as a fallback for engine code, with the
+  banked-function dispatcher relocated accordingly. Either shape is
+  viable; the choice between Shape A (engine in Page A) and Shape B
+  (engine in Page C) is finalised by B4-1's measurement, not now.
+  No architectural change is required either way.
 - **Cross-doc — Per-game `kbd.c` duplication (narrow).** Only
   `games/default` and `games/default_jsp` carry the inline-asm
   `kbd.c`/`kbd.h` raw-scan helper today. `input.md` Phase IN4
@@ -497,9 +536,9 @@ user should be ready to make at the relevant phase boundary:
 | (banking) **OQ-B1** ✅ | Dataset destination buffer placement on cpc-banked | [banking.md](banking.md) | **Resolved (2026-05-26)**: top of Page C (0x8000-0x9FFF, 8 KB). Page A alternative recorded as fallback |
 | (banking) **OQ-B4** ✅ | CPC mode 0 support in Phase 1 | [banking.md](banking.md) | **Resolved (2026-05-26)**: mode 1 only — see also gfx.md Q7, cpc-renderer.md OQ-1 |
 | (banking) **OQ-B11** ✅ | Banking mechanism: custom vs z88dk #pragma bank | [banking.md](banking.md), [toolchain.md](toolchain.md) | **Resolved (2026-05-26)**: extend RAGE1's custom banking (Option A); migration to z88dk deferred as future task. Cross-link: OQ-T11 |
-| (cpc-renderer) **OQ-1** | Default CPC mode | [cpc-renderer.md](cpc-renderer.md) | **Mode 1** |
-| (cpc-renderer) **OQ-2** | Pin cpctelera commit on `development` or `master` | [cpc-renderer.md](cpc-renderer.md) | Specific commit on `development` |
-| (cpc-renderer) **OQ-5** | CDT/DSK via `appmake` or cpctelera's `iDSK`/`2cdt` | [cpc-renderer.md](cpc-renderer.md), [toolchain.md](toolchain.md) | `appmake` |
+| (cpc-renderer) **OQ-1** ✅ | Default CPC mode | [cpc-renderer.md](cpc-renderer.md) | **Resolved (2026-05-25)**: Mode 1 — cross-link gfx.md Q7, banking.md OQ-B4 |
+| (cpc-renderer) **OQ-2** ✅ | Pin cpctelera commit on `development` or `master` | [cpc-renderer.md](cpc-renderer.md) | **Resolved (2026-05-25)**: pin a specific commit on `development` |
+| (cpc-renderer) **OQ-5** ✅ | CDT/DSK via `appmake` or cpctelera's `iDSK`/`2cdt` | [cpc-renderer.md](cpc-renderer.md), [toolchain.md](toolchain.md) | **Resolved (2026-05-25)**: `appmake` |
 | (audio) **Q4** ✅ | ZX128 SFX routing: beeper-only vs beeper + AY both active | [audio.md](audio.md) | **Resolved** (audio.md §3.1.1 / §3.2): both active by default; per-game opt-out |
 | (audio) **Q8** ✅ | Shared `.aks` as recommended authoring convention | [audio.md](audio.md) | **Resolved**: yes — shared `.aks` is the recommended authoring convention |
 | (audio) **Q10** ✅ | MSX placeholder (C64 OOS) | [audio.md](audio.md) | **Resolved (2026-05-26)**: MSX stays sketch-only and `audio_*` generalises cleanly via `PLY_AKG_HARDWARE_MSX`; C64 out of scope per §5.7 |

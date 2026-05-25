@@ -810,8 +810,8 @@ macros above — they're the renames of today's
 | `BUILD_FEATURE_TRACKER_SOUNDFX` | `BUILD_FEATURE_AUDIO_SFX_TRACKER` (capability flag — implies `BUILD_FEATURE_AUDIO_SFX_BACKEND_{ZX,CPC}_AY` is active) |
 
 (Renames are mechanical and done in Phase AU3. The old names
-are emitted in parallel during the deprecation window —
-identical pattern to G1-2 in `gfx.md`.)
+are emitted in parallel **indefinitely** as permanent silent
+aliases per README §5.6 — identical pattern to G1-2 in `gfx.md`.)
 
 **Default backend selection** by platform (music axis and SFX
 axis listed separately):
@@ -1605,7 +1605,7 @@ working without migration.
   - Existing ZX-only games unchanged in behaviour.
   - `make all-test-builds` green.
 
-### Phase AU7 — Hardening, cleanup, deprecation
+### Phase AU7 — Hardening, cleanup, docs
 
 **Goal**: close out the migration and the documentation.
 

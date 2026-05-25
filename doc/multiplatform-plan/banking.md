@@ -1021,6 +1021,91 @@ key) gains `interrupts_cpc_flat:` and `interrupts_cpc_banked:`
 peers. The CPC sections may be much simpler (just a few
 fixed-address constants) but the symmetry is worth keeping.
 
+#### 3.5.1 Interaction between 300 Hz ISR and the banked-function dispatcher (cpc-banked)
+
+`cpc-banked` is the one configuration where the 300 Hz CPC tick
+collides with non-trivial banking state. The interaction is worth
+analysing up front so Phase B6 / B7 / AU5 budget for it rather than
+discovering it under a live music player.
+
+**The three actors:**
+
+1. **The CPC ISR**, firing every 1/300 s, divided down to 50 Hz
+   in software for `do_timer_tick()`.
+2. **The audio tick** (music player + SFX mixer). On CPC this is
+   the AT2 AKG generic player driving the AY chip. The player's
+   call cadence is the music's row rate (typically 50 Hz, derived
+   from the divided ISR counter — not the raw 300 Hz tick).
+3. **The banked-function dispatcher**, which mid-frame may be in
+   the middle of: save Config N → switch to Config M → run callee
+   → switch back to Config N. The window between the two MMR
+   writes is the dispatcher's critical section, and it runs with
+   interrupts **enabled** by default (RAGE1's existing idiom on
+   ZX128, where the IV table at `0x8000` is reachable from every
+   paged-in configuration).
+
+**The interaction matrix.** Each row is "what can be running when
+the ISR fires", and what guarantees we need:
+
+| Foreground state | What the ISR may need to do | Guarantee required |
+|---|---|---|
+| Engine code in Page A, no bank switch in flight | divide-by-six counter; eventual 50 Hz tick | ISR + ISR-callees fit in always-mapped memory (Page A, or low-RAM region also mapped under every Config) |
+| Banked-function dispatcher mid-switch (MMR write completed, callee not yet entered) | same | same — but ISR must NOT itself trigger an MMR write, because the foreground's "restore" relies on `memory_current_memory_bank` being untouched |
+| Banked codeset running (Config N ≠ Config 0) | same — divide-by-six only | ISR body and the divide-by-six counter must be reachable from Config N. On cpc-banked, Page A (`0x0000–0x3FFF`) is permanently mapped under every MMR Config including Config 0 → trivially satisfied if the ISR lives in Page A |
+| 50 Hz tick fires — `do_timer_tick()` chain wakes the music player | music player tick may itself walk through several memory regions | music player code + AY register state + interrupt-time critical data MUST live in always-mapped memory. **Decision**: the AT2 AKG player and `audio_*` tick handler live in Page A (always-resident), NOT in a banked codeset; flow-rule eval and other tick-callbacks may live in banked codesets |
+
+**Two design rules fall out of this:**
+
+- **Rule A — ISR body is always-resident.** The ISR at `0x0038`
+  jumps to a body in Page A (`0x003B`-ish, or any Page A address).
+  No ISR-callee runs out of a banked codeset. This matches the
+  table above and is the same invariant as ZX128's "ISR in low
+  memory" rule.
+- **Rule B — audio tick runs without re-paging.** The
+  AT2 AKG generic player binary (~1.5 KB) and `audio_cpctel_*.c`
+  glue live in Page A. The player advances per-row state and
+  writes AY registers via z88dk's `out` intrinsics; both are
+  Page-A-resident operations. Music data (`.akg` byte stream) is
+  laid out by `cpct_audio` macros into a known address — placed
+  in Page A by `Makefile-cpc-banked` if it fits, otherwise hosted
+  in a per-music-track codeset that the ISR pages in *itself*
+  with the same "save / restore Config" idiom (then the dispatcher
+  must tolerate an ISR-driven Config flip — see Rule C below).
+  **Default plan**: music data fits in Page A; we revisit only if
+  a real game's `.akg` files push us past Page A's budget.
+- **Rule C (only if Rule B's "music in Page A" assumption breaks).**
+  If the ISR itself ends up calling `cpc_memory_switch_bank()` to
+  fetch the next row of music data from a banked codeset, then
+  the foreground dispatcher's two-MMR-write critical section MUST
+  be reformulated as `di; mmr_write; ...callee...; mmr_write; ei`
+  (interrupts disabled during the entire bank-switch round-trip).
+  This is the conservative form; we adopt it only if measurement
+  forces it. **Cost**: a few microseconds of jitter on the
+  foreground per banked call; the divided-down 50 Hz tick still
+  fires because the 300 Hz tick missed during the DI is recovered
+  on the next ISR.
+
+**Worst-case ISR cost budget (back-of-envelope, to be verified
+empirically in Phase B6 / AU5):**
+
+- Divide-by-six counter + 50 Hz fanout: ~40 T-states ≈ 10 µs at
+  4 MHz.
+- 50 Hz music player tick (every 6th ISR): ~3000 T-states ≈
+  750 µs at 4 MHz, depending on the song. AT2 AKG's documented
+  per-tick CPU is in this range; in practice songs vary.
+- 300 Hz raw cost = `(non-tick × 5 + tick × 1) / 6`. With the
+  numbers above: `(10 µs × 5 + 760 µs × 1) / 6` ≈ 135 µs average,
+  or ≈ 4 % of the 3333 µs ISR period at 4 MHz. Easily affordable.
+- Dispatcher worst-case latency (foreground impact): one extra
+  MMR write `out (c), a` ≈ 12 T-states ≈ 3 µs. Negligible.
+
+**Where this gets verified**: Phase **B6** (cpc-banked banking
+infrastructure) measures the actual dispatcher cost on real
+hardware/emulator; Phase **AU5** (real CPC audio) measures the
+music player's actual per-tick cost. README §6 carries this as a
+cross-cutting risk; banking.md R4 / R5 / R6 carry the per-doc
+slices.
+
 ---
 
 ## 4. Tooling changes
@@ -1427,8 +1512,9 @@ touching CPC yet.
   interrupts:
     zx128: { iv_table_addr: 0x8000, … }
   ```
-  Keep `interrupts_128:` as a top-level alias for one release
-  cycle.
+  Keep `interrupts_128:` as a **permanent silent alias** at the
+  top level (per README §5.6); the loader recognises both spellings
+  indefinitely. No removal scheduled.
 - **B2-2** Update `Makefile.common:96-100` to read from the new
   nested location with a fallback to the old.
 - **B2-3** Update `engine/src/interrupts.c:78-98` so the
@@ -1653,11 +1739,16 @@ the swap/restore and decompress paths.
 
 ### Phase B9 — Cleanup and rename
 
-**Goal**: close out deprecated names and tighten the per-platform
-discipline.
+**Goal**: tighten the per-platform discipline and finalise the
+documentation pass. Per README §5.6, no renamed surfaces are
+removed — old spellings stay accepted indefinitely.
 
-- **B9-1** Remove the `interrupts_128:` top-level alias in
-  `etc/rage1-config.yml` (deprecated since B2-1).
+- **B9-1** *(originally "remove the `interrupts_128:` top-level
+  alias" — DROPPED per README §5.6.)* The top-level
+  `interrupts_128:` alias stays accepted by `etc/rage1-config.yml`
+  indefinitely. Documentation pass only: confirm both spellings
+  are still recognised by `Makefile.common` and record the rename
+  in `CHANGELOG.md` as "old name remains accepted indefinitely".
 - **B9-2** Remove hard-coded `@dataset_valid_banks` /
   `@codeset_valid_banks` from `tools/banktool.pl` (deprecated
   since B1-2). The tool now hard-fails if `banking.<platform>` is

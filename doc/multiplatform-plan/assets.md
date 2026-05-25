@@ -484,8 +484,9 @@ in-file platform-conditional syntax**. Reasons:
    build-time identities; CPC664 runs the `cpc464` binary as a
    runtime target — see README.md §1).
    - `ZX_TARGET 48` becomes `PLATFORM zx48`, `ZX_TARGET 128` becomes
-     `PLATFORM zx128`. The two are accepted in parallel during the
-     transition (deprecation pass — see Phase B2).
+     `PLATFORM zx128`. `ZX_TARGET` stays accepted as a permanent
+     silent alias (per README §5.6); both spellings are mapped to
+     the same internal value with no warning.
    - Implies a corresponding `BUILD_FEATURE_PLATFORM_*` macro for
      conditional engine code.
 2. **Renaming `ZX_TARGET`** to `PLATFORM` is also propagated to
@@ -512,10 +513,6 @@ directive iff the current build's `PLATFORM` matches. The mechanism
 is general — adding another per-platform variant later (e.g.
 `SCREEN_DIMENSIONS_CPC` if it turns out to be useful separately
 from `GAME_AREA`) is just one more table entry.
-
-3. **Renaming `ZX_TARGET`** to `PLATFORM` is also propagated to
-   `Makefile.common`'s `ZX_TARGET` shell-grep
-   (`Makefile.common:106`) — toolchain.md tracks this.
 
 **No other syntax extensions in Phase A1.** Specifically:
 
@@ -873,8 +870,8 @@ No CPC work yet.
 - `make all-test-builds` green.
 - `tests/00regression/` ZX screenshot tests green.
 - All checked-in games use `PLATFORM`.
-- `ZX_TARGET` still accepted for backwards compatibility with
-  external games, with a deprecation warning.
+- `ZX_TARGET` still accepted as a permanent silent alias for
+  external games (per README §5.6); no warning emitted.
 - The CLI-override + overlay-required rule is enforced (A1-6).
 
 ### Phase A2 — Sibling tree + overlay copy
@@ -1103,7 +1100,7 @@ story.
   end-to-end on at least one synthetic game.
 - `make all-test-builds` (ZX) green.
 
-### Phase A7 — Cleanups, deprecation, docs
+### Phase A7 — Cleanups, docs
 
 **Goal**: close out the migration cleanly.
 
@@ -1227,11 +1224,14 @@ story.
   the temptation to scatter `if` branches across the 4400 lines.
 
 - **Risk: existing external games (not in this repo) use
-  `ZX_TARGET` and will need a manual edit.**
-  The deprecation pass (A1-2) and alias (A1-4) cushion this, but
-  eventually A7-1 removes the alias.
-  *Mitigation*: A7-1 emits a clear error message pointing at the
-  migration. Communicate via `ROADMAP.md` and release notes.
+  `ZX_TARGET` and would otherwise need a manual edit.**
+  *Mitigation*: per README §5.6, `ZX_TARGET` stays accepted as a
+  permanent silent alias for `PLATFORM zx48` / `PLATFORM zx128`.
+  No removal is scheduled. External games keep building unchanged;
+  `datagen.pl` (A1-2) and the `Makefile.common` grep (A1-4) both
+  recognise both spellings indefinitely. The rename is recorded in
+  `CHANGELOG.md` (A7-1) but is otherwise invisible at the build
+  surface.
 
 ---
 
