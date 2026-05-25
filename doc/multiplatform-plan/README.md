@@ -15,12 +15,11 @@ during work, or correct architectural choices that don't survive
 contact with reality.
 
 > **Status**: initial draft assembled by 8 parallel subsystem agents
-> (2 waves of 4), independently reviewed (8 reviews), and reworked
-> against the review findings. **User review in progress** — completed
-> per-doc review-1 passes are recorded in the commit history. As of
-> 2026-05-25: `assets.md`, `toolchain.md`, `gfx.md`, and this README
-> have a first user-review commit; `cpc-renderer.md`, `audio.md`,
-> `input.md`, `banking.md`, `testing.md` still in initial-draft state.
+> (2 waves of 4), independently reviewed (8 reviews), reworked
+> against the review findings, and **user review-1 complete across
+> all 9 documents** as of 2026-05-26 (per-doc commits recorded in
+> the §8 progress checklist). Awaiting final user approval of the
+> initial plan before execution begins.
 
 ---
 
@@ -521,16 +520,17 @@ execution begins, each per-doc phase is the unit of progress.
 - [x] Initial draft assembled (8 subsystem docs + this README)
 - [x] Independent review of each subsystem doc (8 reviews)
 - [x] Rework against review findings (all 8 docs)
-- [ ] User review and approval of the **initial** plan — in progress:
+- [x] User review-1 of the **initial** plan — complete:
   - [x] `assets.md` review-1 (2026-05-23)
   - [x] `toolchain.md` review-1 (2026-05-24)
   - [x] `gfx.md` review-1 (2026-05-25)
   - [x] `README.md` cross-doc decisions absorbed (2026-05-25)
-  - [ ] `cpc-renderer.md` review-1
-  - [ ] `audio.md` review-1
-  - [ ] `input.md` review-1
-  - [ ] `banking.md` review-1
-  - [ ] `testing.md` review-1
+  - [x] `cpc-renderer.md` review-1 (2026-05-25)
+  - [x] `banking.md` review-1 (2026-05-26)
+  - [x] `audio.md` review-1 (2026-05-26)
+  - [x] `input.md` review-1 (2026-05-26)
+  - [x] `testing.md` review-1 (2026-05-26)
+- [ ] Final user approval of the initial plan
 - [ ] Execution begins — phases run per the cross-cutting sequence
       in §4
 
