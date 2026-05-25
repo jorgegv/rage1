@@ -1,5 +1,22 @@
 # RAGE1 ChangeLog
 
+## Unreleased (cross-platform refactor)
+
+### Renames
+
+- The `SPRITE_ENGINE` keyword in `BEGIN_GAME_CONFIG` (`.gdata`) was
+  renamed to `GFX_BACKEND`. The old `SPRITE_ENGINE` spelling is
+  **accepted indefinitely as a silent alias** — old `.gdata` files
+  keep working forever with no warning, per
+  `doc/multiplatform-plan/gfx.md` §5.6. No removal is scheduled.
+- The Makefile variable `BUILD_SPRITE_ENGINE` was renamed to
+  `BUILD_GFX_BACKEND` and the engine `#ifdef` macro
+  `BUILD_FEATURE_SPRITE_ENGINE_*` was renamed to
+  `BUILD_FEATURE_GFX_BACKEND_*`. `datagen.pl` still emits **both**
+  macros side by side in `build/generated/features.h`, so external
+  game code that uses the legacy `BUILD_FEATURE_SPRITE_ENGINE_*`
+  `#ifdef`s keeps compiling unchanged.
+
 ## 0.6.0 (2025-05-11)
 
 As we said in version 0.5.0, "Cesare The Somnambule" has been developed
