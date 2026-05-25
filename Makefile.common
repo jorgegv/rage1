@@ -92,12 +92,27 @@ BAS_LOADER_TAP		= $(BAS_LOADER:.bas=.tap)
 # Main binary and tap
 MAIN_BIN		= main.bin
 MAIN_TAP		= $(MAIN_BIN:.bin=.tap)
-# 128K interrupt config is the same for both sprite engines
-_INT128_KEY		= interrupts_128
+# 128K interrupt config is the same for both sprite engines.
+#
+# B2-2: read from the per-platform nested location (interrupts.zx128.*)
+# first, fall back to the legacy flat key (interrupts_128.*) for backwards
+# compatibility (README §5.6). The legacy key is a permanent silent alias;
+# no removal is scheduled. The Perl one-liner returns the nested value if
+# present, otherwise the flat one — the keys point at the same hash in the
+# shipped YAML so both paths produce identical output today, but the
+# fallback makes the Make logic robust if a future YAML carries only the
+# nested spelling (or only the flat one for an external/legacy config).
+_INT128_NEW_KEY1	= interrupts
+_INT128_NEW_KEY2	= zx128
+_INT128_LEGACY_KEY	= interrupts_128
 BASE_CODE_ADDRESS_128	= $(shell perl -MYAML -e \
-			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); print $$c->{"$(_INT128_KEY)"}{"base_code_address"}')
+			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); \
+			   print $$c->{"$(_INT128_NEW_KEY1)"}{"$(_INT128_NEW_KEY2)"}{"base_code_address"} \
+			      // $$c->{"$(_INT128_LEGACY_KEY)"}{"base_code_address"}')
 ISR_VECTOR_ADDRESS_128	= $(shell perl -MYAML -e \
-			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); print $$c->{"$(_INT128_KEY)"}{"isr_vector_address"}')
+			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); \
+			   print $$c->{"$(_INT128_NEW_KEY1)"}{"$(_INT128_NEW_KEY2)"}{"isr_vector_address"} \
+			      // $$c->{"$(_INT128_LEGACY_KEY)"}{"isr_vector_address"}')
 
 # Final game TAP
 FINAL_TAP		= game.tap
