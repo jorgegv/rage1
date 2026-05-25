@@ -2,3 +2,7 @@
 	path = external/jsp
 	url = https://github.com/jorgegv/jsp.git
 	branch = main
+[submodule "external/cpctelera"]
+	path = external/cpctelera
+	url = https://github.com/lronaldo/cpctelera.git
+	branch = development
