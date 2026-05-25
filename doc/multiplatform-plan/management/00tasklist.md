@@ -22,11 +22,11 @@ under it is ticked complete.
 
 ## Status
 
-- [ ] **Phase 1 — Foundation (no CPC code; pure preparation)**
-  - [ ] TS1 — backfill ZX regression baselines (≥80 % of test games)
-  - [ ] T0 — toolchain spike: prove z88dk `+cpc` + sdcc_iy + a tiny cpctelera build outside RAGE1
-  - [ ] B1 — banking-config externalisation into `etc/rage1-config.yml` (ZX byte-identical)
-  - [ ] G1 — `gfx_*` audit completion & baseline pin
+- [x] **Phase 1 — Foundation (no CPC code; pure preparation)**
+  - [x] TS1 — backfill ZX regression baselines (≥80 % of test games)
+  - [x] T0 — toolchain spike: prove z88dk `+cpc` + sdcc_iy + a tiny cpctelera build outside RAGE1
+  - [x] B1 — banking-config externalisation into `etc/rage1-config.yml` (ZX byte-identical)
+  - [x] G1 — `gfx_*` audit completion & baseline pin
 
 - [ ] **Phase 2 — HAL & asset-pipeline scaffolding (ZX-only, additive)**
   - [ ] G2 — `SPRITE_ENGINE` → `GFX_BACKEND` mechanical rename
