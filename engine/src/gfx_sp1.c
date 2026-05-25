@@ -22,7 +22,7 @@
 //
 /////////////////////////////////////
 
-#ifdef BUILD_FEATURE_SPRITE_ENGINE_SP1
+#ifdef BUILD_FEATURE_GFX_BACKEND_SP1
 
 void gfx_init( uint8_t bg_attr, uint8_t bg_char ) {
    zx_border(INK_BLACK);
@@ -32,4 +32,4 @@ void gfx_init( uint8_t bg_attr, uint8_t bg_char ) {
    gfx_update();
 }
 
-#endif // BUILD_FEATURE_SPRITE_ENGINE_SP1
+#endif // BUILD_FEATURE_GFX_BACKEND_SP1

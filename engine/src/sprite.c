@@ -22,7 +22,7 @@ void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall {
     gfx_sprite_move_cell( s, &full_screen, NULL, OFF_SCREEN_ROW, OFF_SCREEN_COLUMN );
 }
 
-#ifdef BUILD_FEATURE_SPRITE_ENGINE_SP1
+#ifdef BUILD_FEATURE_GFX_BACKEND_SP1
 
 // standard hook to set sprite attributes. This is a strange function,
 // its parameters must be passed through 2 global variables, defined below :-/
@@ -71,7 +71,7 @@ void gfx_sprite_set_color( gfx_sprite_t *s, uint8_t color ) {
     sp1_IterateSprChar( s, sprite_set_cell_attributes );
 }
 
-#endif // BUILD_FEATURE_SPRITE_ENGINE_SP1
+#endif // BUILD_FEATURE_GFX_BACKEND_SP1
 
 void sprite_free( gfx_sprite_t *s ) __z88dk_fastcall {
     gfx_sprite_destroy( s );

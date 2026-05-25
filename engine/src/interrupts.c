@@ -95,7 +95,7 @@ IM2_DEFINE_ISR(service_interrupt)
 
 // In 48 mode: SP1 uses IV at 0xD000, ISR at 0xD1D1; JSP uses IV at 0xE000, ISR at 0xE1E1
 #ifdef BUILD_FEATURE_PLATFORM_ZX48
-   #ifdef BUILD_FEATURE_SPRITE_ENGINE_JSP
+   #ifdef BUILD_FEATURE_GFX_BACKEND_JSP
       #define IV_ADDR	( ( unsigned char * ) 0xE000 )
       #define ISR_ADDR	( ( unsigned char * ) 0xE1E1 )
       #define IV_BYTE	( 0xE1 )
