@@ -503,7 +503,7 @@ when the active `PLATFORM` matches the suffix.
 | Base directive  | Per-platform variants | Purpose                                                                                                                                                                                              |
 |-----------------|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `GAME_AREA …`   | `GAME_AREA_CPC …`     | Screen-area rectangle. ZX assumes 32×24; CPC mode-1 cells are 40×25, so authors typically need a different rectangle. Phase A1 adds the `_CPC` suffix; other platforms add their own suffix as needed. |
-| `SOUND <E>=<S>` | `SOUND_CPC <E>=<S>`   | SFX symbol bindings (`SOUND ENEMY_KILLED=BEEPFX_HIT_3`). ZX maps to `BEEPFX_*`; CPC maps to Arkos SFX indices. The two forms coexist in the same `Game.gdata`. Per OQ8 (deferred from a general `SOUND_MAP` mechanism). |
+| `SOUND <E>=<S>` | ~~`SOUND_CPC <E>=<S>`~~ — **superseded 2026-05-26**, see OQ8 | SFX symbol bindings. Old (2026-05-23) plan was per-platform `SOUND_CPC` suffixed directives; new plan (audio.md §3.3, OQ8 re-resolved 2026-05-26) is **backend-agnostic event IDs + per-platform `SOUND_MAP` overlay** at `<platform>/game_data/game_config/sound_map.gdata`. Shared `Game.gdata` carries `SOUND ENEMY_KILLED=SFX_HIT`; per-platform overlay carries `SOUND_MAP SFX_HIT=BEEPFX_HIT_3` (ZX) / `SOUND_MAP SFX_HIT=2` (CPC). |
 | `CPC_PALETTE …` | n/a (CPC-only)        | Explicit CPC firmware-palette indices (or `.gpl` reference) passed to `cpct_img2tileset` for PNG-to-CPC conversion. Per OQ5: defaults to standard CPC firmware palette when absent.                  |
 
 The dispatch is done in `datagen.pl`: when parsing `BEGIN_GAME_CONFIG`,
@@ -531,9 +531,12 @@ from `GAME_AREA`) is just one more table entry.
 - A `BEGIN_PLATFORM <name> … END_PLATFORM` wrapper that gates a sub-
   region of a `.gdata` file for one platform. Useful only if file-level
   shadowing proves too coarse — wait until we see real use cases.
-- A general `SOUND_MAP` mechanism (per `audio.md` AU6) that supersedes
-  the `SOUND_<PLATFORM>` directives. Deferred per OQ8 ("specific sound
-  form for CPC, for the moment").
+- ~~A general `SOUND_MAP` mechanism (per `audio.md` AU6) that supersedes
+  the `SOUND_<PLATFORM>` directives.~~ **Adopted 2026-05-26** per OQ8
+  re-resolution: `SOUND_MAP` overlay is now the canonical mechanism
+  (audio.md §3.3); per-platform `SOUND_<PLATFORM>` directives are
+  not used. The §2.3 table row above and §2.4 Tier-3 escape hatch
+  cover the new model.
 
 ### 2.4 Auto-conversion vs hand-authored override boundary
 
@@ -587,14 +590,17 @@ machinery:
   data. Format/driver choice and player integration belong to
   `audio.md`; the asset pipeline simply transports the right
   file per platform.
-- **BEEPFX SOUND IDs** (`SOUND ENEMY_KILLED=BEEPFX_HIT_3` in
-  `Game.gdata`): these reference a ZX-specific SFX bank. Per OQ8
-  resolution, CPC uses a new **`SOUND_CPC`** directive in the same
-  `Game.gdata` (Arkos SFX indices on CPC, e.g.
-  `SOUND_CPC ENEMY_KILLED=ARKOS_HIT_3`). The two forms coexist;
-  `datagen.pl` selects based on the active platform. A general
-  `SOUND_MAP` mechanism remains a long-term refactor option (see
-  `audio.md` AU6) but is explicitly deferred.
+- **SOUND event IDs** (`SOUND ENEMY_KILLED=SFX_HIT` in
+  `Game.gdata`): **OQ8 re-resolved 2026-05-26** to **Option C**
+  (audio.md §3.3) — shared `Game.gdata` uses backend-agnostic
+  event tokens (`SFX_HIT`, `SFX_SHOT`, …) and per-platform
+  overlay files at `<platform>/game_data/game_config/sound_map.gdata`
+  resolve them to backend-native symbols
+  (`SOUND_MAP SFX_HIT=BEEPFX_HIT_3` on ZX,
+  `SOUND_MAP SFX_HIT=2` (Arkos SFX index) on CPC). Supersedes the
+  earlier 2026-05-23 `SOUND_CPC` / `SOUND_<PLATFORM>` plan, which
+  would have proliferated platform suffixes once four platforms
+  exist.
 - **Per-platform `game_src/`** (custom C/asm per game): same
   overlay rule. `game_src/menu.c` shared by default; if a
   particular platform needs a different `menu.c` (e.g. because
@@ -1291,13 +1297,24 @@ plan body has been updated accordingly.
 8. **CPC SOUND ID mapping.**
    ZX `Game.gdata` declares `SOUND ENEMY_KILLED=BEEPFX_HIT_3`,
    etc. CPC needs different mappings.
-   **Decision (2026-05-23): add a per-platform `SOUND_CPC`
-   directive (and, by symmetry, a `SOUND_<PLATFORM>` family) in
-   `BEGIN_GAME_CONFIG`.** Both forms coexist in shared
-   `Game.gdata`; `datagen.pl` selects based on the active
-   platform. A general `SOUND_MAP` mechanism (owned by `audio.md`
-   AU6) remains a longer-term refactor option but is explicitly
-   deferred. See §2.3.
+   **Decision (2026-05-26, supersedes 2026-05-23):** adopt
+   **Option C — backend-agnostic event IDs + per-platform
+   `SOUND_MAP` overlay** (the canonical mechanism owned by
+   [audio.md §3.3](audio.md)). Shared `Game.gdata` carries
+   backend-agnostic event tokens (e.g. `SOUND ENEMY_KILLED=SFX_HIT`);
+   per-platform overlay files at
+   `<platform>/game_data/game_config/sound_map.gdata` resolve
+   those tokens to backend-native symbols (`SOUND_MAP
+   SFX_HIT=BEEPFX_HIT_3` on ZX, `SOUND_MAP SFX_HIT=2` on CPC).
+   The earlier 2026-05-23 resolution (per-platform `SOUND_CPC` /
+   `SOUND_<PLATFORM>` directives) is **superseded**: it would
+   proliferate platform suffixes once we have four platforms
+   (`SOUND_ZX48` / `SOUND_ZX128` / `SOUND_CPC464` /
+   `SOUND_CPC6128`), and per-platform variation belongs in
+   overlay files, not in shared `Game.gdata`. Tier-3 full
+   `Game.gdata` shadow (Option A) remains a valid escape hatch
+   for games that want to diverge harder. See §2.3 and
+   `audio.md` §3.3.
 
 ---
 

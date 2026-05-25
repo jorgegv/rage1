@@ -139,16 +139,16 @@ generated asm (`lib/RAGE/Arkos2.pm:109-123`) and emits
 
 #### Side-by-side game audit
 
-| Game | Beeper SOUND | Tracker TYPE | Songs (.aks/.pt3) | SFX table | Notes |
-|---|---|---|---|---|---|
-| `games/default` | 7 BEEPFX_* | arkos2 | music1/2.asm | soundfx.asm | All `.asm` (pre-converted), no AKS. |
-| `games/default_jsp` | 7 BEEPFX_* | arkos2 | music1/2.asm | soundfx.asm | Same. |
-| `games/monochrome` | 7 BEEPFX_* | arkos2 | music1/2.asm | soundfx.asm | Same. |
-| `games/get_weapon` | 7 BEEPFX_* | arkos2 | music1/2.asm | soundfx.asm | Same. |
-| `games/vortex2` | 7 BEEPFX_* | vortex2 | music1/2.pt3 | none | The only Vortex2 game; commented-out SFX line. |
-| `games/blobs` | 7 BEEPFX_* | — | — | — | No tracker. |
-| `games/minimal` | 7 BEEPFX_* | — | — | — | No tracker. |
-| `games/crumbs`, `damage_mode`, `mapgen`, `sub_bufs_48`, `sub_bufs_128`, `minimal_jsp` | 7-8 BEEPFX_* | — | — | — | No tracker. |
+| Game                                                                                  | Beeper SOUND | Tracker TYPE | Songs (.aks/.pt3) | SFX table   | Notes                                          |
+|---------------------------------------------------------------------------------------|--------------|--------------|-------------------|-------------|------------------------------------------------|
+| `games/default`                                                                       | 7 BEEPFX_*   | arkos2       | music1/2.asm      | soundfx.asm | All `.asm` (pre-converted), no AKS.            |
+| `games/default_jsp`                                                                   | 7 BEEPFX_*   | arkos2       | music1/2.asm      | soundfx.asm | Same.                                          |
+| `games/monochrome`                                                                    | 7 BEEPFX_*   | arkos2       | music1/2.asm      | soundfx.asm | Same.                                          |
+| `games/get_weapon`                                                                    | 7 BEEPFX_*   | arkos2       | music1/2.asm      | soundfx.asm | Same.                                          |
+| `games/vortex2`                                                                       | 7 BEEPFX_*   | vortex2      | music1/2.pt3      | none        | The only Vortex2 game; commented-out SFX line. |
+| `games/blobs`                                                                         | 7 BEEPFX_*   | —            | —                 | —           | No tracker.                                    |
+| `games/minimal`                                                                       | 7 BEEPFX_*   | —            | —                 | —           | No tracker.                                    |
+| `games/crumbs`, `damage_mode`, `mapgen`, `sub_bufs_48`, `sub_bufs_128`, `minimal_jsp` | 7-8 BEEPFX_* | —            | —                 | —           | No tracker.                                    |
 
 Observation: **every game uses beeper FX**, half the games use
 Arkos2 music, **one** game uses Vortex2. The Arkos2 path is the
@@ -234,7 +234,19 @@ Two AY tracker backends today:
   `tracker_vortex2.c` over the `ay_vt2_*` symbols defined in
   `vortex2-player_asm.inc`. The player is identical to z88dk's
   `psg/vt2` library; it's included as asm because that library
-  is not built into NEWLIB (`tracker_vortex2.c:49-57`).
+  is not built into NEWLIB (`tracker_vortex2.c:49-57`). z88dk's
+  `+cpc` platform **also ships a CPC-flavoured Vortex tracker
+  player** (listed on the z88dk `+cpc` wiki alongside Arkos2,
+  WYZ, ETracker, PSG Lib, and one-bit sound), so cross-platform
+  availability mirrors the Arkos2 story: same PT3 music data,
+  per-platform player asm. CPC integration path: prefer
+  retargeting the existing vendored player to CPC AY-via-PPI
+  ports for symmetry with the Arkos2 decision (Phase AU4 spike);
+  fall back to linking z88dk's bundled `+cpc` Vortex tracker
+  player if the hand-ported asm lacks a hardware-define knob
+  (likely, since it was ZX-targeted at hand-port time — see
+  `tracker_vortex2.c:49-57`).
+
 
 The dispatcher in `tracker.c:42-115` is **already backend-
 agnostic** in shape. It carries:
@@ -280,14 +292,28 @@ ZX-shaped assumptions in this path:
    building the same source for CPC is a matter of flipping the
    hardware define. **This is the key fact enabling shared
    tracker assets across ZX and CPC** (§3.4).
-3. **128K-only**. `BUILD_FEATURE_TRACKER` is gated on
-   `BUILD_FEATURE_ZX_TARGET_128`
-   (`tools/datagen.pl:2700-2702`). The tracker code physically
-   lives in `engine/banked_code/128/`. On CPC this constraint
-   disappears: CPC464 has 64K but its AY player runs without
-   banking. The `engine/banked_code/128/tracker*.c` location is
-   a banking arrangement, *not* an audio constraint — see
-   `banking.md`.
+3. **Decoupled from banking model**. `BUILD_FEATURE_TRACKER` is
+   currently gated on `BUILD_FEATURE_ZX_TARGET_128`
+   (`tools/datagen.pl:2700-2702`) and the tracker code physically
+   lives in `engine/banked_code/128/`. This is a historical
+   banking arrangement, NOT an audio constraint. As part of this
+   multiplatform refactor, the tracker is decoupled and made
+   available wherever an AY chip is present:
+   - **ZX48 + AY expansion** (Melodik, Fuller, etc. — all using
+     the same `$FFFD`/`$BFFD` ports as ZX128's built-in AY).
+   - **ZX128** (built-in AY; tracker stays in banked code as
+     today).
+   - **CPC464 / CPC6128** (AY-via-PPI; tracker in home binary or
+     codeset per `banking.md`).
+
+   Games opt in via an explicit `Game.gdata` flag (or implicit-
+   via-`TRACKER`-directive-presence). Tracker sources move from
+   `engine/banked_code/128/` to a platform-neutral location
+   (`engine/audio/` or `engine/tracker/`), and the per-platform
+   build rule decides where the resulting object code lands:
+   home binary on ZX48+AY and cpc-flat; banked on ZX128; banked
+   or home on cpc-banked per `banking.md`. See §3 (HAL design).
+
 4. **`DEFAULT_SUBSONG = 0`** (`arkos2.h:38`) is an Arkos2
    convention; portable.
 5. **Player call ABI**. `ply_akg_init`, `ply_akg_play`,
@@ -862,7 +888,19 @@ SOUND BULLET_SHOT=SFX_SHOT
 `cpc6128/game_data/audio/sound_map.gdata` says `SFX_HIT=2`
 (Arkos SFX-table index) for CPC.
 
-**Recommendation: Option C.**
+**Decision (2026-05-26): Option C.** Backend-agnostic event IDs
+in shared `Game.gdata`; per-platform mapping in
+`<platform>/game_data/game_config/sound_map.gdata` overlay
+files. Supersedes the earlier 2026-05-23 resolution
+([assets.md Q8](assets.md)) that picked Option B
+(`SOUND_<PLATFORM>` per-platform directives). Option B is
+considered and rejected: it would proliferate platform suffixes
+once we have four platforms (`SOUND_ZX48` / `SOUND_ZX128` /
+`SOUND_CPC464` / `SOUND_CPC6128`), and per-platform variation
+belongs in overlay files, not in shared `Game.gdata`. Option A
+(Tier-3 full `Game.gdata` shadow) remains a valid escape hatch
+for games that want to diverge harder.
+
 
 Rationale:
 
@@ -971,19 +1009,37 @@ This is decisive. The strategy:
   same source; only the hardware define differs. RAGE1
   vendors **one** copy of the player asm and includes it
   with the right define per backend.
-- **`TRACKER TYPE=vortex2` stays ZX-only**: parser at
-  `datagen.pl:1004-1006` already validates the type; we add
-  a platform-aware check (CPC rejects `vortex2`).
+- **`TRACKER TYPE=vortex2` available on every AY-equipped
+  target**: ZX48 + AY expansion, ZX128, CPC464, CPC6128. Parser
+  at `datagen.pl:1004-1006` already validates the type; no
+  platform-aware rejection. CPC implementation path per the §2
+  Vortex2 entry: prefer retargeting the existing vendored player
+  asm to CPC AY-via-PPI ports for symmetry with Arkos2; fall
+  back to linking z88dk's bundled `+cpc` Vortex tracker player
+  if the hand-ported asm lacks a hardware-define knob. Decision
+  finalised in Phase AU4 spike.
 
 #### Per-format compatibility matrix
 
-| Source format | ZX48 | ZX128 + Arkos2 | ZX128 + Vortex2 | CPC + Arkos2 |
-|---|---|---|---|---|
-| `.aks` (Arkos2 AT2 song) | n/a | yes | n/a | yes |
-| `.asm` (pre-converted AT2 AKG asm) | n/a | yes | n/a | yes |
-| `.pt3` (Vortex Tracker PT3) | n/a | n/a | yes | no — error at datagen |
-| `.aks` (Arkos2 SFX table) | n/a | yes | n/a | yes |
-| BEEPFX `bfx_*` byte stream | yes (in `<sound/bit.h>` lib) | yes (deferred FX path) | yes (deferred FX path) | no (no beeper on CPC) |
+| Source format                      | ZX48 (no AY) | ZX48 + AY | ZX128 + Arkos2 | ZX128 + Vortex2 | CPC + Arkos2 | CPC + Vortex2 |
+|------------------------------------|--------------|-----------|----------------|-----------------|--------------|---------------|
+| `.aks` (Arkos2 AT2 song)           | n/a          | yes       | yes            | n/a             | yes          | n/a           |
+| `.asm` (pre-converted AT2 AKG asm) | n/a          | yes       | yes            | n/a             | yes          | n/a           |
+| `.pt3` (Vortex Tracker PT3)        | n/a          | yes       | n/a            | yes             | n/a          | yes           |
+| `.aks` (Arkos2 SFX table)          | n/a          | yes       | yes            | n/a             | yes          | n/a           |
+| BEEPFX `bfx_*` byte stream         | yes          | yes       | yes            | yes             | no           | no            |
+
+Notes:
+
+- *ZX48 (no AY)* = stock 48K Spectrum without AY expansion; only
+  BEEPFX is usable.
+- *ZX48 + AY* = 48K + Melodik/Fuller/SAA AY expansion at the
+  standard `$FFFD`/`$BFFD` ports. BEEPFX still works (beeper is
+  independent of the AY). Tracker availability is gated by the
+  game opt-in flag introduced by §1.4 item 3.
+- No BEEPFX on CPC — CPC has no equivalent of the ZX beeper
+  hardware (CPC sound is AY-only). Software beeper emulation is
+  theoretically possible but out of scope.
 
 #### Conversion pipeline (cross-platform)
 
@@ -1014,14 +1070,14 @@ Per `assets.md` §2.5, the file-level recursive overlay copy at
 `make config` already transports any per-platform file. For
 audio assets:
 
-| File kind | Default location | Per-platform overlay (when needed) |
-|---|---|---|
-| Arkos2 `.aks` source | `game_data/music/music1.aks` | `cpc6128/game_data/music/music1.aks` only if the CPC version genuinely differs musically |
-| Arkos2 pre-converted `.asm` | `game_data/music/music1.asm` | Same overlay path; rare in practice |
-| Arkos2 SFX `.aks` | `game_data/music/soundfx.aks` | Per-platform overlay if SFX banks diverge |
-| Arkos2 SFX `.asm` | `game_data/music/soundfx.asm` | Same |
-| Vortex2 `.pt3` | `game_data/music/music1.pt3` | n/a (ZX only) |
-| `sound_map.gdata` (§3.3) | n/a | **always** lives in the overlay tree, never in shared core |
+| File kind                   | Default location              | Per-platform overlay (when needed)                                                       |
+|-----------------------------|-------------------------------|------------------------------------------------------------------------------------------|
+| Arkos2 `.aks` source        | `game_data/music/music1.aks`  | `cpc6128/game_data/music/music1.aks` only if the CPC version genuinely differs musically |
+| Arkos2 pre-converted `.asm` | `game_data/music/music1.asm`  | Same overlay path; rare in practice                                                      |
+| Arkos2 SFX `.aks`           | `game_data/music/soundfx.aks` | Per-platform overlay if SFX banks diverge                                                |
+| Arkos2 SFX `.asm`           | `game_data/music/soundfx.asm` | Same                                                                                     |
+| Vortex2 `.pt3`              | `game_data/music/music1.pt3`  | n/a (ZX only)                                                                            |
+| `sound_map.gdata` (§3.3)    | n/a                           | **always** lives in the overlay tree, never in shared core                               |
 
 **Tier 1 happy path (recommended for most games)**: the
 author writes one `.aks` source, drops it in
