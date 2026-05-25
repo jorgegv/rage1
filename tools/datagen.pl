@@ -759,6 +759,32 @@ sub read_input_data {
                     $game_config->{'name'} = $1;
                     next;
                 }
+                # A1-1: PLATFORM <name> — preferred multiplatform directive.
+                # Accepted values in Phase A1: zx48, zx128. CPC values come
+                # in Phase A5. Always emits BOTH PLATFORM_* and the legacy
+                # ZX_TARGET_* macros so existing engine #ifdefs keep working.
+                if ( $line =~ /^PLATFORM\s+(\w+)$/ ) {
+                    my $platform = lc( $1 );
+                    if ( $platform ne 'zx48' and $platform ne 'zx128' ) {
+                        die "PLATFORM: $file, line $current_line: PLATFORM must be one of: zx48, zx128\n";
+                    }
+                    my $derived_zx_target = ( $platform eq 'zx48' ) ? '48' : '128';
+                    # CLI override (-t) still wins; it carries 48|128 from
+                    # the Makefile (kept legacy for A1-4 compatibility).
+                    if ( $forced_build_target ) {
+                        $derived_zx_target = $forced_build_target;
+                        $platform = ( $forced_build_target eq '48' ) ? 'zx48' : 'zx128';
+                    }
+                    $game_config->{'zx_target'} = $derived_zx_target;
+                    $game_config->{'platform'}  = $platform;
+                    add_build_feature( sprintf( "ZX_TARGET_%s", $derived_zx_target ) );
+                    add_build_feature( sprintf( "PLATFORM_%s", uc( $platform ) ) );
+                    next;
+                }
+                # A1-2: ZX_TARGET is a permanent silent alias for PLATFORM
+                # (per README §5.6). Same emission as PLATFORM — both
+                # macros are always emitted so the two spellings produce
+                # byte-identical builds.
                 if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
                     if ( $forced_build_target ) {
                         $game_config->{'zx_target'} = $forced_build_target;
@@ -769,10 +795,9 @@ sub read_input_data {
                         ( $game_config->{'zx_target'} ne '128' ) ) {
                             die "ZX_TARGET: $file, line $current_line: ZX_TARGET must be either 48 or 128\n";
                         }
+                    # internal mapping ZX_TARGET 48|128 -> PLATFORM zx48|zx128
+                    $game_config->{'platform'} = ( $game_config->{'zx_target'} eq '48' ) ? 'zx48' : 'zx128';
                     add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
-                    # B1-4: emit the cross-platform PLATFORM_ZX48 / _ZX128
-                    # alias alongside the legacy ZX_TARGET_* macro. The
-                    # legacy spelling remains a silent alias per README §5.6.
                     add_build_feature( sprintf( "PLATFORM_ZX%s", $game_config->{'zx_target'} ) );
                     next;
                 }
