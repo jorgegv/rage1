@@ -3305,7 +3305,12 @@ GAME_DATA_H_4
 
 sub generate_game_config {
     # emit SPRITE_ENGINE build feature (defaults to SP1 if not set in game config)
-    add_build_feature( 'SPRITE_ENGINE_' . uc( get_sprite_engine() ) );
+    # Also emit the new GFX_BACKEND_* alias (Phase G1-2): both names compile, so
+    # engine code can be migrated to BUILD_FEATURE_GFX_BACKEND_* incrementally in
+    # Phase G2 without flipping every backend at once.
+    my $engine_upper = uc( get_sprite_engine() );
+    add_build_feature( 'SPRITE_ENGINE_' . $engine_upper );
+    add_build_feature( 'GFX_BACKEND_'   . $engine_upper );
 
     push @h_game_data_lines, "\n// game configuration data\n";
     push @h_game_data_lines, sprintf( "#define MAP_NUM_SCREENS\t%d\n", scalar( @all_screens ) );
