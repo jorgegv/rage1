@@ -27,7 +27,13 @@ void init_memory(void);
     uint8_t memory_switch_bank( uint8_t bank_num ) __z88dk_fastcall;
 
     // reserved memory bank for banked functions in engine code
-    #define ENGINE_CODE_MEMORY_BANK		4
+    // B1-4: gated on PLATFORM_ZX128; other platforms (e.g. CPC) will
+    // define their own ENGINE_CODE_MEMORY_BANK under their own platform
+    // macro. Value 4 mirrors banking.zx128.engine_code_memory_bank in
+    // etc/rage1-config.yml.
+    #ifdef BUILD_FEATURE_PLATFORM_ZX128
+        #define ENGINE_CODE_MEMORY_BANK		4
+    #endif
 
     // function type definitions
     // types for all different function signatures used must be defined here

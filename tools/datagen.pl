@@ -770,6 +770,10 @@ sub read_input_data {
                             die "ZX_TARGET: $file, line $current_line: ZX_TARGET must be either 48 or 128\n";
                         }
                     add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
+                    # B1-4: emit the cross-platform PLATFORM_ZX48 / _ZX128
+                    # alias alongside the legacy ZX_TARGET_* macro. The
+                    # legacy spelling remains a silent alias per README §5.6.
+                    add_build_feature( sprintf( "PLATFORM_ZX%s", $game_config->{'zx_target'} ) );
                     next;
                 }
                 if ( $line =~ /^SPRITE_ENGINE\s+(\w+)$/ ) {
