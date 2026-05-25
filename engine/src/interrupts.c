@@ -76,8 +76,17 @@ IM2_DEFINE_ISR(service_interrupt)
 // ISR_ADDR and IV_BYTE must match: if IV_BYTE is 0x81, ISR_ADDR must be
 // 0x8181
 
+// B2-3: switch the platform-selecting #ifdefs from the legacy
+// BUILD_FEATURE_ZX_TARGET_{48,128} spelling to the cross-platform
+// BUILD_FEATURE_PLATFORM_ZX{48,128} spelling. Both macros are emitted in
+// parallel by datagen.pl (B1-4), so either spelling is valid here; we
+// prefer PLATFORM_* so adding a CPC port (Phase B4+) becomes a sibling
+// #elif rather than a separate file. The legacy ZX_TARGET_* macros stay
+// emitted indefinitely as silent aliases (README §5.6) — external games
+// that test those names directly are unaffected.
+
 // In 128 mode, IV is at 0x8000-0x8100, ISR at 0x8181, but can be changed in config file
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+#ifdef BUILD_FEATURE_PLATFORM_ZX128
    #define IV_ADDR	( ( unsigned char * ) RAGE1_CONFIG_INT128_IV_TABLE_ADDR )
 
    #define ISR_ADDR	( ( unsigned char * ) RAGE1_CONFIG_INT128_ISR_ADDRESS )
@@ -85,7 +94,7 @@ IM2_DEFINE_ISR(service_interrupt)
 #endif
 
 // In 48 mode: SP1 uses IV at 0xD000, ISR at 0xD1D1; JSP uses IV at 0xE000, ISR at 0xE1E1
-#ifdef BUILD_FEATURE_ZX_TARGET_48
+#ifdef BUILD_FEATURE_PLATFORM_ZX48
    #ifdef BUILD_FEATURE_SPRITE_ENGINE_JSP
       #define IV_ADDR	( ( unsigned char * ) 0xE000 )
       #define ISR_ADDR	( ( unsigned char * ) 0xE1E1 )
@@ -95,6 +104,14 @@ IM2_DEFINE_ISR(service_interrupt)
       #define ISR_ADDR	( ( unsigned char * ) 0xD1D1 )
       #define IV_BYTE	( 0xD1 )
    #endif
+#endif
+
+// Defensive fallback: if neither PLATFORM_ZX48 nor PLATFORM_ZX128 was
+// emitted (e.g. a future non-ZX platform missing its own interrupts.c
+// path) compilation would fail with an undefined IV_ADDR — surface the
+// real cause early with a clearer #error so the symptom is obvious.
+#if !defined(BUILD_FEATURE_PLATFORM_ZX48) && !defined(BUILD_FEATURE_PLATFORM_ZX128)
+   #error "interrupts.c: no BUILD_FEATURE_PLATFORM_ZX{48,128} defined; add a platform branch above (see Phase B2-3 / README §5.6)."
 #endif
 
 // code to patch at ISR_ADDR: jp xxxx
