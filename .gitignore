@@ -20,3 +20,10 @@ build/generated
 build/game_data
 build/game_src
 debug_script.cfg
+
+# Phase T0 CPC spike: keep the .cpc/.dsk/.bin deliverables under
+# misc/cpc-spike/ in-tree so the gating phase has visible artifacts.
+# This whole directory is deleted before Phase T1.
+!misc/cpc-spike/*.bin
+!misc/cpc-spike/*.cpc
+!misc/cpc-spike/*.dsk

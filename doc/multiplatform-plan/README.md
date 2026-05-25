@@ -725,6 +725,10 @@ holding in mind:
   include patching individual cpctelera asm files or, worst case,
   switching to CPCRSlib (the `cpc-renderer.md` survey identifies
   fallbacks).
+  *Updated 2026-05-25*: T0 spike confirmed the SDCC ABI compatibility
+  but surfaced two adjacent issues (no `sdcc_iy` on `+cpc`,
+  asm-dialect incompatibility) — see toolchain.md §2.1 + Phase T0
+  outcomes and cpc-renderer.md R1 amendment.
 - **Cross-doc — cpctelera upstream dormancy.** Both `master` and
   `development` branches are largely dormant (last meaningful
   commits May 2026 and Nov 2025 respectively). The pin policy
