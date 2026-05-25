@@ -703,6 +703,26 @@ records the licence/attribution work that T0 does not own.
     in-repo.
   - Licence text and credit added to project docs.
 
+> **R1 entry-point question (added 2026-05-25 from T0-spike outcome)**:
+> cpctelera's `.s`/`.asm` source files use SDCC sdas dialect and cannot
+> be drop-in compiled by z88dk's `z80asm`. R1 must resolve which
+> integration path to take BEFORE R2 (hello-world PoC):
+>
+> - **Option (a)**: Pre-build cpctelera with its own SDCC + `sdasz80`
+>   toolchain into a `.lib`; have RAGE1's `make` orchestrate the
+>   prebuild step and link the `.lib` into z88dk-driven builds.
+>   Preserves cpctelera upstream untouched; adds a "build cpctelera"
+>   Make target as an R1 deliverable.
+> - **Option (b)**: Re-port the (handful of) cpctelera primitives RAGE1
+>   actually needs into z80asm syntax under `engine/src/cpc/`. Cuts the
+>   cpctelera dependency to header-only definitions and a small ported
+>   subset; gives full control over the asm but creates a maintenance
+>   burden on every cpctelera upstream change.
+>
+> Recommended: Option (a) — keeps cpctelera intact and
+> upstream-mergeable; the prebuild overhead is acceptable. Confirm at
+> R1 kick-off. Cross-link: `toolchain.md` Phase T0 outcomes.
+
 ### Phase R2 — Hello-world PoC: cpctelera + z88dk `+cpc`
 
 This phase deliberately bypasses RAGE1 entirely. The point is to

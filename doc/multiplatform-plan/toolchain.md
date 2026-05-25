@@ -219,6 +219,17 @@ z88dk-appmake source):
   IY-frame-pointer SDCC variant is the same one RAGE1 already depends on.
   This is the single most important compatibility fact: **the C ABI and
   calling convention RAGE1 is built against carry over to CPC unchanged.**
+
+  > **T0-spike finding (2026-05-25)**: pinned z88dk v23854's `+cpc` config
+  > (`lib/config/cpc.cfg`) defines only `default` and `ansi` clib variants
+  > — `sdcc_iy` is unavailable for `+cpc`. The working compile recipe is
+  > `zcc +cpc -compiler=sdcc -lndos test.c -create-app -o test` (uses the
+  > default `cpc_clib`). This invalidates the §2.3 claim that the C-ABI is
+  > identical to `+zx`'s `sdcc_iy`; the calling convention difference
+  > between `sdcc_iy` and the default SDCC clib must be re-evaluated when
+  > RAGE1 engine code is built for `+cpc` in Phase T2. **Open question to
+  > track**: whether to (i) port `sdcc_iy` to `+cpc` upstream, or (ii)
+  > accept the default `cpc_clib` ABI for the CPC backend.
 - Default `CRT_ORG_CODE` is `0x1200`; overrideable with `-zorg=` or
   `-pragma-define:CRT_ORG_CODE=...` — identical mechanism to the ZX 128K
   build (`Makefile-128:21`).
@@ -290,7 +301,8 @@ Rationale:
 
 - **C ABI continuity**: same `sdcc_iy` clib on both sides means RAGE1's
   engine C compiles identically, with no second calling-convention
-  surface.
+  surface. (See §2.1 T0-spike finding (2026-05-25) — this premise is
+  invalidated by the pinned z88dk; resolution pending Phase T2.)
 - **Minimal toolchain surface in the CI image**: one z88dk install
   serves all four platforms. cpctelera asset tools are small native
   binaries with no SDCC dependency at runtime.
@@ -729,6 +741,27 @@ modified.
     `external/` and the Dockerfile).
   - **Spike code is deleted** before Phase T1 — it has served its
     purpose.
+
+**T0 outcomes (2026-05-25)**:
+
+*Finding 1 — `sdcc_iy` not on `+cpc`*: see §2.1 T0-spike finding. The
+pinned z88dk v23854 `+cpc` config (`lib/config/cpc.cfg`) only ships
+`default` and `ansi` clib variants. Workaround used in the spike:
+`-compiler=sdcc` with the default `cpc_clib`. Followup: pick option (i)
+port `sdcc_iy` to `+cpc` upstream, or (ii) accept the default `cpc_clib`
+ABI for the CPC backend, at Phase T2. Spike artifacts under
+`misc/cpc-spike/` (cleaned up in T1 per phase-exit rule).
+
+*Finding 2 — cpctelera asm dialect incompatibility*: cpctelera's `.s`
+and `.asm` source files use SDCC sdas dialect (`.module`, `.include
+/file/`, `#0xNN` immediates) and cannot be parsed by z88dk's `z80asm`.
+The "drop cpctelera sources into the compile line" model assumed by
+T0-2 (and by §2.3 of this doc) is unworkable as written. Phase R1 must
+choose between (a) prebuilding cpctelera with its own SDCC + `sdasz80`
+toolchain into a `.lib` linked into z88dk-driven builds, or (b)
+re-porting the primitives RAGE1 uses into z80asm syntax under
+`engine/src/cpc/`. See `cpc-renderer.md` Phase R1 amendment for the
+resolution gate.
 
 ### Phase T1 — Introduce `PLATFORM` axis without touching CPC
 
