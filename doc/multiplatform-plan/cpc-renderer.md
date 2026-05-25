@@ -887,9 +887,14 @@ and runs on a CPC emulator. If this fails, the whole plan changes.
   source glob. R1 verifies the retarget is cheap; if it isn't, the
   fall-back is cpctelera's bundled Arkos. See §4 Caveats item 2.
   Owned by `audio.md`.
-- **OQ-4** — cpctelera keyboard scan vs our own. **Provisional
-  (2026-05-25)**: lean towards **cpctelera's** scan (fast and
-  well-tested). Final decision belongs to `input.md`.
+- **OQ-4** ✅ — cpctelera keyboard scan vs our own.
+  **RESOLVED (2026-05-26)** by [input.md §4.3](input.md): use
+  cpctelera's `cpct_scanKeyboard_if` + `cpct_isKeyPressed`.
+  Custom-scan alternative considered and rejected — cpctelera's
+  scan is near the theoretical minimum at 848 T-states; joystick
+  coverage (Joy0/Joy1 on matrix rows 9 and 6) comes for free;
+  integration boundary stays uniform with the rest of the CPC
+  backend (`gfx_cpctel.*`).
 - **OQ-5** ✅ — DSK/CDT packaging. **RESOLVED (2026-05-25)**: use
   z88dk's **`appmake`** for consistency (CDT via `2cdt` as a small
   external tool per toolchain.md; DSK native via

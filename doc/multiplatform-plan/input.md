@@ -642,11 +642,17 @@ Two design choices:
   (good!). Per-game menu code is *already* platform-specific in the
   per-platform overlay tree (see `assets.md` §2.5).
 
-**Recommendation: Option B.** The compile-time platform safety is
-worth the cost. Per-platform `<platform>/game_src/menu.c` shadowing
-(asset-overlay mechanism, `assets.md` §2.2) is already the right
-place to keep CPC's "1: KEYBOARD / 2: JOY0 / 3: JOY1 / 4: REDEFINE"
-vs ZX's "1: KEYBOARD / 2: KEMPSTON / 3: SINCLAIR / 4: REDEFINE".
+**Decision (2026-05-26): Option B.** Compile-time platform safety
+is worth the cost. Option A (one global enum, sparsely populated
+per platform) was considered and rejected — relying on runtime
+`INPUT_STATE_NONE` returns instead of compile-time symbol-absence
+gives no protection against accidentally referencing a CPC-only
+type from a ZX game (or vice versa). Per-platform
+`<platform>/game_src/menu.c` shadowing (asset-overlay mechanism,
+`assets.md` §2.2) is already the right place to keep CPC's
+"1: KEYBOARD / 2: JOY0 / 3: JOY1 / 4: REDEFINE" vs ZX's
+"1: KEYBOARD / 2: KEMPSTON / 3: SINCLAIR / 4: REDEFINE".
+
 
 The cross-platform constants in `input.h`:
 
@@ -697,12 +703,18 @@ Three options for how the per-game key map travels through the build:
   `input_lookup_key('q')` etc. to convert at runtime. No `.gdata`
   change needed.
 
-**Recommendation: C (ASCII-only) for the engine defaults**, plus B
-(`.gdata CONTROLLER` directive) as an *optional* per-game override.
-ASCII is the only platform-portable spelling of a key. The runtime
-cost of one `input_lookup_key` call per default-key at `init_controllers`
-time is negligible (5 lookups × ~50 cycles each = ~1 ms, once per
-game boot).
+**Decision (2026-05-26): Option C (ASCII-only engine defaults) +
+Option B (optional `.gdata CONTROLLER` directive override).**
+ASCII is the only platform-portable spelling of a key. A new HAL
+function `input_lookup_key( ASCII )` does the per-backend mapping
+(ZX → scancode-pair used by `in_key_pressed`; CPC → `cpct_keyID`),
+called by `init_controllers()` once at game boot from a portable
+ASCII table. Option A (engine-supplied scancode defaults only) was
+considered and rejected — relies on per-game C code to set
+platform-specific scancodes, which doesn't generalise. The runtime
+cost of one `input_lookup_key` call per default-key at
+`init_controllers` time is negligible (5 lookups × ~50 cycles each
+= ~1 ms, once per game boot).
 
 Concretely, `engine/include/rage1/controller.h` changes from:
 
@@ -882,9 +894,16 @@ dependency for input; no upstream surprises. Cons:
 - ⚠️ Marginal cycle savings (cpctelera's scan is already near the
   theoretical minimum at 848 T-states).
 
-### 4.3 Recommendation + justification
+### 4.3 Decision + justification
 
-**Use cpctelera's `cpct_scanKeyboard_if` + `cpct_isKeyPressed`.**
+**Decision (2026-05-26): use cpctelera's `cpct_scanKeyboard_if` +
+`cpct_isKeyPressed`.** Resolves cpc-renderer.md OQ-4 (which
+deferred the final decision to input.md). The custom-scan
+alternative (§4.2) was considered and rejected — cpctelera's scan
+is near the theoretical minimum at 848 T-states, joystick coverage
+comes for free (Joy0/Joy1 are matrix rows 9 and 6), and symmetry
+with the rest of the CPC backend (`gfx_cpctel.*` per README §5.4)
+keeps the integration boundary uniform.
 
 Justifications, in order of weight:
 
@@ -897,8 +916,8 @@ Justifications, in order of weight:
    *single* operation. cpctelera already exposes the right scancode
    constants (`Joy0_Up`, `Joy0_Fire1`, …). A custom scanner would
    have to re-derive those.
-3. **Symmetry with the rest of the CPC backend.** `gfx_cpc.c` and
-   `gfx_cpc.h` will already include from `external/cpctelera/.../
+3. **Symmetry with the rest of the CPC backend.** `gfx_cpctel.c` and
+   `gfx_cpctel.h` will already include from `external/cpctelera/.../
    sprites/`, `video/`, `firmware/`. Adding `keyboard/` keeps the
    "one library, one integration boundary" rule.
 4. **Cycle cost is acceptable.** 1 % CPU per frame for `cpct_scanKeyboard`
@@ -1207,7 +1226,7 @@ option B); polish the public surface.
     one CPC game.
   - ZX + CPC regression green.
 
-### Phase IN8 — Hardening, MSX/C64 anticipation, docs
+### Phase IN8 — Hardening, MSX anticipation, docs
 
 Goal: close the loop, capture forward-looking decisions.
 
@@ -1215,17 +1234,15 @@ Goal: close the loop, capture forward-looking decisions.
   (`input_msx.h`): MSX reads its keyboard via the AY-3-8910 I/O port
   in a 11-row matrix; joysticks via PSG port + bit-packed register.
   Confirm the HAL shape generalises. **No implementation** — sketch
-  only in this doc and `doc/multiplatform-plan/README.md`.
-- **IN8-2** Sketch C64 (cbm/Commodore) input shape — the `CIA` chip
-  / matrix scan. Same shape conclusion; flag the 6502 toolchain axis
-  as the actual blocker.
-- **IN8-3** Add a `tests/00regression/input_hal_smoke` test target
+  only in this doc and `doc/multiplatform-plan/README.md`. C64 is
+  out of scope (README §5.7) — no sketch.
+- **IN8-2** Add a `tests/00regression/input_hal_smoke` test target
   that exercises all the HAL primitives (scan, state read, lookup,
   capture, wait, pause) on each supported PLATFORM.
-- **IN8-4** Update top-level `doc/multiplatform-plan/README.md` to
+- **IN8-3** Update top-level `doc/multiplatform-plan/README.md` to
   reflect input HAL status.
 - **Phase-exit criteria**:
-  - MSX/C64 sketch documented.
+  - MSX sketch documented.
   - Smoke regression added.
   - Docs current.
 
@@ -1352,16 +1369,21 @@ Goal: close the loop, capture forward-looking decisions.
   unsupported types return `INPUT_STATE_NONE` at runtime). Decide
   before IN5.
 
-- **Q2 — Should `input_inkey()` exist as a HAL function at all?**
-  Today `in_inkey()` is used only by per-game menu code, not by the
-  engine. It is awkward on CPC because cpctelera doesn't expose an
-  equivalent — we have to maintain an ASCII translation table. The
-  engine itself never calls `in_inkey()`. **Sub-option Q2A**: drop
-  `input_inkey` from the HAL entirely; per-game menu code uses
-  `input_capture_scancode` + game-local translation. **Sub-option
-  Q2B**: keep `input_inkey()` because half a dozen per-game menus
-  already use it and the migration cost is real. Recommend Q2B
-  with a small (20-30 entry) ASCII table on CPC. Confirm before IN6.
+- **Q2** ✅ — `input_inkey()` as a HAL function.
+  **Resolved (2026-05-26): Q2A — drop `input_inkey()` from the
+  HAL entirely.** Per-game menu code that currently uses
+  `in_inkey()` migrates to `input_capture_scancode()` +
+  game-local ASCII translation (typically a small lookup table
+  local to the menu source). User explicitly accepts the
+  migration cost — Phase IN3 / IN4 includes a dedicated subtask:
+  `grep -rn 'in_inkey' games/` and migrate each call site. Q2B
+  (keep `input_inkey()` with a CPC ASCII table) was considered
+  and rejected — the cross-platform cleanliness of a smaller
+  HAL is preferred over migration savings. Note that
+  `input_lookup_key()` (the opposite direction: ASCII →
+  scancode, used by `init_controllers()` per §3.4) is unaffected
+  and stays.
+
 
 - **Q3 — CPC pause-key default.**
   Recommended `Key_H` (mnemonic: halt). Alternatives: `Key_P`
@@ -1384,50 +1406,50 @@ Goal: close the loop, capture forward-looking decisions.
   DI/EI in the macro (§4.3) — cleaner separation of concerns.
   Confirm before IN6-1.
 
-- **Q5 — Should there be an engine-level menu HAL?**
-  Risk R7 flags the per-game-menu drift problem. A future
-  `engine/src/menu.c` could provide a templated controller-selection
-  menu (driver/strings supplied by the game). Out of scope for the
-  multiplatform plan; flagged here so it can be opened as a separate
-  task. The HAL shape would be: `void engine_menu_select_controller(
-  const char *title, const char **option_names, const uint8_t
-  *option_types, uint8_t num_options )`.
+- **Q5** ✅ — Engine-level menu HAL.
+  **Resolved (2026-05-26): not at the moment; perhaps in the
+  future.** Risk R7 (per-game-menu drift) is acknowledged but the
+  proposed `engine_menu_select_controller()` HAL is out of scope
+  for this multiplatform plan. Flagged for a possible separate
+  future task. The proposed HAL shape (if it lands later) would
+  be: `void engine_menu_select_controller( const char *title,
+  const char **option_names, const uint8_t *option_types, uint8_t
+  num_options )`.
 
-- **Q6 — Mouse / lightgun / extended-input support.**
-  z88dk's `input.h` has a full mouse API (Kempston mouse, AMX mouse,
-  AY mouse, simulated mouse via joystick). cpctelera does *not*
-  ship mouse support natively (AMX mouse drivers exist as third-
-  party CPC code). RAGE1 today uses none of it. Recommendation:
-  out of scope for Phase 1. Document the HAL as joystick + keyboard
-  only; explicitly defer mouse to a future phase.
+- **Q6** ✅ — Mouse / lightgun / extended-input support.
+  **Resolved (2026-05-26): out of scope** for this multiplatform
+  plan. RAGE1 today uses none of z88dk's mouse APIs; cpctelera
+  doesn't ship mouse support natively either. HAL is documented
+  as joystick + keyboard only; mouse explicitly deferred.
 
-- **Q7 — CPC second fire / extended joystick buttons.**
-  cpctelera exposes `Joy0_Fire1`, `Joy0_Fire2`, `Joy0_Fire3`.
-  `INPUT_STATE_FIRE_2`, `INPUT_STATE_FIRE_3` already exist in the
-  bit packing. Should the engine read them and route to a second
-  weapon / action? Recommendation: out of scope; only `_FIRE` is
-  used today. Reserve the bits.
+- **Q7** ✅ — CPC second fire / extended joystick buttons.
+  **Resolved (2026-05-26): out of scope for Phase 1; only
+  `_FIRE` is used today.** `INPUT_STATE_FIRE_2` /
+  `INPUT_STATE_FIRE_3` bits remain reserved in the bit packing
+  for a future second-weapon / second-action expansion.
+  cpctelera's `Joy0_Fire2` / `Joy0_Fire3` constants stay
+  unwired.
 
-- **Q8 — `IN_KEY_SCANCODE_DISABLE` / `_ANYKEY` semantics on CPC.**
-  z88dk's input_zx.h defines two magic scancode values: `0xffff`
-  ("disabled key") and `0x1f00` ("any key"). The engine doesn't
-  use them, but per-game user code might. Recommendation: not
-  reproduced on CPC; if user code references them under CPC build,
-  compile error → user explicitly handles it. Document.
+- **Q8** ✅ — `IN_KEY_SCANCODE_DISABLE` / `_ANYKEY` semantics on
+  CPC. **Resolved (2026-05-26): not reproduced on CPC.** The
+  magic z88dk `input_zx.h` scancode values (`0xffff` = disabled,
+  `0x1f00` = any key) are not exposed on CPC backends. If
+  per-game user code references them under a CPC build, the
+  user gets a clean compile error and explicitly handles it.
 
-- **Q9 — Persistent key redefinition.**
-  Currently the player redefines keys per-game-session; nothing
-  persists. If RAGE1 ever gains save-game support, controller
-  config would naturally save. The HAL types (`input_udk_t`) differ
-  per platform → save files are per-platform anyway. Note for
-  future planning. No decision needed now.
+- **Q9** ✅ — Persistent key redefinition.
+  **Resolved (2026-05-26): out of scope** for this plan. RAGE1
+  has no save-game support; controller config is per-session
+  only. The HAL types (`input_udk_t`) differ per platform anyway,
+  so any future save-game work would naturally produce per-
+  platform save files.
 
-- **Q10 — `MOVE_*` macro retention.**
-  `MOVE_UP/_DOWN/_LEFT/_RIGHT/_ALL/_NONE` aliases in `hero.h`. They
-  are used pervasively in banked `hero.c`. Recommendation: keep the
-  alias even after introducing `INPUT_STATE_*`. `MOVE_*` reads more
-  naturally in hero-movement code. The aliases just `#define
-  MOVE_UP INPUT_STATE_UP` — zero cost.
+- **Q10** ✅ — `MOVE_*` macro retention.
+  **Resolved (2026-05-26): keep `MOVE_*` macros.** The aliases
+  in `hero.h` (`MOVE_UP`, `MOVE_DOWN`, `MOVE_LEFT`, `MOVE_RIGHT`,
+  `MOVE_ALL`, `MOVE_NONE`) stay even after `INPUT_STATE_*` is
+  introduced. They read more naturally in hero-movement code and
+  cost nothing (`#define MOVE_UP INPUT_STATE_UP`).
 
 ---
 
