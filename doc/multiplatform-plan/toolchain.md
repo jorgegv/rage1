@@ -298,8 +298,13 @@ Rationale:
   the same way for `+zx` and `+cpc`; the existing `-pragma-define`
   injection in `Makefile-128:21` carries over to a per-platform
   `Makefile-cpc-flat` / `Makefile-cpc-banked` with no new mechanism.
-- **Banking mechanism is uniform**: `#pragma bank NN` on both sides.
-  (Layout policy differs and is owned by `banking.md`.)
+- **Banking mechanism is platform-side uniform** at the z88dk level:
+  z88dk exposes `#pragma bank NN` on both `+zx` and `+cpc` if we
+  ever want it. **RAGE1 does NOT use z88dk's `#pragma bank`** today
+  (see §2.1 and OQ-T11 / banking.md OQ-B11): the engine has its own
+  banking pipeline that's extended to CPC. The shared linker
+  feature is mentioned here only to note the toolchain accommodates
+  either mechanism.
 - **Library vendoring precedent**: JSP already lives at `external/jsp/`
   as a submodule. Same approach for cpctelera (`external/cpctelera/`)
   gives the user identical mental model and CI behaviour.
@@ -423,10 +428,10 @@ CPC graphics library added later. Engine code gates with
 `#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL` (and parallel macros for
 future entrants), matching `gfx.md`'s usage.
 
-`SPRITE_ENGINE` (old name) remains accepted at the `.gdata` level as an
-alias for `GFX_BACKEND` for one release cycle. The Makefile-side
-variable name changes outright; only one user (gfx.md) needs to know
-both names at any time.
+`SPRITE_ENGINE` (old name) remains accepted at the `.gdata` level
+**indefinitely** as a silent alias for `GFX_BACKEND` (per README
+§5.6). The Makefile-side variable name changes outright; only one
+user (gfx.md) needs to know both names at any time.
 
 ### 3.2 Makefile restructure
 
@@ -444,10 +449,11 @@ Makefile-cpc-banked     — new: covers cpc6128
 Makefile.game           — unchanged
 ```
 
-For the renamed files, keep one-line forwarding stubs `Makefile-48` and
-`Makefile-128` that `-include Makefile-zx48`/`Makefile-zx128`, so any
-external games that call `make -f Makefile-48` continue to work for one
-release cycle. The forwarding stubs print a deprecation banner.
+For the renamed files, keep one-line forwarding stubs `Makefile-48`
+and `Makefile-128` that `-include Makefile-zx48` / `Makefile-zx128`,
+so any external games that call `make -f Makefile-48` continue to
+work. Per README §5.6, the forwarding stubs are **permanent and
+silent** (no deprecation banner).
 
 The top-level dispatch becomes:
 
@@ -499,8 +505,7 @@ runtime requires specific pragma deltas (firmware-disable, special
 interrupt setup); decision deferred to `cpc-renderer.md`.
 
 Keep `zpragma-48.inc` and `zpragma-128.inc` as one-line forwarding
-includes for one release cycle, with a `#warning` so users see the
-rename.
+includes **indefinitely** per README §5.6, silently (no `#warning`).
 
 ### 3.4 New build targets
 
@@ -536,11 +541,11 @@ make build-cpc6128         # force CPC 6128 → Makefile-cpc-banked
 make build-cpc             # alias for build-cpc6128 (most-capable CPC)
 ```
 
-**Legacy aliases** (kept for one release cycle, then removed):
+**Legacy aliases** (kept **indefinitely** per README §5.6, silent):
 
 ```
-make build48   # → build-zx48   (deprecation message)
-make build128  # → build-zx128  (deprecation message)
+make build48   # → build-zx48   (silent forwarding alias)
+make build128  # → build-zx128  (silent forwarding alias)
 ```
 
 **Per-test-game targets** in `Makefile:91-135` need no change; they all
@@ -740,22 +745,24 @@ phase; correctness is verified by all-green ZX tests at phase exit.
   `make build target_game=games/sub_bufs_128` — all build green.
   *Done*: dispatch script in place, behaviour identical.
 - **T1-2** Rename `Makefile-48` → `Makefile-zx48`, `Makefile-128` →
-  `Makefile-zx128`. Add one-line forwarding stubs at the old names
-  with a deprecation `echo`. *Test*: `make build48`, `make build128`,
-  `make -f Makefile-48 build` all still work. *Done*: rename complete,
-  legacy entry points print deprecation banner but succeed.
+  `Makefile-zx128`. Add one-line forwarding stubs at the old names,
+  **silent** (no deprecation echo, per README §5.6). *Test*:
+  `make build48`, `make build128`, `make -f Makefile-48 build` all
+  still work. *Done*: rename complete; legacy entry points succeed
+  silently as permanent aliases.
 - **T1-3** Rename `zpragma-48.inc` → `zpragma-zx48.inc`,
   `zpragma-48-jsp.inc` → `zpragma-zx48-jsp.inc`,
   `zpragma-128.inc` → `zpragma-zx128.inc`. Update internal references
-  in the Makefiles. Keep forwarding stubs at old names with `#warning`.
-  *Test*: `make all-test-builds`. *Done*: all green.
+  in the Makefiles. Keep silent forwarding stubs at old names (no
+  `#warning`, per README §5.6). *Test*: `make all-test-builds`.
+  *Done*: all green.
 - **T1-4** Rename `engine/loader48/` → `engine/loader-zx48/`,
   `engine/loader128/` → `engine/loader-zx128/`. Update internal refs.
   *Test*: `make all-test-builds`. *Done*: all green.
 - **T1-5** Add new top-level targets `build-zx48`, `build-zx128`.
-  Make `build48`, `build128` aliases with a one-line deprecation echo.
-  *Test*: both old and new names work. *Done*: documented in
-  Makefile `help`.
+  Make `build48`, `build128` silent permanent aliases (no
+  deprecation echo, per README §5.6). *Test*: both old and new
+  names work. *Done*: documented in Makefile `help`.
 - **T1-6** Generalise `ZCC_TARGET` so it is *set per
   `Makefile-<platform>` file before* `-include Makefile.common` rather
   than being a literal constant in `Makefile.common:121`. *Test*:
@@ -775,10 +782,11 @@ phase; correctness is verified by all-green ZX tests at phase exit.
   `make all-test-builds`; grep generated `features.h` for both old and
   new macros. *Done*: both macros present.
 - **T1-9** Rename `SPRITE_ENGINE` variable to `GFX_BACKEND` at the
-  Makefile level (keep `.gdata` field name `SPRITE_ENGINE` as alias
-  for one cycle). *Test*: `make build-default`, `make build-default_jsp`,
+  Makefile level. Keep `.gdata` field name `SPRITE_ENGINE` as a
+  **permanent silent alias** for `GFX_BACKEND` (README §5.6).
+  *Test*: `make build-default`, `make build-default_jsp`,
   `make build-minimal_jsp`. *Done*: variable rename complete; both
-  engines build.
+  engines build; `.gdata` alias keeps working indefinitely.
 - **T1-10** Update `tools/loadertool.pl` to take a `--platform` option;
   for `zx48`/`zx128` the behaviour is identical to today (default
   values match). *Test*: `make all-test-builds`. *Done*: option in
@@ -923,34 +931,38 @@ matrix so CI catches regressions on both platforms.
 - **T4-2** Add `.github/workflows/build-test-games.yaml` matrix
   strategy: jobs for `zx` and `cpc` flavours. *Test*: PR CI runs both
   jobs. *Done*: separately attributable in PR check status.
-- **T4-3** Move legacy aliases (`Makefile-48`, `Makefile-128`,
-  `zpragma-48*.inc`, `engine/loader48/`, `engine/loader128/`,
-  `build48`, `build128`, `SPRITE_ENGINE`) from "deprecated but
-  working" to "removed". *Test*: `make all-test-builds`. *Done*:
-  one final cleanup commit with a `CHANGELOG.md` deprecation entry.
+- **T4-3** *(originally "remove legacy aliases" — DROPPED per
+  README §5.6 backwards-compat-indefinite.)* Documentation-only
+  pass: confirm every forwarding stub from T1 (`Makefile-48`,
+  `Makefile-128`, `zpragma-48*.inc`, `engine/loader48/`,
+  `engine/loader128/`, `build48`, `build128`, `SPRITE_ENGINE`
+  alias) is in place and silent (no deprecation banners), and that
+  `CHANGELOG.md` records the rename as "old name remains accepted
+  indefinitely". *Test*: `make all-test-builds`. *Done*: CHANGELOG
+  note added; no removal happens.
 - **T4-4** Update `doc/USAGE-OVERVIEW.md`, `doc/TOOLS.md`,
   `doc/MEMORY-MAP.md`, and `CLAUDE.md` to reflect the multi-platform
   reality. *Test*: docs review. *Done*: docs landed.
 - **Phase-exit criteria**:
   - `make all-test-builds` builds both ZX and CPC test games green.
   - CI runs the matrix.
-  - No deprecated aliases remain.
+  - Every legacy alias from T1 still works (silently) — verified
+    by `make build48`, `make build128`, `make -f Makefile-48 build`,
+    and an external-game smoke build using `SPRITE_ENGINE` in
+    `.gdata`.
   - Documentation matches reality.
 
-### Sketch only: MSX (Z80) and C64 (6502)
+### Sketch only: MSX (Z80)
 
-MSX is z80 + VDP — the toolchain layer would reuse the entire decision
-matrix above with `+msx` as a fifth platform and an `msx-gfx`/`msx-audio`
-HAL. No deep work needed in Task 1; the `PLATFORM`/`GFX_BACKEND` axis is
-extensible.
+MSX is z80 + VDP — the toolchain layer would reuse the entire
+decision matrix above with `+msx` as a fifth platform and an
+`msx-gfx` / `msx-audio` HAL. No deep work needed in Task 1; the
+`PLATFORM` / `GFX_BACKEND` axis is extensible.
 
-C64 is **6502** — outside SDCC's Z80 family. It would require either a
-cc65 toolchain (entirely separate chain) or SDCC's mcs51-class targets
-(no engine reuse). The plan explicitly defers this and notes that the
-toolchain.md architecture does **not** preclude a future cc65 sibling
-branch (`make build-c64` driving a separate `Makefile-c64` that uses
-`cl65` instead of `zcc`), at the cost of duplicating the link/packaging
-stages.
+(C64 is **out of scope** for this project entirely — see
+[README §5.7](README.md). The toolchain architecture deliberately
+does not leave hooks for a 6502 sibling; a future C64 port would
+be a separate project.)
 
 ---
 
@@ -1014,10 +1026,14 @@ stages.
   `RAGE1_PLATFORM` to avoid collisions with user-level Makefiles? The
   current name reads cleanest; the prefix is defensive. User input
   required before Phase T1.
-- **OQ-T2** — Should the legacy `Makefile-48`/`Makefile-128` aliases be
-  kept indefinitely (forever-supported) or only for one release cycle?
-  Plan currently assumes one cycle (removed in Phase T4). Affects
-  external users with pinned `Makefile.game`.
+- **OQ-T2** ✅ — Legacy `Makefile-48` / `Makefile-128` alias lifetime.
+  **Resolved (2026-05-25): indefinite** per README §5.6
+  (backwards-compat indefinite). The forwarding stubs are
+  permanent and silent; T4-3 is no longer a removal task. Same
+  policy applies to every other user-visible alias touched by
+  this refactor (`build48` / `build128`, `zpragma-48*.inc`,
+  `engine/loader48/`, `SPRITE_ENGINE`, `ZX_TARGET`,
+  `BUILD_FEATURE_SPRITE_ENGINE_*`, `datagen.pl -t`).
 - **OQ-T3** — Is z88dk v2.3 the right pinned version, or should T0
   bump to a more recent z88dk tag (v2.4+) to get the latest `+cpc`
   fixes? Trade-off: newer z88dk may also bring SDCC version changes that

@@ -606,9 +606,10 @@ continue to build. Mechanical rename across:
 - `tools/datagen.pl:3304` — emit `GFX_BACKEND_*` instead of `SPRITE_ENGINE_*`
 - `Makefile.common:35-38,130` — variable `BUILD_GFX_BACKEND` replaces
   `BUILD_SPRITE_ENGINE`; corresponding `.gdata` keyword
-  `GFX_BACKEND` replaces `SPRITE_ENGINE` (with **backwards-compat
-  alias** in `datagen.pl`: accept both `SPRITE_ENGINE` and
-  `GFX_BACKEND` keywords during a deprecation window).
+  `GFX_BACKEND` replaces `SPRITE_ENGINE` (with **permanent
+  backwards-compat alias** in `datagen.pl`: both `SPRITE_ENGINE`
+  and `GFX_BACKEND` keywords stay accepted indefinitely per README
+  §5.6, silently mapped).
 - `Makefile-48:22`
 - `tools/mem-summary-*.sh` (4 files)
 - `tools/loadertool.pl:181-190`
@@ -687,9 +688,13 @@ typedef uint16_t               gfx_tile_id_t;       // see §2.3
 #define GFX_PRINT_CTX_INIT(area, attr)   { &(area), (attr), 0, 0 }
 #define GFX_DEFAULT_BG_ATTR              GFX_ATTR(15, 0, 0, 0)
 
-// macros mapping to renderer-library calls
-#define gfx_invalidate(rect)             cpc_renderer_invalidate(rect)
-#define gfx_update()                     cpc_renderer_flush()
+// macros mapping to renderer-library calls (pseudo-names — actual
+// cpctelera-side symbol names per cpc-renderer.md; e.g. dirty-rect
+// invalidate may map to a per-backend wrapper around cpct_drawSprite
+// / cpct_etm_drawTilemap or to a thin shadow-buffer routine, TBD
+// in Phase R4)
+#define gfx_invalidate(rect)             gfx_cpctel_invalidate(rect)
+#define gfx_update()                     gfx_cpctel_flush()
 // ... and so on for every gfx_* macro the contract requires
 ```
 
@@ -757,14 +762,14 @@ on top, but the more the library provides the smaller the backend.
 ### 3.5 Wiring into the build
 
 - `Makefile.common` — extend `BUILD_GFX_BACKEND` matcher to accept
-  `cpc` and pull cpctelera sources into the build from
+  `cpctel` and pull cpctelera sources into the build from
   `external/cpctelera/cpctelera/src/` (the cpctelera submodule
   added by toolchain.md Phase T0; see [cpc-renderer.md §4.2](cpc-renderer.md)
   for the exact glob list).
 - `tools/datagen.pl` — emit
   `BUILD_FEATURE_GFX_BACKEND_CPCTEL` when the `.gdata` selects `cpctel`.
 - **Platform / backend selection rule**: the `gfx_*` backend is one
-  axis (SP1, JSP, CPC). The *target machine* is another (ZX48, ZX128,
+  axis (SP1, JSP, CPCTEL). The *target machine* is another (ZX48, ZX128,
   CPC464, CPC6128 — CPC664 runs the cpc464 binary; covered by
   `toolchain.md`). The matrix is
   constrained: `cpc` backend implies a CPC machine target; SP1/JSP
@@ -843,24 +848,33 @@ but mechanical and low-risk.
     occurrence — `Makefile.common:35-38,130,315`, `Makefile-48:22`,
     `tools/mem-summary-*.sh` (rename files too), `tools/loadertool.pl`,
     `tools/datagen.pl:3303-3304` (and the surrounding helpers
-    `get_sprite_engine` etc. — rename to `get_gfx_backend`). Accept
-    both `SPRITE_ENGINE` and `GFX_BACKEND` keywords in `.gdata` parsing
-    for the duration of one release (deprecation window).
+    `get_sprite_engine` etc. — rename to `get_gfx_backend`). Both
+    `SPRITE_ENGINE` and `GFX_BACKEND` keywords stay accepted
+    indefinitely in `.gdata` parsing per README §5.6 (silent
+    alias).
   - Test: `grep -rn BUILD_SPRITE_ENGINE` returns zero matches; all
-    `make all-test-builds` variants pass.
-- **G2-3** Migrate game `.gdata` keywords.
+    `make all-test-builds` variants pass; smoke build of a game
+    that still declares `SPRITE_ENGINE` in its `.gdata` succeeds.
+- **G2-3** Migrate engine-owned game `.gdata` files (RAGE1's own
+  test games) to use `GFX_BACKEND`.
   - What: update `games/minimal_jsp/.../Game.gdata`,
-    `games/default_jsp/.../Game.gdata` (and any external games via a
-    grep-and-suggest) to use `GFX_BACKEND` keyword.
+    `games/default_jsp/.../Game.gdata` to use the new keyword.
+    External games are NOT migrated — they continue using
+    `SPRITE_ENGINE` if they want (silent alias, per §5.6).
   - Test: regression still green.
-- **G2-4** Remove the `SPRITE_ENGINE` alias.
-  - What: delete the alias emission from G1-2 and the keyword
-    backwards-compat path from G2-2. Add a `datagen.pl` error message
-    pointing at the new keyword if the old one is encountered.
-  - Test: `make all-test-builds` green.
+- **G2-4** *(originally "remove SPRITE_ENGINE alias" — DROPPED
+  per README §5.6.)* Documentation pass: confirm the
+  `SPRITE_ENGINE` ↔ `GFX_BACKEND` alias is present and silent in
+  `datagen.pl`; record the rename in `CHANGELOG.md` as "old name
+  remains accepted indefinitely". No removal.
 - **Phase-exit criteria**:
-  - No occurrence of `SPRITE_ENGINE` anywhere in engine, tools,
-    Makefiles or game data — checked by `grep -r SPRITE_ENGINE`.
+  - `BUILD_SPRITE_ENGINE` (the Makefile variable) is gone from
+    Makefiles, scripts, and tools — replaced with
+    `BUILD_GFX_BACKEND`.
+  - `SPRITE_ENGINE` (the `.gdata` keyword) is still accepted —
+    verified by a smoke build of a game that uses it.
+  - `BUILD_FEATURE_SPRITE_ENGINE_*` and `BUILD_FEATURE_GFX_BACKEND_*`
+    macros are both emitted in `features.h` (per §5.6).
   - All test games still build and screenshot-match.
 
 ### Phase G3 — Attribute & border abstraction
@@ -1001,18 +1015,19 @@ target. **Still no real CPC rendering**; this is the framing.
 - **G7-2** Add `engine/src/gfx_cpctel.c` with `gfx_init`,
   `gfx_sprite_create`, `gfx_sprite_set_color` as stubs guarded by
   `#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL`.
-- **G7-3** Add `cpc` as a recognised value to `tools/datagen.pl` and
-  to `Makefile.common`'s `BUILD_GFX_BACKEND` matcher. Build target
-  may not link yet (no actual library) but the C source must compile.
-- **G7-4** Compile-test: configure a minimal game with `GFX_BACKEND
-  cpc` and verify all `engine/src/*.c` files compile clean against
-  the stub backend (`zcc` may not link a real binary at this point —
-  the goal is C-level type-checking).
+- **G7-3** Add `cpctel` as a recognised value to `tools/datagen.pl`
+  and to `Makefile.common`'s `BUILD_GFX_BACKEND` matcher (per
+  README §5.4 naming rule). Build target may not link yet (no
+  actual library) but the C source must compile.
+- **G7-4** Compile-test: configure a minimal game with
+  `GFX_BACKEND cpctel` and verify all `engine/src/*.c` files
+  compile clean against the stub backend (`zcc` may not link a
+  real binary at this point — the goal is C-level type-checking).
 
   The compile-test "game" — `games/00cpc-compile-test/` — is a
   **synthetic test target**, not a real game. Concretely: a
   hand-written minimal `game_data/game_config/Game.gdata` with
-  `PLATFORM cpc6128` and `GFX_BACKEND cpc`, a single trivial BTile
+  `PLATFORM cpc6128` and `GFX_BACKEND cpctel`, a single trivial BTile
   declaration referencing one PNG (existing or trivially drawn), a
   hero declaration, one screen referencing the BTile, and the
   minimum flow-rule set required by datagen. No music, no enemies,
@@ -1039,7 +1054,7 @@ This is where the CPC renderer library lands as live engine code.
   T0/R1 already shipped.
 - **G8-2** Implement `gfx_cpctel.c` real bodies on top of the library.
 - **G8-3** Build a CPC target: `make build target_game=games/minimal
-  GFX_BACKEND=cpc PLATFORM=cpc6128` (exact knob names defined in
+  GFX_BACKEND=cpctel PLATFORM=cpc6128` (exact knob names defined in
   `toolchain.md`). Output: a CDT or DSK image.
 - **G8-4** Add CPC screenshot regression alongside ZX regression
   (machinery extended in `testing.md`). Initial coverage: `minimal`.
@@ -1068,7 +1083,7 @@ surfaced.
 - **Phase-exit criteria**:
   - At least 3 distinct test games run on CPC.
   - CI is green on `sp1-zx48`, `sp1-zx128`, `jsp-zx48`, `jsp-zx128`,
-    `cpc-cpc6128` lanes.
+    `cpctel-cpc6128` lanes.
 
 ---
 

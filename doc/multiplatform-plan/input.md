@@ -794,10 +794,15 @@ The mechanics:
 - On ZX (`PLATFORM zx48|zx128`): `<symbol>` is a `BEEPFX_*` constant.
 - On CPC (`PLATFORM cpc464|cpc6128`): `<symbol>` is an Arkos
   SFX index.
-- Either via Tier-3 `<platform>/game_data/game_config/Game.gdata`
-  full-shadow (`assets.md` §2.4) or via a per-platform `SOUND_CPC`/
-  `SOUND_ZX` directive (`audio.md`'s decision; flagged as Open Q in
-  `assets.md` §6 item 8).
+- Resolved by the **`SOUND_MAP` overlay** mechanism (audio.md
+  §3.3, OQ8 re-resolved 2026-05-26 to Option C): shared
+  `Game.gdata` carries `SOUND CONTROLLER_SELECTED=SFX_CONFIRM`
+  (backend-agnostic event token), and per-platform overlay files
+  at `<platform>/game_data/game_config/sound_map.gdata` resolve
+  the token to backend-native symbols
+  (`SOUND_MAP SFX_CONFIRM=BEEPFX_OK` on ZX,
+  `SOUND_MAP SFX_CONFIRM=3` on CPC). Tier-3 full `Game.gdata`
+  shadow remains a valid escape hatch.
 - User-code menu calls `beeper_play_fx( SOUND_CONTROLLER_SELECTED )`
   on ZX or `tracker_play_fx( SOUND_CONTROLLER_SELECTED )` on CPC.
   *The function name may differ per platform*; `audio.md` decides
@@ -1283,19 +1288,22 @@ Goal: close the loop, capture forward-looking decisions.
   are the same — only the typedef name changes — so the change is
   almost certainly binary-compatible on ZX).
 
-- **R4 — `IN_KEY_SCANCODE_*` removal breaks external games.**
+- **R4 — `IN_KEY_SCANCODE_*` semantic change risks external games.**
   External games may use `IN_KEY_SCANCODE_y` etc. directly in user
-  code. Removing the include of `<input.h>` from engine headers
-  doesn't prevent user code from including it, but the
-  `KBD_*` macros that were re-exported (`KBD_UP`, `KBD_DOWN`, etc.)
-  change semantic from "ZX scancode" to "ASCII default".
-  *Mitigation*: keep `KBD_*` as **runtime-resolved scancodes**
-  populated by `input_lookup_key(KBD_DEFAULT_*)` — they remain
-  available as variables `game_state.controller.keys.up` etc. The
-  `KBD_*` compile-time macros are removed cleanly with a clear
-  error message pointing at `input_lookup_key`. Document in
-  `ROADMAP.md` and release notes. Add a deprecation grace period
-  during IN3.
+  code. The `KBD_*` macros that were re-exported (`KBD_UP`,
+  `KBD_DOWN`, etc.) change semantic from "ZX scancode literal" to
+  "ASCII default that gets resolved to a scancode by
+  `input_lookup_key()` at runtime".
+  *Mitigation*: per README §5.6, the `KBD_*` compile-time
+  macros and `IN_KEY_SCANCODE_*` symbols stay accepted
+  **indefinitely** — on ZX they keep their old literal-scancode
+  meaning (via the existing z88dk `input_zx.h`); the new ASCII
+  default scheme adds parallel `KBD_DEFAULT_*` ASCII constants
+  consumed by `init_controllers()` through `input_lookup_key()`.
+  External games using `KBD_UP` directly keep building (on ZX
+  with original semantics; on CPC the macro would be undefined
+  and the user gets a clear compile error directing them at the
+  ASCII-default scheme). Document in `CHANGELOG.md`.
 
 - **R5 — CPC keyboard ghost-keys / matrix collisions.**
   Pressing certain key combinations on real CPC hardware causes

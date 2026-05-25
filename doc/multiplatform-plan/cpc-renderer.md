@@ -780,9 +780,9 @@ and runs on a CPC emulator. If this fails, the whole plan changes.
     `Makefile-cpc-banked` select them instead of `gfx_sp1.c` /
     `gfx_jsp.c`.
   - *What to test*: file compiles, no link errors.
-- **R4-2** Add a `BUILD_FEATURE_GFX_BACKEND_CPCTEL` (or whatever the
-  `gfx.md` audit decides on) macro family so the right backend is
-  selected per platform target.
+- **R4-2** Add the `BUILD_FEATURE_GFX_BACKEND_CPCTEL` macro family
+  (per README §5.4) so the right backend is selected per platform
+  target.
 - **R4-3** Create a `games/minimal_cpc/` (or `tests/minimal_cpc/`)
   test game with the smallest possible `.gdata` set that exercises
   init, a sprite, a tile, and `gfx_*` HAL flush — enough to confirm
@@ -806,12 +806,14 @@ and runs on a CPC emulator. If this fails, the whole plan changes.
   fixes.
 - **R5-3** Document the cpctelera pin policy: when to bump (security/
   bug-fix only mid-phase; broader updates at phase boundaries).
-- **R5-4** Decide on inclusion (or not) of cpctelera's audio backend
-  in RAGE1, in conjunction with `audio.md`. If yes, write a
-  `audio_cpc.c` HAL backend skeleton.
-- **R5-5** Decide on inclusion (or not) of cpctelera's keyboard scan
-  in RAGE1, in conjunction with `input.md`. If yes, write an
-  `input_cpc.c` HAL backend skeleton.
+- **R5-4** Confirm the audio integration with `audio.md`: cpctelera's
+  audio backend is **NOT included** (OQ-3 resolved 2026-05-26 —
+  RAGE1's existing Arkos integration is retargeted for CPC instead);
+  exclude `cpctelera/src/audio/` from the vendored source glob.
+- **R5-5** Confirm the input integration with `input.md`: cpctelera's
+  keyboard scan **IS used** (OQ-4 resolved 2026-05-26 by input.md
+  §4.3 — `cpct_scanKeyboard_if` + `cpct_isKeyPressed`); ensure the
+  cpctelera `keyboard/` source path is in the build glob.
 - **Phase-exit criteria**:
   - CPC regression baseline checked in.
   - cpctelera-vs-RAGE1 integration is documented (this file, plus

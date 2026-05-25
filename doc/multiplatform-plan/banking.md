@@ -1663,18 +1663,27 @@ discipline.
   since B1-2). The tool now hard-fails if `banking.<platform>` is
   missing from YAML.
 - **B9-3** Rename `engine/banked_code/128/` to
-  `engine/banked_code/zx128/`. Forwarding shim for one release
-  cycle. (Coordinated with `toolchain.md` Phase T4-3.)
-- **B9-4** Remove `BUILD_FEATURE_ZX_TARGET_128` /
-  `BUILD_FEATURE_ZX_TARGET_48` legacy macros; only
-  `BUILD_FEATURE_PLATFORM_*` survives. Coordinate with
-  `toolchain.md` Phase T4-3.
+  `engine/banked_code/zx128/`. Keep a **permanent silent
+  forwarding symlink / Makefile alias** at the old path per
+  README §5.6 (no deprecation cycle).
+- **B9-4** *(originally "remove `BUILD_FEATURE_ZX_TARGET_*`
+  macros" — DROPPED per README §5.6.)* Both
+  `BUILD_FEATURE_ZX_TARGET_128` / `BUILD_FEATURE_ZX_TARGET_48`
+  AND `BUILD_FEATURE_PLATFORM_*` macros stay emitted in
+  `features.h` indefinitely. External games that `#ifdef` on
+  the old macros keep building. Documentation pass only: record
+  in `CHANGELOG.md` that the canonical macros are the new
+  `BUILD_FEATURE_PLATFORM_*` family.
 - **B9-5** Update `doc/BANKING-DESIGN.md`, `doc/CODESET-DESIGN.md`,
   `doc/SINGLE-USE-BLOBS.md`, `doc/BANKED-FUNCTIONS.md` to reflect
   the per-platform model. Add cross-links to this document.
 - **Phase-exit criteria**:
   - No reference to "zx-only" naming in the banking code path
     that isn't gated by a `BUILD_FEATURE_PLATFORM_ZX*` macro.
+  - Both `BUILD_FEATURE_ZX_TARGET_*` and
+    `BUILD_FEATURE_PLATFORM_*` macros emitted in `features.h`;
+    a smoke build of a `.gdata` that uses the old macros
+    still works.
   - `make all-test-builds` green on every supported PLATFORM.
   - Banking docs reflect reality.
 

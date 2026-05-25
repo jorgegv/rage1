@@ -855,8 +855,8 @@ becomes `tools/mem-summary-<gfx_backend>-<platform>.sh`:
 | `mem-summary-sp1-128.sh` | `mem-summary-sp1-zx128.sh` |
 | `mem-summary-jsp-48.sh` | `mem-summary-jsp-zx48.sh` |
 | `mem-summary-jsp-128.sh` | `mem-summary-jsp-zx128.sh` |
-| (new) | `mem-summary-cpc-cpc464.sh` (also serves CPC664 — same memory map) |
-| (new) | `mem-summary-cpc-cpc6128.sh` |
+| (new) | `mem-summary-cpctel-cpc464.sh` (also serves CPC664 — same memory map) |
+| (new) | `mem-summary-cpctel-cpc6128.sh` |
 
 The CPC variants report:
 
@@ -1065,8 +1065,8 @@ generalise `make mem` to per-platform scripts.
   project-wide backwards-compat policy (README §5.6) — silent
   acceptance, no deprecation banner. Update `Makefile.common:315`
   accordingly.
-- **TS4-4** Add `tools/mem-summary-cpc-cpc464.sh` and
-  `tools/mem-summary-cpc-cpc6128.sh`, modelled on the ZX equivalents
+- **TS4-4** Add `tools/mem-summary-cpctel-cpc464.sh` and
+  `tools/mem-summary-cpctel-cpc6128.sh`, modelled on the ZX equivalents
   but with CPC memory-region constants. The CPC464 script also
   applies to CPC664 (memory-identical); no separate file needed.
 - **TS4-5** Wire CI to optionally run `make mem` per platform and

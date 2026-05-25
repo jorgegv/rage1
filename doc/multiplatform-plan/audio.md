@@ -644,7 +644,7 @@ mitigation refers to.
 
 ### 3.2 Backend split: `zx_beeper`, `zx_ay`, `cpc_ay`, and the macro family
 
-File layout, mirroring `gfx_sp1.h` / `gfx_jsp.h` / `gfx_cpc.h`:
+File layout, mirroring `gfx_sp1.h` / `gfx_jsp.h` / `gfx_cpctel.h`:
 
 ```
 engine/include/rage1/audio.h            -- HAL umbrella, selects backend
@@ -883,9 +883,9 @@ SOUND BULLET_SHOT=SFX_SHOT
 ```
 
 …and a per-platform overlay file like
-`zx128/game_data/audio/sound_map.gdata` says
+`zx128/game_data/game_config/sound_map.gdata` says
 `SFX_HIT=BEEPFX_HIT_3` for ZX, and
-`cpc6128/game_data/audio/sound_map.gdata` says `SFX_HIT=2`
+`cpc6128/game_data/game_config/sound_map.gdata` says `SFX_HIT=2`
 (Arkos SFX-table index) for CPC.
 
 **Decision (2026-05-26): Option C.** Backend-agnostic event IDs
@@ -1401,12 +1401,15 @@ the new HAL names. Mechanical; risk is breadth, not depth.
   `do_rule_action_audio_sfx`. Datagen's action-name table
   (`tools/datagen.pl:2475,2492-2495`) plus the rule-action
   function-pointer table (`flow.c:755-771`) update in
-  lockstep. Keep old action names as `.gdata` aliases for
-  one deprecation cycle (PLAY_SOUND → AUDIO_SFX, etc.).
+  lockstep. Old `.gdata` action keywords (`PLAY_SOUND`,
+  `TRACKER_*`) stay accepted **indefinitely** as silent
+  aliases per README §5.6 — both spellings map to the new
+  dispatch functions.
   *What to test*: every test game still builds; rule
-  dispatch tables in `build/generated/` updated.
+  dispatch tables in `build/generated/` updated; a `.gdata`
+  file that still uses `PLAY_SOUND` builds without warning.
   *Expected outcome*: zero `tracker_*` action symbols in
-  generated code.
+  generated code; old `.gdata` keywords still work.
 - **AU3-3** Migrate game-side custom code (§1.6 game
   call-sites). Edit the 5-6 affected `game_src/*.c` files.
   *What to test*: each game builds and is audibly equivalent
@@ -1425,23 +1428,31 @@ the new HAL names. Mechanical; risk is breadth, not depth.
   *What to test*: `make all-test-builds` green.
 - **AU3-5** Rename `BUILD_FEATURE_TRACKER*` →
   `BUILD_FEATURE_AUDIO_*` (per §3.2 table). Datagen emits
-  both names through one deprecation cycle.
-  *What to test*: `make all-test-builds` green; feature
-  macros visible in both naming conventions.
+  **both names indefinitely** per README §5.6 — external
+  games that `#ifdef` on the old macros keep building.
+  *What to test*: `make all-test-builds` green; both
+  macro families visible in `features.h`.
 - **AU3-6** Update `etc/rage1-config.yml:59-114`
   banked-functions table — rename entries to use the
   `audio_*` names. Regenerate banked function defs and the
   banked function ASM table.
   *What to test*: `make all-test-builds` green; banked
   call sites resolve.
-- **AU3-7** Remove the alias layer added in AU2-2 (drop the
-  `static inline` redirects). All callers now use the new
-  names directly.
-  *What to test*: `make all-test-builds` green; grep for
-  removed symbols returns zero hits.
+- **AU3-7** *(originally "remove AU2-2 alias layer" — DROPPED
+  per README §5.6.)* Engine-internal callers use the new
+  `audio_*` names directly; the AU2-2 `static inline`
+  redirects from old `beeper_*` / `tracker_*` names stay
+  in place indefinitely so any external custom code using
+  the old names keeps compiling.
+  *What to test*: `make all-test-builds` green; a sample
+  external `.c` file using `beeper_play()` / `tracker_*`
+  still compiles via the alias header.
 - **Phase-exit criteria**:
-  - No `beeper_*` / `tracker_*` C-symbols in engine, games,
-    generated code, or config (one `grep -r` confirms it).
+  - No `beeper_*` / `tracker_*` direct C-symbol calls in
+    engine sources, RAGE1-owned games' code, or generated
+    code (one `grep -r` confirms it). The compatibility
+    `static inline` aliases from AU2-2 stay so external
+    games using the old names continue to compile.
   - All test games build and audibly match the baseline
     recordings.
   - `tests/00regression/` ZX screenshot tests green.
@@ -1598,22 +1609,29 @@ working without migration.
 
 **Goal**: close out the migration and the documentation.
 
-- **AU7-1** Remove the deprecated `BUILD_FEATURE_TRACKER*`
-  macro aliases from `datagen.pl` (now `AUDIO_*` only).
-- **AU7-2** Remove the deprecated `PLAY_SOUND` /
-  `TRACKER_*` flow-rule action keyword aliases (now
-  `AUDIO_SFX` / `AUDIO_MUSIC_*`).
+- **AU7-1** *(originally "remove deprecated
+  `BUILD_FEATURE_TRACKER*` macros" — DROPPED per README §5.6.)*
+  Both `BUILD_FEATURE_TRACKER*` and `BUILD_FEATURE_AUDIO_*`
+  macro families stay emitted indefinitely (silent aliases).
+  Documentation pass: record the rename in `CHANGELOG.md`.
+- **AU7-2** *(originally "remove deprecated `PLAY_SOUND` /
+  `TRACKER_*` flow-rule action keywords" — DROPPED per
+  README §5.6.)* All old `.gdata` action keywords stay
+  accepted indefinitely as silent aliases.
 - **AU7-3** Add CPC audio to the CI matrix line introduced
   by `cpc-renderer.md` / `testing.md`.
 - **AU7-4** Update `doc/DATAGEN.md` audio section: name
-  the HAL, the backend matrix, the `SOUND_MAP` directive.
-- **AU7-5** Remove cpctelera's `src/audio/` from the
-  cpctelera glob (excluded by `-not -path '*/audio/*'`)
-  with a justifying comment pointing to this document's
-  §4.3.
+  the HAL, the backend matrix, the `SOUND_MAP` directive,
+  and note that `PLAY_SOUND` / `TRACKER_*` / `MUSIC` /
+  `BUILD_FEATURE_TRACKER*` all remain accepted as
+  permanent aliases.
+- **AU7-5** Confirm cpctelera's `src/audio/` is excluded
+  from the cpctelera glob (`-not -path '*/audio/*'`) with
+  a justifying comment pointing to this document's §4.3.
 - **Phase-exit criteria**:
-  - No `TRACKER*` macro / keyword in engine, datagen,
-    Makefiles, or game data.
+  - `BUILD_FEATURE_TRACKER*` and `BUILD_FEATURE_AUDIO_*`
+    both emitted; `PLAY_SOUND` / `TRACKER_*` / new
+    `AUDIO_*` action keywords all accepted by datagen.
   - CI green on ZX48 + ZX128 + CPC6128 audio lanes.
   - Docs reflect final state.
 
@@ -1840,16 +1858,11 @@ These need user resolution before or during execution.
   removes the risk of audible drift in the
   `games/vortex2` baseline. Confirm.
 
-- **Q10 — MSX / C64 placeholder.**
-  Per the parent task, MSX and C64 are sketch-only. MSX
-  is a clean fit (AT2 already has `PLY_AKG_HARDWARE_MSX`
-  and the AY model holds). C64's SID is utterly
-  different — no AT2 hardware target, no Arkos. C64
-  audio is a from-scratch reimplementation against a
-  SID player (e.g. `cc1541` family). The HAL doesn't
-  block this — `audio_*` is general enough — but C64
-  remains a long-horizon item, not blocked by Phase 1
-  decisions. Confirm no Phase 1 decision is disqualifying.
+- **Q10** ✅ — MSX placeholder. **Resolved (2026-05-26)**:
+  MSX stays sketch-only. AT2 has `PLY_AKG_HARDWARE_MSX` and
+  the AY model holds, so `audio_*` generalises cleanly to
+  MSX without Phase 1 rework. C64 is **out of scope** per
+  README §5.7; no audio HAL hooks are reserved for it.
 
 ---
 

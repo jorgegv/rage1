@@ -500,8 +500,9 @@ user should be ready to make at the relevant phase boundary:
 | (cpc-renderer) **OQ-1** | Default CPC mode | [cpc-renderer.md](cpc-renderer.md) | **Mode 1** |
 | (cpc-renderer) **OQ-2** | Pin cpctelera commit on `development` or `master` | [cpc-renderer.md](cpc-renderer.md) | Specific commit on `development` |
 | (cpc-renderer) **OQ-5** | CDT/DSK via `appmake` or cpctelera's `iDSK`/`2cdt` | [cpc-renderer.md](cpc-renderer.md), [toolchain.md](toolchain.md) | `appmake` |
-| (audio) **Q4** | ZX128 SFX routing: beeper-only vs beeper + AY both active | [audio.md](audio.md) | Both active by default; per-game opt-out |
-| (audio) **Q8** | Shared `.aks` as recommended authoring convention | [audio.md](audio.md) | Yes |
+| (audio) **Q4** ✅ | ZX128 SFX routing: beeper-only vs beeper + AY both active | [audio.md](audio.md) | **Resolved** (audio.md §3.1.1 / §3.2): both active by default; per-game opt-out |
+| (audio) **Q8** ✅ | Shared `.aks` as recommended authoring convention | [audio.md](audio.md) | **Resolved**: yes — shared `.aks` is the recommended authoring convention |
+| (audio) **Q10** ✅ | MSX placeholder (C64 OOS) | [audio.md](audio.md) | **Resolved (2026-05-26)**: MSX stays sketch-only and `audio_*` generalises cleanly via `PLY_AKG_HARDWARE_MSX`; C64 out of scope per §5.7 |
 | (input) **Q3** | CPC pause-key default | [input.md](input.md) | `Key_H` |
 | (input) **Q4** | `cpct_scanKeyboard_if` vs `_f` (DI/EI ownership) | [input.md](input.md) | `_if` with explicit engine-side DI/EI |
 | (banking) **OQ-B6** | CPC cold-boot loader path | [banking.md](banking.md), [toolchain.md](toolchain.md) | AMSDOS one-shot `.cpc` (cpc-flat) / disk per-block load (cpc-banked) |

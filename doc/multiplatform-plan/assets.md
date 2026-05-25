@@ -681,9 +681,11 @@ The changes needed inside datagen are:
    parameterisation is `gfx.md`'s territory.
 5. **`get_sprite_engine()` generalises** — today it returns
    `'sp1'` or `'jsp'`; it becomes `get_gfx_backend()` returning
-   `'sp1'`, `'jsp'`, `'cpc'`, etc. The CPC backend choice
-   is forced by the platform; the ZX backend remains
-   user-selectable (`SPRITE_ENGINE` directive in GAME_CONFIG).
+   `'sp1'`, `'jsp'`, `'cpctel'`, etc. (per README §5.4 naming
+   rule: library short-name). The CPC backend choice is forced by
+   the platform; the ZX backend remains user-selectable
+   (`SPRITE_ENGINE` or `GFX_BACKEND` directive in GAME_CONFIG —
+   both spellings accepted indefinitely per README §5.6).
 6. **`features.h` macros**: add `BUILD_FEATURE_PLATFORM_*` and
    `BUILD_FEATURE_GFX_BACKEND_*`.
 7. **PNG path resolution under overlays** (per OQ7 resolution).
@@ -829,21 +831,28 @@ No CPC work yet.
   appear.
   *Expected outcome*: existing games (none using `PLATFORM`) build
   unchanged; the one updated game has the new macro.
-- **A1-2** Add a deprecation warning printed from datagen when
-  `ZX_TARGET` is used without a `PLATFORM`. Do not yet fail; this
-  is a guidance pass.
-  *Test*: `make all-test-builds` — observe one warning per test game.
-- **A1-3** Migrate every `games/*/game_data/game_config/Game.gdata`
-  to `PLATFORM` (`zx48` or `zx128`) and remove `ZX_TARGET`.
+- **A1-2** *(originally "deprecation warning for ZX_TARGET" —
+  DROPPED per README §5.6.)* `ZX_TARGET` stays a silent
+  permanent alias for `PLATFORM zx48` / `PLATFORM zx128`. No
+  warning emitted. `datagen.pl` maps it transparently.
+  *Test*: a game that still declares `ZX_TARGET 128` (and no
+  `PLATFORM`) builds without any datagen warning, and produces
+  identical `features.h` content to one that declares
+  `PLATFORM zx128`.
+- **A1-3** Migrate the engine's own `games/*/game_data/game_config/Game.gdata`
+  files to use `PLATFORM`. External games are NOT migrated —
+  `ZX_TARGET` continues to work for them indefinitely.
   *Test*: `make all-test-builds`, `tests/00regression/` green.
 - **A1-4** Update `Makefile.common`'s `ZX_TARGET = $(shell grep …
   ZX_TARGET …)` query to read `PLATFORM` instead and map it back to
   `ZX_TARGET=48|128` internally (Makefile-128 / Makefile-48 selection
-  still uses the legacy variable).
+  still uses the legacy variable). The query must also accept
+  `ZX_TARGET <value>` in `.gdata` as a permanent fallback.
   *Test*: `make build48`, `make build128`, `make build`,
   `make all-test-builds`.
 - **A1-5** Update `doc/DATAGEN.md` to document `PLATFORM` as the
-  preferred directive and `ZX_TARGET` as deprecated.
+  preferred directive and `ZX_TARGET` as a **permanent silent
+  alias** (NOT deprecated; per README §5.6).
   *Test*: doc-only; visual review.
 - **A1-6** Implement the **platform-selection rule** (per §2.1
   "Platform-selection rule"): a build resolves its target platform
@@ -1098,10 +1107,15 @@ story.
 
 **Goal**: close out the migration cleanly.
 
-- **A7-1** Remove the `ZX_TARGET` alias from `datagen.pl` (still
-  emit a clear error message if used).
-- **A7-2** Migrate any external test fixtures and update
-  `doc/multiplatform-plan/README.md` cross-references.
+- **A7-1** *(originally "remove ZX_TARGET alias" — DROPPED per
+  README §5.6.)* `ZX_TARGET` stays as a permanent silent alias
+  for `PLATFORM zx48` / `PLATFORM zx128`. Documentation pass
+  only: confirm `datagen.pl` accepts it without warning and
+  record the rename in `CHANGELOG.md` as "old name remains
+  accepted indefinitely".
+- **A7-2** Migrate any RAGE1-owned test fixtures (NOT external
+  games) and update `doc/multiplatform-plan/README.md`
+  cross-references.
 - **A7-3** Update `tools/mapgen.pl` `--help` output to mention
   the per-platform overlay convention.
 - **A7-4** Add an "assets pipeline overview" section to the
@@ -1109,7 +1123,8 @@ story.
   figure showing the three-tier overlay.
 
 **Phase-exit criteria for A7**:
-- No code reference to `ZX_TARGET` remains.
+- `ZX_TARGET` still works in `.gdata` (silent permanent alias);
+  verified by smoke build of a `.gdata` that still uses it.
 - `make all-test-builds` green.
 - `tests/00regression/` green.
 - Docs reflect the final state.
@@ -1176,8 +1191,11 @@ story.
 
 - **Risk: dataset / banking arithmetic changes when CPC byte
   layouts produce assets of different sizes than ZX.**
-  CPC mode-0 pixels are 4 bpp (twice the bytes of ZX); mode 1
-  is 2 bpp (same size as ZX). Sprite + BTile data is what gets
+  CPC mode-1 (4 colours, 2 bpp) sprite/tile bytes are **~2×** the
+  size of ZX 1-bpp bytes for the same pixel area; CPC mode-0
+  (16 colours, 4 bpp) is **~4×**. (See `banking.md` §5 for the
+  authoritative byte-per-cell table and `README.md` §6 for the
+  cross-cutting risk note.) Sprite + BTile data is what gets
   paged into datasets, so the per-dataset capacity calculation
   (`DATASET_MAXSIZE`, `Makefile.common:50`) may need to be
   re-thought for CPC.
