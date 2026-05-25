@@ -494,7 +494,10 @@ user should be ready to make at the relevant phase boundary:
 | (toolchain) **OQ-T1** | `PLATFORM` variable name (`PLATFORM` vs `RAGE1_PLATFORM`) | [toolchain.md](toolchain.md) | `PLATFORM` |
 | (toolchain) **OQ-T2** ✅ | Legacy `Makefile-48`/`Makefile-128` alias lifetime | [toolchain.md](toolchain.md) | **Resolved (2026-05-25)**: indefinite (§5.6) |
 | (toolchain) **OQ-T3** | z88dk pinned version bump | [toolchain.md](toolchain.md) | Bump to current stable (v2.3 → v2.4) |
-| (toolchain) **OQ-T11** | CPC banking model: extend RAGE1's own vs migrate both sides to z88dk `#pragma bank` | [toolchain.md](toolchain.md), [banking.md](banking.md) | Owed by `banking.md`; toolchain accommodates either |
+| (toolchain) **OQ-T11** ✅ | CPC banking model: extend RAGE1's own vs migrate both sides to z88dk `#pragma bank` | [toolchain.md](toolchain.md), [banking.md](banking.md) | **Resolved (2026-05-26)** by [banking.md OQ-B11](banking.md): extend RAGE1's custom banking (Option A). z88dk `#pragma bank` migration deferred to a future task (banking.md R13) |
+| (banking) **OQ-B1** ✅ | Dataset destination buffer placement on cpc-banked | [banking.md](banking.md) | **Resolved (2026-05-26)**: top of Page C (0x8000-0x9FFF, 8 KB). Page A alternative recorded as fallback |
+| (banking) **OQ-B4** ✅ | CPC mode 0 support in Phase 1 | [banking.md](banking.md) | **Resolved (2026-05-26)**: mode 1 only — see also gfx.md Q7, cpc-renderer.md OQ-1 |
+| (banking) **OQ-B11** ✅ | Banking mechanism: custom vs z88dk #pragma bank | [banking.md](banking.md), [toolchain.md](toolchain.md) | **Resolved (2026-05-26)**: extend RAGE1's custom banking (Option A); migration to z88dk deferred as future task. Cross-link: OQ-T11 |
 | (cpc-renderer) **OQ-1** | Default CPC mode | [cpc-renderer.md](cpc-renderer.md) | **Mode 1** |
 | (cpc-renderer) **OQ-2** | Pin cpctelera commit on `development` or `master` | [cpc-renderer.md](cpc-renderer.md) | Specific commit on `development` |
 | (cpc-renderer) **OQ-5** | CDT/DSK via `appmake` or cpctelera's `iDSK`/`2cdt` | [cpc-renderer.md](cpc-renderer.md), [toolchain.md](toolchain.md) | `appmake` |
@@ -502,8 +505,6 @@ user should be ready to make at the relevant phase boundary:
 | (audio) **Q8** | Shared `.aks` as recommended authoring convention | [audio.md](audio.md) | Yes |
 | (input) **Q3** | CPC pause-key default | [input.md](input.md) | `Key_H` |
 | (input) **Q4** | `cpct_scanKeyboard_if` vs `_f` (DI/EI ownership) | [input.md](input.md) | `_if` with explicit engine-side DI/EI |
-| (banking) **OQ-B1** | Dataset destination buffer in page C vs page A | [banking.md](banking.md) | Page C |
-| (banking) **OQ-B4** | CPC mode 0 support in Phase 1 | [banking.md](banking.md) | **No** — mode 1 only |
 | (banking) **OQ-B6** | CPC cold-boot loader path | [banking.md](banking.md), [toolchain.md](toolchain.md) | AMSDOS one-shot `.cpc` (cpc-flat) / disk per-block load (cpc-banked) |
 | (testing) **OQ-TS1** | Caprice32 autocmd token spelling verification | [testing.md](testing.md) | Confirm in TS2 against pinned version |
 | (testing) **OQ-TS9** | Whether CPC664 needs explicit emulator smoke testing in CI (it runs the CPC464 build as a runtime target) | [testing.md](testing.md) | No (Phase 1) |

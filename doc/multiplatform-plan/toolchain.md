@@ -1053,12 +1053,13 @@ stages.
   game-side `make build-cpc6128` shortcut, or do they always go
   through `make build` with `.gdata`-declared `PLATFORM`? Plan
   currently assumes the latter (less surface). Confirm before T2.
-- **OQ-T11** — Does RAGE1 keep its own custom banking implementation
-  and extend it to CPC (datagen/banktool/loadertool learn CPC bank
-  numbers + paging ports; z88dk `#pragma bank` not used on either
-  side), or migrate ZX128 to z88dk's `#pragma bank` model first and
-  then reuse the same mechanism on CPC6128 (one banking strategy
-  across both platforms, smaller toolchain surface)? Owned by
-  `banking.md`; toolchain.md accommodates either choice. The §2.1
-  `#pragma bank` discussion notes both alternatives. Resolution
-  required before Phase T3.
+- **OQ-T11** ✅ — Banking mechanism. **RESOLVED (2026-05-26)** by
+  [banking.md OQ-B11](banking.md): **extend RAGE1's existing
+  custom banking** to CPC (Option A). z88dk's `#pragma bank` is
+  not used on either platform. Migration to z88dk's mechanism is
+  deferred to a future dedicated task (captured as banking.md
+  Risk R13). Toolchain side: T3-5 (banktool.pl `--platform`) and
+  T1-11 (loadertool.pl template-driven) cover the work; no
+  toolchain.md rewrites needed beyond softening the §2.1
+  `#pragma bank` discussion to make explicit that RAGE1 doesn't
+  use it.

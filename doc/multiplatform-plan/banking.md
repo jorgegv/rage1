@@ -463,16 +463,16 @@ Key facts:
 - **8 standard mapping configurations** (`C0..C7` in MMR speak,
   matching cpctelera's `cpct_pageMemory` argument 0..7):
 
-| Config | 0x0000 (A) | 0x4000 (B) | 0x8000 (C) | 0xC000 (D) |
-|---|---|---|---|---|
-| 0 (reset default) | RAM 0 | RAM 1 | RAM 2 | RAM 3 |
-| 1 | RAM 0 | RAM 1 | RAM 2 | RAM 7 |
-| 2 | RAM 4 | RAM 5 | RAM 6 | RAM 7 |
-| 3 | RAM 0 | RAM 3 | RAM 2 | RAM 7 |
-| 4 | RAM 0 | RAM 4 | RAM 2 | RAM 3 |
-| 5 | RAM 0 | RAM 5 | RAM 2 | RAM 3 |
-| 6 | RAM 0 | RAM 6 | RAM 2 | RAM 3 |
-| 7 | RAM 0 | RAM 7 | RAM 2 | RAM 3 |
+| Config            | 0x0000 (A) | 0x4000 (B) | 0x8000 (C) | 0xC000 (D) |
+|-------------------|------------|------------|------------|------------|
+| 0 (reset default) | RAM 0      | RAM 1      | RAM 2      | RAM 3      |
+| 1                 | RAM 0      | RAM 1      | RAM 2      | RAM 7      |
+| 2                 | RAM 4      | RAM 5      | RAM 6      | RAM 7      |
+| 3                 | RAM 0      | RAM 3      | RAM 2      | RAM 7      |
+| 4                 | RAM 0      | RAM 4      | RAM 2      | RAM 3      |
+| 5                 | RAM 0      | RAM 5      | RAM 2      | RAM 3      |
+| 6                 | RAM 0      | RAM 6      | RAM 2      | RAM 3      |
+| 7                 | RAM 0      | RAM 7      | RAM 2      | RAM 3      |
 
   Source: cpctelera reference table cross-checked against Grimware
   Gate Array documentation. The "base 64K" is RAM 0/1/2/3; the
@@ -551,20 +551,20 @@ sources need to be in the source glob for `Makefile-cpc-banked`.
 
 ### 2.4 Comparison: ZX 128 paging vs CPC 6128 banking
 
-| Aspect | ZX 128K | CPC 6128 |
-|---|---|---|
-| Paging port | `0x7FFD` (write-only) | `0x7Fxx` MMR command `0b110xxxxx` (write-only) |
-| Banks of RAM total | 8 banks of 16 KB | 8 banks of 16 KB (4 base + 4 extended) |
-| Always-mapped banks | 5 (`0x4000`), 2 (`0x8000`) | RAM 0/1/2 in default config (configs 0, 3..7) |
-| Swap window | One: `0xC000` | Effectively one preferred: `0xC000` (config 1) or `0x4000` (configs 3..7) |
-| Number of "free" banks visible at the window | 1 at a time, drawn from {0,1,3,4,6,7} | 1 at a time, drawn from {3,4,5,6,7} (configs 1, 3..7) |
-| Where the screen sits | bank 5 at `0x4000` | RAM 0 (or CRTC-selected), independent of MMR |
-| ROM enable in the swap byte | yes (bit 4) | no (separate Gate Array `0b100xxxxx` command) |
-| Bank tracking | software variable (`memory_current_memory_bank`) | same — both ports are write-only |
-| Interrupt mode | IM 2 with user IV table | IM 1 from firmware (default), can take over |
-| Stack location for banked builds | `0x8101–0x8180` (configurable) | flexible; cpctelera typically uses `0xC000`-adjacent |
-| Compression-on-load convention | ZX0 (z88dk-zx0) | ZX0 also works (same z88dk tool family) |
-| ROM loader for cold-boot | Sinclair `LD_BYTES` at `0x0556` | AMSDOS file loader (firmware call) or raw block read from tape |
+| Aspect                                       | ZX 128K                                          | CPC 6128                                                                  |
+|----------------------------------------------|--------------------------------------------------|---------------------------------------------------------------------------|
+| Paging port                                  | `0x7FFD` (write-only)                            | `0x7Fxx` MMR command `0b110xxxxx` (write-only)                            |
+| Banks of RAM total                           | 8 banks of 16 KB                                 | 8 banks of 16 KB (4 base + 4 extended)                                    |
+| Always-mapped banks                          | 5 (`0x4000`), 2 (`0x8000`)                       | RAM 0/1/2 in default config (configs 0, 3..7)                             |
+| Swap window                                  | One: `0xC000`                                    | Effectively one preferred: `0xC000` (config 1) or `0x4000` (configs 3..7) |
+| Number of "free" banks visible at the window | 1 at a time, drawn from {0,1,3,4,6,7}            | 1 at a time, drawn from {3,4,5,6,7} (configs 1, 3..7)                     |
+| Where the screen sits                        | bank 5 at `0x4000`                               | RAM 0 (or CRTC-selected), independent of MMR                              |
+| ROM enable in the swap byte                  | yes (bit 4)                                      | no (separate Gate Array `0b100xxxxx` command)                             |
+| Bank tracking                                | software variable (`memory_current_memory_bank`) | same — both ports are write-only                                          |
+| Interrupt mode                               | IM 2 with user IV table                          | IM 1 from firmware (default), can take over                               |
+| Stack location for banked builds             | `0x8101–0x8180` (configurable)                   | flexible; cpctelera typically uses `0xC000`-adjacent                      |
+| Compression-on-load convention               | ZX0 (z88dk-zx0)                                  | ZX0 also works (same z88dk tool family)                                   |
+| ROM loader for cold-boot                     | Sinclair `LD_BYTES` at `0x0556`                  | AMSDOS file loader (firmware call) or raw block read from tape            |
 
 The structural parallels are strong. The main differences:
 
@@ -671,10 +671,18 @@ Notes:
   (the RST 38 vector) — RAGE1's ISR entry will live there.
 - No banking: `memory_switch_bank` is a stub on cpc-flat (same
   shape as ZX 48). Datasets/codesets/banked-code compile out.
-- Asset budget: this is the tightest of the four targets. CPC
-  mode-1 sprite/tile bytes are roughly **twice the size** of ZX 1-bpp
-  bytes for the same pixel area (mode-1 = 2 bpp packed); mode-0 is
-  **four times**. See §5.
+- Asset budget: depends on the game's code/asset ratio. CPC mode-1
+  sprite/tile bytes are ~**2×** the size of ZX 1-bpp bytes for the
+  same pixel area; mode-0 is ~**4×**. This is partly offset by
+  CPC464's ~5-7 KB extra usable RAM vs ZX48 (CPC464: 64 KB total
+  minus 16 KB screen at `0xC000-0xFFFF` minus small firmware reserve
+  ≈ 46-48 KB; ZX48: 48 KB total minus ~7 KB screen at
+  `0x4000-0x5AFF` minus ~350 B system vars ≈ 41 KB). For asset-light
+  games, cpc-flat is more comfortable than ZX48; for asset-heavy
+  games approaching the ZX48 cap, the 2× multiplier outpaces the
+  RAM bonus and cpc-flat becomes tighter. Mode 0's 4× multiplier
+  pushes cpc-flat hard regardless. See §5.
+
 
 #### 3.1.4 cpc-banked (CPC 6128)
 
@@ -733,8 +741,17 @@ is **TBD**, blocked on the z88dk CRT walk in Phase B4-1. See also
 R9 (CRT_ORG_CODE on cpc-banked is constrained).
 
 === Page B (RAM 1, default): 0x4000–0x7FFF ===
-0x4000–0x5FFF  Dataset decompression buffer + heap (≈8 KB)
-0x6000–0x7FFF  More engine code or generated home data
+0x4000–0x7FFF  Secondary code/data area, **only addressable in
+               MMR Config 0**. Paged OUT during dataset / codeset /
+               banked-code swaps. Realistic contents: one-shot
+               pre-game init code, SUB load slot when no
+               extended-bank read is needed, or kept unused.
+               **Cannot** host anything that must coexist with
+               banking operations — in particular, the dataset
+               decompression buffer cannot live here because the
+               compressed source (paged into the same window via
+               MMR Configs 3..7) and the destination buffer would
+               collide.
 
 === Page B (RAM 3..7, banked mode): 0x4000–0x7FFF ===
 Whatever extended bank is currently paged: datasets / codesets /
@@ -742,15 +759,35 @@ banked code. Same as ZX 128's 0xC000 window in role, just at a
 different address.
 
 === Page C (RAM 2): 0x8000–0xBFFF ===
-0x8000–0xBEFF  Generated game data (home dataset) + bss
+0x8000–0x9FFF  Dataset decompression buffer + heap (8 KB,
+               = BANKED_DATASET_BASE_ADDRESS; matches §3.2
+               invariant — buffer base == compile-time ORG of
+               dataset_N.bin). Final size driven by largest
+               decompressed dataset (computed by datagen.pl,
+               per-platform BUILD_MAX_DATASET_SIZE).
+0xA000–0xBEFF  Generated game data (home dataset) + bss
 0xBF00–0xBFFF  Stack (256 B, top-down — initial budget; exact size
                TBD against a hand-walk of worst-case ISR + cpctelera
                + C-frame nesting in Phase B4-2)
+
 
 === Page D (screen RAM): 0xC000–0xFFFF ===
 0xC000–0xFFFF  Screen RAM (mode 1) — 16 KB, untouchable as
                code/data
 ```
+
+**Design note — buffer placement alternative considered.** Placing
+the decompression buffer + heap at the top of Page A (e.g. 8 KB at
+`0x2000-0x3FFF`) was considered as a closer geometric mirror of
+ZX 128 lowmem (buffer + engine code share one always-resident
+window). It is workable in principle but constrains the Page A
+engine-code budget to roughly 3.5 KB after the `+cpc` clib's
+CRT support routines — too tight for RAGE1's current lowmem
+engine. Page C top is the chosen design; the Page A alternative
+is recorded here as a fallback to revisit if Phase B4-1's lowmem
+measurement shows the engine fits comfortably in ~3.5 KB, OR if
+cpc-banked games run out of home-data room in Page C and a
+swap of constraints becomes attractive.
 
 Implications and choices recorded here:
 
@@ -822,13 +859,13 @@ Stick to Shape A (one swap window at `0x4000`).
 
 ### 3.2 Dataset/codeset/SUB analogues per platform
 
-| Concept | zx48 | zx128 | cpc-flat | cpc-banked |
-|---|---|---|---|---|
-| Datasets (paged) | ❌ (home only) | ✅ Window `0xC000`, dest buf `0x5B00` (ORG = `0x5B00`) | ❌ (home only) | ✅ Window `0x4000`, dest buf `0x8000` (ORG = `0x8000`) |
-| Codesets | ❌ (calls inline to home) | ✅ Org `0xC000`, exec from window | ❌ | ✅ Org `0x4000`, exec from window |
-| Banked engine code | ❌ (linked into main) | ✅ Bank 4 @ `0xC000` | ❌ | ✅ RAM 4 @ `0x4000` |
-| SUBs (one-shot intros) | ✅ (SP1 buffer only) | ✅ (DSBUF + SP1 buffer) | ✅ (limited; small free regions) | ✅ (DSBUF + SP1-equivalent region) |
-| Home dataset | ✅ | ✅ | ✅ | ✅ |
+| Concept                | zx48                     | zx128                                                 | cpc-flat                        | cpc-banked                                            |
+|------------------------|--------------------------|-------------------------------------------------------|---------------------------------|-------------------------------------------------------|
+| Datasets (paged)       | ❌ (home only)            | ✅ Window `0xC000`, dest buf `0x5B00` (ORG = `0x5B00`) | ❌ (home only)                   | ✅ Window `0x4000`, dest buf `0x8000` (ORG = `0x8000`) |
+| Codesets               | ❌ (calls inline to home) | ✅ Org `0xC000`, exec from window                      | ❌                               | ✅ Org `0x4000`, exec from window                      |
+| Banked engine code     | ❌ (linked into main)     | ✅ Bank 4 @ `0xC000`                                   | ❌                               | ✅ RAM 4 @ `0x4000`                                    |
+| SUBs (one-shot intros) | ✅ (SP1 buffer only)      | ✅ (DSBUF + SP1 buffer)                                | ✅ (limited; small free regions) | ✅ (DSBUF + SP1-equivalent region)                     |
+| Home dataset           | ✅                        | ✅                                                     | ✅                               | ✅                                                     |
 
 Concrete proposals:
 
@@ -931,12 +968,12 @@ What this means concretely:
 
 ### 3.4 Screen RAM placement decisions
 
-| Platform | Screen RAM | Configurable? | RAGE1's stance |
-|---|---|---|---|
-| zx48 | `0x4000–0x5AFF` (6912 B) | No (one screen) | Fixed |
-| zx128 | bank 5 at `0x4000` (normal) or bank 7 (shadow) | Yes via `0x7FFD` bit 3 | RAGE1 uses normal screen; shadow not used |
+| Platform           | Screen RAM                                                                          | Configurable?                           | RAGE1's stance                                      |
+|--------------------|-------------------------------------------------------------------------------------|-----------------------------------------|-----------------------------------------------------|
+| zx48               | `0x4000–0x5AFF` (6912 B)                                                            | No (one screen)                         | Fixed                                               |
+| zx128              | bank 5 at `0x4000` (normal) or bank 7 (shadow)                                      | Yes via `0x7FFD` bit 3                  | RAGE1 uses normal screen; shadow not used           |
 | cpc-flat (464/664) | `0xC000–0xFFFF` (16 KB) by default; CRTC R12/R13 can move it to `0x4000` (mode 0/1) | Yes, but cpctelera defaults to `0xC000` | RAGE1 follows cpctelera default: screen at `0xC000` |
-| cpc-banked (6128) | Same as cpc-flat: default `0xC000`, CRTC-relocatable | Yes | RAGE1 follows cpctelera default: screen at `0xC000` |
+| cpc-banked (6128)  | Same as cpc-flat: default `0xC000`, CRTC-relocatable                                | Yes                                     | RAGE1 follows cpctelera default: screen at `0xC000` |
 
 **The screen-base address interacts with the gfx HAL**
 (`gfx.md`-owned). Where the screen sits is a banking concern (this
@@ -1153,10 +1190,10 @@ latter is simpler; recommend it.
 
 Per-platform org addresses for bank binaries:
 
-| Platform | Banked-code ORG | Codeset ORG | Dataset ORG (compile-time) | Dataset DEST (runtime) |
-|---|---|---|---|---|
-| zx128 | `0xC000` | `0xC000` | `0x5B00` | `0x5B00` |
-| cpc-banked | `0x4000` | `0x4000` | `0x8000` | `0x8000` |
+| Platform   | Banked-code ORG | Codeset ORG | Dataset ORG (compile-time) | Dataset DEST (runtime) |
+|------------|-----------------|-------------|----------------------------|------------------------|
+| zx128      | `0xC000`        | `0xC000`    | `0x5B00`                   | `0x5B00`               |
+| cpc-banked | `0x4000`        | `0x4000`    | `0x8000`                   | `0x8000`               |
 
 Note the invariant from §3.2: **dataset ORG = dataset DEST** on
 every platform (the "__orgit trick" pre-resolves internal pointers
@@ -1251,11 +1288,11 @@ asset-size budget to this document. Here's the analysis.
 
 **Pixel-byte sizes per platform**:
 
-| Format | bpp | Bytes for an 8×8 cell | Bytes for a 16×16 sprite (no mask) |
-|---|---|---|---|
-| ZX 1-bpp + 1 attr | 1 + (1/64) | 8 + ε | 32 |
-| CPC mode 1 (4 colours) | 2 | 16 | 64 |
-| CPC mode 0 (16 colours) | 4 | 32 | 128 |
+| Format                  | bpp        | Bytes for an 8×8 cell | Bytes for a 16×16 sprite (no mask) |
+|-------------------------|------------|-----------------------|------------------------------------|
+| ZX 1-bpp + 1 attr       | 1 + (1/64) | 8 + ε                 | 32                                 |
+| CPC mode 1 (4 colours)  | 2          | 16                    | 64                                 |
+| CPC mode 0 (16 colours) | 4          | 32                    | 128                                |
 
 So CPC mode-1 sprite/tile data is **~2× the bytes** of ZX
 attribute-mode data; CPC mode-0 is **~4× the bytes**. Masks
@@ -1278,21 +1315,27 @@ double in mode 0), depending on how cpctelera encodes them.
   or smaller per-screen tile counts, or per-platform overlays
   that ship richer art on ZX 128 and more austere art on CPC 6128.
 
-- cpc-flat: dataset model doesn't apply (no banking); all
-  assets live in the home dataset, which fits in whatever the
-  64 KB CPU map leaves after engine + screen + stack. This is the
-  tightest single-game target. Mode 0 is essentially **not
-  viable** on cpc-flat for any non-trivial RAGE1 game.
+- cpc-flat: dataset model doesn't apply (no banking); all assets
+  live in the home dataset, which fits in whatever the 64 KB CPU
+  map leaves after engine + screen + stack. Tightness depends on
+  the game's code/asset ratio (CPC464's ~46-48 KB usable RAM vs
+  ZX48's ~41 KB partly offsets the 2× mode-1 / 4× mode-0 byte
+  multiplier — see §3.1.3). Mode 0 is materially tighter than
+  mode 1 on cpc-flat (4× asset bytes vs ZX 1bpp), so a non-trivial
+  mode-0 game is likely to need per-platform overlays trimming
+  sprite/tile counts, or a small game design. Final viability is a
+  per-game judgement call deferred to execution.
+
 
 **Decision**: `datagen.pl` continues to enforce
 `DATASET_MAXSIZE` per-platform. The value is computed:
 
-| Platform | Buffer | DATASET_MAXSIZE |
-|---|---|---|
-| zx48 | n/a | ∞ (home only; gated by overall RAM) |
-| zx128 | `0x5B00–0x7FFF` minus heap | ~9 KB |
-| cpc-flat | n/a | ∞ (gated by overall RAM) |
-| cpc-banked | `0x8000–0x9FFF` (proposed 8 KB) | ~8 KB |
+| Platform   | Buffer                          | DATASET_MAXSIZE                     |
+|------------|---------------------------------|-------------------------------------|
+| zx48       | n/a                             | ∞ (home only; gated by overall RAM) |
+| zx128      | `0x5B00–0x7FFF` minus heap      | ~9 KB                               |
+| cpc-flat   | n/a                             | ∞ (gated by overall RAM)            |
+| cpc-banked | `0x8000–0x9FFF` (proposed 8 KB) | ~8 KB                               |
 
 The `datagen.pl` macro that emits `BUILD_MAX_DATASET_SIZE`
 (`Makefile.common:50`) needs to be platform-aware. Concrete
@@ -1770,17 +1813,40 @@ discipline.
   parallel. Investigate whether z88dk's `+cpc` clib has a
   compatible `IM1_DEFINE_ISR`-style macro, or use raw asm.
 
+- **R13 — Long-term: divergence from z88dk's `#pragma bank`
+  banking model.**
+  *Impact*: Phase 1 locks in Option A (extend RAGE1's custom
+  banking; see OQ-B11). This means RAGE1 maintains its own
+  banking pipeline indefinitely while z88dk evolves its
+  `#pragma bank` mechanism. Over time, the gap may widen — z88dk
+  improvements (better linker bank semantics, additional
+  platforms covered out-of-the-box) accrue to projects using
+  `#pragma bank` but not to RAGE1. The `__orgit` invariant
+  (dataset ORG = destination buffer base, not source bank
+  window) is the load-bearing piece that makes a future
+  migration non-trivial.
+  *Mitigation*: keep CPC banking parametrised the same way ZX
+  banking is (per-platform valid-banks lists, per-platform
+  loader template, per-platform swap-window primitive). Document
+  the `__orgit` invariant explicitly in the implementation so a
+  future migration spike can target it. A dedicated future task
+  may spike z88dk's `#pragma bank` on a single ZX game,
+  validating the `__orgit` workaround, before committing to
+  migration. This is **not** Phase 1 work.
+
 ---
 
 ## 8. Open Questions
 
-- **OQ-B1 — Dataset destination buffer placement on cpc-banked.**
-  §3.2 proposes the buffer at page C (`0x8000`-region). An
-  alternative is to put it in page A (`0x0000-0x3FFF`),
-  co-located with the engine code, freeing page C entirely for
-  generated game data. Trade-off: page A is also where the ISR
-  lives, and the buffer would compete with engine code there. **Recommend
-  page C placement; confirm during Phase B6.**
+- **OQ-B1** ✅ — Dataset destination buffer placement on cpc-banked.
+  **RESOLVED (2026-05-26)**: buffer at the **top of Page C**
+  (`0x8000-0x9FFF`, 8 KB). Page A alternative considered (buffer
+  + engine code share one window, ZX-128-style geometry) but
+  rejected for Phase 1 because it constrains Page A engine code to
+  ~3.5 KB after the `+cpc` clib's CRT footprint — too tight. The
+  alternative is recorded in §3.1.4 as a fallback to revisit if
+  Phase B4-1's lowmem measurement reopens it or if home-data
+  pressure on Page C forces a swap of constraints.
 
 - **OQ-B2 — Use cpctelera's `cpct_pageMemory()` directly or roll
   our own MMR write?**
@@ -1802,13 +1868,13 @@ discipline.
   the BASIC loader, at `engine/loader-<platform>/asmloader.asm.in`.
   Confirm this is the right place.
 
-- **OQ-B4 — Do we want to support CPC mode 0 (4 bpp) at all in
-  Phase 1?**
-  Cross-ref `cpc-renderer.md` OQ-1 (recommend mode 1 only) and
-  `gfx.md` Q7 (recommend mode 1 only in Phase 1). Banking-side
-  consequence: mode 0 effectively halves the cpc-banked dataset
-  budget (§5). Strong recommendation: **mode 1 only** for
-  Phase 1; defer mode 0 to a post-Phase-1 research item.
+- **OQ-B4** ✅ — CPC mode 0 in Phase 1. **RESOLVED (2026-05-26)**:
+  **mode 1 only** in Phase 1; mode 0 (and mode 2) deferred. Aligns
+  with `gfx.md` Q7, `cpc-renderer.md` OQ-1, and README §5.5
+  two-layer model (which keeps modes 0/2 open as a future
+  backend-internal mode parameter). Banking-side consequence:
+  cpc-banked dataset budget is sized against mode 1's 2× byte
+  multiplier; mode 0 would halve it.
 
 - **OQ-B5 — Should `dataset_valid_banks_cpc` include bank 4
   at all, or never spill datasets into the engine-code bank?**
@@ -1851,15 +1917,49 @@ discipline.
   the PoC must report which addresses cpctelera reserves so the
   CPC SUB-target table can avoid them. Block Phase B8-1 on this.
 
-- **OQ-B10 — MSX / C64 placeholder.**
+- **OQ-B10 — MSX placeholder.**
   The per-platform banking model designed here generalises
-  cleanly to MSX (Megaram, ASCII8 mapper, KonamiSCC mapper —
-  each is a "swap window + bank-id mapping" instance) and to C64
-  (CIA/VIC-II banking + the cartridge-bank concept). The 4-page
+  cleanly to MSX (Megaram, ASCII8 mapper, KonamiSCC mapper — each
+  is a "swap window + bank-id mapping" instance). The 4-page
   CPC-style "multiple windows" abstraction is more general than
-  ZX's "single window" model — adopting it now leaves room for
-  both. No banking-side disqualification for either future
-  platform.
+  ZX's "single window" model — adopting it now leaves room for a
+  later MSX port. C64 is **out of scope** for this project (see
+  README §5.7) so the banking model is not required to
+  accommodate it. No banking-side disqualification for MSX.
+
+- **OQ-B11** ✅ — Banking mechanism: extend RAGE1's custom
+  implementation vs migrate to z88dk's `#pragma bank`.
+  **RESOLVED (2026-05-26)**: **extend RAGE1's existing custom
+  banking** to CPC (Option A). Migrating to z88dk's `#pragma
+  bank NN` (Option B) is a separate, larger refactor and is
+  deferred to a future task. Rationale:
+
+  - RAGE1's banking pipeline (`banktool.pl` page-policy lists,
+    `loadertool.pl`-emitted asmloader, `--no-crt --org
+    <buffer_address>` dataset compilation = the "__orgit trick")
+    is battle-tested on ZX 128 and stable. A migration is a
+    high-risk refactor that touches every existing game and
+    perturbs the "ZX byte-identical at phase boundaries"
+    invariant.
+  - CPC extension under Option A is mostly mechanical: extend
+    `banktool.pl` with `--platform` and the cpc-banked
+    valid-banks list `(5,6,7,4)`; teach `loadertool.pl` a
+    `--platform=cpc-banked` template (already in scope per
+    toolchain.md T1-11); wrap MMR-config selection in
+    `cpc_memory_switch_bank()`. No engine-side rethink.
+  - The `__orgit` invariant (dataset ORG = destination buffer
+    address, not source window) is RAGE1-specific and not
+    obvious to express under z88dk's `#pragma bank`, which
+    typically assumes ORG = swap window. Re-deriving the
+    invariant on top of z88dk's linker is non-trivial and
+    would warrant a dedicated spike.
+  - Long-term: a future task may revisit Option B as a
+    standalone migration project, with its own PoC validating
+    the `__orgit` workaround on a single ZX game before
+    generalising. Captured as a Risk entry (see §6) for
+    visibility. This decision also resolves
+    [`toolchain.md` OQ-T11](toolchain.md) to "Option A;
+    toolchain.md stays neutral, banking.md owns the design".
 
 ---
 
