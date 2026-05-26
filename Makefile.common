@@ -209,7 +209,17 @@ GDATA_FILES =	$(wildcard $(GAME_DATA_DIR)/game_config/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/map/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/heroes/*.gdata) \
 		$(wildcard $(GAME_DATA_DIR)/flow/*.gdata)
-GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata) $(wildcard $(GAME_DATA_DIR)/patches/flow/*.gdata)
+# A2-4: extend GDATA_PATCHES to cover the new generalised PATCH directives
+# (README §5.11). datagen.pl itself stays directory-unaware — the Makefile is
+# the contract: regular files first, patches last. Load order across patch
+# subdirs is unspecified, but each PATCH_* directive references its target
+# entity by name (so ordering between e.g. game_config and btiles is safe).
+GDATA_PATCHES =	$(wildcard $(GAME_DATA_DIR)/patches/map/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/patches/flow/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/patches/game_config/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/patches/btiles/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/patches/sprites/*.gdata) \
+		$(wildcard $(GAME_DATA_DIR)/patches/heroes/*.gdata)
 
 data:
 	$(DATAGEN) -p zx$(ZX_TARGET) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
