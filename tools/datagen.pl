@@ -4530,8 +4530,8 @@ sub dump_internal_data {
 print "Reading configuration...\n";
 $cfg = rage1_get_config();
 
-our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s );
-getopts("b:d:ct:s:");
+our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s, $opt_p );
+getopts("b:d:ct:s:p:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data		= "$opt_d/$c_file_game_data";
     $asm_file_game_data		= "$opt_d/$asm_file_game_data";
@@ -4543,7 +4543,25 @@ if ( defined( $opt_d ) ) {
 }
 $build_dir = $opt_b || 'build';
 $game_src_dir = $opt_s || 'build/game_src';
-$forced_build_target = $opt_t || 0;
+
+# T1-8: -p <platform> is the canonical CLI flag (zx48 | zx128); legacy -t
+# (numeric ZX_TARGET 48 | 128) is kept as a permanent silent alias per
+# README §5.6. If -p is given, it overrides -t. If both are absent, the
+# build target is inferred later from PLATFORM/ZX_TARGET in the game's
+# .gdata files (read_input_data).
+if ( defined( $opt_p ) ) {
+    my $p = lc( $opt_p );
+    if    ( $p eq 'zx48'  ) { $forced_build_target = 48;  }
+    elsif ( $p eq 'zx128' ) { $forced_build_target = 128; }
+    elsif ( $p =~ /^cpc/  ) {
+        die "** Error: datagen.pl -p $opt_p: CPC platforms are not yet implemented (Phase T2 adds CPC bring-up).\n";
+    }
+    else {
+        die "** Error: datagen.pl -p $opt_p: accepted values are zx48 | zx128.\n";
+    }
+} else {
+    $forced_build_target = $opt_t || 0;
+}
 
 # add default build features - these will be updated/modified later
 print "Adding default build features...\n";
