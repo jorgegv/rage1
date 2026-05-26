@@ -66,9 +66,9 @@
 #endif
 
 // Real functions (multi-step, backend-specific body in .c files)
-void gfx_init( uint8_t bg_attr, uint8_t bg_char );
+void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char );
 gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols );
-void gfx_sprite_set_color( gfx_sprite_t *s, uint8_t color );
+void gfx_sprite_set_color( gfx_sprite_t *s, gfx_attr_t color );
 
 // global initialization
 void init_gfx( void );

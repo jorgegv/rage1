@@ -11,12 +11,14 @@
 #ifndef _GFX_JSP_H
 #define _GFX_JSP_H
 
+#include <stdint.h>
 #include <jsp.h>
 
 //--- Types ---
 typedef struct jsp_sprite_s      gfx_sprite_t;
 typedef struct jsp_rect          gfx_rect_t;
 typedef struct jsp_print_ctx     gfx_print_ctx_t;
+typedef uint8_t                  gfx_attr_t;
 
 //--- Constants ---
 #define GFX_CLEAR_TILE              JSP_RFLAG_TILE

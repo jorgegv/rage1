@@ -23,7 +23,7 @@
 static struct jsp_sprite_s _sprite_pool[ GFX_JSP_MAX_SPRITES ];
 static const uint8_t _blank_tile[8] = {0,0,0,0,0,0,0,0};
 
-void gfx_init( uint8_t bg_attr, uint8_t bg_char ) {
+void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
     (void) bg_char;
     zx_border( INK_BLACK );
     jsp_init( (uint8_t *)_blank_tile, bg_attr );
@@ -38,7 +38,7 @@ gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols ) {
     return s;
 }
 
-void gfx_sprite_set_color( gfx_sprite_t *s, uint8_t color ) {
+void gfx_sprite_set_color( gfx_sprite_t *s, gfx_attr_t color ) {
     // 0xF8 mask: preserve PAPER and BRIGHT bits, replace INK only
     // (matches SP1's attr_mask = 0xF8 used in sprite.c)
     jsp_sprite_set_color( s, color, 0xF8 );

@@ -11,12 +11,14 @@
 #ifndef _GFX_SP1_H
 #define _GFX_SP1_H
 
+#include <stdint.h>
 #include <games/sp1.h>
 
 //--- Types ---
 typedef struct sp1_ss    gfx_sprite_t;
 typedef struct sp1_Rect  gfx_rect_t;
 typedef struct sp1_pss   gfx_print_ctx_t;
+typedef uint8_t          gfx_attr_t;
 
 //--- Constants ---
 #define GFX_CLEAR_TILE         SP1_RFLAG_TILE
