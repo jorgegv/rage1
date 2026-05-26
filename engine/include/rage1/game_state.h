@@ -12,11 +12,11 @@
 #define _GAME_STATE_H
 
 //#include <spectrum.h>
-#include <input.h>
 #include <stdint.h>
 
 #include "features.h"
 
+#include "rage1/input.h"
 #include "rage1/map.h"
 #include "rage1/sprite.h"
 #include "rage1/hero.h"

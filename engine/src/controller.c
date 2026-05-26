@@ -8,7 +8,7 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <input.h>
+#include "rage1/input.h"
 
 #include "rage1/controller.h"
 #include "rage1/game_state.h"
@@ -21,25 +21,24 @@
 /////////////////////////////////////
 
 void init_controllers(void) {
-   game_state.controller.keys.up    = KBD_UP;
-   game_state.controller.keys.down  = KBD_DOWN;
-   game_state.controller.keys.left  = KBD_LEFT;
-   game_state.controller.keys.right = KBD_RIGHT;
-   game_state.controller.keys.fire  = KBD_FIRE;
+   // KBD_DEFAULT_* are ASCII characters (e.g. 'Q'); we resolve them to
+   // backend scancodes at boot. Per input.md §5 phase IN3-3 the spec
+   // accepts one runtime input_lookup_key() per direction here as a
+   // small trade-off for cross-platform default-key portability.
+   game_state.controller.keys.up    = input_lookup_key( KBD_DEFAULT_UP    );
+   game_state.controller.keys.down  = input_lookup_key( KBD_DEFAULT_DOWN  );
+   game_state.controller.keys.left  = input_lookup_key( KBD_DEFAULT_LEFT  );
+   game_state.controller.keys.right = input_lookup_key( KBD_DEFAULT_RIGHT );
+   game_state.controller.keys.fire  = input_lookup_key( KBD_DEFAULT_FIRE  );
    game_state.controller.type = 0;
 }
 
 uint8_t controller_read_state(void) {
-   switch ( game_state.controller.type ) {
-      case CTRL_TYPE_KEYBOARD: return in_stick_keyboard( &game_state.controller.keys );
-      case CTRL_TYPE_KEMPSTON: return in_stick_kempston();
-      case CTRL_TYPE_SINCLAIR1: return in_stick_sinclair1();
-   }
-   return 0;
+   return input_state_read( game_state.controller.type, &game_state.controller.keys );
 }
 
 uint8_t controller_pause_key_pressed(void) {
-   return in_key_pressed( IN_KEY_SCANCODE_y );
+   return input_key_pressed( INPUT_SCANCODE_PAUSE );
 }
 
 void controller_reset_all(void) {

@@ -10,9 +10,9 @@
 
 #include <arch/spectrum.h>
 #include <intrinsic.h>
-#include <input.h>
 #include <stdlib.h>
 
+#include "rage1/input.h"
 #include "rage1/gfx.h"
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"
@@ -37,9 +37,9 @@
 
 void check_game_pause(void) {
    if ( controller_pause_key_pressed() ) {
-      in_wait_nokey();
+      input_wait_nokey();
       while ( ! controller_pause_key_pressed() ) ;
-      in_wait_nokey();
+      input_wait_nokey();
    }
 }
 
@@ -110,6 +110,12 @@ void move_bullets(void) {
 #endif
 
 void check_controller(void) {
+   // Per-frame keyboard-state refresh. No-op on ZX (z88dk's in_stick_*
+   // read the port synchronously every call); on CPC this calls
+   // cpct_scanKeyboard() once per frame. Keeping the call site in
+   // engine code now (Phase IN3-4) avoids a sweep when the CPC backend
+   // lands. See doc/multiplatform-plan/input.md §3.3 input_scan.
+   input_scan();
    game_state.controller.state = controller_read_state();
 }
 

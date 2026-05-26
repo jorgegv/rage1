@@ -11,7 +11,6 @@
 #ifndef _HERO_H
 #define _HERO_H
 
-#include <input.h>
 #include <stdint.h>
 #include <string.h>
 

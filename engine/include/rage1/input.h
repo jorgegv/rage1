@@ -53,36 +53,67 @@
 typedef uint8_t  input_state_t;     // packed INPUT_STATE_* bits
 typedef uint16_t input_scancode_t;  // backend-defined encoding
 
+// The user-defined-keys struct used by keyboard-as-joystick mode is
+// fully defined by each backend wrapper (rage1/input_zx.h /
+// rage1/input_cpc.h). Engine code holds it by value (as a field of
+// `struct controller_info_s`) and reads its `up/down/left/right/fire`
+// fields. The forward declaration here lets `input_state_read()` carry
+// an `input_udk_t *` in its prototype without input.h needing to know
+// the backend struct layout.
+struct input_udk_s;
+typedef struct input_udk_s input_udk_t;
+
 ////////////////////////////////////////////////////////////////////////////////
 //
-// HAL prototypes (Phase IN3 will provide the bodies; declared here so
-// engine call sites can be migrated incrementally without re-touching
-// this header). These are declared BEFORE the backend wrapper is
-// included so the per-backend macro definitions in input_zx.h /
-// input_cpc.h do not collide with the prototypes here.
+// HAL prototypes (the bodies live in engine/src/input.c; on ZX the
+// macros defined in rage1/input_zx.h below replace most of them with
+// thin wrappers over z88dk's <input.h> entry points, so the prototypes
+// here describe the cross-platform contract but only `input_state_read`
+// turns into a real function call on ZX).
 //
-// `controller_type` matches the `type` field of
-// `struct controller_info_s` from rage1/controller.h.
+// These are declared BEFORE the backend wrapper is included so the
+// per-backend function-like macros in rage1/input_zx.h /
+// rage1/input_cpc.h substitute the call sites without clobbering the
+// prototype tokens here.
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// Read the current state of a controller (joystick/keyboard) and write
-// the packed INPUT_STATE_* bits into *out_state.
-void input_state_read( uint8_t controller_type, uint8_t *out_state );
+// Read the current state of a controller (joystick/keyboard) and
+// return it as packed INPUT_STATE_* bits. `type` is one of the
+// CTRL_TYPE_* values (see rage1/controller.h); `udk` is the
+// user-defined-keys struct, used only for CTRL_TYPE_KEYBOARD; backends
+// ignore the `udk` argument for joystick types.
+input_state_t input_state_read( uint8_t type, input_udk_t *udk );
 
 // Non-blocking: is the key with the given backend scancode pressed
-// right now?
-uint8_t input_key_pressed( uint16_t scancode );
+// right now? (ZX: macro that calls in_key_pressed; CPC: macro that
+// reads cpct_keyboardStatusBuffer.)
+uint8_t input_key_pressed( input_scancode_t scancode );
 
 // Blocking: wait until any key is pressed / until no key is pressed.
+// On ZX both are macros that resolve to in_wait_key / in_wait_nokey.
 void input_wait_key( void );
 void input_wait_nokey( void );
 
+// Per-frame keyboard-state refresh. On ZX this is a no-op macro
+// (z88dk's in_stick_* read the port synchronously every call); on CPC
+// it must call cpct_scanKeyboard() to refresh the status buffer
+// before any input_state_read / input_key_pressed call. Engine calls
+// this once at the start of check_controller(), so the per-frame
+// scan-point is in place even on backends that do not need it.
+void input_scan( void );
+
+// ASCII -> backend scancode lookup, used by init_controllers() and by
+// per-game key-redefine flows so they do not reference IN_KEY_SCANCODE_*
+// (ZX) or cpct_keyID (CPC) directly. ZX: macro for in_key_scancode.
+input_scancode_t input_lookup_key( uint8_t ascii );
+
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Per-backend wrapper headers. ZX is the only backend at IN2; the
-// wrapper supplies the INPUT_SCANCODE_* / KBD_DEFAULT_* constants and
-// the macros that map input_* -> in_* z88dk entry points.
+// Per-backend wrapper headers. ZX is the only backend at IN3; the
+// wrapper supplies the INPUT_SCANCODE_* / KBD_DEFAULT_* constants, the
+// `struct input_udk_s` layout, and the macros that map input_* ->
+// in_* z88dk entry points.
 //
 ////////////////////////////////////////////////////////////////////////////////
 
