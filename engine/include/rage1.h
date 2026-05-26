@@ -1,5 +1,6 @@
 #include "rage1/animation.h"
 #include "rage1/arkos2.h"
+#include "rage1/audio.h"
 #include "rage1/banked.h"
 #include "rage1/beeper.h"
 #include "rage1/btile.h"

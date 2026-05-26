@@ -4485,6 +4485,35 @@ sub fix_feature_dependencies {
         delete $conditional_build_features{ 'CODESETS' };
     }
 
+    # AU2-3: derive BUILD_FEATURE_AUDIO_*_BACKEND_* macros (Phase AU2 of
+    # doc/multiplatform-plan/audio.md). These are emitted *alongside*
+    # the legacy BUILD_FEATURE_TRACKER* macros — they do not replace
+    # anything yet. Per §3.2 backend-split table:
+    #
+    #   PLATFORM zx48                       -> SFX: ZX_BEEPER
+    #   PLATFORM zx128 (no TRACKER)         -> SFX: ZX_BEEPER
+    #   PLATFORM zx128 + TRACKER            -> MUSIC: ZX_AY
+    #                                          SFX:   ZX_BEEPER
+    #                                          (+ ZX_AY if FX_CHANNEL set)
+    #
+    # CPC backends are not derived here; they enter the picture in
+    # Phase AU4 once the PLATFORM_CPC* macros land.
+    if ( defined( $conditional_build_features{ 'ZX_TARGET_48' } ) or
+         defined( $conditional_build_features{ 'ZX_TARGET_128' } ) ) {
+        # SFX backend: beeper is always available on ZX (48 or 128).
+        add_build_feature( 'AUDIO_SFX_BACKEND_ZX_BEEPER' );
+    }
+    if ( defined( $conditional_build_features{ 'ZX_TARGET_128' } ) and
+         defined( $conditional_build_features{ 'TRACKER' } ) ) {
+        # Music backend: AY music on ZX128 whenever a TRACKER is configured.
+        add_build_feature( 'AUDIO_MUSIC_BACKEND_ZX_AY' );
+        # Second SFX backend: AY SFX channel, only when FX_CHANNEL is set
+        # (today's TRACKER_SOUNDFX gate; vortex2 forbids it at parse time).
+        if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
+            add_build_feature( 'AUDIO_SFX_BACKEND_ZX_AY' );
+        }
+    }
+
     # additional fixes here...
 }
 
