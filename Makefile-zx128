@@ -63,9 +63,9 @@ CODE_LOWMEM_SYMBOLS	= $(shell for i in $(ENGINE_DIR)/src/*.o; do $(NM) $$i | sed
 # sum it all
 ALL_LOWMEM_SYMBOLS	= $(ENGINE_LOWMEM_SYMBOLS) $(GAME_LOWMEM_SYMBOLS) $(CODE_LOWMEM_SYMBOLS)
 
-# target for doing the real check
+# target for doing the real check (B3-1: pass platform-aware threshold)
 lowmemcheck:
-	./tools/lowmemsym.pl -m main.map $(ALL_LOWMEM_SYMBOLS)
+	./tools/lowmemsym.pl -m main.map --threshold $(SWAP_WINDOW_zx128) $(ALL_LOWMEM_SYMBOLS)
 
 ##
 ## Dataset compilation to standalone binaries org'ed at 0x5C00
