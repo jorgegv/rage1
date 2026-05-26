@@ -434,6 +434,14 @@ public symbols (`init_beeper`, `init_tracker`,
 `tracker_play_pending_fx`, `tracker_request_fx`,
 `tracker_play_fx`). The HAL just needs to capture this set.
 
+> *Inventory verified against `engine/` and `games/` via
+> `grep -rn 'beeper_\|tracker_' engine/ games/` on 2026-05-26
+> vs HEAD `074c010` (worktree merge of `afe3a87`, post Phase 2
+> A1/B2). All line numbers above match HEAD exactly — zero drift.
+> Also confirmed that `games/get_weapon/game_src/game_functions.c`
+> mirrors the `default` / `default_jsp` / `monochrome` / `vortex2`
+> call pattern (mentioned in passing above).*
+
 ---
 
 ## 2. ZX-specific assumptions
