@@ -451,22 +451,31 @@ sub read_input_data {
                         map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                         split( /\s+/, $args )
                     };
-                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    # A3-2: route PNG asset handling through the
+                    # per-platform dispatcher (BTILE branch).
+                    my $platform = $game_config->{'platform'};
+                    my $png = dispatch_png_asset_handling( $platform,
+                        'load_png_file', $build_dir . '/' . $vars->{'file'} ) or
                         die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                     if ( $vars->{'png_rotate'} || 0 ) {
-                        $png = png_rotate( $png, $vars->{'png_rotate'} );
+                        $png = dispatch_png_asset_handling( $platform,
+                            'png_rotate', $png, $vars->{'png_rotate'} );
                     }
                     if ( $vars->{'png_hmirror'} || 0 ) {
-                        $png = png_hmirror( $png );
+                        $png = dispatch_png_asset_handling( $platform,
+                            'png_hmirror', $png );
                     }
                     if ( $vars->{'png_vmirror'} || 0 ) {
-                        $png = png_vmirror( $png );
+                        $png = dispatch_png_asset_handling( $platform,
+                            'png_vmirror', $png );
                     }
 
-                    map_png_colors_to_zx_colors( $png );
+                    dispatch_png_asset_handling( $platform,
+                        'map_png_colors_to_zx_colors', $png );
 
-                    my $data = png_to_pixels_and_attrs(
+                    my $data = dispatch_png_asset_handling( $platform,
+                        'png_to_pixels_and_attrs',
                         $png,
                         $vars->{'xpos'}, $vars->{'ypos'},
                         $vars->{'width'}, $vars->{'height'},
@@ -547,13 +556,19 @@ sub read_input_data {
                         map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                         split( /\s+/, $args )
                     };
+                    # A3-2: route PNG asset handling through the
+                    # per-platform dispatcher (SPRITE PNG_DATA branch).
+                    my $platform = $game_config->{'platform'};
                     my $fgcolor = uc( $vars->{'fgcolor'} );
-                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    my $png = dispatch_png_asset_handling( $platform,
+                        'load_png_file', $build_dir . '/' . $vars->{'file'} ) or
                         die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
-                    map_png_colors_to_zx_colors( $png );
+                    dispatch_png_asset_handling( $platform,
+                        'map_png_colors_to_zx_colors', $png );
 
-                    push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
+                    push @{$cur_sprite->{'pixels'}}, @{ dispatch_png_asset_handling( $platform,
+                        'pick_pixel_data_by_color_from_png',
                         $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                         ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                         ) };
@@ -565,13 +580,19 @@ sub read_input_data {
                         map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                         split( /\s+/, $args )
                     };
+                    # A3-2: route PNG asset handling through the
+                    # per-platform dispatcher (SPRITE PNG_MASK branch).
+                    my $platform = $game_config->{'platform'};
                     my $maskcolor = uc( $vars->{'maskcolor'} );
-                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    my $png = dispatch_png_asset_handling( $platform,
+                        'load_png_file', $build_dir . '/' . $vars->{'file'} ) or
                         die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
-                    map_png_colors_to_zx_colors( $png );
+                    dispatch_png_asset_handling( $platform,
+                        'map_png_colors_to_zx_colors', $png );
 
-                    push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
+                    push @{$cur_sprite->{'mask'}}, @{ dispatch_png_asset_handling( $platform,
+                        'pick_pixel_data_by_color_from_png',
                         $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                         ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                         ) };
