@@ -1,5 +1,11 @@
 # Adding JSP as a Second Sprite Engine Backend for RAGE1
 
+> **Status: COMPLETE (2026-05-23).** All four phases done; JSP is integrated
+> into RAGE1 as a selectable sprite-engine backend via `SPRITE_ENGINE JSP` in
+> a game's config. No further work planned under this plan. Retained as a
+> historical record of the integration. The JSP library itself is vendored as
+> a git submodule at `external/jsp`.
+
 ## Table of Contents
 
 - [Table of Contents](#table-of-contents)
@@ -1375,14 +1381,24 @@ one-expression macros unless noted.
 
 ### Phase 4 — Integration testing
 
-- [ ] **P4-1** Build `games/minimal` with JSP; verify hero sprite, movement, screen
-- [ ] **P4-2** Build a game with enemies; verify sprites, colors, animation frames
-- [ ] **P4-3** Build a game with bullets; verify spawn, park, despawn
-- [ ] **P4-4** Verify text output (screen titles, lives display, debug area if enabled)
-- [ ] **P4-5** `make all-test-builds` with SP1 as default — regression check
-- [ ] **P4-6** `make mem` for JSP 48K build; confirm no address overlap with JSP data structures
-- [ ] **P4-7** Run in FUSE emulator; no visual artifacts at game_area boundary
-- [ ] **P4-8** _(Optional)_ Build a 128K game with JSP; measure binary size headroom
+- [x] **P4-1** Build `games/minimal` with JSP; verify hero sprite, movement, screen
+- [x] **P4-2** Build a game with enemies; verify sprites, colors, animation frames
+- [x] **P4-3** Build a game with bullets; verify spawn, park, despawn
+- [x] **P4-4** Verify text output (screen titles, lives display, debug area if enabled)
+- [x] **P4-5** `make all-test-builds` with SP1 as default — regression check
+- [x] **P4-6** `make mem` for JSP 48K build; confirm no address overlap with JSP data structures
+- [x] **P4-7** Run in FUSE emulator; no visual artifacts at game_area boundary
+- [x] **P4-8** _(Optional)_ Build a 128K game with JSP; measure binary size headroom
+
+---
+
+**Plan closed 2026-05-23.** All Phase 1–4 tasks complete. JSP is shipping
+as a fully integrated, selectable sprite-engine backend in RAGE1; JSP test
+games (`minimal_jsp`, `default_jsp`) build clean, pass the
+`tests/00regression/` screenshot-regression framework, and run correctly
+on both 48K and 128K targets. The JSP library is vendored as a git
+submodule at `external/jsp`. No follow-up tasks are planned under this
+document.
 
 ## Plan execution constraints
 
