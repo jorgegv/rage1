@@ -141,7 +141,10 @@ BAS_LOADER_SRC		= loader$(shell grep -qP '^\s*LOADING_SCREEN' $(BUILD_DIR)/game_
 ZCC			= zcc
 ZX0			= z88dk-zx0
 NM			= z88dk-z80nm
-ZCC_TARGET		= +zx
+# T1-6: ZCC_TARGET is set per Makefile-<platform> file BEFORE -include
+# Makefile.common. Makefile.common itself no longer hard-codes any
+# concrete z88dk target ('+zx', '+cpc', ...); platform-specific Makefiles
+# own that choice. Phase T2 adds Makefile-cpc-* with ZCC_TARGET=+cpc.
 DATAGEN			= ./tools/datagen.pl
 
 # compiler flags

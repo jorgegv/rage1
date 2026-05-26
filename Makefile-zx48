@@ -13,6 +13,10 @@
 MYMAKE			= $(MAKE) -s -f Makefile-zx48
 ZPRAGMA_INC		= zpragma-zx48.inc
 
+# T1-6: z88dk target lives in the per-platform Makefile (Makefile.common
+# no longer hard-codes '+zx'). Phase T2 adds the matching '+cpc' siblings.
+ZCC_TARGET		= +zx
+
 # All taps
 TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(MAIN_TAP) $(SUB_TAPS)
 
