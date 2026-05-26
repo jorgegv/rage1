@@ -194,6 +194,11 @@ build-minimal_jsp:
 build-default_jsp:
 	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/default_jsp
 
+# Phase A4: exercises the sibling-tree overlay mechanism end-to-end.
+# Shared game_data/ + a zx128/ overlay that recolours the Live BTile.
+build-overlay_shadow:
+	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/overlay_shadow
+
 # just a target for the default game for completeness
 build-default: build
 
