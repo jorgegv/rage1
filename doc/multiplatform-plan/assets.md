@@ -1100,6 +1100,18 @@ trivial overlay that visibly differs.
 - `make all-test-builds` green.
 - `tests/00regression/overlay_shadow` green.
 
+**Implementation note (Phase A4, 2026-05-26)**:
+A4-1..A4-4 were not enacted as in-tree mutations of `games/minimal`.
+Instead, a dedicated test game `games/overlay_shadow/` was added whose
+shared `game_data/` mirrors `games/minimal/`'s and whose shared
+`Game.gdata` declares `PLATFORM zx128`. The overlay file
+`games/overlay_shadow/zx128/game_data/btiles/Live.gdata` changes the
+Live BTile's `ATTR` from `INK_RED` to `INK_YELLOW`. This keeps
+`games/minimal` untouched (its existing regression coverage stays
+single-platform 48K) and makes the overlay-precedence test a permanent
+fixture instead of a transient ad-hoc check. See
+`tests/00regression/overlay_shadow/` and `tests/00regression/PRE-MULTIPLATFORM-BASELINE.md`.
+
 ### Phase A5 — CPC asset conversion via cpctelera subprocess
 
 **Goal**: stand up the CPC side of the asset pipeline by wiring
