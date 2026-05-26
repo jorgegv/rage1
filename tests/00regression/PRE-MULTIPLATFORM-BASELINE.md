@@ -40,6 +40,7 @@ matrix currently supported by RAGE1.
 | vortex2        | SP1     | 128k      | baseline pinned |
 | minimal_jsp    | JSP     | 48k       | baseline pinned |
 | default_jsp    | JSP     | 128k      | baseline pinned |
+| overlay_shadow | SP1     | 128k      | baseline pinned (Phase A4) |
 
 Backend × target coverage cells:
 
@@ -53,6 +54,23 @@ Backend × target coverage cells:
 
 All four cells are covered; no `(backend × target)` combination is
 unrepresented in the current baseline.
+
+## Phase A4 — overlay precedence (added 2026-05-26)
+
+`overlay_shadow` is the dedicated end-to-end exercise of the sibling-tree
+overlay copy mechanism added in Phase A2 (commit `91b5e82`). It uses the
+same shared `game_data/` as `games/minimal` plus a single overlay file
+at `games/overlay_shadow/zx128/game_data/btiles/Live.gdata` that changes
+the Live BTile's `ATTR` from `INK_RED` to `INK_YELLOW`. The shared
+`Game.gdata` declares `PLATFORM zx128`, so the overlay wins at
+`make config` time and the heart drawn on Screen01 — plus the lives
+indicator — render yellow instead of red. If the overlay copy ever
+regresses (shared file leaking through), the heart returns to red and
+the pixel diff fires immediately.
+
+The baseline file is therefore *intentionally different* from the
+`games/minimal` baseline despite sharing 100% of the shared game data;
+that difference is the regression signal.
 
 ## Build-environment prerequisites
 

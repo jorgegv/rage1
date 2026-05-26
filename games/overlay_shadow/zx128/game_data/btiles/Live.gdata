@@ -1,0 +1,20 @@
+// Phase A4: per-platform overlay BTile for zx128.
+// Shadows the shared games/overlay_shadow/game_data/btiles/Live.gdata,
+// changing only the ATTR from INK_RED to INK_YELLOW so the win is
+// visible at a glance (the heart drawn on Screen01 goes from red to yellow).
+BEGIN_BTILE
+	NAME	Live
+	ROWS	1
+	COLS	1
+
+	PIXELS	..####..####....
+	PIXELS	##############..
+	PIXELS	##############..
+	PIXELS	##############..
+	PIXELS	..##########....
+	PIXELS	....######......
+	PIXELS	......##........
+	PIXELS	................
+
+	ATTR	INK_YELLOW | PAPER_BLACK | BRIGHT
+END_BTILE
