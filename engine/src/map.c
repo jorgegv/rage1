@@ -21,7 +21,7 @@
 #include "game_data.h"
 
 #ifdef BUILD_FEATURE_SCREEN_TITLES
-gfx_print_ctx_t title_ctx = GFX_PRINT_CTX_INIT(title_area, DEFAULT_BG_ATTR);
+gfx_print_ctx_t title_ctx = GFX_PRINT_CTX_INIT(title_area, GFX_DEFAULT_BG_ATTR);
 #endif // BUILD_FEATURE_SCREEN_TITLES
 
 // draw a given screen
@@ -32,7 +32,7 @@ void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall {
     struct btile_s *bt;
 
     // clear screen
-    gfx_clear_rect( &game_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
+    gfx_clear_rect( &game_area, GFX_DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
 
     // clear btile types
     btile_clear_type_all_screen();
@@ -116,7 +116,7 @@ void map_draw_screen(struct map_screen_s *s) __z88dk_fastcall {
 #endif // BUILD_FEATURE_INVENTORY
 
 #ifdef BUILD_FEATURE_SCREEN_TITLES
-    gfx_clear_rect( &title_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
+    gfx_clear_rect( &title_area, GFX_DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
     if ( game_state.current_screen_ptr->title ) {
         gfx_print_set_pos( &title_ctx, 0, 0 );
         gfx_print_string( &title_ctx, game_state.current_screen_ptr->title );

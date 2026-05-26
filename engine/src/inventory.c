@@ -45,7 +45,7 @@ void inventory_show(void) {
     uint8_t col, item_index;
 
     // clear the area
-    gfx_clear_rect( &inventory_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
+    gfx_clear_rect( &inventory_area, GFX_DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
 
     // draw owned items, left to right
     col = INVENTORY_AREA_LEFT;
