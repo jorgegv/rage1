@@ -20,6 +20,16 @@ typedef struct sp1_Rect  gfx_rect_t;
 typedef struct sp1_pss   gfx_print_ctx_t;
 typedef uint8_t          gfx_attr_t;
 
+// Pixel coordinate widths (Phase G4 — gfx.md §G4-1).
+// On ZX backends 256x192 fits in a byte, so we stay at uint8_t to avoid the
+// 16-bit codegen cost.  The CPC backend (Phase G7) will redefine these as
+// uint16_t for 320x200 and future ZX Next Layer-2 backends likewise for
+// 320x256 / 640x256.  Engine code must use these typedefs at every site that
+// holds an integer screen pixel coordinate so the same source compiles on
+// both byte- and word-coordinate backends.
+typedef uint8_t          gfx_xpos_t;
+typedef uint8_t          gfx_ypos_t;
+
 //--- Constants ---
 #define GFX_CLEAR_TILE         SP1_RFLAG_TILE
 #define GFX_CLEAR_COLOUR       SP1_RFLAG_COLOUR
