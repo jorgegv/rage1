@@ -21,11 +21,15 @@
 /////////////////////////////////////
 
 void init_controllers(void) {
-   game_state.controller.keys.up    = KBD_UP;
-   game_state.controller.keys.down  = KBD_DOWN;
-   game_state.controller.keys.left  = KBD_LEFT;
-   game_state.controller.keys.right = KBD_RIGHT;
-   game_state.controller.keys.fire  = KBD_FIRE;
+   // KBD_DEFAULT_* are ASCII characters (e.g. 'Q'); we resolve them to
+   // backend scancodes at boot. Per input.md §5 phase IN3-3 the spec
+   // accepts one runtime input_lookup_key() per direction here as a
+   // small trade-off for cross-platform default-key portability.
+   game_state.controller.keys.up    = input_lookup_key( KBD_DEFAULT_UP    );
+   game_state.controller.keys.down  = input_lookup_key( KBD_DEFAULT_DOWN  );
+   game_state.controller.keys.left  = input_lookup_key( KBD_DEFAULT_LEFT  );
+   game_state.controller.keys.right = input_lookup_key( KBD_DEFAULT_RIGHT );
+   game_state.controller.keys.fire  = input_lookup_key( KBD_DEFAULT_FIRE  );
    game_state.controller.type = 0;
 }
 
