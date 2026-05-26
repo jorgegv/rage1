@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes build-zx48 build-zx128 build48 build128
 
 help:
 	echo "============================================================"
@@ -26,6 +26,12 @@ help:
 	echo ""
 	echo "Available targets:"
 	grep -P '^[\w\-]+:' Makefile | grep -v ":=" | cut -f1 -d: | grep -v -E '^default' | sed 's/^/    /g'
+	echo ""
+	echo "Platform build targets:"
+	echo "    build-zx48     force ZX Spectrum 48K build"
+	echo "    build-zx128    force ZX Spectrum 128K build"
+	echo "    build48        legacy silent alias for build-zx48 (permanent, README §5.6)"
+	echo "    build128       legacy silent alias for build-zx128 (permanent, README §5.6)"
 	echo ""
 	echo "* Use 'make new-game' for creating a new template game using the library"
 	echo ""
@@ -56,15 +62,18 @@ config:
 	cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
 	$(MYMAKE) show	# shows game name and build configuration
 
-# A1-4: resolve target platform from the game's .gdata.
-#   - PLATFORM directive (preferred): zx48 / zx128 (maps to 48 / 128 internally)
+# A1-4 / T1-1: resolve target platform from the game's .gdata.
+#   - PLATFORM directive (preferred): zx48 / zx128
 #   - ZX_TARGET directive (permanent silent alias per README §5.6): 48 / 128
 # A1-6: tools/detect-platform.sh layers the platform-selection rule
 # (CLI override > declared default; rejection if resolved platform has
-# no overlay) on top of the same lookup, and prints the internal
-# ZX_TARGET token on success.
-_RESOLVED_ZX_TARGET	= $(shell ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM) 2>/dev/null)
+# no overlay) on top of the same lookup. T1-1 makes it emit the canonical
+# platform name ('zx48' / 'zx128') consumed by `Makefile-$(_RESOLVED_PLATFORM)`.
+# The legacy ZX_TARGET internal token (48/128) is derived locally and passed
+# to sub-makes for backward-compat with every ZX_TARGET-keyed lookup.
+_RESOLVED_PLATFORM	= $(shell ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM) 2>/dev/null)
 _DETECT_PLATFORM_RC	= $(shell ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM) >/dev/null 2>&1; echo $$?)
+_RESOLVED_ZX_TARGET	= $(patsubst zx%,%,$(_RESOLVED_PLATFORM))
 
 # build: starts a build of the target game in the mode specified in the game config
 build:
@@ -72,21 +81,25 @@ build:
 	$(MYMAKE) clean
 	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) config
 	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) data
-	$(MYMAKE) -f Makefile-$(_RESOLVED_ZX_TARGET) build
+	$(MYMAKE) -f Makefile-$(_RESOLVED_PLATFORM) build
 
-# forced config build for 48 mode
-build48:
+# T1-5: canonical per-platform forced-build targets.
+build-zx48:
 	$(MYMAKE) clean
 	$(MYMAKE) ZX_TARGET=48 config
 	$(MYMAKE) ZX_TARGET=48 data
-	$(MYMAKE) -f Makefile-48 build
+	$(MYMAKE) -f Makefile-zx48 build
 
-# forced config build for 128 mode
-build128:
+build-zx128:
 	$(MYMAKE) clean
 	$(MYMAKE) ZX_TARGET=128 config
 	$(MYMAKE) ZX_TARGET=128 data
-	$(MYMAKE) -f Makefile-128 build
+	$(MYMAKE) -f Makefile-zx128 build
+
+# T1-5: legacy build48 / build128 stay as permanent silent aliases for
+# build-zx48 / build-zx128 (README §5.6).
+build48: build-zx48
+build128: build-zx128
 
 ###############################################
 ##
@@ -118,7 +131,7 @@ build-mapgen:
 		game_data/png/demo-map-3x2-screens-24x16.png
 	$(MYMAKE) ZX_TARGET=48 config target_game=$(TEST_GAMES_DIR)/mapgen
 	$(MYMAKE) ZX_TARGET=48 data
-	$(MYMAKE) -f Makefile-48 build
+	$(MYMAKE) -f Makefile-zx48 build
 
 build-damage_mode:
 	$(MYMAKE) build target_game=$(TEST_GAMES_DIR)/damage_mode

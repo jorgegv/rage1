@@ -18,18 +18,21 @@
 #     clear error.
 #
 # Output (success):
-#   - For ZX platforms (zx48 / zx128): prints '48' or '128' on stdout
-#     (the legacy ZX_TARGET internal token, consumed by the Makefile-N
-#     selection downstream). Exit 0.
-#   - For non-ZX platforms (Phase A5+ adds CPC handling): rejected
-#     in Phase A1 with a not-yet-supported message. Exit 1.
+#   - For ZX platforms: prints the canonical platform name on stdout
+#     ('zx48' or 'zx128'), consumed by the Makefile-<platform>
+#     selection downstream. Exit 0.
+#   - For non-ZX platforms (Phase T2 adds CPC handling): rejected
+#     in Phase T1 with a not-yet-supported message. Exit 1.
 #
 # Output (failure):
 #   - Multi-line error message on stderr explaining the reason. Exit 1.
 #
-# This script is intentionally minimal in Phase A1 — toolchain.md task
-# T1-1 will refine it (full platform vocabulary, overlay-tree merge
-# semantics, etc.) in later phases.
+# T1-1 (toolchain.md Phase T1): output now uses the canonical platform
+# name ('zx48' / 'zx128') so `make -f Makefile-$(_RESOLVED_PLATFORM)`
+# resolves to the renamed `Makefile-zx48` / `Makefile-zx128` from T1-2.
+# The legacy '48' / '128' ZX_TARGET token is computed downstream in
+# Makefile.common (still passed through sub-make for backwards-compat
+# with every ZX_TARGET-keyed lookup, per README §5.6).
 
 set -uo pipefail
 
@@ -98,21 +101,19 @@ if [[ "${resolved}" != "${declared_platform}" ]]; then
     fi
 fi
 
-# Map resolved platform to the legacy ZX_TARGET internal token consumed by
-# the Makefile-N selection downstream. Phase A1 only supports ZX targets.
+# Emit the canonical platform name (consumed by the Makefile-<platform>
+# selection downstream). Phase T1 only supports ZX targets; CPC bring-up
+# arrives in Phase T2.
 case "${resolved}" in
-    zx48)
-        echo "48"
+    zx48|zx128)
+        echo "${resolved}"
         ;;
-    zx128)
-        echo "128"
-        ;;
-    cpc6128|cpc464|cpc)
-        echo "** Error: platform '${resolved}' is not yet supported (Phase A5 adds CPC bring-up)." >&2
+    cpc6128|cpc464|cpc|cpc-flat|cpc-banked)
+        echo "** Error: platform '${resolved}' is not yet supported (Phase T2 adds CPC bring-up)." >&2
         exit 1
         ;;
     *)
-        echo "** Error: unknown platform '${resolved}' (accepted in Phase A1: zx48, zx128)" >&2
+        echo "** Error: unknown platform '${resolved}' (accepted in Phase T1: zx48, zx128)" >&2
         exit 1
         ;;
 esac

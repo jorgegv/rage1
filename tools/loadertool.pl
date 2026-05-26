@@ -14,12 +14,17 @@ use strict;
 use warnings;
 use utf8;
 use Data::Dumper;
+use Getopt::Long qw( :config bundling no_ignore_case pass_through );
 use Getopt::Std;
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
 require RAGE::Config;
+
+# T1-10: file-level CLI option for --platform <zx48|zx128>. Declared
+# here so subs (get_zx_target etc.) can read it. Parsed in main below.
+our $opt_platform;
 
 # filenames are relative to the GENERATED dir, normally 'build/generated'
 
@@ -162,6 +167,13 @@ sub sanity_check_sub_binaries {
 }
 
 sub get_zx_target {
+    # T1-10: --platform CLI override beats the game's declared default.
+    if ( defined( $opt_platform ) ) {
+        my $p = lc( $opt_platform );
+        return '48'  if $p eq 'zx48';
+        return '128' if $p eq 'zx128';
+        # Any other value would have died at option-parse time.
+    }
     open GAME_CONFIG, $game_config_name or
         die "** Error: could not open $game_config_name for reading\n";
     while ( my $line = <GAME_CONFIG> ) {
@@ -210,288 +222,233 @@ sub get_main_bin_size {
     return $stat_results[7];
 }
 
-sub generate_assembler_loader {
-    my ( $bank_bins, $sub_bins, $outdir ) = @_;
-    my $asm_loader = $outdir . '/' . $asm_loader_name;
+###############################################################################
+##
+## T1-11: template-driven loader generator.
+##
+## The platform-specific scaffolding lives in
+## engine/loader-<platform>/asmloader.asm.in (main file) plus a small set of
+## per-snippet templates next to it:
+##
+##   asmloader.bank-load.snippet.asm.in           (one per bank, 128k only)
+##   asmloader.sub-load.snippet.asm.in            (one per SUB)
+##   asmloader.sub-run-direct.snippet.asm.in      (uncompressed, no-swap SUB)
+##   asmloader.sub-run-swap.snippet.asm.in        (swap-in before run)
+##   asmloader.sub-run-unswap.snippet.asm.in      (swap-out after run)
+##   asmloader.sub-run-decompress.snippet.asm.in  (decompress + run)
+##   asmloader.memswap.snippet.asm.in             (memswap helper routine)
+##   asmloader.dzx0.snippet.asm.in                (dzx0_standard helper)
+##
+## This Perl tool carries NO platform-specific inline loader text — it only
+## (a) reads the relevant snippet, (b) substitutes per-iteration @@FOO@@
+## placeholders, (c) concatenates per-iteration outputs and substitutes them
+## into the main template's placeholders, (d) writes asmloader.asm.
+##
+## Adding a new platform (Phase T2 CPC bring-up) becomes 'drop new templates
+## into engine/loader-<platform>/', no edits to this file.
+##
+###############################################################################
 
-    my @lines;
+# Per-platform template directory (relative to repo root). Symlinks under
+# engine/ to the legacy loader{48,128} names are accepted (T1-4) but the
+# canonical lookup is engine/loader-<platform>/.
+my %loader_template_dir = (
+    '48'  => 'engine/loader-zx48',
+    '128' => 'engine/loader-zx128',
+);
 
-    my $loader_org = sprintf( '0x%04x', ( get_zx_target eq '48' ? $loader_org_48 : $loader_org_128 ) );
+sub _slurp {
+    my ( $path ) = @_;
+    open my $fh, '<', $path
+        or die "** Error: could not open template '$path' for reading: $!\n";
+    local $/;
+    my $contents = <$fh>;
+    close $fh;
+    return $contents;
+}
 
-    push @lines, <<EOF_HEADER
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; This file has been generated automatically, do not edit!
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+sub _template_path {
+    my ( $zx_target, $stem ) = @_;
+    my $dir = $loader_template_dir{ $zx_target }
+        or die "** Error: no loader template directory for ZX target '$zx_target'\n";
+    return "$dir/$stem";
+}
 
-    org $loader_org
-    defc LD_BYTES = 1366	;; ROM routine at 0x0556
+sub _load_template {
+    my ( $zx_target ) = @_;
+    return _slurp( _template_path( $zx_target, 'asmloader.asm.in' ) );
+}
 
-    ;; do all loads with interrupts disabled so that bank 7 is not
-    ;; corrupted by +3DOS at address 0xD200
-    di
-EOF_HEADER
-;
-
-    if ( get_zx_target eq '128' ) {
-        # switch to each bank with the bank switching routine and load each bank content at 0xC000
-        foreach my $bank ( sort keys %$bank_bins ) {
-            my $bank_size = $bank_bins->{ $bank }{'size'};
-            push @lines, <<EOF_BANK1
-    ld a,$bank		;; switch to bank $bank
-    call bswitch
-    ld a,0xff		;; load data operation
-    ld de,$bank_size	;; number of bytes to load
-    ld ix,0xc000	;; destination address
-    scf
-    call LD_BYTES	;; load block
-    jp nc,to_basic
-EOF_BANK1
-;
-        }
-
-        # switch back to bank 0
-        push @lines, <<EOF_BANK0
-    ;; switch to bank 0 and load main binary
-    xor a
-    call bswitch
-EOF_BANK0
-;
+# Apply hash of @@KEY@@ -> value substitutions to a template string.
+sub _apply_substitutions {
+    my ( $tmpl, $subst ) = @_;
+    # iterate by length-desc to avoid prefix collisions if any future
+    # placeholder name is a prefix of another.
+    for my $key ( sort { length($b) <=> length($a) } keys %$subst ) {
+        my $val = $subst->{ $key };
+        $tmpl =~ s/\@\@\Q$key\E\@\@/$val/g;
     }
+    return $tmpl;
+}
 
-    # load main program code at base code address and start execution
-    my $main_code_start;
-    if ( get_zx_target eq '128' ) {
-        # 128K interrupt config is the same for both sprite engines
-        my $int_key = 'interrupts_128';
-        $main_code_start = sprintf( '0x%04x', ( $cfg->{ $int_key }{'base_code_address'} =~ /^0x/ ?
-            hex( $cfg->{ $int_key }{'base_code_address'} ) :
-            $cfg->{ $int_key }{'base_code_address'}
-        ) );
-    } else {
-        $main_code_start = '0x5f00';
+# Build the BANK_LOAD_BLOCK placeholder content by repeatedly substituting
+# the per-bank snippet template. Per the original tool, every block written
+# ends with '\n\n' (snippet's trailing newline + the explicit blank-line
+# separator emitted between every block in the legacy output).
+sub _build_bank_load_block {
+    my ( $zx_target, $bank_bins ) = @_;
+    return '' unless $zx_target eq '128';
+    my $snippet = _slurp( _template_path( $zx_target, 'asmloader.bank-load.snippet.asm.in' ) );
+    my $out = '';
+    foreach my $bank ( sort keys %$bank_bins ) {
+        $out .= _apply_substitutions( $snippet, {
+            BANK      => $bank,
+            BANK_SIZE => $bank_bins->{ $bank }{'size'},
+        } );
+        $out .= "\n";
     }
-    my $main_size = get_main_bin_size;
-    push @lines, <<EOF_LOAD_MAIN
-    ld a,0xff		;; load data operation
-    ld de,$main_size	;; number of bytes to load
-    ld ix,$main_code_start	;; destination address
-    scf
-    call LD_BYTES	;; load block
-    jp nc,to_basic
-EOF_LOAD_MAIN
-;
+    return $out;
+}
 
-    # load each sub at its LOAD_ADDRESS
-    # this sort must be according to the order in which the SUBs were
-    # defined in the GAME_CONFIG
+# Build the SUB_LOAD_BLOCK placeholder content. Same '\n\n' end convention.
+sub _build_sub_load_block {
+    my ( $zx_target, $sub_bins ) = @_;
+    my $snippet = _slurp( _template_path( $zx_target, 'asmloader.sub-load.snippet.asm.in' ) );
+    my $out = '';
     foreach my $sub ( sort {
             $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'}
-            }keys %$sub_bins ) {
-
+        } keys %$sub_bins ) {
         my $sub_size = ( $sub_bins->{ $sub }{'compress'} ?
             $sub_bins->{ $sub }{'compressed_size'} :
             $sub_bins->{ $sub }{'size'}
         );
-        my $sub_load_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'load_address'} );
-        push @lines, <<EOF_LOAD_SUB
-    ;; Load SUB '$sub'
-    ld a,0xff	;; load data operation
-    ld de,$sub_size	;; number of bytes to load
-    ld ix,$sub_load_addr	;; destination address
-    scf
-    call LD_BYTES	;; load block
-    jp nc,to_basic
-EOF_LOAD_SUB
-;
+        $out .= _apply_substitutions( $snippet, {
+            SUB_NAME      => $sub,
+            SUB_SIZE      => $sub_size,
+            SUB_LOAD_ADDR => sprintf( '0x%04x', $sub_bins->{ $sub }{'load_address'} ),
+        } );
+        $out .= "\n";
     }
+    return $out;
+}
 
-    # run each SUB in order
-    # this sort must be according to the order in which the SUBs were
-    # defined in the GAME_CONFIG
+# Build the SUB_RUN_BLOCK placeholder content from the per-case snippets,
+# and tell the caller whether memswap / decompress helper routines need to
+# be emitted afterwards. The original tool emitted, for each SUB:
+#   - one literal label "    ;; Run SUB '$sub' with ints disabled\n"
+#     (single '\n' — pushed as a plain string, not a heredoc)
+#   - one or more heredoc-style blocks, each ending with '\n\n'
+# The reconstruction below preserves both conventions verbatim.
+sub _build_sub_run_block {
+    my ( $zx_target, $sub_bins ) = @_;
+    my $snip_direct     = _slurp( _template_path( $zx_target, 'asmloader.sub-run-direct.snippet.asm.in'     ) );
+    my $snip_swap       = _slurp( _template_path( $zx_target, 'asmloader.sub-run-swap.snippet.asm.in'       ) );
+    my $snip_unswap     = _slurp( _template_path( $zx_target, 'asmloader.sub-run-unswap.snippet.asm.in'     ) );
+    my $snip_decompress = _slurp( _template_path( $zx_target, 'asmloader.sub-run-decompress.snippet.asm.in' ) );
+    my $out = '';
     my $some_subs_are_compressed = 0;
-    my $some_subs_are_swapped = 0;
-    foreach my $sub ( sort { 
+    my $some_subs_are_swapped    = 0;
+    foreach my $sub ( sort {
             $sub_bins->{ $a }{'order'} <=> $sub_bins->{ $b }{'order'}
-            } keys %$sub_bins ) {
-        my $sub_load_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'load_address'} );
-        my $sub_org_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'org_address'} );
-        my $sub_run_addr = sprintf( '0x%04x', $sub_bins->{ $sub }{'run_address'} );
-        my $sub_size = $sub_bins->{ $sub }{'size'};
-        push @lines, "    ;; Run SUB '$sub' with ints disabled";
+        } keys %$sub_bins ) {
+        my $tokens = {
+            SUB_NAME      => $sub,
+            SUB_SIZE      => $sub_bins->{ $sub }{'size'},
+            SUB_LOAD_ADDR => sprintf( '0x%04x', $sub_bins->{ $sub }{'load_address'} ),
+            SUB_ORG_ADDR  => sprintf( '0x%04x', $sub_bins->{ $sub }{'org_address'}  ),
+            SUB_RUN_ADDR  => sprintf( '0x%04x', $sub_bins->{ $sub }{'run_address'}  ),
+        };
+
+        # Label line — single '\n' to match the legacy format.
+        $out .= "    ;; Run SUB '$sub' with ints disabled\n";
 
         if ( $sub_bins->{ $sub }{'compress'} ) {
             $some_subs_are_compressed++;
-            push @lines, <<EOF_UNCOMPRESS
-    ld hl,$sub_load_addr	;; decompress from $sub_load_addr to $sub_org_addr
-    ld de,$sub_org_addr
-    call dzx0_standard
-
-    di
-    call $sub_run_addr	;; run SUB
-EOF_UNCOMPRESS
-;
+            $out .= _apply_substitutions( $snip_decompress, $tokens );
+            $out .= "\n";
         } else {
-            if ( $sub_load_addr ne $sub_org_addr ) {
+            my $load_addr = $tokens->{'SUB_LOAD_ADDR'};
+            my $org_addr  = $tokens->{'SUB_ORG_ADDR'};
+            if ( $load_addr ne $org_addr ) {
                 $some_subs_are_swapped++;
-                push @lines, <<EOF_RUN_SUB2
-    ld hl,$sub_load_addr	;; swap from $sub_load_addr to $sub_org_addr
-    ld de,$sub_org_addr
-    ld bc,$sub_size
-    call memswap
-EOF_RUN_SUB2
-;
+                $out .= _apply_substitutions( $snip_swap, $tokens );
+                $out .= "\n";
             }
-            push @lines, <<EOF_RUN_SUB3
-    di
-    call $sub_run_addr
-EOF_RUN_SUB3
-;
-            if ( $sub_load_addr ne $sub_org_addr ) {
-                push @lines, <<EOF_RUN_SUB4
-    ld hl,$sub_load_addr	;; swap it back
-    ld de,$sub_org_addr
-    ld bc,$sub_size
-    call memswap
-EOF_RUN_SUB4
-;
+            $out .= _apply_substitutions( $snip_direct, $tokens );
+            $out .= "\n";
+            if ( $load_addr ne $org_addr ) {
+                $out .= _apply_substitutions( $snip_unswap, $tokens );
+                $out .= "\n";
             }
         }
     }
+    return ( $out, $some_subs_are_swapped, $some_subs_are_compressed );
+}
 
-    # transfer control to main
-    push @lines, <<EOF_JP_MAIN
-    ;; Start execution
-    di
-    jp $main_code_start
-EOF_JP_MAIN
-;
+sub _memswap_function_block {
+    my ( $zx_target ) = @_;
+    return _slurp( _template_path( $zx_target, 'asmloader.memswap.snippet.asm.in' ) ) . "\n";
+}
 
-    # output auxiliary functions for 128 mode
-    if ( get_zx_target eq '128' ) {
-        push @lines, <<EOF_BSWITCH
-;; Switch memory bank at 0xC000
-;;   A = bank to activate (0-7)
-;;
-;; We want USR0 mode: bits 0-2: bank number to map; bit 3: 0 (normal
-;; screen); bit 4: 1 (48K ROM); bit 5: 0 (allow paging) => 0x10 | bank
+sub _decompress_function_block {
+    my ( $zx_target ) = @_;
+    return _slurp( _template_path( $zx_target, 'asmloader.dzx0.snippet.asm.in' ) ) . "\n";
+}
 
-bswitch:
-    ;; we enter with ints already disabled
-    ;; register A contains the bank to switch to
-    and     0x07            ; get 3 low bits only
-    or      0x10            ; set default for USR0 mode
-    ld      bc,0x7ffd       ; set the port number
-    out     (c),a           ; ...and select the new bank
-    ret
-EOF_BSWITCH
-;
+sub generate_assembler_loader {
+    my ( $bank_bins, $sub_bins, $outdir ) = @_;
+    my $asm_loader = $outdir . '/' . $asm_loader_name;
+
+    my $zx_target  = get_zx_target;
+    my $loader_org = sprintf( '0x%04x',
+        ( $zx_target eq '48' ? $loader_org_48 : $loader_org_128 ) );
+
+    # main code start address
+    my $main_code_start;
+    if ( $zx_target eq '128' ) {
+        # 128K interrupt config is the same for both sprite engines
+        my $int_key = 'interrupts_128';
+        $main_code_start = sprintf( '0x%04x',
+            ( $cfg->{ $int_key }{'base_code_address'} =~ /^0x/ ?
+                hex( $cfg->{ $int_key }{'base_code_address'} ) :
+                $cfg->{ $int_key }{'base_code_address'}
+            )
+        );
+    } else {
+        $main_code_start = '0x5f00';
+    }
+    my $main_size = get_main_bin_size;
+
+    # build dynamic blocks (each block ends '\n\n' so substituted output
+    # matches the legacy code's "push heredoc / printf %s\n" idiom).
+    my $bank_load_block = _build_bank_load_block( $zx_target, $bank_bins );
+    my $sub_load_block  = _build_sub_load_block( $zx_target, $sub_bins );
+    my ( $sub_run_block, $some_subs_are_swapped, $some_subs_are_compressed )
+        = _build_sub_run_block( $zx_target, $sub_bins );
+    my $memswap_function_block    = $some_subs_are_swapped    ? _memswap_function_block( $zx_target )    : '';
+    my $decompress_function_block = $some_subs_are_compressed ? _decompress_function_block( $zx_target ) : '';
+
+    # load the main template and substitute placeholders
+    my $tmpl = _apply_substitutions( _load_template( $zx_target ), {
+        LOADER_ORG           => $loader_org,
+        MAIN_CODE_START      => $main_code_start,
+        MAIN_SIZE            => $main_size,
+        BANK_LOAD_BLOCK      => $bank_load_block,
+        SUB_LOAD_BLOCK       => $sub_load_block,
+        SUB_RUN_BLOCK        => $sub_run_block,
+        MEMSWAP_FUNCTION     => $memswap_function_block,
+        DECOMPRESS_FUNCTION  => $decompress_function_block,
+    } );
+
+    # sanity: refuse to emit a loader that still contains placeholders
+    if ( $tmpl =~ /\@\@(\w+)\@\@/ ) {
+        die "** Error: loadertool.pl: template $loader_template_dir{$zx_target}/asmloader.asm.in references an unknown placeholder '\@\@$1\@\@'\n";
     }
 
-    # output memswap function if needed
-    if ( $some_subs_are_swapped ) {
-        push @lines, <<EOF_MEMSWAP
-;; Swap memory blocks
-;;   BC = size
-;;   DE = dst
-;;   HL = src
-memswap:
-memswap_loop:
-    ld a,(de)
-    ldi
-    dec hl
-    ld (hl),a
-    inc hl
-    jp PE,memswap_loop
-    ret
-EOF_MEMSWAP
-;
-    }
-
-    # output decompress function if needed
-    if ( $some_subs_are_compressed ) {
-        push @lines, <<EOF_COMPRESS
-; -----------------------------------------------------------------------------
-; ZX0 decoder by Einar Saukas
-; "Standard" version (69 bytes only)
-; -----------------------------------------------------------------------------
-; Parameters:
-;   HL: source address (compressed data)
-;   DE: destination address (decompressing)
-; -----------------------------------------------------------------------------
-
-dzx0_standard:
-        ld      bc, 0xffff               ; preserve default offset 1
-        push    bc
-        inc     bc
-        ld      a, 0x80
-dzx0s_literals:
-        call    dzx0s_elias             ; obtain length
-        ldir                            ; copy literals
-        add     a, a                    ; copy from last offset or new offset?
-        jr      c, dzx0s_new_offset
-        call    dzx0s_elias             ; obtain length
-dzx0s_copy:
-        ex      (sp), hl                ; preserve source, restore offset
-        push    hl                      ; preserve offset
-        add     hl, de                  ; calculate destination - offset
-        ldir                            ; copy from offset
-        pop     hl                      ; restore offset
-        ex      (sp), hl                ; preserve offset, restore source
-        add     a, a                    ; copy from literals or new offset?
-        jr      nc, dzx0s_literals
-dzx0s_new_offset:
-        call    dzx0s_elias             ; obtain offset MSB
-        ex      af, af'
-        pop     af                      ; discard last offset
-        xor     a                       ; adjust for negative offset
-        sub     c
-        ret     z                       ; check end marker
-        ld      b, a
-        ex      af, af'
-        ld      c, (hl)                 ; obtain offset LSB
-        inc     hl
-        rr      b                       ; last offset bit becomes first length bit
-        rr      c
-        push    bc                      ; preserve new offset
-        ld      bc, 1                   ; obtain length
-        call    nc, dzx0s_elias_backtrack
-        inc     bc
-        jr      dzx0s_copy
-dzx0s_elias:
-        inc     c                       ; interlaced Elias gamma coding
-dzx0s_elias_loop:
-        add     a, a
-        jr      nz, dzx0s_elias_skip
-        ld      a, (hl)                 ; load another group of 8 bits
-        inc     hl
-        rla
-dzx0s_elias_skip:
-        ret     c
-dzx0s_elias_backtrack:
-        add     a, a
-        rl      c
-        rl      b
-        jr      dzx0s_elias_loop
-; -----------------------------------------------------------------------------
-EOF_COMPRESS
-;
-    }
-
-    # output auxiliary function for 128 mode
-    push @lines, <<EOF_RETBAS
-;; Return to BASIC, only in case of loading errors
-to_basic:
-    ei
-    ret
-EOF_RETBAS
-;
-
-    # that's it, output the ASM program
-    open my $asm, ">", $asm_loader
+    open my $asm, '>', $asm_loader
         or die "\n** Error: could not open $asm_loader for writing\n";
-    foreach my $line ( @lines ) {
-        printf $asm "%s\n", $line;
-    }
+    print $asm $tmpl;
+    close $asm;
 }
 
 ##
@@ -501,10 +458,28 @@ EOF_RETBAS
 # parse command options
 # -i and -o: input bin dir and output file
 # -s: add instructions to load an initial SCREEN$ (optional)
+# T1-10: --platform <zx48|zx128> (canonical CLI override). When absent,
+# the platform is resolved from the PLATFORM/ZX_TARGET directive in the
+# game's .gdata (the A1 follow-up flow, see get_zx_target). CPC values
+# are rejected with 'not yet implemented' (Phase T2 brings them up).
+# ($opt_platform declared file-level near top so subs can read it.)
+GetOptions( 'platform=s' => \$opt_platform ) or
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128>]\n";
+
+if ( defined( $opt_platform ) ) {
+    my $p = lc( $opt_platform );
+    if ( $p ne 'zx48' and $p ne 'zx128' ) {
+        if ( $p =~ /^cpc/ ) {
+            die "** Error: loadertool.pl --platform $opt_platform: CPC platforms are not yet implemented (Phase T2 adds CPC bring-up).\n";
+        }
+        die "** Error: loadertool.pl --platform $opt_platform: accepted values are zx48 | zx128.\n";
+    }
+}
+
 our( $opt_i, $opt_o, $opt_s );
 getopts("i:o:s");
 ( defined( $opt_i ) and defined( $opt_o ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s]\n";
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128>]\n";
 
 my $loading_screen = $opt_s;
 

@@ -1,0 +1,8 @@
+    ld a,@@BANK@@		;; switch to bank @@BANK@@
+    call bswitch
+    ld a,0xff		;; load data operation
+    ld de,@@BANK_SIZE@@	;; number of bytes to load
+    ld ix,0xc000	;; destination address
+    scf
+    call LD_BYTES	;; load block
+    jp nc,to_basic

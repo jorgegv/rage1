@@ -1,0 +1,7 @@
+    ;; Load SUB '@@SUB_NAME@@'
+    ld a,0xff	;; load data operation
+    ld de,@@SUB_SIZE@@	;; number of bytes to load
+    ld ix,@@SUB_LOAD_ADDR@@	;; destination address
+    scf
+    call LD_BYTES	;; load block
+    jp nc,to_basic

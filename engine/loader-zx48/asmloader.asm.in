@@ -1,0 +1,27 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This file has been generated automatically, do not edit!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    org @@LOADER_ORG@@
+    defc LD_BYTES = 1366	;; ROM routine at 0x0556
+
+    ;; do all loads with interrupts disabled so that bank 7 is not
+    ;; corrupted by +3DOS at address 0xD200
+    di
+
+    ld a,0xff		;; load data operation
+    ld de,@@MAIN_SIZE@@	;; number of bytes to load
+    ld ix,@@MAIN_CODE_START@@	;; destination address
+    scf
+    call LD_BYTES	;; load block
+    jp nc,to_basic
+
+@@SUB_LOAD_BLOCK@@@@SUB_RUN_BLOCK@@    ;; Start execution
+    di
+    jp @@MAIN_CODE_START@@
+
+@@MEMSWAP_FUNCTION@@@@DECOMPRESS_FUNCTION@@;; Return to BASIC, only in case of loading errors
+to_basic:
+    ei
+    ret
+

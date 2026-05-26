@@ -1,0 +1,201 @@
+################################################################################
+##
+## RAGE1 - Retro Adventure Game Engine, release 1
+## (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
+## 
+## This code is ublished under a GNU GPL license version 3 or later.  See
+## LICENSE file in the distribution for details.
+## 
+################################################################################
+
+.SILENT:
+
+MYMAKE			= $(MAKE) -s -f Makefile-zx128 -j8
+ZPRAGMA_INC             = zpragma-zx128.inc
+
+# T1-6: z88dk target lives in the per-platform Makefile (Makefile.common
+# no longer hard-codes '+zx'). Phase T2 adds the matching '+cpc' siblings.
+ZCC_TARGET		= +zx
+
+# All taps
+TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(BANK_TAPS) $(MAIN_TAP) $(SUB_TAPS)
+
+-include Makefile.common
+
+CFLAGS			+= -pragma-define:CRT_ORG_CODE=$(BASE_CODE_ADDRESS_128)
+CFLAGS			+= -pragma-define:REGISTER_SP=$(ISR_VECTOR_ADDRESS_128)
+
+.PHONY: datasets codesets taps
+
+build:
+	$(MYMAKE) banked_definitions
+	$(MYMAKE) datasets
+	$(MYMAKE) codesets
+	$(MYMAKE) banked_code BANKED_CFLAGS=-D_BANKED_CODE_BUILD
+	$(MYMAKE) banks
+	$(MYMAKE) main
+	$(MYMAKE) subs
+	$(MYMAKE) loader
+	$(MYMAKE) asmloader
+	cp $(ENGINE_DIR)/loader-zx128/$(BAS_LOADER_SRC) $(BAS_LOADER)
+	$(MYMAKE) taps
+	$(MYMAKE) final
+	$(MYMAKE) lowmemcheck
+	$(MYMAKE) section-check
+
+## Check that certain symbols are linked in low memory.  It is assumed that
+## all symbols mentioned as "extern" in .h files will be accessed from
+## outside their modules and should thus be in lowmem.  Also, some functions
+## should be always placed in lowmem (bank switching, game_startup, etc.)
+
+# all extern declarations in .h files
+ENGINE_LOWMEM_SYMBOLS	= $(shell grep -r extern engine/include/rage1/ | grep -Po '[\w\[\]]+;$$' | tr -d '[];' )
+
+# some critical initialization and memory management functions
+ENGINE_LOWMEM_SYMBOLS	+= init_datasets init_codesets memory_switch_bank dataset_activate codeset_call_function memory_call_banked_function
+
+# all data generated in the home bank
+GAME_LOWMEM_SYMBOLS	= $(shell $(NM) $(GENERATED_DIR)/game_data.o | sed '1,/  Symbols:/d' | awk '{print $$4}' )
+
+# all code generated in the home bank
+CODE_LOWMEM_SYMBOLS	= $(shell for i in $(ENGINE_DIR)/src/*.o; do $(NM) $$i | sed '1,/  Symbols:/d' | awk '{print $$4}' ; done )
+
+# sum it all
+ALL_LOWMEM_SYMBOLS	= $(ENGINE_LOWMEM_SYMBOLS) $(GAME_LOWMEM_SYMBOLS) $(CODE_LOWMEM_SYMBOLS)
+
+# target for doing the real check
+lowmemcheck:
+	./tools/lowmemsym.pl -m main.map $(ALL_LOWMEM_SYMBOLS)
+
+##
+## Dataset compilation to standalone binaries org'ed at 0x5C00
+##
+
+datasets: $(ZX0_DATASETS)
+
+dataset_%.bin:
+	echo "Compiling DATASET $@ ..."
+	# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	cp $@ $@.save
+	echo "-- $$( basename $@ ) uncompressed size: $$( stat -c%s $@ ) bytes"
+	if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then \
+		echo "** ERROR: $$( basename $@ ) size ($$( stat -c%s $@ ) bytes) is greater than $(DATASET_MAXSIZE) bytes"; \
+		exit 1; \
+	fi
+
+dataset_%.zx0: dataset_%.bin
+	echo "Compressing DATASET $< ..."
+	$(ZX0) $< $@ >/dev/null 2>&1
+	echo "-- $$( basename $@ ) compressed size: $$( stat -c%s $@ ) bytes"
+
+##
+## Codeset compilation to standalone binaries org'ed at 0xC000
+##
+
+codesets: $(BIN_CODESETS)
+
+codeset_%.bin:
+	echo "Compiling CODESET $@ ..."
+	# the '.../*.{asm,c}' at the end of the next line is critical: asm files MUST be included before C ones!
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -I$(GAME_SRC_DIR) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+	if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(CODESET_MAXSIZE) bytes"; exit 1; fi
+
+##
+## SUBs (Single Use Binaries) compilation to standalone binaries
+##
+
+subs: $(SUB_BINS)
+
+sub_%.bin:
+	echo "Compiling SUB $@ ..."
+	mv $(GAME_SRC_DIR)/sub_$* $(GENERATED_DIR_SUBS)/sub_$*.src
+	$(MAKE) -s -C $(GENERATED_DIR_SUBS)/sub_$*.src
+	cp $(GENERATED_DIR_SUBS)/sub_$*.src/sub.bin  $(GENERATED_DIR)/sub_$*.bin
+	if ( grep -i 'SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata | grep -i 'NAME=$*' | grep -qi 'COMPRESS=1' ) then \
+		echo "Compressing SUB $@ ..." ; \
+		$(ZX0) -f $(GENERATED_DIR)/sub_$*.bin >/dev/null 2>&1 ; \
+	fi
+
+# we set org at 0x0000 for the subs (unused)
+sub_%.tap:
+	echo "Creating TAP $@..."
+	if ( grep -i 'SINGLE_USE_BLOB' $(GAME_DATA_DIR)/game_config/*.gdata | grep -i 'NAME=$*' | grep -qi 'COMPRESS=1' ) then \
+		$(APPMAKE) --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin.zx0 -o sub_$*.tap ; \
+	else \
+		$(APPMAKE) --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin -o sub_$*.tap ; \
+	fi
+
+##
+## Banked code compilation to standalone binary at 0xC000
+## and associated checks
+##
+
+banked_definitions:
+	./tools/check_banked_code_definitions.pl
+
+banked_code: $(BIN_BANKED_CODE)
+
+$(BIN_BANKED_CODE): $(BANKED_CODE_OBJS_COMMON) $(BANKED_CODE_OBJS_128)
+	echo "Building $@..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) -m $(BANKED_CFLAGS) --no-crt -o $@ $(BANKED_CODE_OBJS_128) $(BANKED_CODE_OBJS_COMMON)
+	mv $(BANKED_CODE_DIR)/$(shell basename $@ .bin)_code_compiler.bin $@
+	if [ $$( stat -c%s $@ ) -gt $(BANK_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) size is greater than $(BANK_MAXSIZE) bytes"; exit 1; fi
+
+##
+## Dataset/Codeset Banks
+##
+
+banks:
+	echo "Building Bank binaries and Dataset/Codeset maps..."
+	./tools/banktool.pl -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR)
+
+##
+## Custom ASM loader
+##
+
+loader:
+	echo "Creating custom loader..."
+	./tools/loadertool.pl -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER) $(LOADING_SCREEN_FLAG)
+
+asmloader: $(ASMLOADER_BIN)
+
+$(ASMLOADER_BIN):
+	echo "Assembling loader routine..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --list --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
+
+##
+## Taps
+##
+
+taps: $(TAPS)
+
+# we set org at 0xC000 for the banks
+bank_%.tap: bank_%.bin
+	echo "Creating TAP $@..."
+	$(APPMAKE) --noloader --noheader --org 0xC000 -b $<
+
+# we set org at base code address for 128 mode, 0x5F00 for 48 mode
+$(MAIN_TAP): $(MAIN_BIN)
+	echo "Creating TAP $@..."
+	$(APPMAKE) --noloader --noheader --org $(BASE_CODE_ADDRESS_128) -b $<
+
+# we set org at 0x8000 for loader
+$(ASMLOADER_TAP): $(ASMLOADER_BIN)
+	echo "Creating TAP $@..."
+	$(APPMAKE) --noloader --org 0x8000 -b $<
+
+##
+## Main
+##
+
+$(MAIN_BIN): $(OBJS)
+	echo "Bulding $(MAIN_BIN)...."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) $(OBJS) -startup=31 -o $(MAIN_BIN)
+
+##
+## Run options
+##
+
+FUSE_RUN_OPTS		= --machine 128

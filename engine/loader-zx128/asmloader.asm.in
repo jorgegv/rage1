@@ -1,0 +1,46 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This file has been generated automatically, do not edit!
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    org @@LOADER_ORG@@
+    defc LD_BYTES = 1366	;; ROM routine at 0x0556
+
+    ;; do all loads with interrupts disabled so that bank 7 is not
+    ;; corrupted by +3DOS at address 0xD200
+    di
+
+@@BANK_LOAD_BLOCK@@    ;; switch to bank 0 and load main binary
+    xor a
+    call bswitch
+
+    ld a,0xff		;; load data operation
+    ld de,@@MAIN_SIZE@@	;; number of bytes to load
+    ld ix,@@MAIN_CODE_START@@	;; destination address
+    scf
+    call LD_BYTES	;; load block
+    jp nc,to_basic
+
+@@SUB_LOAD_BLOCK@@@@SUB_RUN_BLOCK@@    ;; Start execution
+    di
+    jp @@MAIN_CODE_START@@
+
+;; Switch memory bank at 0xC000
+;;   A = bank to activate (0-7)
+;;
+;; We want USR0 mode: bits 0-2: bank number to map; bit 3: 0 (normal
+;; screen); bit 4: 1 (48K ROM); bit 5: 0 (allow paging) => 0x10 | bank
+
+bswitch:
+    ;; we enter with ints already disabled
+    ;; register A contains the bank to switch to
+    and     0x07            ; get 3 low bits only
+    or      0x10            ; set default for USR0 mode
+    ld      bc,0x7ffd       ; set the port number
+    out     (c),a           ; ...and select the new bank
+    ret
+
+@@MEMSWAP_FUNCTION@@@@DECOMPRESS_FUNCTION@@;; Return to BASIC, only in case of loading errors
+to_basic:
+    ei
+    ret
+
