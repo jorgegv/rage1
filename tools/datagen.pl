@@ -451,22 +451,31 @@ sub read_input_data {
                         map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                         split( /\s+/, $args )
                     };
-                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    # A3-2: route PNG asset handling through the
+                    # per-platform dispatcher (BTILE branch).
+                    my $platform = $game_config->{'platform'};
+                    my $png = dispatch_png_asset_handling( $platform,
+                        'load_png_file', $build_dir . '/' . $vars->{'file'} ) or
                         die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
                     if ( $vars->{'png_rotate'} || 0 ) {
-                        $png = png_rotate( $png, $vars->{'png_rotate'} );
+                        $png = dispatch_png_asset_handling( $platform,
+                            'png_rotate', $png, $vars->{'png_rotate'} );
                     }
                     if ( $vars->{'png_hmirror'} || 0 ) {
-                        $png = png_hmirror( $png );
+                        $png = dispatch_png_asset_handling( $platform,
+                            'png_hmirror', $png );
                     }
                     if ( $vars->{'png_vmirror'} || 0 ) {
-                        $png = png_vmirror( $png );
+                        $png = dispatch_png_asset_handling( $platform,
+                            'png_vmirror', $png );
                     }
 
-                    map_png_colors_to_zx_colors( $png );
+                    dispatch_png_asset_handling( $platform,
+                        'map_png_colors_to_zx_colors', $png );
 
-                    my $data = png_to_pixels_and_attrs(
+                    my $data = dispatch_png_asset_handling( $platform,
+                        'png_to_pixels_and_attrs',
                         $png,
                         $vars->{'xpos'}, $vars->{'ypos'},
                         $vars->{'width'}, $vars->{'height'},
@@ -547,13 +556,19 @@ sub read_input_data {
                         map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                         split( /\s+/, $args )
                     };
+                    # A3-2: route PNG asset handling through the
+                    # per-platform dispatcher (SPRITE PNG_DATA branch).
+                    my $platform = $game_config->{'platform'};
                     my $fgcolor = uc( $vars->{'fgcolor'} );
-                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    my $png = dispatch_png_asset_handling( $platform,
+                        'load_png_file', $build_dir . '/' . $vars->{'file'} ) or
                         die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
-                    map_png_colors_to_zx_colors( $png );
+                    dispatch_png_asset_handling( $platform,
+                        'map_png_colors_to_zx_colors', $png );
 
-                    push @{$cur_sprite->{'pixels'}}, @{ pick_pixel_data_by_color_from_png(
+                    push @{$cur_sprite->{'pixels'}}, @{ dispatch_png_asset_handling( $platform,
+                        'pick_pixel_data_by_color_from_png',
                         $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                         ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                         ) };
@@ -565,13 +580,19 @@ sub read_input_data {
                         map { my ($k,$v) = split( /=/, $_ ); lc($k), $v }
                         split( /\s+/, $args )
                     };
+                    # A3-2: route PNG asset handling through the
+                    # per-platform dispatcher (SPRITE PNG_MASK branch).
+                    my $platform = $game_config->{'platform'};
                     my $maskcolor = uc( $vars->{'maskcolor'} );
-                    my $png = load_png_file( $build_dir . '/' . $vars->{'file'} ) or
+                    my $png = dispatch_png_asset_handling( $platform,
+                        'load_png_file', $build_dir . '/' . $vars->{'file'} ) or
                         die "** Error: $file, line $current_line: could not load PNG file " . $build_dir . '/' . $vars->{'file'} . "\n";
 
-                    map_png_colors_to_zx_colors( $png );
+                    dispatch_png_asset_handling( $platform,
+                        'map_png_colors_to_zx_colors', $png );
 
-                    push @{$cur_sprite->{'mask'}}, @{ pick_pixel_data_by_color_from_png(
+                    push @{$cur_sprite->{'mask'}}, @{ dispatch_png_asset_handling( $platform,
+                        'pick_pixel_data_by_color_from_png',
                         $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                         ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
                         ) };
@@ -1423,6 +1444,61 @@ sub read_input_data {
         }
     }	# end foreach my $file
     printf "\rGDATA files read: %d/%d\n", $num_files_read, $num_files;
+}
+
+######################################
+## Per-platform PNG asset dispatcher
+######################################
+
+# A3-1: per-platform dispatch seam for PNG-driven BTile / sprite
+# asset handling. Phase A3 is ZX-only; the CPC branch is a
+# placeholder that errors out cleanly so Phase A5 can land additively
+# without touching this dispatcher.
+#
+# Per doc/multiplatform-plan/README.md §5.1 and
+# doc/multiplatform-plan/assets.md §3.1, CPC asset conversion is
+# handled by a subprocess (cpctelera's cpct_img2tileset) called from
+# a future helper here — NOT by adding per-platform branches inside
+# RAGE::PNGFileUtils. The seam lives in datagen.pl, not in the PNG
+# utility module.
+#
+# Usage:
+#   my $png  = dispatch_png_asset_handling($platform, 'load_png_file', $path);
+#   my $data = dispatch_png_asset_handling($platform, 'png_to_pixels_and_attrs',
+#                                          $png, $x, $y, $w, $h);
+#
+# Dispatch keys:
+#   /^zx/   — route to existing RAGE::PNGFileUtils:: subs (current behaviour).
+#   /^cpc/  — die: "CPC asset conversion not yet wired — see Phase A5".
+#   default — die: "Unknown platform '<name>' in dispatch_png_asset_handling".
+sub dispatch_png_asset_handling {
+    my ( $platform, $fn, @args ) = @_;
+
+    defined( $platform ) or
+        die "dispatch_png_asset_handling: platform is undefined\n";
+    defined( $fn ) or
+        die "dispatch_png_asset_handling: function name is undefined\n";
+
+    if ( $platform =~ /^zx/ ) {
+        # ZX branch: thin pass-through to the PNG-utility subs
+        # provided by RAGE::PNGFileUtils.  Note the module declares
+        # no `package` of its own, so its subs are installed into
+        # main::; we therefore resolve by symbolic name in main::.
+        # All current call sites use one of:
+        #   load_png_file, png_rotate, png_hmirror, png_vmirror,
+        #   map_png_colors_to_zx_colors, png_to_pixels_and_attrs,
+        #   pick_pixel_data_by_color_from_png
+        my $code = main->can( $fn ) or
+            die "dispatch_png_asset_handling: no PNG-asset sub '$fn' " .
+                "(expected from RAGE::PNGFileUtils)\n";
+        return $code->( @args );
+    }
+
+    if ( $platform =~ /^cpc/ ) {
+        die "CPC asset conversion not yet wired — see Phase A5\n";
+    }
+
+    die "Unknown platform '$platform' in dispatch_png_asset_handling\n";
 }
 
 ######################################

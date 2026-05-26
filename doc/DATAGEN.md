@@ -841,6 +841,47 @@ including different data pieces.  Arguments:
   * SUBs loaded at addresses below 0xC000 are only allowed in 128K mode. 
     SUBs at that address or above are allowed in both 48K and 128K modes.
 
+## Internals: per-platform PNG asset dispatcher
+
+PNG-driven BTile and sprite handling (the `PNG_DATA` / `PNG_MASK`
+directives above) is routed through a single dispatch seam so that
+each platform can plug in its own asset pipeline without having to
+edit the surrounding parser logic.
+
+The seam is a single helper sub in `tools/datagen.pl`:
+
+```perl
+dispatch_png_asset_handling( $platform, $function_name, @args )
+```
+
+* `$platform` is the value resolved from the `PLATFORM` directive in
+  `game_config/Game.gdata` (see the `PLATFORM` and `ZX_TARGET`
+  entries above); it is stored as `$game_config->{'platform'}` at
+  parse time.
+* `$function_name` is the bare name of one of the PNG utility subs
+  declared in `lib/RAGE/PNGFileUtils.pm` (`load_png_file`,
+  `png_rotate`, `png_hmirror`, `png_vmirror`,
+  `map_png_colors_to_zx_colors`, `png_to_pixels_and_attrs`,
+  `pick_pixel_data_by_color_from_png`).
+* `@args` are forwarded verbatim to the resolved sub.
+
+Dispatch keys:
+
+| Platform pattern | Behaviour |
+| --- | --- |
+| `/^zx/`  | Routes to the matching `RAGE::PNGFileUtils` sub (current ZX 48 / ZX 128 behaviour). |
+| `/^cpc/` | Hard error: `die "CPC asset conversion not yet wired — see Phase A5"`. |
+| default  | Hard error: `die "Unknown platform '<name>' in dispatch_png_asset_handling"`. |
+
+Architectural convention (see
+`doc/multiplatform-plan/README.md` §5.1 and
+`doc/multiplatform-plan/assets.md` §3.1): **CPC asset conversion
+shells out to cpctelera's `cpct_img2tileset` as a subprocess** —
+new per-platform encoders are *not* added inside
+`RAGE::PNGFileUtils`. The seam therefore lives in `datagen.pl`, not
+in the PNG utility module, and the `^cpc` branch of this dispatcher
+is reserved for that subprocess wiring (landed in Phase A5).
+
 # FLOWGEN
 
 Flowgen was a separate utility for compiling game scripts into code that can
