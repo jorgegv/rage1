@@ -1426,6 +1426,61 @@ sub read_input_data {
 }
 
 ######################################
+## Per-platform PNG asset dispatcher
+######################################
+
+# A3-1: per-platform dispatch seam for PNG-driven BTile / sprite
+# asset handling. Phase A3 is ZX-only; the CPC branch is a
+# placeholder that errors out cleanly so Phase A5 can land additively
+# without touching this dispatcher.
+#
+# Per doc/multiplatform-plan/README.md §5.1 and
+# doc/multiplatform-plan/assets.md §3.1, CPC asset conversion is
+# handled by a subprocess (cpctelera's cpct_img2tileset) called from
+# a future helper here — NOT by adding per-platform branches inside
+# RAGE::PNGFileUtils. The seam lives in datagen.pl, not in the PNG
+# utility module.
+#
+# Usage:
+#   my $png  = dispatch_png_asset_handling($platform, 'load_png_file', $path);
+#   my $data = dispatch_png_asset_handling($platform, 'png_to_pixels_and_attrs',
+#                                          $png, $x, $y, $w, $h);
+#
+# Dispatch keys:
+#   /^zx/   — route to existing RAGE::PNGFileUtils:: subs (current behaviour).
+#   /^cpc/  — die: "CPC asset conversion not yet wired — see Phase A5".
+#   default — die: "Unknown platform '<name>' in dispatch_png_asset_handling".
+sub dispatch_png_asset_handling {
+    my ( $platform, $fn, @args ) = @_;
+
+    defined( $platform ) or
+        die "dispatch_png_asset_handling: platform is undefined\n";
+    defined( $fn ) or
+        die "dispatch_png_asset_handling: function name is undefined\n";
+
+    if ( $platform =~ /^zx/ ) {
+        # ZX branch: thin pass-through to the PNG-utility subs
+        # provided by RAGE::PNGFileUtils.  Note the module declares
+        # no `package` of its own, so its subs are installed into
+        # main::; we therefore resolve by symbolic name in main::.
+        # All current call sites use one of:
+        #   load_png_file, png_rotate, png_hmirror, png_vmirror,
+        #   map_png_colors_to_zx_colors, png_to_pixels_and_attrs,
+        #   pick_pixel_data_by_color_from_png
+        my $code = main->can( $fn ) or
+            die "dispatch_png_asset_handling: no PNG-asset sub '$fn' " .
+                "(expected from RAGE::PNGFileUtils)\n";
+        return $code->( @args );
+    }
+
+    if ( $platform =~ /^cpc/ ) {
+        die "CPC asset conversion not yet wired — see Phase A5\n";
+    }
+
+    die "Unknown platform '$platform' in dispatch_png_asset_handling\n";
+}
+
+######################################
 ## BTile functions
 ######################################
 
