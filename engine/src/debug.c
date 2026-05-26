@@ -72,11 +72,11 @@ void debug_pause( uint16_t delay ) __z88dk_fastcall {
 void debug_panic( uint8_t code ) {
     *DEBUG_PANIC_CODE_ADDRESS = code;
     while (1) {
-        zx_border( INK_BLACK );
+        gfx_set_border( GFX_BLACK );
         debug_pause( 81 );
-        zx_border( INK_YELLOW );
+        gfx_set_border( GFX_YELLOW );
         debug_pause( 70 );
-        zx_border( INK_BLACK );
+        gfx_set_border( GFX_BLACK );
         debug_pause( 69 );
     }
 }

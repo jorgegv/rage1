@@ -25,7 +25,7 @@ static const uint8_t _blank_tile[8] = {0,0,0,0,0,0,0,0};
 
 void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
     (void) bg_char;
-    zx_border( INK_BLACK );
+    gfx_set_border( GFX_BLACK );
     jsp_init( (uint8_t *)_blank_tile, bg_attr );
     jsp_sprite_pool_init( _sprite_pool, GFX_JSP_MAX_SPRITES );
     gfx_invalidate( &full_screen );

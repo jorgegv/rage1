@@ -47,6 +47,9 @@ typedef uint8_t          gfx_attr_t;
 // gfx_init() is a real function (multi-step), defined in sp1engine.c
 #define gfx_invalidate(rect)                   sp1_Invalidate(rect)
 #define gfx_update()                           sp1_UpdateNow()
+// gfx_set_border() — border colour is consumed on every backend (CPC too).
+// On ZX it is a Spectrum colour 0..7; the backend wraps zx_border().
+#define gfx_set_border(color)                  zx_border((color))
 
 //--- Sprite lifecycle ---
 // gfx_sprite_create() is a real function (multi-step), defined in sprite.c
