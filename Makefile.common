@@ -116,6 +116,15 @@ ISR_VECTOR_ADDRESS_128	= $(shell perl -MYAML -e \
 			   print $$c->{"$(_INT128_NEW_KEY1)"}{"$(_INT128_NEW_KEY2)"}{"isr_vector_address"} \
 			      // $$c->{"$(_INT128_LEGACY_KEY)"}{"isr_vector_address"}')
 
+# B3-1: swap-window address for the lowmem-symbol check. Read from
+# banking.zx128.swap_window (B1) so the threshold tracks the platform's
+# bank-switched window instead of a hard-coded 0xC000. lowmemsym.pl
+# preserves the historical 0xC000 default if --threshold is omitted, so
+# external callers keep working.
+SWAP_WINDOW_zx128	= $(shell perl -MYAML -e \
+			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); \
+			   print $$c->{"banking"}{"zx128"}{"swap_window"} // "0xC000"')
+
 # Final game TAP
 FINAL_TAP		= game.tap
 
