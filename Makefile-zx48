@@ -62,7 +62,7 @@ sub_%.bin:
 # we set org at 0x0000 for the subs (unused)
 sub_%.tap:
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin -o sub_$*.tap
+	$(APPMAKE) --noloader --noheader --org 0x0000 -b $(GENERATED_DIR)/sub_$*.bin -o sub_$*.tap
 
 ##
 ## Custom ASM loader
@@ -82,7 +82,7 @@ $(ASMLOADER_BIN):
 # we set org at 0x5E00 for loader
 $(ASMLOADER_TAP): $(ASMLOADER_BIN)
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --org 0x5E00 -b $<
+	$(APPMAKE) --noloader --org 0x5E00 -b $<
 
 ##
 ## Main binary
@@ -91,7 +91,7 @@ $(ASMLOADER_TAP): $(ASMLOADER_BIN)
 # we set org at 0x5F00 for 48 mode
 $(MAIN_TAP): $(MAIN_BIN)
 	echo "Creating TAP $@..."
-	z88dk-appmake +zx --noloader --noheader --org 0x5F00 -b $<
+	$(APPMAKE) --noloader --noheader --org 0x5F00 -b $<
 
 $(MAIN_BIN): $(OBJS)
 	echo "Bulding $(MAIN_BIN)...."

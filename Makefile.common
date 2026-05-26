@@ -146,6 +146,10 @@ NM			= z88dk-z80nm
 # concrete z88dk target ('+zx', '+cpc', ...); platform-specific Makefiles
 # own that choice. Phase T2 adds Makefile-cpc-* with ZCC_TARGET=+cpc.
 DATAGEN			= ./tools/datagen.pl
+# T1-7: generic appmake invocation; concrete z88dk target comes from
+# $(ZCC_TARGET) set in the per-platform Makefile. Every literal
+# 'z88dk-appmake +zx' in the build files routes through this macro.
+APPMAKE			= z88dk-appmake $(ZCC_TARGET)
 
 # compiler flags
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
@@ -237,7 +241,7 @@ screen.tap:
 	if [ ! -z "$(LOADING_SCREEN_SCR)" ] && [ ! -z "$(LOADING_SCREEN_PNG)" ]; then echo "** Error: LOADING_SCREEN: PNG and SCR cannot de used at the same time"; exit 1; fi
 	if [ ! -z "$(LOADING_SCREEN_SCR)" ]; then cp "$(BUILD_DIR)/$(LOADING_SCREEN_SCR)" /tmp/screen.scr; else ./tools/png2scr.pl "$(BUILD_DIR)/$(LOADING_SCREEN_PNG)" /tmp/screen.scr; fi
 	if [ "$$(wc -c /tmp/screen.scr | awk '{print $$1}')" -ne 6912 ]; then echo "** Error: LOADING_SCREEN must be exactly 6912 bytes long"; exit 1 ; fi
-	z88dk-appmake +zx --noloader --org 16384 -b /tmp/screen.scr -o screen.tap
+	$(APPMAKE) --noloader --org 16384 -b /tmp/screen.scr -o screen.tap
 
 ## Main game
 
