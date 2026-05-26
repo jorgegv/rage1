@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes build-zx48 build-zx128 build48 build128
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128
 
 help:
 	echo "============================================================"
@@ -206,6 +206,7 @@ all-test-builds:
 	echo -n "START: "
 	date
 	$(MYMAKE) check-input-includes
+	$(MYMAKE) check-input-hal
 	for i in $(ALL_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds.log
 	echo -n "END: "
 	date
@@ -229,6 +230,13 @@ all-test-builds:
 # doc/multiplatform-plan/input-baseline-coverage.md §IN1-3.
 check-input-includes:
 	bash tools/check-input-include-guard.sh
+
+# Phase IN3-5: stricter guard that no engine source outside the HAL
+# allowlist (rage1/input.h, rage1/input_zx.h, engine/src/input.c)
+# references any legacy z88dk-input symbol. This is the IN3-exit
+# invariant — see doc/multiplatform-plan/input.md §5 Phase IN3-5.
+check-input-hal:
+	bash tools/check-input-hal-clean.sh
 
 ###############################################
 ##
