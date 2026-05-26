@@ -19,8 +19,8 @@
 struct controller_info_s {
     // controller type, see below
     uint8_t type;
-    // controller keys
-    struct udk_s keys;
+    // controller keys (HAL-typed; backend-defined layout, see rage1/input_zx.h)
+    input_udk_t keys;
     // controller state
     uint8_t state;
 };

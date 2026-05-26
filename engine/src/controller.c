@@ -30,16 +30,11 @@ void init_controllers(void) {
 }
 
 uint8_t controller_read_state(void) {
-   switch ( game_state.controller.type ) {
-      case CTRL_TYPE_KEYBOARD: return in_stick_keyboard( &game_state.controller.keys );
-      case CTRL_TYPE_KEMPSTON: return in_stick_kempston();
-      case CTRL_TYPE_SINCLAIR1: return in_stick_sinclair1();
-   }
-   return 0;
+   return input_state_read( game_state.controller.type, &game_state.controller.keys );
 }
 
 uint8_t controller_pause_key_pressed(void) {
-   return in_key_pressed( IN_KEY_SCANCODE_y );
+   return input_key_pressed( INPUT_SCANCODE_PAUSE );
 }
 
 void controller_reset_all(void) {

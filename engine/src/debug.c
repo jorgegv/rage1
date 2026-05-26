@@ -60,8 +60,8 @@ char *i8toa( uint8_t i ) {
 }
 
 void debug_waitkey(void) {
-    in_wait_key();
-    in_wait_nokey();
+    input_wait_key();
+    input_wait_nokey();
 }
 
 void debug_pause( uint16_t delay ) __z88dk_fastcall {

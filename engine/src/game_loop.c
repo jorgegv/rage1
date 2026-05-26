@@ -37,9 +37,9 @@
 
 void check_game_pause(void) {
    if ( controller_pause_key_pressed() ) {
-      in_wait_nokey();
+      input_wait_nokey();
       while ( ! controller_pause_key_pressed() ) ;
-      in_wait_nokey();
+      input_wait_nokey();
    }
 }
 

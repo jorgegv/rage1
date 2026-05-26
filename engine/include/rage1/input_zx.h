@@ -22,6 +22,27 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+// Backend `struct input_udk_s` definition.
+//
+// The user-defined-keys struct used by keyboard-as-joystick mode. On
+// ZX the layout matches z88dk's `struct udk_s` exactly (same field
+// order, same uint16_t scancode width) so input.c can pass an
+// `input_udk_t *` straight to z88dk's `in_stick_keyboard` via a single
+// pointer cast. Game and engine code only see the HAL alias name.
+// See input.md §3.2 for the cross-platform field-order rationale.
+//
+////////////////////////////////////////////////////////////////////////////////
+
+struct input_udk_s {
+    input_scancode_t fire;
+    input_scancode_t right;
+    input_scancode_t left;
+    input_scancode_t down;
+    input_scancode_t up;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//
 // Backend scancode / default-key constants (see input.md §3.4).
 //
 // INPUT_SCANCODE_PAUSE        -- the engine's "pause" key on ZX.
