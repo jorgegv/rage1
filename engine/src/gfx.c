@@ -15,5 +15,5 @@
 #include "game_data.h"
 
 void init_gfx(void) {
-   gfx_init( DEFAULT_BG_ATTR, ' ' );
+   gfx_init( GFX_DEFAULT_BG_ATTR, ' ' );
 }

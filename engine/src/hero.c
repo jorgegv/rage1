@@ -293,14 +293,14 @@ void hero_check_tiles_below(void) {
 
 #ifdef BUILD_FEATURE_SCREEN_AREA_LIVES_AREA
 // printing context
-gfx_print_ctx_t lives_display_ctx = GFX_PRINT_CTX_INIT(lives_area, DEFAULT_BG_ATTR);
+gfx_print_ctx_t lives_display_ctx = GFX_PRINT_CTX_INIT(lives_area, GFX_DEFAULT_BG_ATTR);
 
 void hero_update_lives_display(void) {
     uint8_t col;
     uint8_t n;
 
     // clear the area
-    gfx_clear_rect( &lives_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
+    gfx_clear_rect( &lives_area, GFX_DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
 
     // draw one tile per live
     col = LIVES_AREA_LEFT;

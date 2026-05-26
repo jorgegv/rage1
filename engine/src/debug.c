@@ -21,7 +21,7 @@ uint8_t initialized = 0;
 
 uint16_t debug_flags = 0;
 
-gfx_print_ctx_t debug_ctx = GFX_PRINT_CTX_INIT(debug_area, INK_WHITE | PAPER_BLACK);
+gfx_print_ctx_t debug_ctx = GFX_PRINT_CTX_INIT(debug_area, GFX_ATTR(GFX_WHITE, GFX_BLACK, 0, 0));
 
 void debug_out( char *txt ) {
     if ( ! initialized ) {
@@ -29,7 +29,7 @@ void debug_out( char *txt ) {
         initialized++;
     }
     if ( *txt == '\n' ) {
-        gfx_clear_rect( &debug_area, INK_WHITE | PAPER_BLACK, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
+        gfx_clear_rect( &debug_area, GFX_ATTR(GFX_WHITE, GFX_BLACK, 0, 0), ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
         gfx_print_set_pos( &debug_ctx, 0, 0 );
         txt++;
     }
@@ -72,11 +72,11 @@ void debug_pause( uint16_t delay ) __z88dk_fastcall {
 void debug_panic( uint8_t code ) {
     *DEBUG_PANIC_CODE_ADDRESS = code;
     while (1) {
-        zx_border( INK_BLACK );
+        gfx_set_border( GFX_BLACK );
         debug_pause( 81 );
-        zx_border( INK_YELLOW );
+        gfx_set_border( GFX_YELLOW );
         debug_pause( 70 );
-        zx_border( INK_BLACK );
+        gfx_set_border( GFX_BLACK );
         debug_pause( 69 );
     }
 }

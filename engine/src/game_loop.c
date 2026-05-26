@@ -149,9 +149,9 @@ void animate_btiles( void ) {
 
 void show_heartbeat(void) {
     if ( current_time.frame & 0x08 ) {
-        gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, DEFAULT_BG_ATTR, ' ');
+        gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, GFX_DEFAULT_BG_ATTR, ' ');
     } else {
-        gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, INK_YELLOW | PAPER_GREEN, ' ');
+        gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, GFX_ATTR(GFX_YELLOW, GFX_GREEN, 0, 0), ' ');
     }
 }
 

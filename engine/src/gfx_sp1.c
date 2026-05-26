@@ -24,8 +24,8 @@
 
 #ifdef BUILD_FEATURE_GFX_BACKEND_SP1
 
-void gfx_init( uint8_t bg_attr, uint8_t bg_char ) {
-   zx_border(INK_BLACK);
+void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
+   gfx_set_border(GFX_BLACK);
    sp1_Initialize(SP1_IFLAG_MAKE_ROTTBL | SP1_IFLAG_OVERWRITE_TILES | SP1_IFLAG_OVERWRITE_DFILE,
       bg_attr, bg_char);
    gfx_invalidate(&full_screen);

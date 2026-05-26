@@ -151,7 +151,7 @@ void btile_remove( uint8_t row, uint8_t col, struct btile_s *b ) {
     cmax = b->num_cols;
     for ( dr = 0; dr < rmax; ++dr )
         for ( dc = 0; dc < cmax; ++dc ) {
-            gfx_tile_put( row + dr, col + dc, DEFAULT_BG_ATTR, ' ' );
+            gfx_tile_put( row + dr, col + dc, GFX_DEFAULT_BG_ATTR, ' ' );
             SET_TILE_TYPE_AT( row + dr, col + dc, TT_DECORATION );
         }
 }

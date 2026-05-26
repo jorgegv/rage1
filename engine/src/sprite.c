@@ -64,7 +64,7 @@ gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols ) {
     return s;
 }
 
-void gfx_sprite_set_color( gfx_sprite_t *s, uint8_t color ) {
+void gfx_sprite_set_color( gfx_sprite_t *s, gfx_attr_t color ) {
     // add color
     sprite_attr_param.attr = color;
     sprite_attr_param.attr_mask = 0xF8;
