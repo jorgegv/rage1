@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes build-zx48 build-zx128 build48 build128
 
 help:
 	echo "============================================================"
@@ -26,6 +26,12 @@ help:
 	echo ""
 	echo "Available targets:"
 	grep -P '^[\w\-]+:' Makefile | grep -v ":=" | cut -f1 -d: | grep -v -E '^default' | sed 's/^/    /g'
+	echo ""
+	echo "Platform build targets:"
+	echo "    build-zx48     force ZX Spectrum 48K build"
+	echo "    build-zx128    force ZX Spectrum 128K build"
+	echo "    build48        legacy silent alias for build-zx48 (permanent, README §5.6)"
+	echo "    build128       legacy silent alias for build-zx128 (permanent, README §5.6)"
 	echo ""
 	echo "* Use 'make new-game' for creating a new template game using the library"
 	echo ""
@@ -77,19 +83,23 @@ build:
 	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) data
 	$(MYMAKE) -f Makefile-$(_RESOLVED_PLATFORM) build
 
-# forced config build for 48 mode
-build48:
+# T1-5: canonical per-platform forced-build targets.
+build-zx48:
 	$(MYMAKE) clean
 	$(MYMAKE) ZX_TARGET=48 config
 	$(MYMAKE) ZX_TARGET=48 data
-	$(MYMAKE) -f Makefile-48 build
+	$(MYMAKE) -f Makefile-zx48 build
 
-# forced config build for 128 mode
-build128:
+build-zx128:
 	$(MYMAKE) clean
 	$(MYMAKE) ZX_TARGET=128 config
 	$(MYMAKE) ZX_TARGET=128 data
-	$(MYMAKE) -f Makefile-128 build
+	$(MYMAKE) -f Makefile-zx128 build
+
+# T1-5: legacy build48 / build128 stay as permanent silent aliases for
+# build-zx48 / build-zx128 (README §5.6).
+build48: build-zx48
+build128: build-zx128
 
 ###############################################
 ##
