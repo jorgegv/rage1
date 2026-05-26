@@ -2204,6 +2204,15 @@ sub generate_hero {
     my $immunity_period		= $hero->{'damage_mode'}{'immunity_period'};
     my $health_display_function	= $hero->{'damage_mode'}{'health_display_function'} || '';
 
+    # Phase G4-4 (gfx.md §G4-4): movement bounds are screen pixel coordinates
+    # so their natural HAL type is gfx_xpos_t / gfx_ypos_t.  We emit the bare
+    # integer literal here so the #define stays usable in compile-time
+    # arithmetic (e.g. `y.value <= HERO_MOVE_YMIN * 256` in banked hero.c).
+    # On ZX gfx_{x,y}pos_t is uint8_t and the bare literal already fits.  On
+    # a future CPC / Layer-2 backend a sibling tree will emit the same
+    # #defines wrapped in a `(gfx_xpos_t)( ... )` cast so the 16-bit width
+    # flows through ffp24_t-style position structs (Risk R3 — handled in
+    # the CPC bring-up, not here).
     my $move_xmin		= $game_config->{'game_area'}{'left'} * 8;
     my $move_xmax		= ( $game_config->{'game_area'}{'right'} + 1 ) * 8 - $width;
     my $move_ymin		= $game_config->{'game_area'}{'top'} * 8;
@@ -2235,6 +2244,10 @@ sub generate_hero {
 #define	HERO_MOVE_HSTEP_DIAG		$hstep_diag_ffp
 // FFP value: 256 * $vstep_diag
 #define	HERO_MOVE_VSTEP_DIAG		$vstep_diag_ffp
+// HERO_MOVE_X{MIN,MAX} / Y{MIN,MAX} are screen pixel coordinates with HAL
+// type gfx_xpos_t / gfx_ypos_t (uint8_t on ZX, uint16_t on CPC/Layer-2).
+// Emitted as bare #defines so they remain usable in compile-time arithmetic
+// (e.g. `HERO_MOVE_YMIN * 256` in banked hero.c).  See gfx.md Phase G4-4.
 #define	HERO_MOVE_XMIN			$move_xmin
 #define	HERO_MOVE_XMAX			$move_xmax
 #define	HERO_MOVE_YMIN			$move_ymin

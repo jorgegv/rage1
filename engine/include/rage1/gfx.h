@@ -25,6 +25,9 @@
 //     gfx_sprite_t       - opaque handle to a hardware sprite
 //     gfx_rect_t         - rectangle (row, col, width, height)
 //     gfx_print_ctx_t    - print-string context
+//     gfx_attr_t         - attribute byte (inert on CPC, see §2.1)
+//     gfx_xpos_t         - integer screen X pixel coord (uint8_t on ZX, uint16_t on CPC/Layer-2)
+//     gfx_ypos_t         - integer screen Y pixel coord (uint8_t on ZX, uint16_t on CPC/Layer-2)
 //
 //   Constants (as #defines):
 //     GFX_CLEAR_TILE     - flag: clear tiles in a rect

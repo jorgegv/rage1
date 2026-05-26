@@ -45,7 +45,7 @@ void gfx_sprite_set_color( gfx_sprite_t *s, gfx_attr_t color ) {
 }
 
 void gfx_jsp_move_sprite_clipped( gfx_sprite_t *s, gfx_rect_t *clip,
-                                   uint8_t *frame, uint8_t x, uint8_t y )
+                                   uint8_t *frame, gfx_xpos_t x, gfx_ypos_t y )
 {
     if ( frame == NULL ) {
         jsp_sprite_park( s );
