@@ -14,12 +14,17 @@ use strict;
 use warnings;
 use utf8;
 use Data::Dumper;
+use Getopt::Long qw( :config bundling no_ignore_case pass_through );
 use Getopt::Std;
 
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
 require RAGE::Config;
+
+# T1-10: file-level CLI option for --platform <zx48|zx128>. Declared
+# here so subs (get_zx_target etc.) can read it. Parsed in main below.
+our $opt_platform;
 
 # filenames are relative to the GENERATED dir, normally 'build/generated'
 
@@ -162,6 +167,13 @@ sub sanity_check_sub_binaries {
 }
 
 sub get_zx_target {
+    # T1-10: --platform CLI override beats the game's declared default.
+    if ( defined( $opt_platform ) ) {
+        my $p = lc( $opt_platform );
+        return '48'  if $p eq 'zx48';
+        return '128' if $p eq 'zx128';
+        # Any other value would have died at option-parse time.
+    }
     open GAME_CONFIG, $game_config_name or
         die "** Error: could not open $game_config_name for reading\n";
     while ( my $line = <GAME_CONFIG> ) {
@@ -501,10 +513,28 @@ EOF_RETBAS
 # parse command options
 # -i and -o: input bin dir and output file
 # -s: add instructions to load an initial SCREEN$ (optional)
+# T1-10: --platform <zx48|zx128> (canonical CLI override). When absent,
+# the platform is resolved from the PLATFORM/ZX_TARGET directive in the
+# game's .gdata (the A1 follow-up flow, see get_zx_target). CPC values
+# are rejected with 'not yet implemented' (Phase T2 brings them up).
+# ($opt_platform declared file-level near top so subs can read it.)
+GetOptions( 'platform=s' => \$opt_platform ) or
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128>]\n";
+
+if ( defined( $opt_platform ) ) {
+    my $p = lc( $opt_platform );
+    if ( $p ne 'zx48' and $p ne 'zx128' ) {
+        if ( $p =~ /^cpc/ ) {
+            die "** Error: loadertool.pl --platform $opt_platform: CPC platforms are not yet implemented (Phase T2 adds CPC bring-up).\n";
+        }
+        die "** Error: loadertool.pl --platform $opt_platform: accepted values are zx48 | zx128.\n";
+    }
+}
+
 our( $opt_i, $opt_o, $opt_s );
 getopts("i:o:s");
 ( defined( $opt_i ) and defined( $opt_o ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s]\n";
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128>]\n";
 
 my $loading_screen = $opt_s;
 
