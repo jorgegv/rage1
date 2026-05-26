@@ -271,7 +271,16 @@ sub read_input_data {
     my $cur_rule = undef;
 
     # read and process input
-    my $screen_patching = 0;
+    # A2-4: generalised PATCH directives — each *_patching flag suppresses
+    # the normal "push new struct + register in name_to_index" path at the
+    # matching END_*, and (for BTILE/SPRITE/HERO) skips re-running
+    # validate_and_compile_* on the already-compiled entity. See README §5.11
+    # for the semantics contract.
+    my $screen_patching     = 0;
+    my $btile_patching      = 0;
+    my $sprite_patching     = 0;
+    my $hero_patching       = 0;
+    my $game_config_patching = 0;
     my $pending_split_lines;
 
     # after option processing, the remaining ags are the files to process
@@ -334,6 +343,53 @@ sub read_input_data {
                     $state = 'SCREEN';
                     $screen_patching = 1;
                     $cur_screen = $all_screens[ $screen_name_to_index{ $name } ];
+                    next;
+                }
+                # A2-4: generalised PATCH directives (README §5.11).
+                # All four mirror PATCH_SCREEN: look up the existing entity in
+                # its name-index, enter the matching parser state with $cur_*
+                # pointing at the already-loaded struct (no copy), and set the
+                # matching *_patching flag so the END_* handler skips push +
+                # name_to_index registration. Loaded entities must already
+                # exist (Makefile contract: regular files first, patches last).
+                if ( $line =~ /^PATCH_GAME_CONFIG$/ ) {
+                    if ( not defined( $game_config ) ) {
+                        die "PATCH_GAME_CONFIG: $file, line $current_line: GAME_CONFIG has not been loaded yet\n";
+                    }
+                    $state = 'GAME_CONFIG';
+                    $game_config_patching = 1;
+                    next;
+                }
+                if ( $line =~ /^PATCH_BTILE\s+NAME=(.+)$/ ) {
+                    my $name = $1;
+                    if ( not defined( $btile_name_to_index{ $name } ) ) {
+                        die "PATCH_BTILE: $file, line $current_line: '$name' is not the name of an existing BTILE\n";
+                    }
+                    $state = 'BTILE';
+                    $btile_patching = 1;
+                    $cur_btile = $all_btiles[ $btile_name_to_index{ $name } ];
+                    next;
+                }
+                if ( $line =~ /^PATCH_SPRITE\s+NAME=(.+)$/ ) {
+                    my $name = $1;
+                    if ( not defined( $sprite_name_to_index{ $name } ) ) {
+                        die "PATCH_SPRITE: $file, line $current_line: '$name' is not the name of an existing SPRITE\n";
+                    }
+                    $state = 'SPRITE';
+                    $sprite_patching = 1;
+                    $cur_sprite = $all_sprites[ $sprite_name_to_index{ $name } ];
+                    next;
+                }
+                if ( $line =~ /^PATCH_HERO\s+NAME=(.+)$/ ) {
+                    my $name = $1;
+                    if ( not defined( $hero ) ) {
+                        die "PATCH_HERO: $file, line $current_line: HERO has not been loaded yet\n";
+                    }
+                    if ( ( $hero->{'name'} // '' ) ne $name ) {
+                        die "PATCH_HERO: $file, line $current_line: '$name' is not the name of the loaded HERO (loaded: '" . ( $hero->{'name'} // '<unnamed>' ) . "')\n";
+                    }
+                    $state = 'HERO';
+                    $hero_patching = 1;
                     next;
                 }
                 if ( $line =~ /^BEGIN_SPRITE$/ ) {
@@ -435,10 +491,17 @@ sub read_input_data {
                     next;
                 }
                 if ( $line =~ /^END_BTILE$/ ) {
-                    validate_and_compile_btile( $cur_btile );
-                    my $index = scalar( @all_btiles );
-                    push @all_btiles, $cur_btile;
-                    $btile_name_to_index{ $cur_btile->{'name'} } = $index;
+                    if ( not $btile_patching ) {
+                        validate_and_compile_btile( $cur_btile );
+                        my $index = scalar( @all_btiles );
+                        push @all_btiles, $cur_btile;
+                        $btile_name_to_index{ $cur_btile->{'name'} } = $index;
+                    } else {
+                        # A2-4: PATCH_BTILE — entity already validated and
+                        # compiled at first load; skip re-validation to avoid
+                        # double-compiling pixel_bytes/sequences derived data.
+                        $btile_patching = 0;
+                    }
                     $state = 'NONE';
                     next;
                 }
@@ -530,9 +593,16 @@ sub read_input_data {
                     next;
                 }
                 if ( $line =~ /^END_SPRITE$/ ) {
-                    validate_and_compile_sprite( $cur_sprite );
-                    $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @all_sprites );
-                    push @all_sprites, $cur_sprite;
+                    if ( not $sprite_patching ) {
+                        validate_and_compile_sprite( $cur_sprite );
+                        $sprite_name_to_index{ $cur_sprite->{'name'}} = scalar( @all_sprites );
+                        push @all_sprites, $cur_sprite;
+                    } else {
+                        # A2-4: PATCH_SPRITE — entity already validated and
+                        # compiled at first load; skip re-validation to avoid
+                        # double-compiling pixel_bytes/mask_bytes/sequences.
+                        $sprite_patching = 0;
+                    }
                     $state = 'NONE';
                     next;
                 }
@@ -826,7 +896,13 @@ sub read_input_data {
                     next;
                 }
                 if ( $line =~ /^END_HERO$/ ) {
-                    validate_and_compile_hero( $hero );
+                    if ( not $hero_patching ) {
+                        validate_and_compile_hero( $hero );
+                    } else {
+                        # A2-4: PATCH_HERO — hero already validated/compiled
+                        # at first load; skip re-validation.
+                        $hero_patching = 0;
+                    }
                     $state = 'NONE';
                     next;
                 }
@@ -1237,6 +1313,10 @@ sub read_input_data {
                     next;
                 }
                 if ( $line =~ /^END_GAME_CONFIG$/ ) {
+                    # A2-4: PATCH_GAME_CONFIG — every directive above is
+                    # replace-by-key, so just clear the flag and return to
+                    # NONE state. No push / register step in this section.
+                    $game_config_patching = 0;
                     $state = 'NONE';
                     next;
                 }
