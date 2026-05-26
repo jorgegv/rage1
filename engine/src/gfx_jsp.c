@@ -16,7 +16,7 @@
 
 #include "game_data.h"
 
-#ifdef BUILD_FEATURE_SPRITE_ENGINE_JSP
+#ifdef BUILD_FEATURE_GFX_BACKEND_JSP
 
 // Pool storage.  The recompositing JSP model needs no per-sprite drawing
 // buffers — the pool is simply an array of sprite descriptors.
@@ -58,4 +58,4 @@ void gfx_jsp_move_sprite_clipped( gfx_sprite_t *s, gfx_rect_t *clip,
     jsp_move_sprite_mask2_frame( s, frame, x, y );
 }
 
-#endif // BUILD_FEATURE_SPRITE_ENGINE_JSP
+#endif // BUILD_FEATURE_GFX_BACKEND_JSP

@@ -19,7 +19,7 @@ TAPS			= $(BAS_LOADER_TAP) $(LOADING_SCREEN_TAP) $(ASMLOADER_TAP) $(MAIN_TAP) $(
 -include Makefile.common
 
 # JSP 48K uses a different zpragma (different stack pointer; override after Makefile.common)
-ifeq ($(BUILD_SPRITE_ENGINE),jsp)
+ifeq ($(BUILD_GFX_BACKEND),jsp)
     ZPRAGMA_INC = zpragma-48-jsp.inc
 endif
 

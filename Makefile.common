@@ -30,12 +30,14 @@ TEST_GAMES_DIR		= games
 DEFAULT_TARGET_GAME	= $(TEST_GAMES_DIR)/default
 TARGET_GAME		:= $(if $(target_game),$(target_game),$(DEFAULT_TARGET_GAME))
 
-# sprite engine selection: read from game config .gdata (same pattern as ZX_TARGET)
-# defaults to 'sp1' when not specified
-BUILD_SPRITE_ENGINE	:= $(shell grep -E '^\s*SPRITE_ENGINE\s+\w+' \
+# gfx backend selection: read from game config .gdata (same pattern as ZX_TARGET)
+# Accepts both the new GFX_BACKEND keyword and the legacy SPRITE_ENGINE alias
+# (silent, indefinite — per doc/multiplatform-plan/gfx.md §5.6 / README §5.6).
+# Defaults to 'sp1' when not specified.
+BUILD_GFX_BACKEND	:= $(shell grep -E '^\s*(GFX_BACKEND|SPRITE_ENGINE)\s+\w+' \
 			   $(BUILD_DIR)/game_data/game_config/*.gdata 2>/dev/null | \
 			   grep -vP '^\s*//' | head -1 | awk '{print tolower($$2)}')
-BUILD_SPRITE_ENGINE	:= $(or $(BUILD_SPRITE_ENGINE),sp1)
+BUILD_GFX_BACKEND	:= $(or $(BUILD_GFX_BACKEND),sp1)
 
 # Main sources and objs
 CSRC 			= $(wildcard $(ENGINE_DIR)/src/*.c) $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
@@ -148,7 +150,7 @@ INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
 # JSP sprite engine: add library sources and include path
 # JSP is vendored as a git submodule at external/jsp
 JSP_DIR			= external/jsp
-ifeq ($(BUILD_SPRITE_ENGINE),jsp)
+ifeq ($(BUILD_GFX_BACKEND),jsp)
     CSRC		+= $(wildcard $(JSP_DIR)/lib/*.c)
     ASMSRC		+= $(wildcard $(JSP_DIR)/lib/*.asm)
     INC			+= -I$(JSP_DIR)/include
@@ -330,10 +332,10 @@ mem_bank:
 
 mem-old: mem_main mem_bank
 
-# memory usage report — pick the script specific to this game's sprite
-# engine and target; the scripts themselves contain no detection logic
+# memory usage report — pick the script specific to this game's gfx
+# backend and target; the scripts themselves contain no detection logic
 mem:
-	./tools/mem-summary-$(BUILD_SPRITE_ENGINE)-$(ZX_TARGET).sh
+	./tools/mem-summary-$(BUILD_GFX_BACKEND)-$(ZX_TARGET).sh
 
 # SP1 vs JSP 128K memory comparison — builds games/default (SP1) and
 # games/default_jsp (JSP) and reports the memory-footprint difference

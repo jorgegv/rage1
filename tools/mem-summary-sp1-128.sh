@@ -34,9 +34,9 @@ MAIN_CODE_END=$( map_data $MAIN_MAP | grep -E '^__code_user_tail' | awk '{print 
 STARTUP_START=$( map_data $MAIN_MAP | grep -E '^__Start' | awk '{print $3}' | hex2dec )
 STARTUP_END=$(( MAIN_DATA_START - 1 ))
 
-# SP1 sprite engine — 128K fixed memory layout.
-# Spritelib+target specific: the Makefile 'mem' target selects this script
-# from BUILD_SPRITE_ENGINE and ZX_TARGET. Do NOT add detection logic here.
+# SP1 gfx backend — 128K fixed memory layout.
+# Backend+target specific: the Makefile 'mem' target selects this script
+# from BUILD_GFX_BACKEND and ZX_TARGET. Do NOT add detection logic here.
 SPRITE_DATA_LABEL=sp1data
 SPRITE_START=$( echo D1ED | hex2dec )
 SPRITE_END=$( echo FFFF | hex2dec )

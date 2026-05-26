@@ -185,7 +185,7 @@ sub get_zx_target {
     return '48'; # default
 }
 
-sub get_sprite_engine {
+sub get_gfx_backend {
     open GAME_CONFIG, $game_config_name or
         die "** Error: could not open $game_config_name for reading\n";
     while ( my $line = <GAME_CONFIG> ) {
@@ -194,7 +194,10 @@ sub get_sprite_engine {
         $line =~ s/\/\/.*$//g;
         $line =~ s/\s*$//g;
         next if $line eq '';
-        if ( $line =~ /^SPRITE_ENGINE\s+(\w+)$/i ) {
+        # Accept both the new GFX_BACKEND keyword and the legacy
+        # SPRITE_ENGINE alias (silent, indefinite — per
+        # doc/multiplatform-plan/gfx.md §5.6 / README §5.6).
+        if ( $line =~ /^(?:GFX_BACKEND|SPRITE_ENGINE)\s+(\w+)$/i ) {
             return lc($1);
         }
     }

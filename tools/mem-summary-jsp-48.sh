@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Memory usage report — JSP sprite engine, 48K target.
-# Spritelib+target specific: the Makefile 'mem' target selects this script
-# from BUILD_SPRITE_ENGINE and ZX_TARGET. Do NOT add detection logic here.
+# Memory usage report — JSP gfx backend, 48K target.
+# Backend+target specific: the Makefile 'mem' target selects this script
+# from BUILD_GFX_BACKEND and ZX_TARGET. Do NOT add detection logic here.
 #
 # JSP memory map — RAGE1 uses JSPDATA_SLOT3 (JSP's default): the JSP
 # sprite-engine data tables (rotation table, BTT, BAT, DTT, FTT) sit at the

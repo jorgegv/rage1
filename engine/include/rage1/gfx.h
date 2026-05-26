@@ -53,15 +53,15 @@
 /////////////////////////////////////////////////////////////////////
 
 // Include the backend-specific header
-#ifdef BUILD_FEATURE_SPRITE_ENGINE_SP1
+#ifdef BUILD_FEATURE_GFX_BACKEND_SP1
     #include "rage1/gfx_sp1.h"
 #endif
 
-#ifdef BUILD_FEATURE_SPRITE_ENGINE_ALT
+#ifdef BUILD_FEATURE_GFX_BACKEND_ALT
     #include "rage1/gfx_alt.h"
 #endif
 
-#ifdef BUILD_FEATURE_SPRITE_ENGINE_JSP
+#ifdef BUILD_FEATURE_GFX_BACKEND_JSP
     #include "rage1/gfx_jsp.h"
 #endif
 
