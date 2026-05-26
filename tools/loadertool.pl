@@ -170,6 +170,13 @@ sub get_zx_target {
         $line =~ s/\/\/.*$//g;      # remove comments (//...)
         $line =~ s/\s*$//g;         # remove trailing blanks
         next if $line eq '';                # ignore blank lines
+        # A1 follow-up: accept the new PLATFORM directive (zx48|zx128) and
+        # map it back to the legacy 48|128 internal token. Mirrors the
+        # Makefile.common resolution and datagen.pl's PLATFORM parser.
+        if ( $line =~ /^PLATFORM\s+zx(48|128)$/ ) {
+            return $1;
+        }
+        # ZX_TARGET is a permanent silent alias for PLATFORM (README §5.6).
         if ( $line =~ /^ZX_TARGET\s+(\w+)$/ ) {
             # ARG1=val1 ARG2=va2 ARG3=val3...
             return $1;
