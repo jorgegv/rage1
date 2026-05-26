@@ -35,6 +35,55 @@
 // audio_sfx_tracker_request become no-ops at the backend level.
 typedef uint8_t audio_sfx_tracker_t;
 
-// Inline static-redirect HAL aliases are added by AU2-2.
+////////////////////////////////////////////////////////
+// HAL contract — Music ops (AU2-2 inline aliases)
+////////////////////////////////////////////////////////
+
+// audio_music_select_song(song_id) — pick the active song.
+static inline void audio_music_select_song( uint8_t song_id ) {
+    tracker_select_song( song_id );
+}
+
+// audio_music_start() — start playback of the selected song.
+static inline void audio_music_start( void ) {
+    tracker_start();
+}
+
+// audio_music_stop() — stop playback.
+static inline void audio_music_stop( void ) {
+    tracker_stop();
+}
+
+// audio_music_rewind() — rewind the active song to the start.
+static inline void audio_music_rewind( void ) {
+    tracker_rewind();
+}
+
+// audio_music_tick() — ISR-time per-frame service tick.
+static inline void audio_music_tick( void ) {
+    tracker_do_periodic_tasks();
+}
+
+////////////////////////////////////////////////////////
+// HAL contract — SFX ops (AY tracker channel)
+////////////////////////////////////////////////////////
+
+// audio_sfx_tracker_request(sfx) — queue an AY SFX for the next
+// game-loop chokepoint drain. The legacy entry point takes a
+// uint16_t for ABI reasons; the HAL type is uint8_t, so we widen
+// at the call boundary.
+static inline void audio_sfx_tracker_request( audio_sfx_tracker_t sfx ) {
+    tracker_request_fx( (uint16_t)sfx );
+}
+
+// audio_sfx_tracker_play(sfx) — play an AY SFX immediately.
+static inline void audio_sfx_tracker_play( audio_sfx_tracker_t sfx ) {
+    tracker_play_fx( sfx );
+}
+
+// audio_sfx_tracker_play_pending() — drain queued AY SFX requests.
+static inline void audio_sfx_tracker_play_pending( void ) {
+    tracker_play_pending_fx();
+}
 
 #endif // _AUDIO_ZX_AY_H
