@@ -28,17 +28,17 @@ under it is ticked complete.
   - [x] B1 — banking-config externalisation into `etc/rage1-config.yml` (ZX byte-identical)
   - [x] G1 — `gfx_*` audit completion & baseline pin
 
-- [ ] **Phase 2 — HAL & asset-pipeline scaffolding (ZX-only, additive)**
-  - [ ] G2 — `SPRITE_ENGINE` → `GFX_BACKEND` mechanical rename
-  - [ ] A1 — introduce `PLATFORM` directive (`zx48`, `zx128` only)
+- [x] **Phase 2 — HAL & asset-pipeline scaffolding (ZX-only, additive)**
+  - [x] G2 — `SPRITE_ENGINE` → `GFX_BACKEND` mechanical rename
+  - [x] A1 — introduce `PLATFORM` directive (`zx48`, `zx128` only)
   - [x] A2 — sibling-tree overlay copy in `make config` (mechanism only; no overlay files yet)
-  - [ ] T1 — `PLATFORM` axis throughout the Makefile family; ZX-only
-  - [ ] B2 — per-platform ISR / codeset YAML split
-  - [ ] IN1 — input audit
-  - [ ] IN2 — input HAL skeleton (alias-only, ZX-only)
-  - [ ] AU1 — audio audit
-  - [ ] AU2 — audio HAL aliases
-  - [ ] R1 — cpctelera submodule add (vendored but not yet compiled)
+  - [x] T1 — `PLATFORM` axis throughout the Makefile family; ZX-only
+  - [x] B2 — per-platform ISR / codeset YAML split
+  - [x] IN1 — input audit
+  - [x] IN2 — input HAL skeleton (alias-only, ZX-only)
+  - [x] AU1 — audio audit
+  - [x] AU2 — audio HAL aliases
+  - [x] R1 — cpctelera submodule add (vendored but not yet compiled)
 
 - [ ] **Phase 3 — HAL generalisation (ZX byte-identical)**
   - [ ] G3 — attribute abstraction
