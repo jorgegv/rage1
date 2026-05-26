@@ -10,9 +10,9 @@
 
 #include <arch/spectrum.h>
 #include <intrinsic.h>
-#include <input.h>
 #include <stdlib.h>
 
+#include "rage1/input.h"
 #include "rage1/gfx.h"
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"

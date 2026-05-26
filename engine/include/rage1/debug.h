@@ -12,9 +12,9 @@
 #define _DEBUG_H
 
 #include <stdint.h>
-#include <input.h>
 
 #include "rage1/gfx.h"
+#include "rage1/input.h"
 
 #ifdef BUILD_FEATURE_SCREEN_AREA_DEBUG_AREA
 void debug_out( char * );

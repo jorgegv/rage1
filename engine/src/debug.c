@@ -9,8 +9,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <arch/spectrum.h>
-#include <input.h>
 
+#include "rage1/input.h"
 #include "rage1/debug.h"
 
 #include "game_data.h"

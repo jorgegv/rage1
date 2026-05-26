@@ -8,7 +8,7 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <input.h>
+#include "rage1/input.h"
 
 #include "rage1/controller.h"
 #include "rage1/game_state.h"

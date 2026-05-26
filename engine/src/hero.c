@@ -10,7 +10,7 @@
 
 // hero.c
 
-#include <input.h>
+#include "rage1/input.h"
 #include <arch/spectrum.h>
 
 #include "rage1/hero.h"

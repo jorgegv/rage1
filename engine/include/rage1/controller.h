@@ -11,10 +11,10 @@
 #ifndef _CONTROLLER_H
 #define _CONTROLLER_H
 
-#include <input.h>
 #include <stdint.h>
 
 #include "features.h"
+#include "rage1/input.h"
 
 struct controller_info_s {
     // controller type, see below
