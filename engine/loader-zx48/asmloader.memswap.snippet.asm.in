@@ -1,0 +1,13 @@
+;; Swap memory blocks
+;;   BC = size
+;;   DE = dst
+;;   HL = src
+memswap:
+memswap_loop:
+    ld a,(de)
+    ldi
+    dec hl
+    ld (hl),a
+    inc hl
+    jp PE,memswap_loop
+    ret

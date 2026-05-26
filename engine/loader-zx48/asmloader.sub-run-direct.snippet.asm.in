@@ -1,0 +1,2 @@
+    di
+    call @@SUB_RUN_ADDR@@

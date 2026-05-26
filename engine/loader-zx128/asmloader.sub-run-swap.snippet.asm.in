@@ -1,0 +1,4 @@
+    ld hl,@@SUB_LOAD_ADDR@@	;; swap from @@SUB_LOAD_ADDR@@ to @@SUB_ORG_ADDR@@
+    ld de,@@SUB_ORG_ADDR@@
+    ld bc,@@SUB_SIZE@@
+    call memswap

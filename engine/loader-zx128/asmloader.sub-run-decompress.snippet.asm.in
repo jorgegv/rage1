@@ -1,0 +1,6 @@
+    ld hl,@@SUB_LOAD_ADDR@@	;; decompress from @@SUB_LOAD_ADDR@@ to @@SUB_ORG_ADDR@@
+    ld de,@@SUB_ORG_ADDR@@
+    call dzx0_standard
+
+    di
+    call @@SUB_RUN_ADDR@@	;; run SUB
