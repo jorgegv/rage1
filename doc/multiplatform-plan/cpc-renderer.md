@@ -723,6 +723,45 @@ records the licence/attribution work that T0 does not own.
 > upstream-mergeable; the prebuild overhead is acceptable. Confirm at
 > R1 kick-off. Cross-link: `toolchain.md` Phase T0 outcomes.
 
+> **R1 decision (recorded 2026-05-26)**: confirmed **Option (a)**.
+> cpctelera will be prebuilt into a `.lib` via its own bundled
+> SDCC + `sdasz80` toolchain in a new Phase R1-5 (added below). The
+> `cpctelera-build-lib` Make target will land in Phase R1-5; the lib
+> path will be `external/cpctelera/build/cpctelera.lib` (or similar —
+> the exact name/path is confirmed by the R1-5 implementation, which
+> reads cpctelera's own Makefile to find the canonical output). R1-5
+> itself is **not implemented in R1**; it is a Phase R2 / R3
+> prerequisite and is scheduled to land before R2's hello-world PoC
+> can link.
+
+- **R1-5** Implement the cpctelera prebuild Make target.
+  - *What to change*: a new top-level Make target,
+    `cpctelera-lib` (alias `make cpctelera-lib`), which:
+    1. Invokes cpctelera's own Makefile under
+       `external/cpctelera/` using cpctelera's bundled SDCC 3.6.8
+       (and `sdasz80`) to assemble the `.s` / `.asm` sources that
+       z88dk's `z80asm` cannot consume directly.
+    2. Produces a single static-link archive (`.lib`) at a stable
+       in-tree path under `external/cpctelera/build/` (exact
+       filename to be confirmed by reading the upstream Makefile —
+       likely `cpctelera.lib`).
+    3. Is wired into RAGE1's top-level `Makefile` as a build
+       prerequisite for any CPC target (`build-cpc*` / future
+       `all-test-builds-cpc`).
+  - *What to test*: `make cpctelera-lib` succeeds on a clean
+    submodule checkout and produces the expected `.lib` artefact;
+    a subsequent `make build-minimal target=games/minimal_cpc`
+    (once that game exists in Phase R3+) links against the lib
+    without unresolved-symbol errors.
+  - *Expected outcome*: cpctelera's asm-heavy primitives become
+    available to z88dk-driven RAGE1 CPC builds without any source
+    changes to cpctelera itself, preserving upstream-mergeability
+    (per the Option (a) decision above).
+  - *Dependencies*: this is a **Phase R2 / R3 prerequisite**.
+    R1-5 is recorded here as a placeholder owned by R1 (the
+    decision phase); the implementation work itself is scheduled
+    immediately after R1 closes and before R2 kicks off.
+
 ### Phase R2 — Hello-world PoC: cpctelera + z88dk `+cpc`
 
 This phase deliberately bypasses RAGE1 entirely. The point is to
