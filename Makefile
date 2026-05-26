@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes
 
 help:
 	echo "============================================================"
@@ -155,6 +155,7 @@ test-build-%:
 all-test-builds:
 	echo -n "START: "
 	date
+	$(MYMAKE) check-input-includes
 	for i in $(ALL_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds.log
 	echo -n "END: "
 	date
@@ -165,6 +166,19 @@ all-test-builds:
 		echo "All tests succeeded"; \
 		exit 0; \
 	fi
+
+###############################################
+##
+## STATIC CHECKS (Phase IN1-3 onwards)
+##
+###############################################
+
+# Phase IN1-3: guard that no NEW file under engine/banked_code/ pulls
+# z88dk's <input.h> directly. Allowed exceptions are frozen in
+# tools/check-input-include-guard.sh and documented in
+# doc/multiplatform-plan/input-baseline-coverage.md §IN1-3.
+check-input-includes:
+	bash tools/check-input-include-guard.sh
 
 ###############################################
 ##
