@@ -31,7 +31,7 @@ under it is ticked complete.
 - [ ] **Phase 2 — HAL & asset-pipeline scaffolding (ZX-only, additive)**
   - [ ] G2 — `SPRITE_ENGINE` → `GFX_BACKEND` mechanical rename
   - [ ] A1 — introduce `PLATFORM` directive (`zx48`, `zx128` only)
-  - [ ] A2 — sibling-tree overlay copy in `make config` (mechanism only; no overlay files yet)
+  - [x] A2 — sibling-tree overlay copy in `make config` (mechanism only; no overlay files yet)
   - [ ] T1 — `PLATFORM` axis throughout the Makefile family; ZX-only
   - [ ] B2 — per-platform ISR / codeset YAML split
   - [ ] IN1 — input audit

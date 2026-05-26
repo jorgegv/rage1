@@ -452,6 +452,67 @@ which requires a `NAME=<some_name>` parameter.  Besides this, the elements
 that can be included in the patching section are the same ones as indicated
 above for a regular `BEGIN_SCREEN` section.
 
+### Generalised PATCH directives (cross-platform overlays)
+
+In addition to `PATCH_SCREEN`, the parser supports the following
+generalised `PATCH_*` directives for the other top-level sections
+(introduced in Phase A2 of the multiplatform refactor — see
+`doc/multiplatform-plan/README.md` §5.11 for the design rationale):
+
+- `PATCH_GAME_CONFIG` — enters `GAME_CONFIG` state on the already-loaded
+  `$game_config`; every directive is replace-by-key. Use it to surgically
+  override individual `GAME_CONFIG` fields (e.g. a per-platform overlay
+  that adds a `BEGIN_CPC_COLOR_MAP` block without restating the rest
+  of the shared config).
+- `PATCH_BTILE  NAME=<name>` — enters `BTILE` state on the named BTile
+  (must already be loaded). Frame-list directives append; scalar
+  directives replace by key.
+- `PATCH_SPRITE NAME=<name>` — same shape for sprites.
+- `PATCH_HERO   NAME=<name>` — same shape for the loaded hero.
+
+All four die with a clear "name not found" (or "not loaded yet") error
+if the referenced entity hasn't been loaded yet. Load order is the
+existing `Makefile.common` contract: regular files first, then every
+file under `game_data/patches/<section>/`.
+
+The `Makefile.common` `GDATA_PATCHES` glob covers:
+
+```
+game_data/patches/map/*.gdata
+game_data/patches/flow/*.gdata
+game_data/patches/game_config/*.gdata
+game_data/patches/btiles/*.gdata
+game_data/patches/sprites/*.gdata
+game_data/patches/heroes/*.gdata
+```
+
+These patch directories are also picked up under per-platform overlay
+subtrees (e.g. `cpc6128/game_data/patches/game_config/*.gdata`) thanks
+to the sibling-tree overlay copy in `make config` (see
+`doc/multiplatform-plan/assets.md` Phase A2-1).
+
+Worked example — a per-platform overlay that adds a CPC colour map
+without restating the shared `GAME_CONFIG`:
+
+```
+// games/<game>/cpc6128/game_data/patches/game_config/cpc_palette.gdata
+PATCH_GAME_CONFIG
+	BEGIN_CPC_COLOR_MAP
+		BLACK	FW=0
+		WHITE	FW=26
+		RED	FW=6
+	END_CPC_COLOR_MAP
+END_GAME_CONFIG
+```
+
+The shared `game_data/game_config/Game.gdata` keeps all the other
+`GAME_CONFIG` fields verbatim; only the CPC build sees the colour map.
+
+There is no `PATCH_RULE` and no removal syntax in Phase 1: flow rules
+already append via their normal `BEGIN_RULE` blocks, and removal of
+list elements is deferred (matches `PATCH_SCREEN`'s existing
+constraint).
+
 ### HERO data
 
 * This element contains the definitions for the game hero.
@@ -580,6 +641,17 @@ END_GAME_CONFIG
   the preferred multiplatform directive (added in the cross-platform
   refactor); accepted values will be extended in later phases (Phase A5
   introduces CPC values).
+
+  **Per-platform sibling overlay tree** (added in Phase A2 — see
+  `doc/multiplatform-plan/assets.md`): a game can ship an optional
+  `<game>/<platform>/game_data/` and `<game>/<platform>/game_src/`
+  subtree alongside the shared `game_data/` and `game_src/`. During
+  `make config`, after copying the shared trees into `build/`, the
+  per-platform overlay is copied on top (later `cp -r` wins, so shared
+  files at the same relative path get shadowed). Combine with the
+  generalised `PATCH_*` directives (see the "Generalised PATCH
+  directives" section below) for surgical-merge semantics — the
+  overlay restates only what changes.
 
 * `ZX_TARGET`: **permanent silent alias** for `PLATFORM` — accepts `48` or
   `128` and maps internally to `PLATFORM zx48` / `PLATFORM zx128`. Kept
