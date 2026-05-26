@@ -18,6 +18,7 @@
 #include "rage1/types.h"
 #include "rage1/sprite.h"
 #include "rage1/controller.h"
+#include "rage1/input.h"
 
 // animation data for the hero sprite
 // there are 4 animation sequences, for up, down, left and right movements
@@ -40,10 +41,10 @@ struct hero_animation_data_s {
 
 // movement data for the hero sprite
 #define MOVE_NONE	0
-#define MOVE_UP		IN_STICK_UP
-#define MOVE_DOWN	IN_STICK_DOWN
-#define MOVE_LEFT	IN_STICK_LEFT
-#define MOVE_RIGHT	IN_STICK_RIGHT
+#define MOVE_UP		INPUT_STATE_UP
+#define MOVE_DOWN	INPUT_STATE_DOWN
+#define MOVE_LEFT	INPUT_STATE_LEFT
+#define MOVE_RIGHT	INPUT_STATE_RIGHT
 #define MOVE_ALL	( MOVE_UP | MOVE_DOWN | MOVE_LEFT | MOVE_RIGHT )
 
 struct hero_movement_data_s {
