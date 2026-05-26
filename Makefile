@@ -54,6 +54,18 @@ config:
 		$(GENERATED_DIR_SUBS)/
 	cp -r $(TARGET_GAME)/game_data/* $(GAME_DATA_DIR)/
 	cp -r $(TARGET_GAME)/game_src/* $(GAME_SRC_DIR)/
+	# A2-1: per-platform sibling overlay copy. After the shared trees
+	# above land in build/, overlay any files from the per-platform
+	# sibling subtree at $(TARGET_GAME)/$(PLATFORM)/{game_data,game_src}/
+	# on top. Later `cp -r` wins by default, so shared files at the same
+	# relative path get shadowed. No-op when the overlay directory is
+	# absent (any game that has not opted into multi-platform yet).
+	if [ -n "$(PLATFORM)" ] && [ -d "$(TARGET_GAME)/$(PLATFORM)/game_data" ]; then \
+		cp -r $(TARGET_GAME)/$(PLATFORM)/game_data/* $(GAME_DATA_DIR)/ ; \
+	fi
+	if [ -n "$(PLATFORM)" ] && [ -d "$(TARGET_GAME)/$(PLATFORM)/game_src" ]; then \
+		cp -r $(TARGET_GAME)/$(PLATFORM)/game_src/* $(GAME_SRC_DIR)/ ; \
+	fi
 	$(MYMAKE) show	# shows game name and build configuration
 
 # A1-4: resolve target platform from the game's .gdata.
@@ -66,25 +78,50 @@ config:
 _RESOLVED_ZX_TARGET	= $(shell ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM) 2>/dev/null)
 _DETECT_PLATFORM_RC	= $(shell ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM) >/dev/null 2>&1; echo $$?)
 
+# A2-1: full platform name (zx48/zx128/cpc6128/...) used to locate the
+# per-platform overlay subtree under $(TARGET_GAME)/<platform>/. Mirrors
+# the resolution logic in tools/detect-platform.sh but emits the canonical
+# platform token instead of the internal ZX_TARGET (48/128). Honours the
+# CLI override $(PLATFORM) first, then the game's declared default.
+_RESOLVED_PLATFORM	= $(shell \
+				if [ -n "$(PLATFORM)" ]; then \
+					echo "$(PLATFORM)" | tr '[:upper:]' '[:lower:]' ; \
+				else \
+					grep -hE '^\s*PLATFORM\s+\w+\s*$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null \
+						| grep -vP '^\s*//' \
+						| head -1 \
+						| awk '{print tolower($$2)}' \
+						| { read p; \
+						    if [ -n "$$p" ]; then echo "$$p"; \
+						    else \
+						        z=$$(grep -hE '^\s*ZX_TARGET\s+(48|128)\s*$$' $(TARGET_GAME)/game_data/game_config/*.gdata 2>/dev/null \
+						                | grep -vP '^\s*//' | head -1 | awk '{print $$2}') ; \
+						        if [ "$$z" = "48" ]; then echo zx48 ; \
+						        elif [ "$$z" = "128" ]; then echo zx128 ; \
+						        fi ; \
+						    fi ; \
+						  } ; \
+				fi)
+
 # build: starts a build of the target game in the mode specified in the game config
 build:
 	if [ "$(_DETECT_PLATFORM_RC)" != "0" ]; then ./tools/detect-platform.sh $(TARGET_GAME) $(PLATFORM); exit 1; fi
 	$(MYMAKE) clean
-	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) config
+	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) PLATFORM=$(_RESOLVED_PLATFORM) config
 	$(MYMAKE) ZX_TARGET=$(_RESOLVED_ZX_TARGET) data
 	$(MYMAKE) -f Makefile-$(_RESOLVED_ZX_TARGET) build
 
 # forced config build for 48 mode
 build48:
 	$(MYMAKE) clean
-	$(MYMAKE) ZX_TARGET=48 config
+	$(MYMAKE) ZX_TARGET=48 PLATFORM=zx48 config
 	$(MYMAKE) ZX_TARGET=48 data
 	$(MYMAKE) -f Makefile-48 build
 
 # forced config build for 128 mode
 build128:
 	$(MYMAKE) clean
-	$(MYMAKE) ZX_TARGET=128 config
+	$(MYMAKE) ZX_TARGET=128 PLATFORM=zx128 config
 	$(MYMAKE) ZX_TARGET=128 data
 	$(MYMAKE) -f Makefile-128 build
 
@@ -116,7 +153,7 @@ build-mapgen:
 		--generate-check-map \
 		game_data/png/test-tiles.png \
 		game_data/png/demo-map-3x2-screens-24x16.png
-	$(MYMAKE) ZX_TARGET=48 config target_game=$(TEST_GAMES_DIR)/mapgen
+	$(MYMAKE) ZX_TARGET=48 PLATFORM=zx48 config target_game=$(TEST_GAMES_DIR)/mapgen
 	$(MYMAKE) ZX_TARGET=48 data
 	$(MYMAKE) -f Makefile-48 build
 
