@@ -734,33 +734,122 @@ records the licence/attribution work that T0 does not own.
 > prerequisite and is scheduled to land before R2's hello-world PoC
 > can link.
 
-- **R1-5** Implement the cpctelera prebuild Make target.
-  - *What to change*: a new top-level Make target,
-    `cpctelera-lib` (alias `make cpctelera-lib`), which:
-    1. Invokes cpctelera's own Makefile under
-       `external/cpctelera/` using cpctelera's bundled SDCC 3.6.8
-       (and `sdasz80`) to assemble the `.s` / `.asm` sources that
-       z88dk's `z80asm` cannot consume directly.
-    2. Produces a single static-link archive (`.lib`) at a stable
-       in-tree path under `external/cpctelera/build/` (exact
-       filename to be confirmed by reading the upstream Makefile —
-       likely `cpctelera.lib`).
-    3. Is wired into RAGE1's top-level `Makefile` as a build
-       prerequisite for any CPC target (`build-cpc*` / future
-       `all-test-builds-cpc`).
-  - *What to test*: `make cpctelera-lib` succeeds on a clean
-    submodule checkout and produces the expected `.lib` artefact;
-    a subsequent `make build-minimal target=games/minimal_cpc`
-    (once that game exists in Phase R3+) links against the lib
-    without unresolved-symbol errors.
-  - *Expected outcome*: cpctelera's asm-heavy primitives become
-    available to z88dk-driven RAGE1 CPC builds without any source
-    changes to cpctelera itself, preserving upstream-mergeability
-    (per the Option (a) decision above).
-  - *Dependencies*: this is a **Phase R2 / R3 prerequisite**.
-    R1-5 is recorded here as a placeholder owned by R1 (the
-    decision phase); the implementation work itself is scheduled
-    immediately after R1 closes and before R2 kicks off.
+> **R1 decision UPDATED (2026-05-30) — supersedes the 2026-05-26 entry above**:
+> Two new findings reframe the choice:
+>
+> 1. **z88dk patches SDCC to emit z80asm syntax (not sdas).** There is no
+>    hidden path inside z88dk that consumes sdas; cpctelera's `.s`/`.asm`
+>    files genuinely have to be transformed *outside* both cpctelera and
+>    z88dk before they reach z88dk's `z80asm`.
+> 2. **cpctelera's prebuilt `.lib` is almost certainly NOT z88dk-link-
+>    compatible.** sdld emits SDCC-format relocatable object files (`.rel`)
+>    archived as a thin `.lib`; z88dk-z80asm produces its own object format
+>    and consumes its own `.lib`. The two are unlikely to be binary-compatible
+>    and no format converter is known to exist. Option (a) therefore collapses
+>    to "build cpctelera, throw away the `.lib`, and you still need translated
+>    source for z88dk to consume" — strictly dominated by Option (b).
+>
+> **Decision (2026-05-30)**: adopt **Option (b) with LLM-assisted manual
+> translation**. Concretely:
+>
+> - Identify the small, bounded set of cpctelera primitives RAGE1 needs for
+>   `gfx_cpctel.c` (Phase R4 surface): mode 1 init, sprite blit / erase,
+>   BTile blit, palette / pen setup, border, keyboard scan, plus the AT2
+>   AKG player path already proven by the `misc/au-spike/` dual-target build.
+>   Shortlist target: 8–15 files.
+> - For each shortlisted file, translate the sdas-flavoured `.s`/`.asm`
+>   source into z88dk-`z80asm` syntax. Translations are one-shot, committed
+>   under `engine/src/cpc/` (alongside a thin C header wrapper under
+>   `engine/include/rage1/`), and never re-translated at build time. cpctelera
+>   upstream stays pinned in `external/cpctelera/` as the canonical
+>   reference; we lift primitives from there file-by-file as the engine
+>   needs them.
+> - Heavy macros (loop unrolling, scanline math, hardware-pen patterns):
+>   prefer to translate the macro definition into a `z80asm` macro when the
+>   semantics map cleanly; pre-expand at translate time when they don't.
+>   Per-file judgement.
+> - Naming convention: SDCC and z88dk both use `_`-prefixed externals for
+>   C linkage, so the boundary should align without rewriting symbol names.
+>   Verify on the first translated file.
+> - No general translator is built. If patterns are highly repetitive across
+>   files, a small Perl helper (one-off, hand-curated output) is acceptable;
+>   a fully general sdas→z80asm translator is explicitly NOT in scope —
+>   maintenance cost is dominated by the macro / conditional-assembly
+>   surface.
+>
+> **Why Option (a) is dropped**: see finding 2 above. The prebuilt `.lib`
+> would land in a format z88dk's linker cannot consume; the cpctelera
+> build still has to be re-driven through z88dk's z80asm somehow, which
+> brings us back to translation.
+>
+> **Why a general translator is not pursued**: SDAS (ASxxxx family) and
+> z88dk-z80asm differ on directives, number prefixes (`#0xNN` vs `0xNN`),
+> conditional-assembly syntax, macro parameter binding, local-label scope,
+> and section/linker attribute semantics. A robust general translator is a
+> small compiler (~1–2 KLOC Perl) and would silently break on every cpctelera
+> upstream syntax addition. The per-file LLM-translated approach absorbs
+> the same complexity once, at translation time, with the human in the loop
+> per file.
+>
+> **Process gate**: translate one POC file first (smallest non-trivial
+> primitive, e.g. `cpct_setVideoMode.asm` or `cpct_setBorder.asm`). If POC
+> assembles + links + executes correctly under Caprice32, lock in this
+> approach for the rest of the shortlist. If POC blows up on macros or
+> conditional assembly, reconsider — possibly pre-expand the offending
+> constructs, or hand-rewrite that specific primitive from cpctelera's
+> documentation rather than its source.
+>
+> R1-5 below is rewritten to reflect this decision. Cross-link:
+> `toolchain.md` Phase T0 outcomes (z88dk-patches-SDCC clarification
+> added 2026-05-30); `README.md` §6 risks index.
+
+- **R1-5** Translate the shortlisted cpctelera primitives into z88dk-`z80asm`
+  syntax, file-by-file, and commit under `engine/src/cpc/`.
+  - *What to change*:
+    1. Produce a shortlist of cpctelera `.s`/`.asm` files RAGE1 needs for
+       `gfx_cpctel.c` (Phase R4 surface). Source the list from the
+       `gfx_cpctel.h` HAL contract draft; cross-check against
+       `cpct_img2tileset` output expectations. Document the shortlist
+       in `engine/src/cpc/README.md` (created as part of R1-5) with the
+       upstream commit SHA each translation was derived from.
+    2. Translate one POC file first (smallest non-trivial primitive,
+       e.g. `cpct_setVideoMode.asm` or `cpct_setBorder.asm`) into z88dk-
+       `z80asm` syntax. Commit under `engine/src/cpc/`. Wrap with a thin
+       C header in `engine/include/rage1/`. Verify it assembles via
+       z88dk's `z80asm`, links cleanly, and runs correctly under
+       Caprice32 (TS2 emulator surface, Phase R2 hello-world).
+    3. If POC succeeds, fan out the same translate-commit-verify cycle to
+       the remaining shortlisted files. Per-file: read upstream `.s`/
+       `.asm`, translate sdas dialect (directives, number prefixes,
+       conditionals, macros, section / linker attributes) into z80asm
+       syntax, commit with a brief commit message noting upstream SHA
+       and translator (LLM-assisted, file-by-file, one-shot).
+    4. Wire the translated files into the existing engine build path —
+       they participate in `make build-cpc*` exactly like any other
+       engine-side `.asm` source. No `make cpctelera-lib` target; no
+       prebuild step; cpctelera's own build system is never invoked.
+  - *What to test*: each translated file assembles cleanly under
+    z88dk's `z80asm`. The first POC file additionally links and runs
+    under Caprice32 (gate for the rest of the shortlist). For each
+    primitive that has an obvious behavioural test (e.g. mode set
+    changes screen layout; palette set changes colours), add a small
+    smoke verification in `engine/src/cpc/test/` or fold into Phase R2
+    test scaffolding.
+  - *Expected outcome*: the cpctelera primitives RAGE1 actually uses are
+    available to z88dk-driven CPC builds as native z80asm-format objects.
+    cpctelera stays pinned in `external/cpctelera/` as the canonical
+    reference but is never compiled by RAGE1's build.
+  - *Dependencies*: this is a **Phase R2 / R3 prerequisite**. R1-5 is
+    recorded here as a placeholder owned by R1 (the decision phase);
+    the per-file translation work itself is scheduled across R2 (POC
+    file) and R3–R4 (rest of the shortlist), folded into the CPC
+    bring-up workflow.
+  - *Risk*: cpctelera's macros may be denser than expected — the per-file
+    judgement of "translate macro vs pre-expand" can grow into a
+    bottleneck on complex files (sprite blit, scroll). If a specific
+    file resists clean translation, fall back to hand-writing the
+    equivalent z80asm from cpctelera's API documentation. Recorded in
+    the cross-doc Risks index.
 
 ### Phase R2 — Hello-world PoC: cpctelera + z88dk `+cpc`
 

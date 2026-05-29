@@ -763,6 +763,25 @@ re-porting the primitives RAGE1 uses into z80asm syntax under
 `engine/src/cpc/`. See `cpc-renderer.md` Phase R1 amendment for the
 resolution gate.
 
+*Finding 2 follow-up (2026-05-30) — z88dk patches SDCC to use
+z80asm*: clarifying the SDCC-integration model. z88dk does NOT carry a
+bundled `sdasz80` and does NOT consume sdas-syntax assembly; it patches
+SDCC so that SDCC's `.s` output is emitted in z80asm syntax and linked
+by z88dk's own linker. There is therefore no "z88dk knows how to
+assemble sdas" path that cpctelera's source could ride on. Coupled with
+the further observation that **cpctelera's `.lib` (sdld output, SDCC-
+format relocatable archive) is almost certainly NOT z88dk-link-format
+compatible**, Option (a) above collapses: building cpctelera with its
+own toolchain would produce a `.lib` z88dk's linker cannot consume, so
+the integration would still need translated z80asm source as the unit
+of link. `cpc-renderer.md` Phase R1 is updated 2026-05-30 to adopt
+**Option (b) with LLM-assisted manual translation**, file-by-file,
+committed under `engine/src/cpc/`. No general translator is built; no
+`make cpctelera-lib` target is added; cpctelera stays pinned in
+`external/cpctelera/` as the canonical reference only. See
+`cpc-renderer.md` Phase R1 / R1-5 for the per-file translation
+workflow.
+
 ### Phase T1 — Introduce `PLATFORM` axis without touching CPC
 
 Rename and re-factor the build matrix so adding a CPC Makefile in Phase

@@ -729,6 +729,17 @@ holding in mind:
   but surfaced two adjacent issues (no `sdcc_iy` on `+cpc`,
   asm-dialect incompatibility) — see toolchain.md §2.1 + Phase T0
   outcomes and cpc-renderer.md R1 amendment.
+  *Updated 2026-05-30*: Phase R1 decision flipped from Option (a)
+  prebuilt `.lib` to Option (b) LLM-assisted file-by-file translation.
+  Two findings drove the flip: (1) z88dk patches SDCC to emit z80asm
+  syntax (not sdas), so there is no z88dk path for sdas source;
+  (2) cpctelera's sdld-produced `.lib` is almost certainly not
+  z88dk-link-format compatible, so Option (a) would still require
+  translated source to link. CPCRSlib remains the documented fall-back
+  if per-file translation hits a wall on a specific primitive. See
+  cpc-renderer.md Phase R1 / R1-5 for the rewritten workflow and
+  toolchain.md Phase T0 outcomes Finding 2 follow-up for the
+  z88dk-patches-SDCC clarification.
 - **Cross-doc — cpctelera upstream dormancy.** Both `master` and
   `development` branches are largely dormant (last meaningful
   commits May 2026 and Nov 2025 respectively). The pin policy
