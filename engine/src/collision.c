@@ -74,10 +74,10 @@ void collision_check_bullets_with_sprites( void ) {
                         // set bullet inactive and move away
                         RESET_BULLET_FLAG( game_state.bullet.bullets[ bi ], F_BULLET_ACTIVE );
                         game_state.bullet.active_bullets--;
-                        sprite_move_offscreen( game_state.bullet.bullets[ bi ].sprite );
+                        gfx_sprite_park( game_state.bullet.bullets[ bi ].sprite );
                         // set sprite inactive and move away
                         RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ s->state_index ].asset_state, F_ENEMY_ACTIVE );
-                        sprite_move_offscreen( s->sprite );
+                        gfx_sprite_park( s->sprite );
                         // TO DO: increment score, etc.
                         if ( ! --game_state.enemies_alive )
                             SET_GAME_FLAG( F_GAME_ALL_ENEMIES_KILLED );

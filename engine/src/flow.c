@@ -498,7 +498,7 @@ void do_rule_action_enable_enemy( struct flow_rule_action_s *action ) __z88dk_fa
 void do_rule_action_disable_enemy( struct flow_rule_action_s *action ) __z88dk_fastcall {
     struct enemy_info_s *e = &game_state.current_screen_ptr->enemy_data.enemies[ action->data.enemy.num_enemy ];
     RESET_ENEMY_FLAG( game_state.current_screen_asset_state_table_ptr[ e->state_index ].asset_state, F_ENEMY_ACTIVE );
-    sprite_move_offscreen( e->sprite );
+    gfx_sprite_park( e->sprite );
 }
 #endif
 

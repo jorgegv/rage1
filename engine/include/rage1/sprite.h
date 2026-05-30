@@ -39,8 +39,10 @@ struct  sprite_graphic_data_s {
 // utility functions and data structs
 //////////////////////////////////////////////////////////////////////////
 
-// move sprite off screen
-void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall;
+// move sprite off screen — legacy public name; permanent backwards-compat alias
+// for gfx_sprite_park() (Phase G5 — gfx.md §G5-4).  Pure macro alias: it adds no
+// second out-of-line body, so the only park function emitted is gfx_sprite_park().
+#define sprite_move_offscreen(s)	gfx_sprite_park((s))
 
 // free a sprite
 void sprite_free( gfx_sprite_t *s ) __z88dk_fastcall;

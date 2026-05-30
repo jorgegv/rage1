@@ -30,12 +30,29 @@ typedef uint8_t          gfx_attr_t;
 typedef uint8_t          gfx_xpos_t;
 typedef uint8_t          gfx_ypos_t;
 
+// Tile / glyph identifier (Phase G6 — gfx.md §G6-1).
+// On SP1 a tile id is the polysemic uint16_t passed to sp1_PrintAtInv(): values
+// < 256 are UDG character codes, values >= 256 are 16-bit tile addresses.  Engine
+// code must use this typedef for the tile argument of gfx_tile_put() so the same
+// source compiles on the CPC backend (Phase G7), where the id is a backend-internal
+// tile-cache index instead.
+typedef uint16_t         gfx_tile_id_t;
+
 //--- Constants ---
 #define GFX_CLEAR_TILE         SP1_RFLAG_TILE
 #define GFX_CLEAR_COLOUR       SP1_RFLAG_COLOUR
 #define GFX_PSS_INVALIDATE     SP1_PSSFLAG_INVALIDATE
 #define GFX_PRINT_CTX_INIT(area, attr) \
     { &(area), GFX_PSS_INVALIDATE, 0, 0, 0, (attr), 0, 0 }
+
+// Screen geometry in cells (Phase G5 — gfx.md §G5-1).
+// SP1 renders the standard ZX Spectrum 32x24 character grid.  The CPC backend
+// (Phase G7) will redefine these (mode-1: 40x25), and ZX Next Layer-2 likewise.
+// Engine code must use these constants at every site that holds a screen-grid
+// dimension so the same source compiles unchanged on backends with a different
+// character-cell geometry.
+#define GFX_SCREEN_COLS        32
+#define GFX_SCREEN_ROWS        24
 
 //--- Attribute layer (ZX-only — inert on CPC, see gfx.md §2.1) ---
 // ZX colour indices 0..7 (match arch/spectrum.h INK_*/PAPER_* numeric values)
@@ -71,6 +88,14 @@ typedef uint8_t          gfx_ypos_t;
 //--- Sprite movement ---
 #define gfx_sprite_move_pixel(s,clip,fr,x,y)   sp1_MoveSprPix((s),(clip),(fr),(x),(y))
 #define gfx_sprite_move_cell(s,clip,fr,r,c)    sp1_MoveSprAbs((s),(clip),(fr),(r),(c),0,0)
+
+// Park a sprite off-screen (Phase G5 — gfx.md §G5-4).  The parking row is a
+// backend-internal detail: SP1 parks at row 24 (one row below the visible 24-row
+// grid), column 0.  Engine code never references the parking row directly; it
+// calls gfx_sprite_park() — a single out-of-line __z88dk_fastcall function whose
+// body lives in sprite.c — so each backend can choose its own off-screen slot.
+#define GFX_PARK_ROW                           24
+#define GFX_PARK_COL                           0
 
 //--- Sprite query ---
 #define gfx_sprite_get_row(s)                  ((s)->row)
