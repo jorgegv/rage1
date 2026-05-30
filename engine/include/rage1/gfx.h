@@ -50,7 +50,6 @@
 //     gfx_sprite_get_col(s)
 //     gfx_sprite_get_width(s)
 //     gfx_sprite_get_height(s)
-//     gfx_sprite_park(s)     - move sprite to the backend's off-screen parking slot
 //     gfx_tile_put(row, col, attr, tile)      - tile is a gfx_tile_id_t
 //     gfx_tile_register(index, graphic)       - index is a gfx_tile_id_t
 //     gfx_clear_rect(rect, attr, ch, flags)
@@ -77,6 +76,10 @@
 void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char );
 gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols );
 void gfx_sprite_set_color( gfx_sprite_t *s, gfx_attr_t color );
+// Park a sprite off-screen (Phase G5 — gfx.md §G5-4).  Single out-of-line
+// __z88dk_fastcall function (body in sprite.c) so every callsite emits one call;
+// each backend parks at its own GFX_PARK_ROW / GFX_PARK_COL.
+void gfx_sprite_park( gfx_sprite_t *s ) __z88dk_fastcall;
 
 // global initialization
 void init_gfx( void );

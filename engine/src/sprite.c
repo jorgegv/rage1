@@ -18,8 +18,12 @@
 
 #include "game_data.h"
 
-void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall {
-    gfx_sprite_park( s );
+// Single out-of-line park function (Phase G5 — gfx.md §G5-4).  Renamed from the
+// former sprite_move_offscreen(); same __z88dk_fastcall convention (sprite ptr in
+// HL) and identical body, so codegen is byte-identical to baseline.  The legacy
+// sprite_move_offscreen() name is a macro alias in sprite.h (backwards-compat).
+void gfx_sprite_park( gfx_sprite_t *s ) __z88dk_fastcall {
+    gfx_sprite_move_cell( s, &full_screen, NULL, GFX_PARK_ROW, GFX_PARK_COL );
 }
 
 #ifdef BUILD_FEATURE_GFX_BACKEND_SP1

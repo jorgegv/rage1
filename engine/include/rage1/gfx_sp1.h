@@ -92,10 +92,10 @@ typedef uint16_t         gfx_tile_id_t;
 // Park a sprite off-screen (Phase G5 — gfx.md §G5-4).  The parking row is a
 // backend-internal detail: SP1 parks at row 24 (one row below the visible 24-row
 // grid), column 0.  Engine code never references the parking row directly; it
-// calls gfx_sprite_park() so each backend can choose its own off-screen slot.
+// calls gfx_sprite_park() — a single out-of-line __z88dk_fastcall function whose
+// body lives in sprite.c — so each backend can choose its own off-screen slot.
 #define GFX_PARK_ROW                           24
 #define GFX_PARK_COL                           0
-#define gfx_sprite_park(s)                     gfx_sprite_move_cell((s),&full_screen,NULL,GFX_PARK_ROW,GFX_PARK_COL)
 
 //--- Sprite query ---
 #define gfx_sprite_get_row(s)                  ((s)->row)
