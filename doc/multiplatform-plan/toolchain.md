@@ -756,12 +756,13 @@ ABI for the CPC backend, at Phase T2. Spike artifacts under
 and `.asm` source files use SDCC sdas dialect (`.module`, `.include
 /file/`, `#0xNN` immediates) and cannot be parsed by z88dk's `z80asm`.
 The "drop cpctelera sources into the compile line" model assumed by
-T0-2 (and by §2.3 of this doc) is unworkable as written. Phase R1 must
-choose between (a) prebuilding cpctelera with its own SDCC + `sdasz80`
-toolchain into a `.lib` linked into z88dk-driven builds, or (b)
-re-porting the primitives RAGE1 uses into z80asm syntax under
-`engine/src/cpc/`. See `cpc-renderer.md` Phase R1 amendment for the
-resolution gate.
+T0-2 (and by §2.3 of this doc) is unworkable as written. The choice was
+between (a) prebuilding cpctelera with its own SDCC + `sdasz80` toolchain
+into a `.lib` linked into z88dk-driven builds, or (b) re-porting the
+primitives RAGE1 uses into z80asm syntax under `engine/src/cpc/`.
+**RESOLVED 2026-05-30 → Option (b)** (file-by-file LLM-assisted
+translation); the follow-up below shows why (a) collapses. See
+`cpc-renderer.md` §6 (R1 decision UPDATED) and §4.2.
 
 *Finding 2 follow-up (2026-05-30) — z88dk patches SDCC to use
 z80asm*: clarifying the SDCC-integration model. z88dk does NOT carry a

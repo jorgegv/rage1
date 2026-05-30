@@ -1633,9 +1633,13 @@ working without migration.
   and note that `PLAY_SOUND` / `TRACKER_*` / `MUSIC` /
   `BUILD_FEATURE_TRACKER*` all remain accepted as
   permanent aliases.
-- **AU7-5** Confirm cpctelera's `src/audio/` is excluded
-  from the cpctelera glob (`-not -path '*/audio/*'`) with
-  a justifying comment pointing to this document's §4.3.
+- **AU7-5** Confirm no cpctelera audio primitive is ever
+  translated into `engine/src/cpc/`. (Corrected 2026-05-30:
+  there is no cpctelera source glob to exclude it from —
+  cpctelera is reference-only, never compiled; see
+  `cpc-renderer.md` §4.2. The risk is now "don't translate
+  audio primitives", not "exclude from a glob".) Keep a
+  justifying comment pointing to this document's §4.3.
 - **Phase-exit criteria**:
   - `BUILD_FEATURE_TRACKER*` and `BUILD_FEATURE_AUDIO_*`
     both emitted; `PLAY_SOUND` / `TRACKER_*` / new
@@ -1663,15 +1667,16 @@ working without migration.
   vendored asm.
 
 - **R2 — cpctelera's audio module gets pulled in
-  accidentally.** `cpc-renderer.md` §4.2's source glob
-  `find $(CPCTELERA_SRC) -name '*.c' -not -path '*/audio/akm/*'`
-  excludes only `audio/akm/`, not the whole audio tree.
-  Without the AU7-5 fix, builds may link both cpctelera's
-  Arkos player and RAGE1's AT2 player and conflict on AY
-  state.
-  *Mitigation*: AU7-5 explicit exclusion; assert at link
-  time that `cpct_akp_*` symbols are not in the final
-  binary (CI grep on `nm` output).
+  accidentally.** *Largely obsolete since 2026-05-30*: RAGE1
+  no longer globs/compiles any cpctelera source (it ships no
+  `sdasz80`; cpctelera asm is hand-translated file-by-file —
+  see `cpc-renderer.md` §4.2). There is no source glob that
+  could sweep in `cpct_akp_*`. The residual risk is only a
+  human one: **do not put a cpctelera audio primitive on the
+  translation shortlist** (AU7-5).
+  *Mitigation*: AU7-5; assert at link time that `cpct_akp_*`
+  symbols are absent from the final binary (CI grep on `nm`
+  output) as a cheap backstop.
 
 - **R3 — Audible regression is hard to test
   automatically.** Screenshot regression catches gfx

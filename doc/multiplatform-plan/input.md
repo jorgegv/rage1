@@ -912,19 +912,23 @@ keeps the integration boundary uniform.
 
 Justifications, in order of weight:
 
-1. **Already vendored.** Once `cpc-renderer.md` Phase R1 lands
-   cpctelera as `external/cpctelera`, its keyboard module costs us
-   exactly one extra `Makefile.common` rule (`-Iexternal/cpctelera/
-   cpctelera/src/keyboard/`) and a handful of asm/C source files.
+1. **Small, well-bounded surface.** cpctelera's keyboard module is a
+   handful of primitives. (Corrected 2026-05-30: cpctelera is `sdas`
+   asm that z88dk cannot compile, so we don't `-I`/glob it — we
+   hand-translate the 2-3 keyboard primitives we need into
+   `engine/src/cpc/` per R1-5; see `cpc-renderer.md` §4.2.) The scope
+   is still a handful of files, just translated rather than globbed.
 2. **Joy0/Joy1 fall out for free.** The fact that CPC joysticks are
    matrix rows 9 and 6 makes "keyboard scan + joystick read" a
    *single* operation. cpctelera already exposes the right scancode
    constants (`Joy0_Up`, `Joy0_Fire1`, …). A custom scanner would
    have to re-derive those.
-3. **Symmetry with the rest of the CPC backend.** `gfx_cpctel.c` and
-   `gfx_cpctel.h` will already include from `external/cpctelera/.../
-   sprites/`, `video/`, `firmware/`. Adding `keyboard/` keeps the
-   "one library, one integration boundary" rule.
+3. **Symmetry with the rest of the CPC backend.** `gfx_cpctel.c` /
+   `gfx_cpctel.h` already build on **translated** cpctelera primitives
+   (sprites, video, firmware) under `engine/src/cpc/`. Translating the
+   keyboard primitives the same way keeps the "one integration boundary"
+   rule (corrected 2026-05-30 — translated, not included from the
+   submodule).
 4. **Cycle cost is acceptable.** 1 % CPU per frame for `cpct_scanKeyboard`
    plus negligible cost per `input_state_read` call. Even if RAGE1
    eventually goes 60 Hz on CPC, the budget remains tiny.

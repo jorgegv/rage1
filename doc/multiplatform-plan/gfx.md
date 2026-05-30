@@ -762,10 +762,10 @@ on top, but the more the library provides the smaller the backend.
 ### 3.5 Wiring into the build
 
 - `Makefile.common` — extend `BUILD_GFX_BACKEND` matcher to accept
-  `cpctel` and pull cpctelera sources into the build from
-  `external/cpctelera/cpctelera/src/` (the cpctelera submodule
-  added by toolchain.md Phase T0; see [cpc-renderer.md §4.2](cpc-renderer.md)
-  for the exact glob list).
+  `cpctel` and pull the **translated** cpctelera primitives into the
+  build from `engine/src/cpc/` (hand-ported sdas→z80asm under Phase
+  R1-5; cpctelera itself is pinned as reference and **never compiled** —
+  see [cpc-renderer.md §4.2](cpc-renderer.md)).
 - `tools/datagen.pl` — emit
   `BUILD_FEATURE_GFX_BACKEND_CPCTEL` when the `.gdata` selects `cpctel`.
 - **Platform / backend selection rule**: the `gfx_*` backend is one
@@ -1060,11 +1060,11 @@ where the CPC renderer library lands as live engine code.
 > and CPC. `testing.md` TS6 owns the retirement of CPC-only stubs.
 > See [testing.md §4.1](testing.md) and [cpc-renderer.md R4](cpc-renderer.md).
 
-- **G8-1** Confirm `external/cpctelera/` (added in toolchain.md Phase
-  T0, configured/pinned in cpc-renderer.md Phase R1) is on the
-  include path and source glob of the active `Makefile-cpc-flat`
-  (or `-banked`). No new vendoring at this phase; G8 consumes what
-  T0/R1 already shipped.
+- **G8-1** Confirm the **translated** cpctelera primitives under
+  `engine/src/cpc/` (hand-ported in Phase R1-5; cpctelera itself is
+  pinned as reference only and never compiled) are in the build of the
+  active `Makefile-cpc-flat` (or `-banked`). No new translation at this
+  phase; G8 consumes what R1-5 already shipped.
 - **G8-2** Implement `gfx_cpctel.c` real bodies on top of the library.
 - **G8-3** Build a CPC target: `make build target_game=games/minimal_cpc
   GFX_BACKEND=cpctel PLATFORM=cpc6128` (exact knob names defined in

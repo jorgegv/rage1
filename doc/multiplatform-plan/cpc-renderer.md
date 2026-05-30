@@ -226,10 +226,15 @@ Specifically:
    submodule add is owned by toolchain.md Phase T0 (so the toolchain
    spike can prove the build end-to-end before R-phase work starts);
    R1 then verifies, pins, and records the licence.
-2. Use cpctelera as a **source-level library**, bypassing its
-   `cpct_mkproject` build system: compile the relevant subset of
-   `cpctelera/cpctelera/src/**/*.{c,s,asm,c.s}` with z88dk's `zcc +cpc`,
-   the same way `Makefile.common:127-134` already does for JSP.
+2. Use cpctelera as a **reference source library**, not a compiled
+   dependency. RAGE1 never compiles `cpctelera/src/` (superseded model;
+   see §4.1/§4.2 and the **2026-05-30 Option (b) decision** in §6 below).
+   z88dk ships **no `sdasz80`** and its SDCC fork emits/consumes only
+   `z80asm` syntax, so cpctelera's all-assembly sources cannot be globbed
+   into a `zcc +cpc` build. Instead the small shortlist of primitives
+   RAGE1 needs is **hand-translated (sdas → z80asm) under
+   `engine/src/cpc/`** and built as native engine asm (Phase R1-5),
+   the same way every other engine `.asm` source is built.
 3. Map RAGE1's `gfx_*` HAL to cpctelera primitives via a new file
    `engine/src/gfx_cpctel.c` + header `engine/include/rage1/gfx_cpctel.h`.
 4. Drive cpctelera's asset converters (`cpct_img2tileset`,
@@ -252,13 +257,19 @@ Specifically:
   No part of `gfx_*` HAL is so ZX-specific that cpctelera cannot back
   it once the gfx.md audit removes the obvious ZX assumptions
   (attribute cell, BAT, 32×24 screen dimension).
-- **Language fit**. cpctelera is overwhelmingly C — that is exactly the
-  language RAGE1 is written in. The hot-path asm is well-isolated under
-  `cpctelera/src/sprites/` and `cpctelera/src/keyboard/` and uses SDCC
-  `__z88dk_*` calling conventions that z88dk's own SDCC fork
-  understands. Compare to CPCRSlib, where ~93% of the code is hand-
-  written asm against a custom calling convention — porting/integration
-  cost there would be much higher.
+- **API fit (corrected 2026-05-30)**. An earlier draft of this section
+  claimed cpctelera is "overwhelmingly C". That is **wrong**: cpctelera
+  is **entirely hand-written Z80 assembly** — 0 `.c` files; 265 `.s` +
+  97 `.asm` files in SDCC `sdas` dialect — exposed to C through header
+  declarations plus per-function `_cbindings.s` / `_asmbindings.s` stubs
+  using `__z88dk_callee` / `__z88dk_fastcall`. The value cpctelera
+  offers is its **clean, exhaustively documented primitive set and its
+  C-callable ABI**, which maps naturally onto RAGE1's `gfx_*` HAL. Because
+  the source is `sdas` asm (which z88dk's `z80asm` cannot assemble — see
+  §4.3 and §6), RAGE1 lifts the primitives it needs by **hand-translation
+  to z80asm** (§4.2, R1-5) rather than compilation. Compared with CPCRSlib
+  (also mostly asm, but a custom calling convention), cpctelera's
+  documented `__z88dk_*` ABI keeps the per-primitive translation tractable.
 - **Toolchain fit**. RAGE1 already lives in z88dk (`zcc +zx`). The same
   `zcc` driver supports `+cpc`, with a patched SDCC that honours the
   `__z88dk_callee` / `__z88dk_fastcall` markers cpctelera's headers
@@ -346,8 +357,13 @@ permission.)
 
 **In practice**, for our distribution scenario:
 
-- We ship combined source that includes a subset of cpctelera's
-  `cpctelera/src/**` (LGPL-3.0) plus RAGE1 engine + game (GPL-3+).
+- We ship combined source: RAGE1 engine + game (GPL-3+), the pinned
+  cpctelera submodule (LGPL-3.0, reference), **and hand-translated
+  derivatives of specific cpctelera primitives under `engine/src/cpc/`**.
+  Those translated files are LGPL-derived works: each preserves
+  cpctelera's copyright + LGPL notice and records the upstream commit SHA
+  it derives from (corrected 2026-05-30 — we incorporate translated
+  source, not a linked LGPL binary).
 - The combined work is distributed under **GPL-3+**, with cpctelera's
   origin and licence preserved (LICENSE file kept in `external/
   cpctelera/`, headers' copyright notices preserved as required by
@@ -427,22 +443,23 @@ The submodule entry in `.gitmodules` mirrors the JSP entry:
     branch = development
 ```
 
-We use cpctelera **as-is from upstream**, without forking, vendoring a
-subset, or copying files in. The selection of which paths inside
-`external/cpctelera` we actually compile is done at Makefile level by
-explicit globs — exactly how `Makefile.common:130-133` does for JSP.
+We use cpctelera **as-is from upstream**, without forking. We do **not**
+compile any of it (corrected 2026-05-30 — z88dk cannot assemble its
+`sdas` asm; §4.2 / §4.3). It is consumed in only two ways: as
+**reference source** for hand-translation, and as **host asset tools**
+run as subprocesses.
 
 The cpctelera tree we **do** consume:
 
-- `external/cpctelera/cpctelera/src/` — the runtime library (all sub-
-  directories listed in 1.1 except possibly `buildsys/` which is the
-  build template and not runtime code)
-- `external/cpctelera/cpctelera/cfg/` — configuration headers we may
-  need (e.g. fixed memory addresses); to be confirmed in R2
-- `external/cpctelera/cpctelera/tools/scripts/` — only the asset
-  converters we need: `cpct_img2tileset`, `cpct_img2sprites`,
-  `cpct_bin2c` (driven as subprocesses; see section 5). The Img2CPC
-  binary they call is built from `cpctelera/tools/img2cpc/`.
+- `external/cpctelera/cpctelera/src/` — **reference only**, read while
+  hand-translating shortlisted primitives into `engine/src/cpc/` (R1-5).
+  Never added to a compile `-I` or to a `CSRC` / `ASMSRC` glob.
+- `external/cpctelera/cpctelera/cfg/` — referenced (e.g. fixed memory
+  addresses) while translating; not a compile include.
+- `external/cpctelera/cpctelera/tools/` — the asset converters we need:
+  `cpct_img2tileset`, `cpct_img2sprites`, `cpct_bin2c` (driven as host
+  subprocesses; see section 5). The Img2CPC binary they call is built
+  from `cpctelera/tools/img2cpc/`.
 
 The cpctelera tree we **do not** consume:
 
@@ -459,81 +476,95 @@ file PRs / issues against `lronaldo/cpctelera` and pin past them in the
 meantime by bumping the submodule SHA, exactly as we would handle a JSP
 bug.
 
-### 4.2 Build-time integration (link, runtime extraction, subbuild)
+### 4.2 Build-time integration
 
-Three strategies were considered:
+> **SUPERSEDED 2026-05-30 (R2 recon).** The three strategies below — all
+> of which compile or link cpctelera's own source/objects — are
+> **rejected by the Option (b) decision** (§6, "R1 decision UPDATED
+> 2026-05-30"). Empirically confirmed during R2 recon: z88dk ships **no
+> `sdasz80`**, and its `z80asm` cannot parse cpctelera's `sdas` dialect
+> (`.module`, `.area`, `#0xNN` immediates, `.include /file/`). So **none**
+> of cpctelera's 362 asm files can be globbed into a `zcc +cpc` build —
+> Strategy A is impossible, not merely undesirable; B's `.lib` is sdld
+> format (not z88dk-link-compatible). The table is kept for history.
+
+Three strategies were originally considered (all now superseded):
 
 | Strategy | Description | Verdict |
 |---|---|---|
-| **A. Source-glob inline compile** | Add cpctelera C/asm sources to `CSRC` / `ASMSRC` in `Makefile-cpc-flat` (and `Makefile-cpc-banked` for cpc6128) and let `zcc +cpc` compile them alongside engine code, exactly like JSP today. | **Chosen.** |
-| **B. Pre-built library** | Run cpctelera's own Makefile once to produce a `.lib`, then link RAGE1 against the result. | Rejected — requires installing cpctelera's full toolchain (bundled SDCC, scripts), defeats the "z88dk-only" simplification, makes the link more brittle. |
-| **C. Driven subbuild** | Have RAGE1's Makefile shell out to cpctelera's own Makefile per build. | Rejected — same brittleness as B plus the worst of both worlds: dependency on cpctelera's build system without the benefit of caching. |
+| **A. Source-glob inline compile** | Add cpctelera asm sources to `ASMSRC` and let `zcc +cpc` assemble them alongside engine code, like JSP. | ~~Chosen~~ → **impossible**: `z80asm` cannot assemble `sdas` syntax and z88dk has no `sdasz80`. |
+| **B. Pre-built library** | Run cpctelera's own SDCC+`sdasz80` build to a `.lib`, link RAGE1 against it. | Rejected — sdld `.lib` is SDCC-relocatable format, not z88dk-link-compatible. |
+| **C. Driven subbuild** | Shell out to cpctelera's Makefile per build. | Rejected — same incompatibility as B plus build-system coupling. |
 
-Strategy A is the same model as JSP and the same model RAGE1 already
-uses for **all** its own code. The cost is that we encode in
-`Makefile-cpc-flat` / `Makefile-cpc-banked` (both owned by
-`toolchain.md`) the list of source paths under
-`external/cpctelera/cpctelera/src/`. Concretely:
+**Actual model (Option (b), Phase R1-5).** The shortlisted cpctelera
+primitives are hand-translated `sdas` → `z80asm` and committed under
+`engine/src/cpc/`; they enter the build as ordinary engine asm. No
+cpctelera source path is ever added to `CSRC` / `ASMSRC`, and cpctelera's
+own build system is never invoked. The only reference into the submodule
+is human reading while translating — never a compile `-I`/glob. Sketch:
 
 ```make
-# in Makefile-cpc-flat / Makefile-cpc-banked (sketched; final form in toolchain.md)
-CPCTELERA_DIR   = external/cpctelera/cpctelera
-CPCTELERA_SRC   = $(CPCTELERA_DIR)/src
-CSRC          += $(shell find $(CPCTELERA_SRC) -name '*.c' -not -path '*/audio/akm/*' )
-ASMSRC        += $(shell find $(CPCTELERA_SRC) -name '*.s' -o -name '*.asm')
-INC           += -I$(CPCTELERA_SRC) -I$(CPCTELERA_DIR)/cfg
+# in Makefile-cpc-flat / Makefile-cpc-banked (final form in toolchain.md)
+# cpctelera is reference-only; RAGE1 builds its own TRANSLATED primitives:
+ASMSRC        += $(wildcard engine/src/cpc/*.asm)
+# (no glob into external/cpctelera/cpctelera/src — it is never compiled)
 ```
 
-The exact globs (and any exclusions for files that don't compile under
-z88dk's SDCC fork) are determined in phase R2 by a hello-world build.
+Which primitives are translated, and from which upstream commit SHA, is
+recorded in `engine/src/cpc/README.md` (R1-5). The shortlist is driven by
+the `gfx_cpctel.h` HAL surface (Phase R4), not by a blanket glob.
 
-#### Compile flags
+#### Asm dialect & routing (RESOLVED 2026-05-30, R2 recon)
 
-cpctelera headers declare callee/fastcall via `__z88dk_callee` and
-`__z88dk_fastcall`, which z88dk's SDCC fork supports natively. No
-porting layer should be required.
+The routing question — *"can `zcc +cpc` be made to send cpctelera's asm
+through an `sdasz80`?"* — is **resolved: no.** This z88dk (2.4) has **no
+`sdasz80` binary at all** (`bin/` ships only `z88dk-zsdcc`), and its SDCC
+fork emits **z80asm** syntax, not `sdas`. Both `.s` and `.asm` cpctelera
+files are `sdas` dialect (`.module`, `.area`, `#0xNN` immediates,
+`.include /file/`); feeding either to `zcc +cpc` routes it to `z80asm`,
+which errors on the first `.module` (verified). No `zcc` flag makes z88dk
+consume `sdas`. Consequence: cpctelera asm is brought in by
+**hand-translation** to z80asm (§4.2, R1-5), not by routing.
 
-The `.s` (SDCC asm) vs `.asm` (z88dk asm) split needs verification:
-cpctelera's hand-written hot-path files use a mix of `.s` and `.asm`
-extensions and target SDCC's `sdasz80` assembler syntax. Inside
-`zcc`, `.asm` is normally routed through z88dk's `z80asm`, while `.s`
-files are routed through `sdasz80` when SDCC mode is active — the two
-paths are not equivalent and may need explicit per-file extension
-choices or `zcc` flags to route every cpctelera asm file through
-`sdasz80`. R2's hello-world PoC must establish which routing is
-required for cpctelera's asm tree to assemble. This is the single
-biggest unknown: see section 7 risk R-1.
+cpctelera's header-level `__z88dk_callee` / `__z88dk_fastcall` calling
+conventions *are* understood by z88dk's SDCC, so a translated body's
+C-callable ABI lines up without renaming symbols — only the asm *dialect*
+of the body changes. See §7 risk R-1.
 
 #### What about cpctelera's audio backend?
 
-The Arkos player in `src/audio/` is C+asm and needs an Arkos-format
-music file to play. Music format and audio HAL are owned by `audio.md`.
-At the build level we expect to glob `src/audio/*.c` and `.asm` into
-the build same as the rest — they should compile fine standalone — but
-**whether we wire them into the runtime** is `audio.md`'s call.
+Moot, for two reasons. (1) cpctelera's audio is `sdas` asm like the rest,
+so it could not be globbed in even if we wanted it. (2) `audio.md` (R5-4,
+resolved 2026-05-26) decided **not** to use cpctelera's Arkos player at
+all — RAGE1's existing Arkos integration is retargeted for CPC instead.
+So no cpctelera audio source is translated or built.
 
 ### 4.3 Toolchain marriage (SDCC version, build-system collision avoidance)
 
 This is the single non-trivial novelty vs JSP.
 
-#### Bundled vs host SDCC
+#### Bundled vs host SDCC (corrected 2026-05-30)
 
-- cpctelera ships SDCC 3.6.8 (`cpctelera/tools/sdcc-3.6.8-r9946/`).
-- z88dk currently ships its own patched SDCC fork (4.3.x as of z88dk
-  v2.3/v2.4, 2025–2026).
-- The two SDCCs differ on minor codegen and on which fixes are
-  backported, but the **language**, **calling conventions**, and **asm
-  syntax** that cpctelera relies on are unchanged between 3.6.8 and
-  4.3.x.
-- cpctelera's `__z88dk_callee` / `__z88dk_fastcall` annotations are
-  exactly what z88dk's SDCC understands — there is no "translation"
-  needed.
+- cpctelera ships SDCC 3.6.8 (`cpctelera/tools/sdcc-3.6.8-r9946/`) with
+  the matching `sdasz80` assembler + `sdld` linker; its whole library is
+  assembled by that `sdasz80`.
+- z88dk ships its own patched SDCC fork (4.x) **but no `sdasz80`**: it
+  patches SDCC to emit **z80asm** syntax and assembles with z88dk's own
+  `z80asm`. There is no `sdas` path anywhere in z88dk.
+- An earlier draft claimed "asm syntax … unchanged between 3.6.8 and
+  4.3.x … no translation needed." That is **wrong**: the obstacle is not
+  the SDCC *version*, it is the *assembler dialect*. cpctelera's bodies
+  are `sdas`; z88dk only consumes `z80asm`. The C **calling conventions**
+  (`__z88dk_*`) do line up — only the asm dialect differs.
 
-Conclusion: we **use z88dk's bundled SDCC, not cpctelera's**. We do not
-install cpctelera's bundled SDCC tree.
+Conclusion (corrected): we use **z88dk's SDCC for RAGE1's own C** (engine
++ game), exactly as on ZX, and we **never** invoke cpctelera's SDCC or
+`sdasz80`. The cpctelera *primitives* we need are hand-translated to
+z80asm (§4.2, R1-5). We do not install cpctelera's bundled SDCC tree.
 
-Validation: the R2 hello-world PoC must demonstrate a full
-build-and-run of a trivial cpctelera example using only `zcc +cpc`.
+Validation: the R2 hello-world PoC demonstrates a full build-and-run on
+CPC using only `zcc +cpc`, linking a **translated** cpctelera primitive
+(e.g. `cpct_setVideoMode`) — not any cpctelera-built object.
 
 #### Avoiding build-system collisions
 
@@ -542,21 +573,27 @@ cpctelera projects expect a `cfg/build_config.mk` and a generated
 `cpct_mkproject`. We do not include cpctelera's `Makefile` fragments.
 We do not source `cpctelera/scripts/cpct-env.sh`.
 
-What we **do** keep visible to our `Makefile-cpc-flat` / `-banked`:
+What we **do** use from the submodule:
 
-- The header tree under `cpctelera/cpctelera/src/` — for `-I`.
-- The C/asm sources themselves — globbed into `CSRC` / `ASMSRC`.
-- The asset-converter scripts under `cpctelera/cpctelera/tools/
-  scripts/` — invoked as subprocesses.
+- The asset-converter scripts/binaries under `cpctelera/cpctelera/tools/`
+  (e.g. `cpct_img2tileset`, `img2cpc`) — invoked as **host subprocesses**
+  at asset-build time (Phase R3). These are unaffected by the asm-dialect
+  problem.
+- The `cpctelera/src/` tree as **human reference** while hand-translating
+  primitives (R1-5). It is read, never compiled.
 
-What we **do not** want:
+What we **do not** do (corrected 2026-05-30):
 
-- `CPCT_PATH` environment variable shenanigans
-- cpctelera's `cfg/build_config.mk`
-- cpctelera's emulator launcher
+- We do **not** add cpctelera headers as a compile `-I`, and do **not**
+  glob its `.s` / `.asm` into `CSRC` / `ASMSRC` — z88dk cannot assemble
+  them (§4.2 / §4.3). The translated primitives live under
+  `engine/src/cpc/`.
+- No `CPCT_PATH` shenanigans, no cpctelera `cfg/build_config.mk`, no
+  cpctelera emulator launcher, no `cpct_mkproject`.
 
-This is symmetric with how we use JSP today: we pull source files into
-our build, ignore JSP's own `Makefile`, and the rest is transparent.
+This is therefore **not** symmetric with JSP: JSP is z80asm + C and is
+globbed straight into the build; cpctelera is `sdas` asm and is instead
+**translated** file-by-file into `engine/src/cpc/`.
 
 #### CDT/DSK output
 
@@ -851,41 +888,52 @@ records the licence/attribution work that T0 does not own.
     equivalent z80asm from cpctelera's API documentation. Recorded in
     the cross-doc Risks index.
 
-### Phase R2 — Hello-world PoC: cpctelera + z88dk `+cpc`
+### Phase R2 — Hello-world PoC: translate one primitive + run on CPC
 
-This phase deliberately bypasses RAGE1 entirely. The point is to
-prove that cpctelera's source tree compiles under z88dk's SDCC fork
-and runs on a CPC emulator. If this fails, the whole plan changes.
+This phase deliberately bypasses RAGE1's engine. The point is to prove
+the **Option (b) translation pipeline** end-to-end: hand-translate one
+cpctelera primitive `sdas` → `z80asm`, build it with `zcc +cpc` only,
+and run it on a CPC emulator. This is the gate the R1-5 decision (§6)
+calls for. If translation blows up on macros / conditional assembly, the
+approach is reconsidered (per the R1-5 fallback).
 
-- **R2-1** Write a standalone PoC under `tools/cpc-poc/` that
-  `#include`s `cpctelera.h` from `external/cpctelera`, calls
-  `cpct_setVideoMode(1)` + a sprite blit, and produces a `.cdt`.
-  - *What to change*: new directory `tools/cpc-poc/` with a single-file
-    `main.c` + small `Makefile` (or inline rules in
-    `Makefile.cpc-poc`).
-  - *What to test*: `make -C tools/cpc-poc` produces `poc.cdt`.
-  - *Expected outcome*: a `.cdt` file. Failure here means the
-    SDCC-version assumption (1.4.3 §4.3) is wrong; fall back plan is
-    to add `__z88dk_*` shims or pin to specific cpctelera files.
-- **R2-2** Identify the subset of `external/cpctelera/cpctelera/src/`
-  that compiles cleanly under z88dk's SDCC. Catalogue any files that
-  fail with reasons.
-  - *What to test*: a `--dry-run` build that touches every source file
-    under `cpctelera/src/`; collect errors.
-  - *Expected outcome*: a known-failing list of files, ideally empty
-    or limited to the audio backend (which we may exclude per
-    `audio.md`).
-- **R2-3** Run the PoC `.cdt` in a CPC emulator (Caprice32 / ACE /
-  RVM — emulator choice owned by `testing.md`); confirm sprite appears.
-  - *What to test*: take a screenshot, eyeball-verify against a known
-    good output. (Pixel-perfect regression baseline is a `testing.md`
-    deliverable, not blocking here.)
+> **Re-scoped 2026-05-30 (R2 recon).** The original R2-1/2/3 assumed
+> cpctelera's source could be compiled by `zcc +cpc` (glob it, build it,
+> catalogue which files fail). R2 recon proved that impossible — z88dk
+> ships no `sdasz80` and `z80asm` rejects `sdas` syntax (§4.2 / §4.3). R2
+> is therefore re-scoped to the **translation PoC**. The "catalogue which
+> cpctelera files compile under z88dk" task is dropped: the answer is
+> *none*. The relevant artefact is the **translation shortlist** in
+> `engine/src/cpc/README.md` (R1-5).
+
+- **R2-1** Translate the smallest non-trivial primitive
+  (`cpct_setVideoMode`, plus `cpct_setBorder` / a PAL-pen setter for
+  visible output) from `sdas` → `z80asm`, committed under
+  `engine/src/cpc/` with a thin C header under `engine/include/rage1/`.
+  Add a standalone harness under `tools/cpc-poc/` (`main.c` + `Makefile`)
+  that calls the translated primitive(s) and renders something visible
+  (mode change + a colour / sprite), built with `zcc +cpc` only.
+  - *What to test*: the translated `.asm` assembles under `z80asm`;
+    `make -C tools/cpc-poc` produces a CPC-loadable image (`.cdt`/`.dsk`
+    via z88dk `appmake +cpc`, or `2cdt`).
+  - *Expected outcome*: a loadable image built with **no** cpctelera-built
+    object and **no** `sdasz80`.
+- **R2-2** Confirm the translation is faithful: check the translated body
+  against the cpctelera source's documented behaviour / register
+  contract. Record the upstream commit SHA each translation derives from
+  in `engine/src/cpc/README.md`.
+  - *What to test*: the translated primitive behaves as documented (mode
+    set changes screen layout; pen/border set changes colour).
+- **R2-3** Run the PoC image in a CPC emulator (Caprice32 — emulator
+  choice owned by `testing.md`); confirm the expected output appears.
+  - *What to test*: take a screenshot, eyeball-verify. (Pixel-perfect
+    baseline is a `testing.md` deliverable, not blocking here.)
 - **Phase-exit criteria**:
-  - PoC `.cdt` builds with `zcc +cpc` only (no cpctelera-bundled
-    SDCC).
-  - PoC runs in chosen CPC emulator and renders the sprite.
-  - Catalogue of cpctelera files that need exclusion is written into
-    this document (section 4.2 globs).
+  - PoC image builds with `zcc +cpc` only (no cpctelera-built objects, no
+    `sdasz80`), linking the **translated** primitive(s).
+  - PoC runs in Caprice32 and renders the expected output.
+  - The translation approach is validated end-to-end (or, if a primitive
+    resists clean translation, that is recorded with the R1-5 fallback).
   - ZX builds still green.
 
 ### Phase R3 — Asset converter wiring
@@ -956,12 +1004,16 @@ and runs on a CPC emulator. If this fails, the whole plan changes.
   bug-fix only mid-phase; broader updates at phase boundaries).
 - **R5-4** Confirm the audio integration with `audio.md`: cpctelera's
   audio backend is **NOT included** (OQ-3 resolved 2026-05-26 —
-  RAGE1's existing Arkos integration is retargeted for CPC instead);
-  exclude `cpctelera/src/audio/` from the vendored source glob.
+  RAGE1's existing Arkos integration is retargeted for CPC instead). No
+  cpctelera audio primitive is translated; `cpctelera/src/audio/` is
+  simply never lifted (there is no source glob to exclude it from —
+  corrected 2026-05-30).
 - **R5-5** Confirm the input integration with `input.md`: cpctelera's
   keyboard scan **IS used** (OQ-4 resolved 2026-05-26 by input.md
-  §4.3 — `cpct_scanKeyboard_if` + `cpct_isKeyPressed`); ensure the
-  cpctelera `keyboard/` source path is in the build glob.
+  §4.3 — `cpct_scanKeyboard_if` + `cpct_isKeyPressed`); the relevant
+  `cpctelera/src/keyboard/` primitives are on the **translation
+  shortlist** (R1-5), hand-ported into `engine/src/cpc/` — not globbed
+  (corrected 2026-05-30).
 - **Phase-exit criteria**:
   - CPC regression baseline checked in.
   - cpctelera-vs-RAGE1 integration is documented (this file, plus
@@ -972,14 +1024,21 @@ and runs on a CPC emulator. If this fails, the whole plan changes.
 
 ## 7. Risks
 
-- **R-1 (high) — z88dk's SDCC fork rejects parts of cpctelera's asm**.
-  cpctelera's hand-written `.asm` files target sdasz80 syntax bundled
-  with SDCC 3.6.8. z88dk's SDCC 4.2.x ships a newer sdasz80; subtle
-  syntax/macro differences may emerge. *Mitigation*: phase R2 is
-  explicitly the gating test for this. If a small number of files
-  fail, we patch them (filing PRs upstream); if many fail, we fall
-  back to vendoring cpctelera's bundled sdasz80, or worst case to
-  CPCRSlib.
+- **R-1 (CONFIRMED 2026-05-30 — was "high"; now the basis of the
+  translation model) — z88dk cannot assemble cpctelera's asm at all.**
+  cpctelera's `.s` / `.asm` are `sdas` dialect; this z88dk ships **no
+  `sdasz80`** and its `z80asm` rejects `sdas` syntax outright (verified).
+  This is **not** a "subtle syntax difference" — it is total
+  incompatibility. (An earlier draft here wrongly stated z88dk "ships a
+  newer sdasz80"; it ships none — only `z88dk-zsdcc`, which emits z80asm.)
+  The residual risk is therefore **translation burden**, not assembler
+  rejection: per-file hand-translation of the shortlisted primitives
+  (R1-5), where macro-dense / conditional-assembly files (sprite blit,
+  scroll) may be costly. *Mitigation*: per-file judgement (translate macro
+  vs pre-expand); if a file resists clean translation, hand-write the
+  equivalent z80asm from cpctelera's API docs; worst case fall back to
+  CPCRSlib for that one primitive. Phase R2 validates the pipeline on the
+  smallest primitive first.
 - **R-2 (medium) — cpctelera upstream stays dormant**. Both master
   and `development` had only sporadic activity in 2025–2026 (master:
   one commit in 3 years, then a fix in May 2026; development: last

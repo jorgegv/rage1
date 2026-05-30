@@ -547,7 +547,9 @@ What RAGE1 *will* roll on top of cpctelera:
   `cpct_pageMemory` doesn't return previous state).
 
 Coordinate with `cpc-renderer.md` §4.2: the cpctelera memutils
-sources need to be in the source glob for `Makefile-cpc-banked`.
+primitives RAGE1 needs are hand-translated into `engine/src/cpc/`
+(Phase R1-5) and built from there — cpctelera's own `memutils/` source
+is reference only, **never globbed/compiled**.
 
 ### 2.4 Comparison: ZX 128 paging vs CPC 6128 banking
 
@@ -1570,9 +1572,9 @@ This is documentation work; no engine/tool changes.
   the floor, not the target.
 - **B4-3** Document the bank-ID convention (per-platform, not
   shared — §3.3) in the `etc/rage1-config.yml` comment block.
-- **B4-4** Cross-reference with `cpc-renderer.md` Phase R2 (PoC
-  that compiles cpctelera + an empty game): align on where the
-  screen RAM, cpctelera library data, and CRT live. Adjust §3.1.4
+- **B4-4** Cross-reference with `cpc-renderer.md` Phase R2 (PoC that
+  translates a cpctelera primitive and runs it on CPC): align on where
+  the screen RAM, translated-primitive data, and CRT live. Adjust §3.1.4
   if R2 surfaces a constraint.
 - **Phase-exit criteria**:
   - §3.1.3 and §3.1.4 numbers are final and reviewed.
