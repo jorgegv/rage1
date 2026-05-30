@@ -39,6 +39,13 @@ RUN \
 	&& make \
 	&& cp ${BAS2TAP_PATH}/bas2tap ${Z88DK_PATH}/bin
 
+# Phase R3: cpctelera host asset converter (Img2CPC + cpct_img2tileset).
+# Requires: gcc-c++ (already above) + freeimage-devel.
+# The cpctelera submodule is brought in via the workspace checkout
+# (CI uses `submodules: recursive`); install-cpctelera-converters.sh
+# builds Img2CPC from source and installs the cpct_img2tileset wrapper.
+RUN dnf install -y freeimage freeimage-devel
+
 ENV PATH="${Z88DK_PATH}/bin:$HOME/perl5/bin:${PATH}" \
     ZCCCFG="${Z88DK_PATH}/lib/config/" \
     PERL5LIB="$HOME/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}" \
