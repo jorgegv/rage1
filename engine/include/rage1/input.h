@@ -117,7 +117,7 @@ input_scancode_t input_lookup_key( uint8_t ascii );
 // matrix directly; CPC will implement it via cpctelera later. Unlike
 // input_lookup_key() (ASCII -> scancode), this reads the physical
 // keyboard and blocks until a key is detected.
-input_scancode_t input_capture_scancode( void );
+input_scancode_t input_capture_scancode( void ) __z88dk_fastcall;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
