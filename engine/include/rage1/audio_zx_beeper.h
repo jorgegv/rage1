@@ -25,6 +25,11 @@
 // that still call beeper_* keep working forever.
 
 #include "features.h"
+// memory.h must be included before beeper.h so that, on 128K builds, the
+// banked-call macros (banked_function_defs.h) are visible when the inline
+// alias bodies below are parsed — they must expand to banked calls, not
+// direct calls to symbols that only exist inside the banked code.
+#include "rage1/memory.h"
 #include "rage1/beeper.h"
 
 // SFX handle type: pointer to a BEEPFX byte stream (sound/bit.h).
@@ -33,6 +38,18 @@ typedef void *audio_sfx_beeper_t;
 ////////////////////////////////////////////////////////
 // HAL contract — inline static-redirect aliases (AU2-2)
 ////////////////////////////////////////////////////////
+
+// audio_sfx_beeper_init()
+//   Initialise the beeper SFX backend.
+//   Inline redirect to init_beeper().
+//   init_beeper() only exists on 128K builds (on 48K the beeper state is
+//   zeroed by regular BSS init), and SDCC emits static-inline bodies even
+//   when unreferenced, so the alias is gated to match.
+#ifdef BUILD_FEATURE_ZX_TARGET_128
+static inline void audio_sfx_beeper_init( void ) {
+    init_beeper();
+}
+#endif
 
 // audio_sfx_beeper_request(sfx)
 //   Request that a beeper FX be played at the end of the game loop.
