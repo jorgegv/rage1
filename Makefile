@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello all-test-builds all-test-builds-zx all-test-builds-cpc
 
 help:
 	echo "============================================================"
@@ -162,6 +162,15 @@ data-cpc464:
 # contains all the test games
 ALL_TEST_GAMES		= $(shell cd $(TEST_GAMES_DIR)/ && ls -1 )
 
+# T2: split the test-game matrix by platform axis.
+#   CPC_TEST_GAMES — games that build for the Amstrad CPC (cpc-flat/...).
+#   ZX_TEST_GAMES  — everything else (the ZX 48/128 subset).
+# The split keeps CPC binary output out of the ZX pass/fail log scrape and
+# lets `make all-test-builds-zx` (toolchain.md T2 phase-exit criterion) build
+# ONLY the ZX games. CPC games are matched by the 'cpc-' name prefix.
+CPC_TEST_GAMES		= $(filter cpc-%,$(ALL_TEST_GAMES))
+ZX_TEST_GAMES		= $(filter-out cpc-%,$(ALL_TEST_GAMES))
+
 # T2-10: CPC hello-world test game build target
 build-cpc-hello:
 	$(MYMAKE) build-cpc464 target_game=$(TEST_GAMES_DIR)/cpc-hello
@@ -226,21 +235,48 @@ test-build-%:
 	printf 'Building test game %.15s...' "'$*'..............."
 	if ( ! $(MYMAKE) build-$* >/tmp/build-$*.log 2>&1 ) then echo " Errors - see /tmp/build-$*.log"; else echo " Build OK"; fi
 
-all-test-builds:
-	echo -n "START: "
+# T2: ZX-only test build (toolchain.md T2 phase-exit: "make all-test-builds-zx
+# (ZX subset) green"). Builds ONLY the ZX games; CPC games are excluded so
+# their binary output cannot pollute the pass/fail scrape. Verdict uses
+# `grep -a` (binary-safe) on a dedicated log.
+all-test-builds-zx:
+	echo -n "START (zx): "
 	date
 	$(MYMAKE) check-input-includes
 	$(MYMAKE) check-input-hal
-	for i in $(ALL_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds.log
-	echo -n "END: "
+	for i in $(ZX_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds-zx.log
+	echo -n "END (zx): "
 	date
-	if ( grep -i Errors /tmp/all-test-builds.log ) then \
-		echo "*** Some tests failed ***"; \
+	if ( grep -a -i Errors /tmp/all-test-builds-zx.log ) then \
+		echo "*** Some ZX tests failed ***"; \
 		exit 1; \
 	else \
-		echo "All tests succeeded"; \
+		echo "All ZX tests succeeded"; \
 		exit 0; \
 	fi
+
+# T2: CPC-only test build. Builds the CPC games (cpc-flat/...). Kept separate
+# from the ZX target per toolchain.md's per-platform matrix.
+all-test-builds-cpc:
+	echo -n "START (cpc): "
+	date
+	for i in $(CPC_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds-cpc.log
+	echo -n "END (cpc): "
+	date
+	if ( grep -a -i Errors /tmp/all-test-builds-cpc.log ) then \
+		echo "*** Some CPC tests failed ***"; \
+		exit 1; \
+	else \
+		echo "All CPC tests succeeded"; \
+		exit 0; \
+	fi
+
+# Combined matrix: ZX subset then CPC subset. Each subset is scraped on its
+# own dedicated log (binary-safe) so a CPC binary cannot corrupt the ZX
+# verdict; the combined target fails if either subset fails.
+all-test-builds:
+	$(MYMAKE) all-test-builds-zx
+	$(MYMAKE) all-test-builds-cpc
 
 ###############################################
 ##

@@ -76,7 +76,11 @@ CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -
 # The custom mmap file for section-check
 CPC_MMAP_INC		= mmap-cpc-flat.inc
 
-.PHONY: build main loader asmloader cpc dsk cdt final section-check
+# NOTE: section-check-cpc / final-cpc carry the '-cpc' suffix so they do NOT
+# override the same-named targets already defined in Makefile.common (which is
+# -included above). Reusing the bare names produced 7x "overriding recipe for
+# target" GNU Make warnings on every build.
+.PHONY: build main loader asmloader cpc dsk cdt final-cpc section-check-cpc
 
 build:
 	$(MYMAKE) loader
@@ -84,7 +88,7 @@ build:
 	$(MYMAKE) dsk
 	$(MYMAKE) cpc
 	$(MYMAKE) cdt
-	$(MYMAKE) section-check
+	$(MYMAKE) section-check-cpc
 	echo "Build completed SUCCESSFULLY (cpc-flat)"
 
 ##
@@ -155,22 +159,24 @@ $(CDT_FILE): $(CPC_FILE)
 		echo "  [skip] 2cdt not found — $(CDT_FILE) not generated (install via docker/Dockerfile T2-9)"; \
 	fi
 
-# The 'final' target is a no-op alias for compatibility with the ZX
-# Makefile shape (Makefile.common's final: $(FINAL_TAP) expects this).
-# On CPC-flat the 'dsk' step is the equivalent of 'final'.
-final: dsk
+# The 'final-cpc' target is a no-op alias for the CPC build shape (the ZX
+# 'final: $(FINAL_TAP)' in Makefile.common does not apply on cpc-flat).
+# On CPC-flat the 'dsk' step is the equivalent of 'final'. Suffixed with
+# '-cpc' to avoid overriding Makefile.common's 'final:' target.
+final-cpc: dsk
 
 ##
-## section-check: validate that all sections land inside expected regions
+## section-check-cpc: validate that all sections land inside expected regions
 ## (T2-3).  At Phase T2, the +cpc CRT uses its own built-in section
 ## layout (__MMAP is NOT -1 — see zpragma-cpc-flat.inc comments).
 ## The section-check is deferred to Phase T3/B5 when the custom mmap
 ## hook is implemented.  We do a minimal sanity check instead: verify
 ## that the .map file was produced and that no sections landed in the
-## screen RAM region (0xC000-0xFFFF).
+## screen RAM region (0xC000-0xFFFF).  Suffixed with '-cpc' to avoid
+## overriding Makefile.common's 'section-check:' target.
 ##
 
-section-check:
+section-check-cpc:
 	echo "Section check (cpc-flat, Phase T2 minimal)..."
 	if [ ! -f main.map ]; then echo "  ERROR: main.map not produced"; exit 1; fi
 	if grep -E '^\s*[0-9A-Fa-f]{4}\s' main.map | awk '{print $$1}' | grep -qiE '^[Cc][0-9A-Fa-f]{3}'; then \

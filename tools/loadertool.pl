@@ -412,15 +412,16 @@ sub generate_assembler_loader {
 
     # T2-5: cpc-flat loader: no banking, no SUBs.  The CRT loads at
     # CRT_ORG_CODE=0x1200; the loader stub just does jp to that address.
+    # The cpc-flat template only uses @@LOADER_ORG@@ and @@MAIN_CODE_START@@
+    # (no @@MAIN_SIZE@@), so we deliberately do NOT call get_main_bin_size
+    # here — it would read the not-yet-existent build/main.bin and is unused.
     if ( $zx_target eq 'cpc-flat' ) {
         my $loader_org = '0x0100';   # small stub in low RAM, well below code
         my $main_code_start = '0x1200';   # CRT_ORG_CODE from zpragma-cpc-flat.inc
-        my $main_size = get_main_bin_size;
 
         my $tmpl = _apply_substitutions( _load_template( $zx_target ), {
             LOADER_ORG       => $loader_org,
             MAIN_CODE_START  => $main_code_start,
-            MAIN_SIZE        => $main_size,
         } );
 
         if ( $tmpl =~ /\@\@(\w+)\@\@/ ) {
