@@ -108,6 +108,17 @@ void input_scan( void );
 // (ZX) or cpct_keyID (CPC) directly. ZX: macro for in_key_scancode.
 input_scancode_t input_lookup_key( uint8_t ascii );
 
+// Blocking raw keyboard scan: spin until exactly one key is pressed,
+// then return its backend scancode in the form expected by the
+// keyboard-as-joystick reader (ZX: a krepress scancode, i.e. the same
+// encoding stored in controller_info_s.keys.* / struct input_udk_s).
+// Used by per-game key-redefine ("Redefine keys") menu flows. On ZX
+// this is a real function (engine/src/input.c) that scans the keyboard
+// matrix directly; CPC will implement it via cpctelera later. Unlike
+// input_lookup_key() (ASCII -> scancode), this reads the physical
+// keyboard and blocks until a key is detected.
+input_scancode_t input_capture_scancode( void );
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Per-backend wrapper headers. ZX is the only backend at IN3; the
