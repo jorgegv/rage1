@@ -711,8 +711,11 @@ END_GAME_CONFIG
   * `TYPE`: the type of function. Possible values:
     * `MENU`: the main menu, must end with the correct controller selected.
       It can also be used to redefine the default keys QAOP-SP (see the
-      menu function in the example game `default`, and the auxiliary
-      function in the `kbd.c` file in the same directory)
+      menu function in the example game `default`). To capture a raw key
+      scancode in a custom redefine flow, call the input HAL helper
+      `input_capture_scancode()` (declared in `rage1/input.h`); it blocks
+      until a single key is pressed and returns its backend scancode. This
+      replaces the former per-game `kbd.c` helper `capture_key_scancode()`.
     * `INTRO`: intro screen, shown just after the menu and before beginning
     gameplay
     * `GAME_END`: this function will run when the game is ended successfully,
