@@ -935,6 +935,32 @@ approach is reconsidered (per the R1-5 fallback).
   - The translation approach is validated end-to-end (or, if a primitive
     resists clean translation, that is recorded with the R1-5 fallback).
   - ZX builds still green.
+- **R2 OUTCOME (2026-05-30) — PASSED.** The Option (b) pipeline is proven
+  end-to-end. Deliverables:
+  - `engine/src/cpc/cpct_video.asm` + `cpct_strings_m1.asm` — hand-translated
+    `cpct_setVideoMode`, `cpct_setPALColour`, `cpct_setDrawCharM1`,
+    `cpct_drawStringM1` (+ inner renderer & tables), from cpctelera `662fc885`;
+    see `engine/src/cpc/README.md`.
+  - `tools/cpc-poc/` (`main.c` + `Makefile`) builds `poc.dsk` with
+    **`zcc +cpc -compiler=sdcc` only** (no `sdasz80`, no cpctelera compile).
+  - `tools/cap32-shot.sh` — headless Caprice32 screenshot driver (dedicated
+    **Xvfb** + forced SDL **x11** backend + `import -window root`; the live
+    Wayland `:0` cannot be root-grabbed). This is an interim stand-in until
+    `testing.md` TS2 lands the proper Caprice32+Xvfb/Docker harness.
+  - Verified: mode-1 yellow-on-blue text renders correctly in Caprice32.
+  - **Two non-obvious gotchas (carry into R4 / banking.md / toolchain.md T2):**
+    1. **Link org MUST be ≥ 0x4000.** `cpct_drawStringM1` pages in the lower
+       ROM (0x0000–0x3FFF) to read the firmware font; any program code/data
+       below 0x4000 is masked during that window and the call crashes into
+       ROM. z88dk's `+cpc` default org is 0x1200 — must override
+       (`-zorg=0x4000`). The CPC memory map in `banking.md` §3.1 must keep the
+       engine + translated primitives above 0x4000.
+    2. z88dk writes the AMSDOS file with an **empty extension**, so
+       `RUN"NAME` (which AMSDOS expands to `.BAS`/`.BIN`) fails — use
+       `RUN"NAME.` (explicit empty extension).
+  - The translations themselves were correct on first build; both issues were
+    link/launch concerns, not asm-dialect problems — further evidence the
+    translation approach is sound.
 
 ### Phase R3 — Asset converter wiring
 

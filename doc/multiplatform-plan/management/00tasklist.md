@@ -53,7 +53,7 @@ under it is ticked complete.
   - [x] AU3 — migrate to `audio_*` names (legacy stays as permanent silent aliases per README §5.6)
 
 - [ ] **Phase 4 — CPC bring-up (cpc-flat first, then cpc-banked)**
-  - [ ] R2 — cpctelera + z88dk hello-world PoC (gating test)
+  - [x] R2 — cpctelera + z88dk hello-world PoC (gating test)
   - [ ] R3 — `cpct_img2tileset` asset-converter wiring
   - [ ] T2 — cpc-flat Makefile; first `.cpc`/`.cdt` build
   - [ ] B4 — CPC banking config seam (cpc-flat = no banking)
