@@ -38,7 +38,7 @@ under it is ticked complete.
   - [x] IN2 — input HAL skeleton (alias-only, ZX-only)
   - [x] AU1 — audio audit
   - [x] AU2 — audio HAL aliases
-  - [x] R1 — cpctelera submodule add (vendored but not yet compiled)
+  - [x] R1 — cpctelera submodule add (vendored as reference; never compiled)
 
 - [x] **Phase 3 — HAL generalisation (ZX byte-identical)**
   - [x] G3 — attribute abstraction

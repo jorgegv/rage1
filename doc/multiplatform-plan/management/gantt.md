@@ -203,13 +203,16 @@ proceeds unless they succeed.
   *before* anyone refactors the engine. Without TS1's safety net
   the "ZX byte-identical" invariant every later phase asserts is
   unverifiable.
-- **T0** — z88dk `+cpc` + sdcc_iy + a trivial cpctelera build,
-  outside RAGE1. If T0 fails, the entire toolchain story is
-  unsound; the plan returns to library survey
+- **T0** — z88dk `+cpc` + sdcc_iy + a trivial cpctelera build
+  *attempt*, outside RAGE1. (Outcome: cpctelera's `sdas` asm cannot be
+  assembled by z88dk — see `cpc-renderer.md` §4.2 — which led to the
+  Option (b) translation decision.) If `+cpc` itself had failed, the
+  toolchain story would be unsound; the plan returns to library survey
   ([cpc-renderer.md](../cpc-renderer.md)).
-- **R2** — cpctelera-SDCC-3.6.8-vs-z88dk-SDCC-4.3 hello-world.
-  Most CPC work is gated on R2 succeeding; fallback is the
-  cpc-renderer.md alternatives survey (CPCRSlib).
+- **R2** — translate one cpctelera primitive (`sdas`→`z80asm`) and run a
+  hello-world on Caprice32 (Option (b) PoC gate; the obstacle is asm
+  *dialect*, not SDCC *version*). Most CPC work is gated on R2 succeeding;
+  fallback is the cpc-renderer.md alternatives survey (CPCRSlib).
 
 ---
 

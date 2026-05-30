@@ -170,7 +170,7 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
 - `B2` — per-platform ISR / codeset YAML split
 - `IN1`, `IN2` — input audit + HAL skeleton (alias-only, ZX-only)
 - `AU1`, `AU2` — audio audit + HAL aliases
-- `R1` — cpctelera submodule add (vendored but not yet compiled)
+- `R1` — cpctelera submodule add (vendored as reference; never compiled — Option (b) translation, see cpc-renderer.md §4.2/§6)
 
 **Phase 3 — HAL generalisation (ZX byte-identical).**
 

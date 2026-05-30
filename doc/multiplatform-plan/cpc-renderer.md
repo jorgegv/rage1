@@ -1092,9 +1092,11 @@ approach is reconsidered (per the R1-5 fallback).
   (2026-05-25)**: **reuse RAGE1's existing Arkos integration** on
   CPC (Arkos supports CPC natively via its CPC-flavoured player
   `.asm` variant; AKG music data is platform-agnostic). Do NOT
-  vendor cpctelera's `cpctelera/src/audio/` — exclude it from the
-  source glob. R1 verifies the retarget is cheap; if it isn't, the
-  fall-back is cpctelera's bundled Arkos. See §4 Caveats item 2.
+  translate or lift cpctelera's `cpctelera/src/audio/` — it is simply
+  never used; there is no source glob to exclude it from (corrected
+  2026-05-30 — cpctelera is reference-only, never compiled). R1
+  verifies the retarget is cheap; if it isn't, the fall-back is
+  cpctelera's bundled Arkos. See §4 Caveats item 2.
   Owned by `audio.md`.
 - **OQ-4** ✅ — cpctelera keyboard scan vs our own.
   **RESOLVED (2026-05-26)** by [input.md §4.3](input.md): use

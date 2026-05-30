@@ -294,8 +294,12 @@ build).** Use
 cpctelera (or whichever CPC graphics library is selected in
 `cpc-renderer.md`) **as a vendored library only** — vendored via git
 submodule at `external/<libname>/` mirroring the existing `external/jsp/`
-pattern — and consume only its public headers, .lib/.asm sources and
-asset-conversion command-line tools. Do not import its build system.
+pattern. **Corrected 2026-05-30 (Option (b), §2.3 Finding 2):** RAGE1
+consumes only its asset-conversion command-line tools (as host
+subprocesses) and its source as **translation reference** — never its
+`.lib` or `.asm`/`.h` as compiled inputs (z88dk cannot assemble
+cpctelera's `sdas`; see `cpc-renderer.md` §4.2). Do not import its build
+system.
 
 Rationale:
 
@@ -320,13 +324,15 @@ Rationale:
 - **Library vendoring precedent**: JSP already lives at `external/jsp/`
   as a submodule. Same approach for cpctelera (`external/cpctelera/`)
   gives the user identical mental model and CI behaviour.
-- **Risk of mismatch with cpctelera's expectations**: cpctelera library
-  sources are written against its own SDCC version, but as long as we
-  use cpctelera's `.asm` and `.h` files (not its prebuilt binaries) and
-  feed them to the z88dk-driven SDCC of equivalent vintage, calling
-  conventions match. This is a known-good pattern (cpctelera itself
-  builds its lib with the same compiler family). Validated empirically
-  by a small spike in Phase T0; see Risks.
+- **Asm-dialect mismatch (superseded 2026-05-30 → Option (b))**: an
+  earlier draft assumed we could "use cpctelera's `.asm`/`.h` and feed
+  them to the z88dk-driven SDCC of equivalent vintage." The T0 spike
+  (Finding 2, below) disproved this: z88dk ships **no `sdasz80`** and its
+  `z80asm` cannot parse cpctelera's `sdas` dialect, so cpctelera asm is
+  **never fed to z88dk**. The primitives RAGE1 needs are hand-translated
+  `sdas`→`z80asm` under `engine/src/cpc/` (`cpc-renderer.md` §4.2 / §6,
+  R1-5). The C calling conventions (`__z88dk_*`) still line up for the
+  translated bodies; only the asm dialect changes.
 
 The chosen architecture is therefore:
 
