@@ -18,7 +18,7 @@
 
 #include "game_data.h"
 
-#ifdef BUILD_FEATURE_TRACKER_VORTEX2
+#ifdef BUILD_FEATURE_AUDIO_MUSIC_VORTEX2
 
 #include "rage1/vortex2.h"
 
@@ -62,9 +62,9 @@ __endasm;
 
 // Vortex2 does not support sound fx
 
-#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+#ifdef BUILD_FEATURE_AUDIO_SFX_TRACKER
   #error Vortex2 does not support Sound FX!
 #endif
 
-#endif // BUILD_FEATURE_TRACKER_VORTEX2
+#endif // BUILD_FEATURE_AUDIO_MUSIC_VORTEX2
 

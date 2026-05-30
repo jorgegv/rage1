@@ -19,16 +19,16 @@
 
 #include "game_data.h"
 
-#ifdef BUILD_FEATURE_TRACKER
+#ifdef BUILD_FEATURE_AUDIO_MUSIC
 
 /////////////////////////////////////////////////////
 // include the proper file for the tracker used
 
-#ifdef BUILD_FEATURE_TRACKER_ARKOS2
+#ifdef BUILD_FEATURE_AUDIO_MUSIC_ARKOS2
   #include "rage1/arkos2.h"
 #endif
 
-#ifdef BUILD_FEATURE_TRACKER_VORTEX2
+#ifdef BUILD_FEATURE_AUDIO_MUSIC_VORTEX2
   #include "rage1/vortex2.h"
 #endif
 
@@ -89,7 +89,7 @@ void tracker_do_periodic_tasks( void ) {
 // sound effects table
 // extern void *all_sound_effects[] - generated externally
 
-#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+#ifdef BUILD_FEATURE_AUDIO_SFX_TRACKER
 
 /////////////////////////////////////
 // Tracker sound effects functions
@@ -112,5 +112,5 @@ void tracker_request_fx( uint16_t fxid ) {
     SET_LOOP_FLAG( F_LOOP_PLAY_TRACKER_FX );
 }
 
-#endif // BUILD_FEATURE_TRACKER_SOUNDFX
-#endif // BUILD_FEATURE_TRACKER
+#endif // BUILD_FEATURE_AUDIO_SFX_TRACKER
+#endif // BUILD_FEATURE_AUDIO_MUSIC
