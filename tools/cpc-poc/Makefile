@@ -8,9 +8,13 @@
 NAME       = poc
 CC         = zcc
 TARGET     = +cpc
-# NOTE: org MUST be >= 0x4000. drawStringM1 pages in the lower ROM (0x0000-
-# 0x3FFF) to read the CPC font, which would mask any program code/data living
-# below 0x4000 (z88dk's +cpc default org is 0x1200) and crash the call.
+# NOTE: -zorg=0x4000 here is a PoC-specific workaround, NOT a general rule, and
+# NOT the engine's memory map. THIS PoC reuses the CPC firmware font in the
+# lower ROM, so drawStringM1 pages the lower ROM in (0x0000-0x3FFF) to read it;
+# while paged in, RAM there is masked, so the program (z88dk's +cpc default org
+# is 0x1200, inside that window) must be relocated above it or the call crashes
+# into ROM. The real engine follows the designed memory map (banking.md §3.1)
+# and renders from RAGE1's own charset (no firmware font), so it won't need this.
 CFLAGS     = -compiler=sdcc -zorg=0x4000 -SO2 --max-allocs-per-node200000
 ENGINE_CPC = ../../engine/src/cpc
 ASMSRC     = $(ENGINE_CPC)/cpct_video.asm $(ENGINE_CPC)/cpct_strings_m1.asm

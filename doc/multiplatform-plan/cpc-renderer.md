@@ -949,12 +949,18 @@ approach is reconsidered (per the R1-5 fallback).
     `testing.md` TS2 lands the proper Caprice32+Xvfb/Docker harness.
   - Verified: mode-1 yellow-on-blue text renders correctly in Caprice32.
   - **Two non-obvious gotchas (carry into R4 / banking.md / toolchain.md T2):**
-    1. **Link org MUST be ≥ 0x4000.** `cpct_drawStringM1` pages in the lower
-       ROM (0x0000–0x3FFF) to read the firmware font; any program code/data
-       below 0x4000 is masked during that window and the call crashes into
-       ROM. z88dk's `+cpc` default org is 0x1200 — must override
-       (`-zorg=0x4000`). The CPC memory map in `banking.md` §3.1 must keep the
-       engine + translated primitives above 0x4000.
+    1. **Lower-ROM-font link caveat (PoC-specific — NOT a memory-map rule).**
+       The PoC reused the CPC firmware font in the lower ROM, so
+       `cpct_drawStringM1` pages the lower ROM in (0x0000–0x3FFF) to read it;
+       while paged in, RAM there is masked, so any code/data the routine touches
+       must sit above that window. z88dk's low `+cpc` default org (0x1200) fell
+       inside it → crash; the PoC worked around it with `-zorg=0x4000`. This is
+       a PoC convenience, not an engine requirement: **do not hardcode 0x4000.**
+       Real CPC placement follows the designed memory map (`banking.md` §3.1),
+       and since RAGE1 minimises firmware use and renders from its own
+       charset/glyph data (not the firmware ROM font), the R4 `gfx_cpctel`
+       renderer generally won't page the lower ROM during drawing and this
+       caveat won't apply.
     2. z88dk writes the AMSDOS file with an **empty extension**, so
        `RUN"NAME` (which AMSDOS expands to `.BAS`/`.BIN`) fails — use
        `RUN"NAME.` (explicit empty extension).

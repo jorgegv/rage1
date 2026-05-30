@@ -55,15 +55,21 @@ What it does, and **why each step is needed in this environment**:
 ## Building a CPC test program (z88dk `+cpc`)
 
 ```bash
-zcc +cpc -compiler=sdcc -zorg=0x4000 -create-app -subtype=dsk -o NAME \
+zcc +cpc -compiler=sdcc -create-app -subtype=dsk -o NAME \
     main.c engine/src/cpc/*.asm
 ```
 - **`-compiler=sdcc`** is mandatory: cpctelera's C-binding ABI is SDCC's, and
   z88dk's SDCC `__z88dk_callee`/`__z88dk_fastcall` match it exactly.
-- **`-zorg=0x4000` is mandatory for anything that draws text / reads the
-  firmware font.** `cpct_drawStringM1` pages in the **lower ROM (0x0000–0x3FFF)**
-  to read the 0x3800 font; any code/data below 0x4000 is masked during that
-  window → the call crashes into ROM. z88dk's `+cpc` default org is 0x1200.
+- **Link org**: use the project's designed CPC memory map (the real engine
+  build sets this via its Makefile / `banking.md` §3.1) — **don't hardcode an
+  address.** *Caveat for the firmware ROM font only:* if a routine pages in the
+  **lower ROM (0x0000–0x3FFF)** to read the firmware font (as the R2 PoC's
+  `cpct_drawStringM1` does), any code/data it touches must live above that
+  masked window, so the PoC overrode z88dk's low `+cpc` default org with
+  `-zorg=0x4000`. RAGE1 aims to **minimise firmware use** and renders from its
+  own charset/glyph data (not the firmware font), so the engine renderer
+  (R4 `gfx_cpctel`) generally won't page the lower ROM and this caveat won't
+  apply — placement is whatever the memory map dictates.
 - Link the **translated** cpctelera primitives from `engine/src/cpc/*.asm`.
   **Never compile cpctelera itself** — it is pure `sdas` asm and z88dk has no
   `sdasz80` (the whole Option (b) translation model; see `cpc-renderer.md`
