@@ -14,7 +14,7 @@
 #include "rage1/flow.h"
 #include "rage1/game_state.h"
 #include "rage1/hero.h"
-#include "rage1/beeper.h"
+#include "rage1/audio.h"
 #include "rage1/hotzone.h"
 #include "rage1/map.h"
 #include "rage1/btile.h"
@@ -311,8 +311,8 @@ void do_rule_action_reset_user_flag( struct flow_rule_action_s *action ) __z88dk
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_PLAY_SOUND
-void do_rule_action_play_sound( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    beeper_request_fx( action->data.play_sound.sound_id );
+void do_rule_action_audio_sfx( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    audio_sfx_beeper_request( action->data.play_sound.sound_id );
 }
 #endif
 
@@ -448,29 +448,29 @@ void do_rule_action_flow_var_sub( struct flow_rule_action_s *action ) __z88dk_fa
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_SELECT_SONG
-void do_rule_action_tracker_select_song( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    tracker_stop();
-    tracker_select_song( action->data.tracker_song.num_song );
+void do_rule_action_audio_music_select_song( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    audio_music_stop();
+    audio_music_select_song( action->data.tracker_song.num_song );
 }
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_STOP
-void do_rule_action_tracker_music_stop( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    tracker_stop();
+void do_rule_action_audio_music_stop( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    audio_music_stop();
 }
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_START
-void do_rule_action_tracker_music_start( struct flow_rule_action_s *action ) __z88dk_fastcall {
-    tracker_start();
+void do_rule_action_audio_music_start( struct flow_rule_action_s *action ) __z88dk_fastcall {
+    audio_music_start();
 }
 #endif
 
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
-void do_rule_action_tracker_play_fx( struct flow_rule_action_s *action ) __z88dk_fastcall {
+void do_rule_action_audio_sfx_tracker( struct flow_rule_action_s *action ) __z88dk_fastcall {
     // ignored if we do not have a tracker that supports sound fx
-#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
-    tracker_request_fx( action->data.tracker_fx.num_effect );
+#ifdef BUILD_FEATURE_AUDIO_SFX_TRACKER
+    audio_sfx_tracker_request( action->data.tracker_fx.num_effect );
 #endif
 }
 #endif
@@ -663,7 +663,7 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     NULL,
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_PLAY_SOUND
-    do_rule_action_play_sound,
+    do_rule_action_audio_sfx,
 #else
     NULL,
 #endif
@@ -753,22 +753,22 @@ rule_action_fn_t rule_action_fn[ RULE_ACTION_MAX + 1 ] = {
     NULL,
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_SELECT_SONG
-    do_rule_action_tracker_select_song,
+    do_rule_action_audio_music_select_song,
 #else
     NULL,
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_STOP
-    do_rule_action_tracker_music_stop,
+    do_rule_action_audio_music_stop,
 #else
     NULL,
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_MUSIC_START
-    do_rule_action_tracker_music_start,
+    do_rule_action_audio_music_start,
 #else
     NULL,
 #endif
 #ifdef BUILD_FEATURE_FLOW_RULE_ACTION_TRACKER_PLAY_FX
-    do_rule_action_tracker_play_fx,
+    do_rule_action_audio_sfx_tracker,
 #else
     NULL,
 #endif
