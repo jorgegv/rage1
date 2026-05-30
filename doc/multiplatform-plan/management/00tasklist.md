@@ -41,14 +41,14 @@ under it is ticked complete.
   - [x] R1 — cpctelera submodule add (vendored but not yet compiled)
 
 - [ ] **Phase 3 — HAL generalisation (ZX byte-identical)**
-  - [ ] G3 — attribute abstraction
-  - [ ] G4 — pixel coords widening
+  - [x] G3 — attribute abstraction
+  - [x] G4 — pixel coords widening
   - [ ] G5 — sprite geometry abstraction
   - [ ] G6 — tile-ID abstraction
-  - [ ] A3 — per-platform dispatch seam in `datagen.pl`
-  - [ ] A4 — overlay precedence proven end-to-end on ZX
-  - [ ] B3 — parameterise lowmem threshold checks
-  - [ ] IN3 — engine ↔ HAL migration
+  - [x] A3 — per-platform dispatch seam in `datagen.pl`
+  - [x] A4 — overlay precedence proven end-to-end on ZX
+  - [x] B3 — parameterise lowmem threshold checks
+  - [x] IN3 — engine ↔ HAL migration
   - [ ] IN4 — per-game `kbd.c` consolidation
   - [ ] AU3 — migrate to `audio_*` names (legacy stays as permanent silent aliases per README §5.6)
 
