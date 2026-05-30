@@ -308,11 +308,11 @@ TEST1_OBJS=memory.o sp1engine.o map.o
 test1: tests/test1.c $(TEST1_OBJS)
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) tests/test1.c $(TEST1_OBJS) -startup=31 -create-app -o test1.bin
 
-TEST2_OBJS=beeper.o
+TEST2_OBJS=audio_zx_beeper.o
 test2: tests/test2.c $(TEST2_OBJS)
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) tests/test2.c $(TEST2_OBJS) -startup=31 -create-app -o test2.bin
 
-BEEPTEST_OBJS=beeper.o
+BEEPTEST_OBJS=audio_zx_beeper.o
 beeptest: tests/beeptest.c $(BEEPTEST_OBJS)
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) $(INCLUDE) $(LIBDIR) $(LIBS) tests/beeptest.c $(BEEPTEST_OBJS) -startup=31 -create-app -o beeptest.bin
 
