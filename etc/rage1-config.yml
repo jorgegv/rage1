@@ -118,7 +118,17 @@ banked_functions:
   - name: init_main_shared_data
     signature: a16
 
-  # beeper
+  # beeper (audio SFX backend: zx_beeper)
+  #
+  # AU3-6 note: these banked-function `name`s are the *implementation*
+  # symbols exported by engine/banked_code/common/audio_zx_beeper.c and are
+  # also used to generate the call-shim macros (#define beeper_play_fx(a)
+  # ...). The audio_* HAL surface reaches them via the AU2-2 `static inline`
+  # redirects (audio_sfx_beeper_play -> beeper_play_fx). Because AU3-7 was
+  # DROPPED (README §5.6 — the audio_* inline aliases stay forever), renaming
+  # these entries to the audio_* names would clash with those same-named
+  # inline functions. They therefore keep the legacy implementation-symbol
+  # names; the audio_* names live one layer up in the HAL headers.
   - name: beeper_play_pending_fx
   - name: beeper_request_fx
     signature: a16
@@ -144,7 +154,15 @@ banked_functions:
   - name: bullet_add
     build_dependency: BUILD_FEATURE_HERO_HAS_WEAPON
 
-  # tracker
+  # tracker (audio music + AY SFX backend: zx_ay)
+  #
+  # AU3-6 note: same rationale as the beeper block above. These are the
+  # implementation symbols in engine/banked_code/128/audio_zx_ay.c; the
+  # audio_music_* / audio_sfx_tracker_* HAL aliases redirect to them. They
+  # keep their legacy names to avoid clashing with the kept AU2-2 inline
+  # aliases (AU3-7 dropped). build_dependency is left on the legacy
+  # BUILD_FEATURE_TRACKER* macros, which datagen still emits in parallel with
+  # the new BUILD_FEATURE_AUDIO_* family (so external configs are unaffected).
   - name: init_tracker
     build_dependency: BUILD_FEATURE_TRACKER
   - name: tracker_select_song

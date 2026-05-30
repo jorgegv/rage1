@@ -15,25 +15,53 @@
 
 #include "features.h"
 
+// On 128K builds these symbols are provided as banked-call macros from
+// banked_function_defs.h (included via memory.h). When that header is
+// pulled in *before* this one, the macros are already defined and the
+// real prototypes must be suppressed to avoid "too many arguments to
+// macro" errors. The #ifndef guards make this header order-independent
+// while keeping the prototypes visible on builds where the function is
+// a real linkable symbol (the banked-code build itself).
+
 /////////////////////////////
 // Tracker music functions
 /////////////////////////////
 
+#ifndef init_tracker
 void init_tracker( void );
+#endif
+#ifndef tracker_select_song
 void tracker_select_song( uint8_t song_id );
+#endif
+#ifndef tracker_start
 void tracker_start( void );
+#endif
+#ifndef tracker_stop
 void tracker_stop( void );
+#endif
+#ifndef tracker_do_periodic_tasks
 void tracker_do_periodic_tasks( void );
+#endif
+#ifndef tracker_rewind
 void tracker_rewind( void );
+#endif
 
 /////////////////////////////////////
 // Tracker sound effects functions
 /////////////////////////////////////
 
+#ifndef init_tracker_sound_effects
 void init_tracker_sound_effects( void );
+#endif
+#ifndef tracker_play_fx
 void tracker_play_fx( uint8_t effect_id );
+#endif
+#ifndef tracker_request_fx
 void tracker_request_fx( uint16_t fxid );
+#endif
+#ifndef tracker_play_pending_fx
 void tracker_play_pending_fx( void );
+#endif
 
 // Songs and FX tables
 extern void *all_songs[];

@@ -4683,6 +4683,28 @@ sub fix_feature_dependencies {
         }
     }
 
+    # AU3-5: rename the legacy BUILD_FEATURE_TRACKER* capability macros to
+    # the BUILD_FEATURE_AUDIO_* family (doc/multiplatform-plan/audio.md
+    # §3.2). The old names are emitted *in parallel indefinitely* as
+    # permanent silent aliases per README §5.6 — external games that
+    # #ifdef on the old macros keep building forever. Mapping:
+    #   BUILD_FEATURE_TRACKER          -> BUILD_FEATURE_AUDIO_MUSIC
+    #   BUILD_FEATURE_TRACKER_ARKOS2   -> BUILD_FEATURE_AUDIO_MUSIC_ARKOS2
+    #   BUILD_FEATURE_TRACKER_VORTEX2  -> BUILD_FEATURE_AUDIO_MUSIC_VORTEX2
+    #   BUILD_FEATURE_TRACKER_SOUNDFX  -> BUILD_FEATURE_AUDIO_SFX_TRACKER
+    if ( defined( $conditional_build_features{ 'TRACKER' } ) ) {
+        add_build_feature( 'AUDIO_MUSIC' );
+    }
+    if ( defined( $conditional_build_features{ 'TRACKER_ARKOS2' } ) ) {
+        add_build_feature( 'AUDIO_MUSIC_ARKOS2' );
+    }
+    if ( defined( $conditional_build_features{ 'TRACKER_VORTEX2' } ) ) {
+        add_build_feature( 'AUDIO_MUSIC_VORTEX2' );
+    }
+    if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
+        add_build_feature( 'AUDIO_SFX_TRACKER' );
+    }
+
     # additional fixes here...
 }
 

@@ -12,6 +12,7 @@
 
 #include "features.h"
 
+#include "rage1/audio.h"
 #include "rage1/memory.h"
 #include "rage1/interrupts.h"
 #include "rage1/controller.h"
@@ -56,7 +57,7 @@ void init_program(void) {
 #ifdef BUILD_FEATURE_ZX_TARGET_128
    // this one is only needed when compiling for 128
    // for 48 mode the beepr gets initialized by regular BSS init code
-   init_beeper();
+   audio_sfx_beeper_init();
 #endif
 
 #ifdef	BUILD_FEATURE_CUSTOM_CHARSET
@@ -66,11 +67,11 @@ void init_program(void) {
 #ifdef BUILD_FEATURE_GAME_TIME
    init_timer();
 #endif
-#ifdef BUILD_FEATURE_TRACKER
-   init_tracker();
+#ifdef BUILD_FEATURE_AUDIO_MUSIC
+   audio_music_init();
 #endif
-#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
-   init_tracker_sound_effects();
+#ifdef BUILD_FEATURE_AUDIO_SFX_TRACKER
+   audio_sfx_tracker_init();
 #endif
 
    // this must be called last

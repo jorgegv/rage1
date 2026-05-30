@@ -17,7 +17,7 @@
 #include "rage1/game_state.h"
 #include "rage1/interrupts.h"
 #include "rage1/screen.h"
-#include "rage1/beeper.h"
+#include "rage1/audio.h"
 #include "rage1/controller.h"
 #include "rage1/sprite.h"
 #include "rage1/collision.h"
@@ -71,14 +71,14 @@ void check_loop_flags( void ) {
 
     // check if sound fx needs to be played
     if ( GET_LOOP_FLAG( F_LOOP_PLAY_BEEPER_FX ) ) {
-        beeper_play_pending_fx();
+        audio_sfx_beeper_play_pending();
         // all loop flags are reset at the beginning of the game loop
     }
 
-#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+#ifdef BUILD_FEATURE_AUDIO_SFX_TRACKER
     // check if tracker sound fx needs to be played
     if ( GET_LOOP_FLAG( F_LOOP_PLAY_TRACKER_FX ) ) {
-        tracker_play_pending_fx();
+        audio_sfx_tracker_play_pending();
         // all loop flags are reset at the beginning of the game loop
     }
 #endif
@@ -162,9 +162,9 @@ void show_heartbeat(void) {
 }
 
 // this one is not needed, this task is run from the ISR
-// void run_tracker_tasks( void ) {
+// void run_music_tasks( void ) {
 //    RUN_ONLY_ONCE_PER_FRAME;
-//    tracker_do_periodic_tasks();
+//    audio_music_tick();
 //}
 
 void run_main_game_loop(void) {
@@ -188,12 +188,12 @@ void run_main_game_loop(void) {
    inventory_show();
 #endif
 
-#ifdef BUILD_FEATURE_TRACKER
+#ifdef BUILD_FEATURE_AUDIO_MUSIC
    // start music
    // music is playing via interrupts
-   tracker_select_song( TRACKER_IN_GAME_SONG );
-   tracker_rewind();
-   tracker_start();
+   audio_music_select_song( TRACKER_IN_GAME_SONG );
+   audio_music_rewind();
+   audio_music_start();
 #endif
 
    // run user game initialization, if any
@@ -283,9 +283,9 @@ void run_main_game_loop(void) {
 
    // cleanup
 
-#ifdef BUILD_FEATURE_TRACKER
+#ifdef BUILD_FEATURE_AUDIO_MUSIC
    // stop music
-   tracker_stop();
+   audio_music_stop();
 #endif
 
    // free sprites in the current screen

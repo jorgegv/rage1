@@ -27,6 +27,11 @@
 #include <stdint.h>
 
 #include "features.h"
+// memory.h must be included before tracker.h so that, on 128K builds, the
+// banked-call macros (banked_function_defs.h) are visible when the inline
+// alias bodies below are parsed — they must expand to banked calls, not
+// direct calls to symbols that only exist inside the banked code.
+#include "rage1/memory.h"
 #include "rage1/tracker.h"
 
 // SFX index type (0 .. TRACKER_SOUNDFX_NUM_EFFECTS-1). For the
@@ -38,6 +43,11 @@ typedef uint8_t audio_sfx_tracker_t;
 ////////////////////////////////////////////////////////
 // HAL contract — Music ops (AU2-2 inline aliases)
 ////////////////////////////////////////////////////////
+
+// audio_music_init() — initialise the AY music backend.
+static inline void audio_music_init( void ) {
+    init_tracker();
+}
 
 // audio_music_select_song(song_id) — pick the active song.
 static inline void audio_music_select_song( uint8_t song_id ) {
@@ -68,6 +78,19 @@ static inline void audio_music_tick( void ) {
 // HAL contract — SFX ops (AY tracker channel)
 ////////////////////////////////////////////////////////
 
+// The underlying tracker SFX symbols (init_tracker_sound_effects,
+// tracker_request_fx, tracker_play_fx, tracker_play_pending_fx) only
+// exist when the build configures an AY SFX channel (TRACKER ... FX_CHANNEL,
+// i.e. BUILD_FEATURE_AUDIO_SFX_TRACKER). SDCC emits static-inline bodies
+// even when unreferenced, so these aliases are gated to match — otherwise
+// a Vortex2 (no-SFX) build would link against absent symbols.
+#ifdef BUILD_FEATURE_AUDIO_SFX_TRACKER
+
+// audio_sfx_tracker_init() — initialise the AY SFX channel.
+static inline void audio_sfx_tracker_init( void ) {
+    init_tracker_sound_effects();
+}
+
 // audio_sfx_tracker_request(sfx) — queue an AY SFX for the next
 // game-loop chokepoint drain. The legacy entry point takes a
 // uint16_t for ABI reasons; the HAL type is uint8_t, so we widen
@@ -85,5 +108,7 @@ static inline void audio_sfx_tracker_play( audio_sfx_tracker_t sfx ) {
 static inline void audio_sfx_tracker_play_pending( void ) {
     tracker_play_pending_fx();
 }
+
+#endif // BUILD_FEATURE_AUDIO_SFX_TRACKER
 
 #endif // _AUDIO_ZX_AY_H

@@ -18,7 +18,7 @@
 
 #include "game_data.h"
 
-#ifdef BUILD_FEATURE_TRACKER_ARKOS2
+#ifdef BUILD_FEATURE_AUDIO_MUSIC_ARKOS2
 
 #include "rage1/arkos2.h"
 
@@ -50,7 +50,7 @@ void tracker_specific_do_periodic_tasks( void ) {
     //intrinsic_ei_if_needed();
 }
 
-#ifdef BUILD_FEATURE_TRACKER_SOUNDFX
+#ifdef BUILD_FEATURE_AUDIO_SFX_TRACKER
 
 /////////////////////////////////////
 // Tracker sound effects functions
@@ -77,7 +77,7 @@ __asm
 __endasm;
 }
 
-#endif // BUILD_FEATURE_TRACKER_SOUNDFX
+#endif // BUILD_FEATURE_AUDIO_SFX_TRACKER
 
-#endif // BUILD_FEATURE_TRACKER_ARKOS2
+#endif // BUILD_FEATURE_AUDIO_MUSIC_ARKOS2
 

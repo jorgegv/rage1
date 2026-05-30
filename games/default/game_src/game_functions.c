@@ -17,7 +17,7 @@
 #include "rage1/game_state.h"
 #include "rage1/controller.h"
 #include "rage1/input.h"
-#include "rage1/beeper.h"
+#include "rage1/audio.h"
 #include "rage1/btile.h"
 #include "rage1/flow.h"
 #include "rage1/debug.h"
@@ -76,9 +76,9 @@ void my_menu_screen(void) {
 
    controller_reset_all();
 
-   tracker_select_song( TRACKER_SONG_GAME_SONG );
-   tracker_rewind();
-   tracker_start();
+   audio_music_select_song( TRACKER_SONG_GAME_SONG );
+   audio_music_rewind();
+   audio_music_start();
 
    // wait for selection
    gfx_print_string( &print_ctx, "\x16\x13\x06 Selection: " );
@@ -105,31 +105,31 @@ void my_menu_screen(void) {
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key UP:   " );
             gfx_update();
             game_state.controller.keys.up = input_capture_scancode();
-            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            audio_sfx_beeper_play( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key DOWN: " );
             gfx_update();
             game_state.controller.keys.down = input_capture_scancode();
-            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            audio_sfx_beeper_play( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key LEFT: " );
             gfx_update();
             game_state.controller.keys.left = input_capture_scancode();
-            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            audio_sfx_beeper_play( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key RIGHT:" );
             gfx_update();
             game_state.controller.keys.right = input_capture_scancode();
-            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            audio_sfx_beeper_play( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key FIRE: " );
             gfx_update();
             game_state.controller.keys.fire = input_capture_scancode();
-            beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+            audio_sfx_beeper_play( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx, "\x16\x13\x06 Selection: " );
@@ -139,13 +139,13 @@ void my_menu_screen(void) {
    }
    gfx_update();
    in_pause(100);
-   beeper_play_fx( SOUND_CONTROLLER_SELECTED );
+   audio_sfx_beeper_play( SOUND_CONTROLLER_SELECTED );
    in_pause(500);
 
    // stop playing and reset the song
-   tracker_stop();
-   tracker_select_song( TRACKER_SONG_GAME_SONG );
-   tracker_rewind();
+   audio_music_stop();
+   audio_music_select_song( TRACKER_SONG_GAME_SONG );
+   audio_music_rewind();
 
    // clear screen and exit to main game loop
    gfx_clear_rect( &game_area, DEFAULT_BG_ATTR, ' ', GFX_CLEAR_TILE | GFX_CLEAR_COLOUR );
@@ -224,7 +224,7 @@ void my_intro_screen(void) {
 void my_game_end_screen(void) {
    draw_text_box( &b2, " You won!" );
    gfx_update();
-   beeper_play_fx( SOUND_GAME_WON );
+   audio_sfx_beeper_play( SOUND_GAME_WON );
 
    in_wait_nokey();
    in_wait_key();
@@ -237,7 +237,7 @@ void my_game_end_screen(void) {
 void my_game_over_screen(void) {
    draw_text_box( &b2, "GAME OVER!" );
    gfx_update();
-   beeper_play_fx( SOUND_GAME_OVER );
+   audio_sfx_beeper_play( SOUND_GAME_OVER );
 
    in_wait_nokey();
    in_wait_key();
