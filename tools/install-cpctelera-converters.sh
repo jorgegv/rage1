@@ -111,7 +111,9 @@ echo "[cpctelera-converters] wrapper installed: $WRAPPER"
 # ---------------------------------------------------------------------------
 # 3. PATH hint / profile.d
 # ---------------------------------------------------------------------------
-if [[ "$PREFIX" == "/usr/local/bin" ]] || echo "$PATH" | grep -qF "$PREFIX"; then
+# Colon-delimited exact match so /usr/local/bin doesn't spuriously match e.g.
+# /usr/local/bin-other, and a bare $PREFIX isn't matched as a substring.
+if [[ ":$PATH:" == *":$PREFIX:"* ]]; then
     echo "[cpctelera-converters] $PREFIX is on PATH — no further action needed."
 else
     # If running as root, drop a profile.d fragment

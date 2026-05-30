@@ -39,11 +39,12 @@ RUN \
 	&& make \
 	&& cp ${BAS2TAP_PATH}/bas2tap ${Z88DK_PATH}/bin
 
-# Phase R3: cpctelera host asset converter (Img2CPC + cpct_img2tileset).
-# Requires: gcc-c++ (already above) + freeimage-devel.
-# The cpctelera submodule is brought in via the workspace checkout
-# (CI uses `submodules: recursive`); install-cpctelera-converters.sh
-# builds Img2CPC from source and installs the cpct_img2tileset wrapper.
+# Phase R3: build dependency for cpctelera's host asset converter
+# (Img2CPC + cpct_img2tileset).  Requires gcc-c++ (already above) + freeimage.
+# The converter itself is built/installed at CI time by
+# tools/install-cpctelera-converters.sh (see .github/workflows/build-test-games.yaml),
+# because Img2CPC needs the external/cpctelera submodule which only exists after
+# the workspace checkout (CI uses `submodules: recursive`) — not at image build.
 RUN dnf install -y freeimage freeimage-devel
 
 ENV PATH="${Z88DK_PATH}/bin:$HOME/perl5/bin:${PATH}" \

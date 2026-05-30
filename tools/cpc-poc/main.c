@@ -30,11 +30,15 @@ extern void cpct_setPALColour( uint8_t pen, uint8_t hw_ink )  __z88dk_callee;
 extern void cpct_setDrawCharM1( uint8_t fg_pen, uint8_t bg_pen ) __z88dk_callee;
 extern void cpct_drawStringM1( void *string, void *video_mem )   __z88dk_callee;
 
-// CPC hardware colour values (from cpctelera colours.h)
-#define HW_BLACK          0x14
-#define HW_BLUE           0x04
-#define HW_BRIGHT_YELLOW  0x0A
-#define HW_BRIGHT_WHITE   0x0B
+// CPC GA INK values for cpct_setPALColour (it ORs 0x40 internally, so these
+// are HW_value - 0x40 = the low 6 bits of the Gate-Array hardware INK).
+// The four below are EXACTLY the firmware palette {1,24,20,6} that
+// cpc_asset_convert.pl uses for the sprite conversion (mode-1 pens 0..3),
+// so the runtime palette matches the PNG quantisation 1:1.
+#define HW_DK_BLUE        0x04    // FW 1  (HW 0x44) — pen 0
+#define HW_BRIGHT_YELLOW  0x0A    // FW 24 (HW 0x4A) — pen 1
+#define HW_BRIGHT_CYAN    0x13    // FW 20 (HW 0x53) — pen 2
+#define HW_BRIGHT_RED     0x0C    // FW 6  (HW 0x4C) — pen 3
 
 #define CPC_VMEM          ((uint8_t *)0xC000)
 #define CPC_SCR_BYTES_ROW 0x50u    // 80 bytes per pixel row in mode 1
@@ -42,9 +46,15 @@ extern void cpct_drawStringM1( void *string, void *video_mem )   __z88dk_callee;
 // ---------------------------------------------------------------------------
 // CPC mode-1 screen address for pixel row y, byte offset x
 //   addr = vbase + (y % 8) * 0x50 + (y / 8) * 0x800 + x
+// The (y/8)*0x800 term reaches 0xC000 at y=192, which overflows 16-bit math
+// once added to the 0xC000 video base; compute the byte offset in 32-bit and
+// add it to the base as a single pointer step.
 // ---------------------------------------------------------------------------
 static uint8_t *scr_addr(uint16_t y, uint16_t x_byte) {
-    return CPC_VMEM + (y & 7u) * CPC_SCR_BYTES_ROW + (y >> 3) * 0x800u + x_byte;
+    uint32_t off = (uint32_t)(y & 7u) * CPC_SCR_BYTES_ROW
+                 + (uint32_t)(y >> 3) * 0x800u
+                 + x_byte;
+    return CPC_VMEM + off;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,12 +78,15 @@ int main(void) {
 
     cpct_setVideoMode(1);       // mode 1: 320x200, 4 colours
 
-    // Palette: pen 0 = background (blue), pen 1 = text (bright yellow),
-    //          pen 2 = cyan, pen 3 = red
-    cpct_setPALColour(0, HW_BLUE);
+    // Palette matches the FW {1,24,20,6} set used by cpc_asset_convert.pl:
+    //   pen 0 = dark blue   (sprite background + text background)
+    //   pen 1 = bright yellow (sprite + text foreground)
+    //   pen 2 = bright cyan
+    //   pen 3 = bright red
+    cpct_setPALColour(0, HW_DK_BLUE);
     cpct_setPALColour(1, HW_BRIGHT_YELLOW);
-    cpct_setPALColour(2, HW_BRIGHT_WHITE);  // fw20 = cyan ≈ bright white in HW
-    cpct_setPALColour(3, HW_BLACK);
+    cpct_setPALColour(2, HW_BRIGHT_CYAN);
+    cpct_setPALColour(3, HW_BRIGHT_RED);
 
     // Clear the 16K screen to pen 0 (mode-1 pixels all 0)
     for (uint16_t i = 0; i < 0x4000u; i++)
