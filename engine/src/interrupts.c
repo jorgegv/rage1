@@ -20,6 +20,7 @@
 #include <intrinsic.h>
 #include <z80.h>
 
+#include "rage1/audio.h"
 #include "rage1/interrupts.h"
 #include "rage1/debug.h"
 #include "rage1/memory.h"
@@ -50,8 +51,8 @@ void do_timer_tick( void ) {
 // periodic tasks function, invoked from ISR
 // do not add code here unless it is strictly needed!
 void do_periodic_isr_tasks( void ) {
-#ifdef BUILD_FEATURE_TRACKER
-   tracker_do_periodic_tasks();
+#ifdef BUILD_FEATURE_AUDIO_MUSIC
+   audio_music_tick();
 #endif
 }
 
