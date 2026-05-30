@@ -28,6 +28,8 @@
 //     gfx_attr_t         - attribute byte (inert on CPC, see §2.1)
 //     gfx_xpos_t         - integer screen X pixel coord (uint8_t on ZX, uint16_t on CPC/Layer-2)
 //     gfx_ypos_t         - integer screen Y pixel coord (uint8_t on ZX, uint16_t on CPC/Layer-2)
+//     gfx_tile_id_t      - tile/glyph identifier passed to gfx_tile_put/gfx_tile_register
+//                          (uint16_t on ZX: UDG code <256 or tile address; cache index on CPC)
 //
 //   Constants (as #defines):
 //     GFX_CLEAR_TILE     - flag: clear tiles in a rect
@@ -49,8 +51,8 @@
 //     gfx_sprite_get_width(s)
 //     gfx_sprite_get_height(s)
 //     gfx_sprite_park(s)     - move sprite to the backend's off-screen parking slot
-//     gfx_tile_put(row, col, attr, tile)
-//     gfx_tile_register(index, graphic)
+//     gfx_tile_put(row, col, attr, tile)      - tile is a gfx_tile_id_t
+//     gfx_tile_register(index, graphic)       - index is a gfx_tile_id_t
 //     gfx_clear_rect(rect, attr, ch, flags)
 //     gfx_print_set_pos(ctx, row, col)
 //     gfx_print_set_clip(ctx, rect)

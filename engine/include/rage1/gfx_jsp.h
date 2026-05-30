@@ -30,6 +30,14 @@ typedef uint8_t                  gfx_attr_t;
 typedef uint8_t                  gfx_xpos_t;
 typedef uint8_t                  gfx_ypos_t;
 
+// Tile / glyph identifier (Phase G6 — gfx.md §G6-1).
+// On JSP a tile id is the polysemic uint16_t passed to jsp_tile_put(): values
+// < 256 are UDG character codes, values >= 256 are 16-bit tile addresses.  Engine
+// code must use this typedef for the tile argument of gfx_tile_put() so the same
+// source compiles on the CPC backend (Phase G7), where the id is a backend-internal
+// tile-cache index instead.
+typedef uint16_t                 gfx_tile_id_t;
+
 //--- Constants ---
 #define GFX_CLEAR_TILE              JSP_RFLAG_TILE
 #define GFX_CLEAR_COLOUR            JSP_RFLAG_COLOUR
