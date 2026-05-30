@@ -55,7 +55,7 @@ under it is ticked complete.
 - [ ] **Phase 4 — CPC bring-up (cpc-flat first, then cpc-banked)**
   - [x] R2 — cpctelera + z88dk hello-world PoC (gating test)
   - [ ] R3 — `cpct_img2tileset` asset-converter wiring
-  - [ ] T2 — cpc-flat Makefile; first `.cpc`/`.cdt` build
+  - [x] T2 — cpc-flat Makefile; first `.cpc`/`.cdt` build
   - [ ] B4 — CPC banking config seam (cpc-flat = no banking)
   - [ ] B5 — cpc-flat banking materialised
   - [ ] G7 — `gfx_cpctel.c` stub skeleton
