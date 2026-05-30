@@ -102,18 +102,21 @@ if [[ "${resolved}" != "${declared_platform}" ]]; then
 fi
 
 # Emit the canonical platform name (consumed by the Makefile-<platform>
-# selection downstream). Phase T1 only supports ZX targets; CPC bring-up
-# arrives in Phase T2.
+# selection downstream). T2 adds cpc464 (cpc-flat memory model).
 case "${resolved}" in
     zx48|zx128)
         echo "${resolved}"
         ;;
-    cpc6128|cpc464|cpc|cpc-flat|cpc-banked)
-        echo "** Error: platform '${resolved}' is not yet supported (Phase T2 adds CPC bring-up)." >&2
+    cpc464)
+        # T2-7: cpc464 is supported; top-level Makefile dispatches to Makefile-cpc-flat.
+        echo "${resolved}"
+        ;;
+    cpc6128|cpc|cpc-flat|cpc-banked)
+        echo "** Error: platform '${resolved}' is not yet supported (Phase T3 adds cpc6128/cpc-banked)." >&2
         exit 1
         ;;
     *)
-        echo "** Error: unknown platform '${resolved}' (accepted in Phase T1: zx48, zx128)" >&2
+        echo "** Error: unknown platform '${resolved}' (accepted: zx48, zx128, cpc464)" >&2
         exit 1
         ;;
 esac

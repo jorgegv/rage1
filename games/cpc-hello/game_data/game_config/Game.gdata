@@ -1,0 +1,15 @@
+// CPC hello-world test game (T2-10)
+//
+// Scope: proves zcc +cpc toolchain end-to-end.
+// The RAGE1 CPC gfx/audio/input HAL backends are not yet
+// implemented (Phase G7/IN5/AU4). Therefore this game does NOT
+// use the RAGE1 engine directly; it is a minimal standalone C
+// programme (game_src/main_cpc.c) that boots and renders text
+// in Caprice32.
+//
+// Only PLATFORM and NAME are declared here; datagen.pl emits
+// BUILD_FEATURE_PLATFORM_CPC464 and BUILD_FEATURE_PLATFORM_CPC_FLAT.
+BEGIN_GAME_CONFIG
+    NAME        CpcHello
+    PLATFORM    cpc464
+END_GAME_CONFIG

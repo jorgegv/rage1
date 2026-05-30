@@ -39,6 +39,14 @@ RUN \
 	&& make \
 	&& cp ${BAS2TAP_PATH}/bas2tap ${Z88DK_PATH}/bin
 
+# T2-9: install 2cdt for CPC cassette tape image (.cdt) generation.
+# 2cdt source is in the CPCTools project by Clemens Bartz.
+ENV TWOCDT_PATH="/opt/2cdt"
+RUN \
+	git clone https://github.com/cpcitor/cpc-dev-tool-chain ${TWOCDT_PATH} \
+	&& gcc -o ${Z88DK_PATH}/bin/2cdt ${TWOCDT_PATH}/cpclib/2cdt/2cdt.c \
+	|| ( echo "2cdt build failed — CDT generation will be skipped at runtime" ; true )
+
 ENV PATH="${Z88DK_PATH}/bin:$HOME/perl5/bin:${PATH}" \
     ZCCCFG="${Z88DK_PATH}/lib/config/" \
     PERL5LIB="$HOME/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}" \

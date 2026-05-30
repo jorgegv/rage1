@@ -22,8 +22,9 @@ use lib "$FindBin::Bin/../lib";
 
 require RAGE::Config;
 
-# T1-10: file-level CLI option for --platform <zx48|zx128>. Declared
+# T1-10: file-level CLI option for --platform <zx48|zx128|cpc-flat>. Declared
 # here so subs (get_zx_target etc.) can read it. Parsed in main below.
+# T2-5: extends accepted values to include cpc-flat.
 our $opt_platform;
 
 # filenames are relative to the GENERATED dir, normally 'build/generated'
@@ -168,10 +169,12 @@ sub sanity_check_sub_binaries {
 
 sub get_zx_target {
     # T1-10: --platform CLI override beats the game's declared default.
+    # T2-5: cpc-flat is a valid platform token; return it as-is.
     if ( defined( $opt_platform ) ) {
         my $p = lc( $opt_platform );
-        return '48'  if $p eq 'zx48';
-        return '128' if $p eq 'zx128';
+        return '48'      if $p eq 'zx48';
+        return '128'     if $p eq 'zx128';
+        return 'cpc-flat' if $p eq 'cpc-flat';
         # Any other value would have died at option-parse time.
     }
     open GAME_CONFIG, $game_config_name or
@@ -182,6 +185,10 @@ sub get_zx_target {
         $line =~ s/\/\/.*$//g;      # remove comments (//...)
         $line =~ s/\s*$//g;         # remove trailing blanks
         next if $line eq '';                # ignore blank lines
+        # T2-5: cpc464 maps to cpc-flat loader template.
+        if ( $line =~ /^PLATFORM\s+cpc464$/ ) {
+            return 'cpc-flat';
+        }
         # A1 follow-up: accept the new PLATFORM directive (zx48|zx128) and
         # map it back to the legacy 48|128 internal token. Mirrors the
         # Makefile.common resolution and datagen.pl's PLATFORM parser.
@@ -252,9 +259,11 @@ sub get_main_bin_size {
 # Per-platform template directory (relative to repo root). Symlinks under
 # engine/ to the legacy loader{48,128} names are accepted (T1-4) but the
 # canonical lookup is engine/loader-<platform>/.
+# T2-5: cpc-flat added; template lives in engine/loader-cpc-flat/.
 my %loader_template_dir = (
-    '48'  => 'engine/loader-zx48',
-    '128' => 'engine/loader-zx128',
+    '48'      => 'engine/loader-zx48',
+    '128'     => 'engine/loader-zx128',
+    'cpc-flat' => 'engine/loader-cpc-flat',
 );
 
 sub _slurp {
@@ -400,6 +409,32 @@ sub generate_assembler_loader {
     my $asm_loader = $outdir . '/' . $asm_loader_name;
 
     my $zx_target  = get_zx_target;
+
+    # T2-5: cpc-flat loader: no banking, no SUBs.  The CRT loads at
+    # CRT_ORG_CODE=0x1200; the loader stub just does jp to that address.
+    # The cpc-flat template only uses @@LOADER_ORG@@ and @@MAIN_CODE_START@@
+    # (no @@MAIN_SIZE@@), so we deliberately do NOT call get_main_bin_size
+    # here — it would read the not-yet-existent build/main.bin and is unused.
+    if ( $zx_target eq 'cpc-flat' ) {
+        my $loader_org = '0x0100';   # small stub in low RAM, well below code
+        my $main_code_start = '0x1200';   # CRT_ORG_CODE from zpragma-cpc-flat.inc
+
+        my $tmpl = _apply_substitutions( _load_template( $zx_target ), {
+            LOADER_ORG       => $loader_org,
+            MAIN_CODE_START  => $main_code_start,
+        } );
+
+        if ( $tmpl =~ /\@\@(\w+)\@\@/ ) {
+            die "** Error: loadertool.pl: template $loader_template_dir{$zx_target}/asmloader.asm.in references an unknown placeholder '\@\@$1\@\@'\n";
+        }
+
+        open my $asm, '>', $asm_loader
+            or die "\n** Error: could not open $asm_loader for writing\n";
+        print $asm $tmpl;
+        close $asm;
+        return;
+    }
+
     my $loader_org = sprintf( '0x%04x',
         ( $zx_target eq '48' ? $loader_org_48 : $loader_org_128 ) );
 
@@ -464,15 +499,16 @@ sub generate_assembler_loader {
 # are rejected with 'not yet implemented' (Phase T2 brings them up).
 # ($opt_platform declared file-level near top so subs can read it.)
 GetOptions( 'platform=s' => \$opt_platform ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128>]\n";
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128|cpc-flat>]\n";
 
 if ( defined( $opt_platform ) ) {
     my $p = lc( $opt_platform );
-    if ( $p ne 'zx48' and $p ne 'zx128' ) {
+    # T2-5: cpc-flat is now supported.
+    if ( $p ne 'zx48' and $p ne 'zx128' and $p ne 'cpc-flat' ) {
         if ( $p =~ /^cpc/ ) {
-            die "** Error: loadertool.pl --platform $opt_platform: CPC platforms are not yet implemented (Phase T2 adds CPC bring-up).\n";
+            die "** Error: loadertool.pl --platform $opt_platform: accepted CPC platform is 'cpc-flat' (Phase T3 adds cpc-banked).\n";
         }
-        die "** Error: loadertool.pl --platform $opt_platform: accepted values are zx48 | zx128.\n";
+        die "** Error: loadertool.pl --platform $opt_platform: accepted values are zx48 | zx128 | cpc-flat.\n";
     }
 }
 
