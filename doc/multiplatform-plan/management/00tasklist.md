@@ -40,17 +40,17 @@ under it is ticked complete.
   - [x] AU2 — audio HAL aliases
   - [x] R1 — cpctelera submodule add (vendored but not yet compiled)
 
-- [ ] **Phase 3 — HAL generalisation (ZX byte-identical)**
+- [x] **Phase 3 — HAL generalisation (ZX byte-identical)**
   - [x] G3 — attribute abstraction
   - [x] G4 — pixel coords widening
-  - [ ] G5 — sprite geometry abstraction
-  - [ ] G6 — tile-ID abstraction
+  - [x] G5 — sprite geometry abstraction
+  - [x] G6 — tile-ID abstraction
   - [x] A3 — per-platform dispatch seam in `datagen.pl`
   - [x] A4 — overlay precedence proven end-to-end on ZX
   - [x] B3 — parameterise lowmem threshold checks
   - [x] IN3 — engine ↔ HAL migration
-  - [ ] IN4 — per-game `kbd.c` consolidation
-  - [ ] AU3 — migrate to `audio_*` names (legacy stays as permanent silent aliases per README §5.6)
+  - [x] IN4 — per-game `kbd.c` consolidation
+  - [x] AU3 — migrate to `audio_*` names (legacy stays as permanent silent aliases per README §5.6)
 
 - [ ] **Phase 4 — CPC bring-up (cpc-flat first, then cpc-banked)**
   - [ ] R2 — cpctelera + z88dk hello-world PoC (gating test)
