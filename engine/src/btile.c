@@ -17,9 +17,9 @@
 
 #include "game_data.h"
 
-#define SCREEN_MAX_ROW	23
-#define SCREEN_MAX_COL	31
-#define SCREEN_SIZE	( ( SCREEN_MAX_ROW + 1 ) * ( SCREEN_MAX_COL + 1 ) )
+#define SCREEN_MAX_ROW	( GFX_SCREEN_ROWS - 1 )
+#define SCREEN_MAX_COL	( GFX_SCREEN_COLS - 1 )
+#define SCREEN_SIZE	( GFX_SCREEN_ROWS * GFX_SCREEN_COLS )
 
 // when using a packed tile type map, we pack 4 tiles per byte
 // if not, we use 1 byte per tile
@@ -173,13 +173,13 @@ void btile_clear_type_all_screen(void) {
 #ifdef BUILD_FEATURE_BTILE_2BIT_TYPE_MAP
 // Accelerated functions for getting/setting tile types
 uint8_t btile_get_tile_type( uint8_t row, uint8_t col ) {
-    uint8_t pos = ( row * 32 + col ) / TYPE_MAP_BTILES_PER_BYTE;
+    uint8_t pos = ( row * GFX_SCREEN_COLS + col ) / TYPE_MAP_BTILES_PER_BYTE;
     uint8_t rot = TYPE_MAP_BTILE_BITS * ( col & TYPE_MAP_BTILE_LOW_BITS_MASK );
     return ( ( screen_pos_tile_type_data[ pos ] >> rot ) & TYPE_MAP_BTILE_LOW_BITS_MASK );
 }
 
 void btile_set_tile_type( uint8_t row, uint8_t col, uint8_t type ) {
-    uint8_t pos = ( row * 32 + col ) / TYPE_MAP_BTILES_PER_BYTE;
+    uint8_t pos = ( row * GFX_SCREEN_COLS + col ) / TYPE_MAP_BTILES_PER_BYTE;
     uint8_t rot = TYPE_MAP_BTILE_BITS * ( col & TYPE_MAP_BTILE_LOW_BITS_MASK );
     screen_pos_tile_type_data[ pos ] = ( screen_pos_tile_type_data[ pos ] & ( ~( TYPE_MAP_BTILE_LOW_BITS_MASK << rot ) ) ) | ( type << rot );
 }

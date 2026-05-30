@@ -41,7 +41,7 @@ void bullet_redraw_all( void ) {
         // skip if it's not active
         if ( IS_BULLET_ACTIVE( *bs ) ) {
             if ( BULLET_MOVE_OFFSCREEN( *bs ) ) {
-                sprite_move_offscreen( bs->sprite );
+                gfx_sprite_park( bs->sprite );
                 RESET_BULLET_FLAG( *bs, F_BULLET_MOVE_OFFSCREEN );
                 RESET_BULLET_FLAG( *bs, F_BULLET_ACTIVE );
                 game_state.bullet.active_bullets--;
@@ -63,7 +63,7 @@ void bullet_reset_all(void) {
         save = game_state.bullet.bullets[ i ].sprite;
         memset( &game_state.bullet.bullets[ i ], 0, sizeof( struct bullet_state_data_s ) );
         game_state.bullet.bullets[ i ].sprite = save;
-        sprite_move_offscreen( save );
+        gfx_sprite_park( save );
         game_state.bullet.active_bullets = 0;
     }
 }
@@ -73,7 +73,7 @@ void bullet_move_offscreen_all(void) {
 
     i = BULLET_MAX_BULLETS;
     while ( i-- )
-        sprite_move_offscreen( game_state.bullet.bullets[i].sprite );
+        gfx_sprite_park( game_state.bullet.bullets[i].sprite );
 }
 
 struct bullet_info_s bullet_startup_data = {

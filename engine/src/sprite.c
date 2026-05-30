@@ -19,7 +19,7 @@
 #include "game_data.h"
 
 void sprite_move_offscreen( gfx_sprite_t *s ) __z88dk_fastcall {
-    gfx_sprite_move_cell( s, &full_screen, NULL, OFF_SCREEN_ROW, OFF_SCREEN_COLUMN );
+    gfx_sprite_park( s );
 }
 
 #ifdef BUILD_FEATURE_GFX_BACKEND_SP1

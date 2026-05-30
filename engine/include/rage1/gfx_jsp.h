@@ -36,6 +36,15 @@ typedef uint8_t                  gfx_ypos_t;
 #define GFX_PSS_INVALIDATE          0x00    // unused in JSP backend
 #define GFX_PRINT_CTX_INIT(a,at)    JSP_PRINT_CTX_INIT((a),(at))
 
+// Screen geometry in cells (Phase G5 — gfx.md §G5-1).
+// JSP renders the standard ZX Spectrum 32x24 character grid.  The CPC backend
+// (Phase G7) will redefine these (mode-1: 40x25), and ZX Next Layer-2 likewise.
+// Engine code must use these constants at every site that holds a screen-grid
+// dimension so the same source compiles unchanged on backends with a different
+// character-cell geometry.
+#define GFX_SCREEN_COLS             32
+#define GFX_SCREEN_ROWS             24
+
 //--- Attribute layer (ZX-only — inert on CPC, see gfx.md §2.1) ---
 // ZX colour indices 0..7 (match arch/spectrum.h INK_*/PAPER_* numeric values)
 #define GFX_BLACK                   0
@@ -71,6 +80,14 @@ typedef uint8_t                  gfx_ypos_t;
     gfx_jsp_move_sprite_clipped((s),(clip),(fr),(x),(y))
 #define gfx_sprite_move_cell(s,clip,fr,r,c) \
     gfx_jsp_move_sprite_clipped((s),(clip),(fr),(c)*8,(r)*8)
+
+// Park a sprite off-screen (Phase G5 — gfx.md §G5-4).  The parking row is a
+// backend-internal detail: JSP parks at row 24 (one row below the visible 24-row
+// grid), column 0.  Engine code never references the parking row directly; it
+// calls gfx_sprite_park() so each backend can choose its own off-screen slot.
+#define GFX_PARK_ROW                        24
+#define GFX_PARK_COL                        0
+#define gfx_sprite_park(s)                  gfx_sprite_move_cell((s),&full_screen,NULL,GFX_PARK_ROW,GFX_PARK_COL)
 
 //--- Sprite query ---
 #define gfx_sprite_get_row(s)               ((s)->ypos / 8)

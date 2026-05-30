@@ -86,6 +86,6 @@ void enemy_redraw_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
 void enemy_move_offscreen_all( uint8_t num_enemies, struct enemy_info_s *enemies ) {
     uint8_t i;
     i = num_enemies;
-    while ( i-- ) sprite_move_offscreen( enemies[i].sprite );
+    while ( i-- ) gfx_sprite_park( enemies[i].sprite );
 }
 

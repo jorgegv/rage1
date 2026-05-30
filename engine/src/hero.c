@@ -313,7 +313,7 @@ void hero_update_lives_display(void) {
 #endif
 
 void hero_move_offscreen(void) {
-    sprite_move_offscreen( game_state.hero.sprite );
+    gfx_sprite_park( game_state.hero.sprite );
 }
 
 // Hero Sprites initialization function

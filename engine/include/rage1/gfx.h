@@ -34,6 +34,8 @@
 //     GFX_CLEAR_COLOUR   - flag: clear colour in a rect
 //     GFX_PSS_INVALIDATE - flag: invalidate on print
 //     GFX_PRINT_CTX_INIT(area, attr) - static initializer for print ctx
+//     GFX_SCREEN_COLS    - screen width  in character cells (ZX: 32)
+//     GFX_SCREEN_ROWS    - screen height in character cells (ZX: 24)
 //
 //   Macros (mapping to library functions):
 //     gfx_invalidate(rect)
@@ -46,6 +48,7 @@
 //     gfx_sprite_get_col(s)
 //     gfx_sprite_get_width(s)
 //     gfx_sprite_get_height(s)
+//     gfx_sprite_park(s)     - move sprite to the backend's off-screen parking slot
 //     gfx_tile_put(row, col, attr, tile)
 //     gfx_tile_register(index, graphic)
 //     gfx_clear_rect(rect, attr, ch, flags)

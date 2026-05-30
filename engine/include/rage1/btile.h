@@ -90,8 +90,8 @@ extern uint8_t screen_pos_tile_type_data[];
     #define GET_TILE_TYPE_AT(srow,scol)		( btile_get_tile_type( (srow), (scol) ) )
     #define SET_TILE_TYPE_AT(srow,scol,sval)	( btile_set_tile_type( (srow), (scol), (sval) ) )
 #else
-    #define GET_TILE_TYPE_AT(srow,scol)		( screen_pos_tile_type_data[ (srow) * 32 + (scol) ] )
-    #define SET_TILE_TYPE_AT(srow,scol,sval)	( screen_pos_tile_type_data[ (srow) * 32 + (scol) ] = (sval) )
+    #define GET_TILE_TYPE_AT(srow,scol)		( screen_pos_tile_type_data[ (srow) * GFX_SCREEN_COLS + (scol) ] )
+    #define SET_TILE_TYPE_AT(srow,scol,sval)	( screen_pos_tile_type_data[ (srow) * GFX_SCREEN_COLS + (scol) ] = (sval) )
 #endif
 
 // Accelerated functions for getting/setting tile types

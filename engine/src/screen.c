@@ -11,4 +11,4 @@
 #include "rage1/screen.h"
 
 // rectangles covering the full screen and other screen areas
-gfx_rect_t full_screen	= { 0, 0, 32, 24 };
+gfx_rect_t full_screen	= { 0, 0, GFX_SCREEN_COLS, GFX_SCREEN_ROWS };
