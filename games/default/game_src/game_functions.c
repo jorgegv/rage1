@@ -16,6 +16,7 @@
 #include "rage1/gfx.h"
 #include "rage1/game_state.h"
 #include "rage1/controller.h"
+#include "rage1/input.h"
 #include "rage1/beeper.h"
 #include "rage1/btile.h"
 #include "rage1/flow.h"
@@ -23,8 +24,6 @@
 #include "rage1/memory.h"
 
 #include "game_data.h"
-
-#include "kbd.h"
 
 // External frame coordinates and dimensions
 #define BORDER_TOP		0
@@ -105,31 +104,31 @@ void my_menu_screen(void) {
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key UP:   " );
             gfx_update();
-            game_state.controller.keys.up = capture_key_scancode();
+            game_state.controller.keys.up = input_capture_scancode();
             beeper_play_fx( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key DOWN: " );
             gfx_update();
-            game_state.controller.keys.down = capture_key_scancode();
+            game_state.controller.keys.down = input_capture_scancode();
             beeper_play_fx( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key LEFT: " );
             gfx_update();
-            game_state.controller.keys.left = capture_key_scancode();
+            game_state.controller.keys.left = input_capture_scancode();
             beeper_play_fx( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key RIGHT:" );
             gfx_update();
-            game_state.controller.keys.right = capture_key_scancode();
+            game_state.controller.keys.right = input_capture_scancode();
             beeper_play_fx( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
             gfx_print_string( &print_ctx,"\x16\x13\x06 Key FIRE: " );
             gfx_update();
-            game_state.controller.keys.fire = capture_key_scancode();
+            game_state.controller.keys.fire = input_capture_scancode();
             beeper_play_fx( SOUND_CONTROLLER_SELECTED );
             in_pause( 500 );
 
