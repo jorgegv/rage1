@@ -1,0 +1,185 @@
+################################################################################
+##
+## RAGE1 - Retro Adventure Game Engine, release 1
+## (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
+##
+## This code is published under a GNU GPL license version 3 or later.  See
+## LICENSE file in the distribution for details.
+##
+################################################################################
+##
+## Makefile-cpc-flat — CPC464/664 flat (no-banking) build
+##
+## Modelled on Makefile-zx48. Key differences:
+##   - ZCC_TARGET=+cpc  (not +zx)
+##   - No ZX BASIC loader (AMSDOS header embedded by zcc -create-app)
+##   - No TAP packaging: produces .cpc, .dsk, .cdt instead
+##   - No bank, dataset, or codeset machinery (cpc-flat = flat 64 KB)
+##   - Section check uses mmap-cpc-flat.inc
+##
+## IMPORTANT — the bootable .dsk is built with the single-step
+## `zcc -create-app -subtype=dsk` path, NOT a separate `appmake +cpc --disk`
+## call. `appmake +cpc --disk` emits a malformed ~2.7 KB stub that Caprice32
+## reports as "disc missing"; only the integrated `zcc -create-app` driver
+## produces a valid ~194 KB Extended-CPC-DSK that boots. The raw .cpc AMSDOS
+## single-file image (~2.7 KB: AMSDOS header + payload — small by design) is
+## produced with `appmake +cpc -b <linked-bin>` (no --disk).
+##
+## Phase T2: at this phase the RAGE1 engine itself (SP1, gfx_sp1, etc.)
+## is NOT compiled for CPC — the CPC gfx/audio/input HAL backends are
+## stubbed and will land in Phase G7/IN5/AU4.  The build target is the
+## games/cpc-hello hello-world C programme that runs through the
+## toolchain without pulling the full RAGE1 engine.
+##
+################################################################################
+
+.SILENT:
+
+MYMAKE			= $(MAKE) -s -f Makefile-cpc-flat
+ZPRAGMA_INC		= zpragma-cpc-flat.inc
+
+# T2-1: CPC z88dk target
+ZCC_TARGET		= +cpc
+
+# CPC-flat builds produce a single memory image; no TAP/bank list.
+CPC_NAME		= game
+CPC_FILE		= $(CPC_NAME).cpc
+DSK_FILE		= $(CPC_NAME).dsk
+CDT_FILE		= $(CPC_NAME).cdt
+
+-include Makefile.common
+
+# ---- Override Makefile.common vars that don't apply to CPC-flat ----
+# On CPC-flat there are no banking, datasets, codesets, or SUBs.
+BANK_BINS		=
+BANK_TAPS		=
+SUB_DIRS		=
+SUB_BINS		=
+SUB_TAPS		=
+
+# Phase T2: the RAGE1 engine sources (engine/src/*.c) are ZX-specific and
+# cannot be compiled for CPC at this phase (Phase G7/IN5/AU4 add CPC HAL
+# backends). Override CSRC/ASMSRC/OBJS to include ONLY game_src and
+# build/generated sources for the CPC build.
+CSRC			= $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
+ASMSRC			= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
+OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
+
+# Override CFLAGS: +cpc uses the default clib (NOT -clib=sdcc_iy, which is
+# ZX-specific). -SO2 instead of -SO3 for CPC (R2 PoC value). The pragma
+# include points to zpragma-cpc-flat.inc (CRT_ORG_CODE/stack/EIDI). At
+# Phase T2 it deliberately does NOT set __MMAP=-1 — see the long note in
+# zpragma-cpc-flat.inc (the +cpc CRT pre-defines __MMAP=0 and rejects the
+# override). The +cpc CRT's built-in section layout is used.
+CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
+
+# The custom mmap file for section-check
+CPC_MMAP_INC		= mmap-cpc-flat.inc
+
+.PHONY: build main loader asmloader cpc dsk cdt final section-check
+
+build:
+	$(MYMAKE) loader
+	$(MYMAKE) asmloader
+	$(MYMAKE) dsk
+	$(MYMAKE) cpc
+	$(MYMAKE) cdt
+	$(MYMAKE) section-check
+	echo "Build completed SUCCESSFULLY (cpc-flat)"
+
+##
+## CPC artifacts — built single-step with `zcc -create-app`.
+##
+## We do NOT pre-link a separate main.bin and then run `appmake --disk`:
+## that two-step path emits a ~2.7 KB malformed DSK stub. The integrated
+## `zcc -create-app -subtype=dsk` driver links AND packages in one pass,
+## producing a valid bootable Extended-CPC-DSK (~194 KB). It also writes
+## a main.map alongside the binary, consumed by section-check.
+##
+## zcc -create-app -subtype=dsk -> $(DSK_FILE) (disc image, Caprice32-loadable)
+## appmake +cpc -b $(CPC_NAME)    -> $(CPC_FILE) (raw AMSDOS .cpc image)
+##
+
+# Source list passed to zcc in one shot (CSRC/ASMSRC overridden above to
+# exclude the ZX-specific engine/src/*).
+CPC_SRC			= $(CSRC) $(ASMSRC)
+
+dsk: $(DSK_FILE)
+
+# Single-step build+link+package. zcc writes the linked binary as
+# $(CPC_NAME) (no extension) plus $(CPC_NAME).dsk and a $(CPC_NAME).map.
+$(DSK_FILE): $(CPC_SRC)
+	echo "Building + packaging $(DSK_FILE) (cpc-flat disc image)..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) \
+		-create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
+	cp $(CPC_NAME) $(MAIN_BIN)
+	cp $(CPC_NAME).map main.map
+
+# The raw .cpc AMSDOS image is built from the already-linked $(CPC_NAME)
+# binary via appmake (no --disk). Depends on the .dsk step having produced
+# the linked binary.
+cpc: $(CPC_FILE)
+
+$(CPC_FILE): $(DSK_FILE)
+	echo "Packaging $(CPC_FILE) (cpc-flat AMSDOS image)..."
+	$(APPMAKE) --org $(CRT_ORG_CODE) -b $(CPC_NAME) -o $(CPC_FILE)
+
+main: $(DSK_FILE)
+
+##
+## ASM loader (T2-4/T2-5): loadertool.pl emits asmloader.asm from the
+## engine/loader-cpc-flat/ template; we then assemble it with zcc +cpc.
+## On cpc-flat this is a trivial stub (no banks/SUBs); it is emitted for
+## toolchain symmetry and as a hook for the future pre-main boot sequence.
+##
+
+loader:
+	echo "Creating CPC loader stub..."
+	./tools/loadertool.pl --platform=cpc-flat -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER)
+
+asmloader: $(ASMLOADER_BIN)
+
+$(ASMLOADER_BIN):
+	echo "Assembling CPC loader stub..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
+
+# .cdt (tape image) via 2cdt (T2-8/T2-9)
+cdt: $(CDT_FILE)
+
+$(CDT_FILE): $(CPC_FILE)
+	echo "Packaging $(CDT_FILE) (cpc-flat)..."
+	if command -v 2cdt >/dev/null 2>&1; then \
+		2cdt -n GAME -X $(CRT_ORG_CODE) -L $(CRT_ORG_CODE) $(CPC_FILE) $(CDT_FILE) 2>/dev/null \
+		  || 2cdt -n GAME $(CPC_FILE) $(CDT_FILE); \
+	else \
+		echo "  [skip] 2cdt not found — $(CDT_FILE) not generated (install via docker/Dockerfile T2-9)"; \
+	fi
+
+# The 'final' target is a no-op alias for compatibility with the ZX
+# Makefile shape (Makefile.common's final: $(FINAL_TAP) expects this).
+# On CPC-flat the 'dsk' step is the equivalent of 'final'.
+final: dsk
+
+##
+## section-check: validate that all sections land inside expected regions
+## (T2-3).  At Phase T2, the +cpc CRT uses its own built-in section
+## layout (__MMAP is NOT -1 — see zpragma-cpc-flat.inc comments).
+## The section-check is deferred to Phase T3/B5 when the custom mmap
+## hook is implemented.  We do a minimal sanity check instead: verify
+## that the .map file was produced and that no sections landed in the
+## screen RAM region (0xC000-0xFFFF).
+##
+
+section-check:
+	echo "Section check (cpc-flat, Phase T2 minimal)..."
+	if [ ! -f main.map ]; then echo "  ERROR: main.map not produced"; exit 1; fi
+	if grep -E '^\s*[0-9A-Fa-f]{4}\s' main.map | awk '{print $$1}' | grep -qiE '^[Cc][0-9A-Fa-f]{3}'; then \
+		echo "  ERROR: section(s) in screen RAM region (0xC000-0xFFFF)!"; exit 1; \
+	fi
+	echo "  OK: no sections in screen RAM region."
+
+##
+## CRT_ORG_CODE exposed for appmake (read from zpragma-cpc-flat.inc)
+##
+
+CRT_ORG_CODE		= 0x1200

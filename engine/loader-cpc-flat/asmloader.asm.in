@@ -1,0 +1,28 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; RAGE1 CPC-flat ASM entry stub
+;;
+;; For cpc-flat (CPC464/664) the binary is loaded by AMSDOS and
+;; jumped to directly at CRT_ORG_CODE (0x1200).  No separate
+;; bank-loading or SUB-loading infrastructure is needed at this
+;; phase (no banking, no SUBs on cpc-flat in Phase T2).
+;;
+;; The CRT (z88dk +cpc startup) handles:
+;;   - stack setup   (REGISTER_SP = 0xBF00)
+;;   - EI/DI         (CRT_ENABLE_EIDI = 1)
+;;   - BSS zeroing
+;;   - call to main()
+;;
+;; Therefore this file is intentionally minimal: it exists so that
+;; loadertool.pl --platform=cpc-flat has a well-formed template to
+;; emit, and so the Makefile-cpc-flat loader target has a concrete
+;; source to assemble.
+;;
+;; Phase T4/G7 will expand this when the CPC graphics/input HAL lands
+;; and a real pre-main boot sequence is needed (e.g. firmware disable,
+;; mode set, palette init).
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    org @@LOADER_ORG@@
+
+;; cpc-flat: no bank loads, no SUBs — jump straight to main code
+    jp @@MAIN_CODE_START@@

@@ -936,13 +936,22 @@ sub read_input_data {
                     next;
                 }
                 # A1-1: PLATFORM <name> — preferred multiplatform directive.
-                # Accepted values in Phase A1: zx48, zx128. CPC values come
-                # in Phase A5. Always emits BOTH PLATFORM_* and the legacy
-                # ZX_TARGET_* macros so existing engine #ifdefs keep working.
+                # Accepted values: zx48, zx128, cpc464 (T2-6 adds cpc464).
+                # Always emits BOTH PLATFORM_* and legacy ZX_TARGET_* macros
+                # for ZX targets so existing engine #ifdefs keep working.
+                # For cpc464 (T2-6) emits PLATFORM_CPC464 + PLATFORM_CPC_FLAT.
                 if ( $line =~ /^PLATFORM\s+(\w+)$/ ) {
                     my $platform = lc( $1 );
-                    if ( $platform ne 'zx48' and $platform ne 'zx128' ) {
-                        die "PLATFORM: $file, line $current_line: PLATFORM must be one of: zx48, zx128\n";
+                    if ( $platform ne 'zx48' and $platform ne 'zx128' and $platform ne 'cpc464' ) {
+                        die "PLATFORM: $file, line $current_line: PLATFORM must be one of: zx48, zx128, cpc464\n";
+                    }
+                    # T2-6: CPC464 handling — emit machine-identity AND memory-model macros.
+                    if ( $platform eq 'cpc464' ) {
+                        $game_config->{'platform'} = $platform;
+                        # No ZX_TARGET for CPC; skip derived_zx_target.
+                        add_build_feature( 'PLATFORM_CPC464' );      # machine identity
+                        add_build_feature( 'PLATFORM_CPC_FLAT' );    # memory model
+                        next;
                     }
                     my $derived_zx_target = ( $platform eq 'zx48' ) ? '48' : '128';
                     # CLI override (-t) still wins; it carries 48|128 from
@@ -2994,7 +3003,16 @@ sub integer_in_range {
 
 sub check_game_config_is_valid {
     my $errors = 0;
-    if ( defined( $game_config->{'zx_target'} ) ) {
+    # T2-6: CPC platforms have no ZX_TARGET concept; skip the check.
+    my $is_cpc = ( defined( $game_config->{'platform'} ) and
+                   $game_config->{'platform'} =~ /^cpc/ );
+    if ( $is_cpc ) {
+        # For CPC, set a synthetic zx_target so the rest of datagen.pl's
+        # ZX-centric code (dataset layout, 48K fallback paths) degrades
+        # gracefully to the 48K (flat/no-banking) code path.  This is
+        # intentionally the most conservative fallback.
+        $game_config->{'zx_target'} = '48' unless defined( $game_config->{'zx_target'} );
+    } elsif ( defined( $game_config->{'zx_target'} ) ) {
         ( $game_config->{'zx_target'} eq '48' ) or
         ( $game_config->{'zx_target'} eq '128' ) or do {
             warn sprintf( "Game Config: invalid '%s' value for 'zx_target' setting", $game_config->{'zx_target'} );
@@ -4764,20 +4782,27 @@ if ( defined( $opt_d ) ) {
 $build_dir = $opt_b || 'build';
 $game_src_dir = $opt_s || 'build/game_src';
 
-# T1-8: -p <platform> is the canonical CLI flag (zx48 | zx128); legacy -t
-# (numeric ZX_TARGET 48 | 128) is kept as a permanent silent alias per
-# README §5.6. If -p is given, it overrides -t. If both are absent, the
+# T1-8: -p <platform> is the canonical CLI flag (zx48 | zx128 | cpc464);
+# legacy -t (numeric ZX_TARGET 48 | 128) is kept as a permanent silent alias
+# per README §5.6. If -p is given, it overrides -t. If both are absent, the
 # build target is inferred later from PLATFORM/ZX_TARGET in the game's
 # .gdata files (read_input_data).
+# T2-6: cpc464 added; $forced_build_target stays 0 for CPC (no ZX_TARGET
+# concept); the PLATFORM directive in the .gdata handles feature emission.
 if ( defined( $opt_p ) ) {
     my $p = lc( $opt_p );
     if    ( $p eq 'zx48'  ) { $forced_build_target = 48;  }
     elsif ( $p eq 'zx128' ) { $forced_build_target = 128; }
+    elsif ( $p eq 'cpc464' ) {
+        # T2-6: CPC464 — no ZX_TARGET; features are emitted from the PLATFORM
+        # directive in the game's .gdata.  $forced_build_target remains 0.
+        $forced_build_target = 0;
+    }
     elsif ( $p =~ /^cpc/  ) {
-        die "** Error: datagen.pl -p $opt_p: CPC platforms are not yet implemented (Phase T2 adds CPC bring-up).\n";
+        die "** Error: datagen.pl -p $opt_p: accepted CPC platform is 'cpc464' (Phase T3 adds cpc6128).\n";
     }
     else {
-        die "** Error: datagen.pl -p $opt_p: accepted values are zx48 | zx128.\n";
+        die "** Error: datagen.pl -p $opt_p: accepted values are zx48 | zx128 | cpc464.\n";
     }
 } else {
     $forced_build_target = $opt_t || 0;
@@ -4791,20 +4816,53 @@ add_default_build_features;
 print "Reading input data files...\n";
 read_input_data;
 
-# run consistency checks
-print "Running consistency checks...\n";
-run_consistency_checks;
+# T2-6: CPC platforms may have a minimal .gdata set (NAME + PLATFORM only,
+# no screens/hero/btiles). The full ZX-specific pipeline (dataset deps,
+# game data generation) requires a hero and at least one screen and cannot
+# run cleanly on a bare CPC skeleton.  When the game has no screens defined,
+# skip straight to output_game_data (which only outputs features.h and the
+# minimal game_data.h stub).  The full engine integration — and a real
+# RAGE1-style gdata set for CPC — is deferred to Phase G7/IN5/AU4.
+my $is_cpc_platform = ( defined( $game_config->{'platform'} ) and
+                        $game_config->{'platform'} =~ /^cpc/ );
+my $has_screens     = scalar( @all_screens ) > 0;
 
-# process data dependencies
-print "Computing dataset dependencies...\n";
-create_dataset_dependencies;
-fix_feature_dependencies;
+if ( $is_cpc_platform and not $has_screens ) {
+    print "CPC platform with no screens: using minimal features-only output pipeline.\n";
+    # For a CPC skeleton (NAME + PLATFORM only, no screens/hero/btiles),
+    # emit only features.h plus empty stub files for game_data.h/.c/.asm.
+    # The full ZX dataset/codeset/hero pipeline cannot run without a hero
+    # and screens; it will be integrated in Phase G7/IN5/AU4 when the CPC
+    # HAL backends land and cpc-hello gains a real RAGE1 gdata set.
+    generate_conditional_build_features;
+    # Emit minimal stub game_data.h (just the include guard)
+    push @h_game_data_lines, "// CPC minimal stub — no RAGE1 engine integration at Phase T2\n";
+    push @h_game_data_lines, "#ifndef _GAME_DATA_H\n#define _GAME_DATA_H\n#endif // _GAME_DATA_H\n";
+    # Emit minimal stub .c file (empty translation unit)
+    push @c_game_data_lines, "// CPC minimal stub — no RAGE1 engine integration at Phase T2\n";
+    # Initialise dataset/codeset hashrefs so output_game_data does not crash
+    $c_dataset_lines   = { 'home' => [] };
+    $asm_dataset_lines = { 'home' => [] };
+    $c_codeset_lines   = {};
+    $asm_codeset_lines = {};
+    print "Writing output files...\n";
+    output_game_data;
+} else {
+    # run consistency checks
+    print "Running consistency checks...\n";
+    run_consistency_checks;
 
-# generate output
-print "Generating game data...";
-generate_game_data;
-print "Writing output files...\n";
-output_game_data;
+    # process data dependencies
+    print "Computing dataset dependencies...\n";
+    create_dataset_dependencies;
+    fix_feature_dependencies;
+
+    # generate output
+    print "Generating game data...";
+    generate_game_data;
+    print "Writing output files...\n";
+    output_game_data;
+}
 
 # dump internal data if required to do so
 dump_internal_data

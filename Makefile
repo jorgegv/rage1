@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello
 
 help:
 	echo "============================================================"
@@ -32,6 +32,7 @@ help:
 	echo "    build-zx128    force ZX Spectrum 128K build"
 	echo "    build48        legacy silent alias for build-zx48 (permanent, README §5.6)"
 	echo "    build128       legacy silent alias for build-zx128 (permanent, README §5.6)"
+	echo "    build-cpc464   force CPC464/664 (cpc-flat) build"
 	echo ""
 	echo "* Use 'make new-game' for creating a new template game using the library"
 	echo ""
@@ -138,6 +139,20 @@ build-zx128:
 build48: build-zx48
 build128: build-zx128
 
+# T2-7: CPC464/664 flat build target (symmetric with build-zx48 / build-zx128).
+# CPC664 is a runtime target of the same cpc464 build; no build-cpc664 target.
+# 'data' step still uses datagen.pl with -p cpc464 (no ZX_TARGET for CPC).
+build-cpc464:
+	$(MYMAKE) clean
+	$(MYMAKE) PLATFORM=cpc464 config
+	$(MYMAKE) PLATFORM=cpc464 data-cpc464
+	$(MYMAKE) -f Makefile-cpc-flat build
+
+# T2-7: datagen invocation for CPC464 — uses -p cpc464 instead of -p zx$(ZX_TARGET).
+# Only emits game_data_home.c and features.h; no banked-function machinery.
+data-cpc464:
+	$(DATAGEN) -p cpc464 -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
+
 ###############################################
 ##
 ## TARGETS FOR TEST GAME BUILDS
@@ -146,6 +161,10 @@ build128: build-zx128
 
 # contains all the test games
 ALL_TEST_GAMES		= $(shell cd $(TEST_GAMES_DIR)/ && ls -1 )
+
+# T2-10: CPC hello-world test game build target
+build-cpc-hello:
+	$(MYMAKE) build-cpc464 target_game=$(TEST_GAMES_DIR)/cpc-hello
 
 # detailed build rules for each test game
 build-minimal:
