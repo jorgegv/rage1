@@ -11,7 +11,9 @@
 // hero.c
 
 #include "rage1/input.h"
-#include <arch/spectrum.h>
+// G7: ZX arch include routed through the platform shim (byte-identical on ZX,
+// compiles under +cpc — see rage1/platform.h).
+#include "rage1/platform.h"
 
 #include "rage1/hero.h"
 #include "rage1/game_state.h"

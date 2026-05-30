@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello all-test-builds all-test-builds-zx all-test-builds-cpc
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello build-00cpc-compile-test all-test-builds all-test-builds-zx all-test-builds-cpc
 
 help:
 	echo "============================================================"
@@ -168,12 +168,26 @@ ALL_TEST_GAMES		= $(shell cd $(TEST_GAMES_DIR)/ && ls -1 )
 # The split keeps CPC binary output out of the ZX pass/fail log scrape and
 # lets `make all-test-builds-zx` (toolchain.md T2 phase-exit criterion) build
 # ONLY the ZX games. CPC games are matched by the 'cpc-' name prefix.
-CPC_TEST_GAMES		= $(filter cpc-%,$(ALL_TEST_GAMES))
-ZX_TEST_GAMES		= $(filter-out cpc-%,$(ALL_TEST_GAMES))
+# G7-4: CPC games are matched by the 'cpc-' name prefix OR the '00cpc'
+# compile-test prefix (the leading '00' keeps the synthetic compile-test
+# first in `ls`; it must land in the CPC subset, NOT the ZX one).
+CPC_TEST_GAMES		= $(filter cpc-% 00cpc%,$(ALL_TEST_GAMES))
+ZX_TEST_GAMES		= $(filter-out cpc-% 00cpc%,$(ALL_TEST_GAMES))
 
 # T2-10: CPC hello-world test game build target
 build-cpc-hello:
 	$(MYMAKE) build-cpc464 target_game=$(TEST_GAMES_DIR)/cpc-hello
+
+# G7-4: synthetic CPC engine compile-test. Configures + datagens the
+# 00cpc-compile-test game for cpc464, then COMPILE-ONLY type-checks the whole
+# RAGE1 engine (engine/src/*.c) under +cpc against the 'cpctel' stub backend.
+# Linkage is intentionally not attempted (gfx.md Phase G7 phase-exit: "linkage
+# may fail; that is acceptable"). The point is C-level type-checking.
+build-00cpc-compile-test:
+	$(MYMAKE) clean
+	$(MYMAKE) PLATFORM=cpc464 config target_game=$(TEST_GAMES_DIR)/00cpc-compile-test
+	$(MYMAKE) PLATFORM=cpc464 data-cpc464 target_game=$(TEST_GAMES_DIR)/00cpc-compile-test
+	$(MYMAKE) -f Makefile-cpc-flat compile-test
 
 # detailed build rules for each test game
 build-minimal:

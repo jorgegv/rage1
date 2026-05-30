@@ -68,4 +68,16 @@
     #endif
 #endif
 
+// G7: the real CPC audio backends are Phase AU4 — datagen emits no CPC
+// AUDIO_*_BACKEND_* feature yet.  But the engine calls a few SFX entry points
+// (audio_sfx_beeper_*) UNCONDITIONALLY.  Pull in a no-op CPC audio stub so the
+// whole engine type-checks under +cpc for the G7 gfx-stub compile-test, unless
+// a real CPC audio backend header was already included above.  See
+// rage1/audio_cpc_stub.h.
+#if ( defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT ) ) \
+    && !defined( BUILD_FEATURE_AUDIO_SFX_BACKEND_CPC_AY ) \
+    && !defined( BUILD_FEATURE_AUDIO_MUSIC_BACKEND_CPC_AY )
+    #include "rage1/audio_cpc_stub.h"
+#endif
+
 #endif // _AUDIO_H

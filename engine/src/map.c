@@ -8,7 +8,9 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <arch/spectrum.h>
+// G7: ZX arch include routed through the platform shim (byte-identical on ZX,
+// compiles under +cpc — see rage1/platform.h).
+#include "rage1/platform.h"
 #include <stdlib.h>
 
 #include "rage1/map.h"

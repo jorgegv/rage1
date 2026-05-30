@@ -1,0 +1,9 @@
+// One screen referencing the single Tile BTile (G7-4).
+BEGIN_SCREEN
+	NAME		Screen01
+	DATASET		0
+
+	HERO		STARTUP_XPOS=20 STARTUP_YPOS=20
+	DECORATION	NAME=Deco BTILE=Tile ROW=10 COL=10 ACTIVE=1
+
+END_SCREEN

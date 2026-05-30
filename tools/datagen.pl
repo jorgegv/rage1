@@ -992,8 +992,11 @@ sub read_input_data {
                 if ( $line =~ /^(GFX_BACKEND|SPRITE_ENGINE)\s+(\w+)$/ ) {
                     my $keyword = $1;
                     my $engine = lc($2);
-                    die "$keyword: $file, line $current_line: must be 'SP1' or 'JSP'\n"
-                        if $engine ne 'sp1' and $engine ne 'jsp';
+                    # G7-3: 'cpctel' is the Amstrad CPC backend short-name
+                    # (README §5.4 -> files gfx_cpctel.{h,c},
+                    # BUILD_FEATURE_GFX_BACKEND_CPCTEL).
+                    die "$keyword: $file, line $current_line: must be 'SP1', 'JSP' or 'CPCTEL'\n"
+                        if $engine ne 'sp1' and $engine ne 'jsp' and $engine ne 'cpctel';
                     $game_config->{'gfx_backend'} = $engine;
                     next;
                 }
@@ -3156,8 +3159,13 @@ sub generate_c_home_header {
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include <arch/spectrum.h>
+// G7: route the ZX <arch/spectrum.h> through the platform shim (byte-identical
+// on ZX; provides inert INK_/PAPER_ on CPC).  <sound/bit.h> (ZX beeper BEEPFX_*
+// constants) is ZX-only — guard it for CPC (CPC audio is Phase AU4).
+#include "rage1/platform.h"
+#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
 #include <sound/bit.h>
+#endif
 #include "rage1/gfx.h"
 
 #include "rage1/inventory.h"
@@ -3191,8 +3199,13 @@ sub generate_c_banked_header {
 //
 ////////////////////////////////&//////////////////////////////////////////
 
-#include <arch/spectrum.h>
+// G7: route the ZX <arch/spectrum.h> through the platform shim (byte-identical
+// on ZX; provides inert INK_/PAPER_ on CPC).  <sound/bit.h> (ZX beeper BEEPFX_*
+// constants) is ZX-only — guard it for CPC (CPC audio is Phase AU4).
+#include "rage1/platform.h"
+#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
 #include <sound/bit.h>
+#endif
 
 #include "rage1/map.h"
 #include "rage1/sprite.h"
