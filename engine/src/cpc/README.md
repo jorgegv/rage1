@@ -19,13 +19,14 @@ below.
 cpctelera submodule commit: **`662fc885`** (all translations below derive
 from this revision).
 
-## Translated shortlist (R2 PoC + R4 renderer)
+## Translated shortlist (R2 PoC + R4 renderer + IN6 input)
 
 | File | C symbol(s) | Translated from (cpctelera `src/…`) |
 |---|---|---|
 | `cpct_video.asm` | `cpct_setVideoMode`, `cpct_setPALColour`, data `_cpct_mode_rom_status` | `video/cpct_setVideoMode.asm`+`_cbindings.s`, `video/cpct_setPALColour.asm`+`_cbindings.s`, `video/videomode.s`, `firmware/cpc_mode_rom_status.s` |
 | `cpct_strings_m1.asm` | `cpct_setDrawCharM1`, `cpct_drawStringM1`, internal `cpct_drawCharM1_inner_asm`, tables `dc_mode1_ct` / `cpct_char2pxM1` | `strings/cpct_setDrawCharM1.asm`+`_cbindings.s`, `strings/cpct_drawCharM1_inner.s`, `strings/cpct_drawStringM1.asm`+`_cbindings.s`, `strings/cpct_dc_mode1_ct.s`, `strings/strings.s` |
 | `cpct_gfx_m1.asm` (R4) | `cpct_getScreenPtr`, `cpct_drawSprite`, `cpct_setBorder` | `video/cpct_getScreenPtr.asm`+`_cbindings.s`, `sprites/cpct_drawSprite.asm`+`_cbindings.s` (clean loop re-derivation, see note), GA border-ink set |
+| `cpct_keyboard.asm` (IN6) | `cpct_scanKeyboard`, `cpct_scanKeyboard_f`, `cpct_isKeyPressed` (fastcall), `cpct_isAnyKeyPressed_f`, data `_cpct_keyboardStatusBuffer` (10 bytes) | `keyboard/cpct_scanKeyboard.s`, `keyboard/cpct_scanKeyboard_f.s`, `keyboard/cpct_isKeyPressed.s`, `keyboard/cpct_isAnyKeyPressed_f.s`, `keyboard/keyboard.s` |
 
 **Note on `cpct_drawSprite` (R4):** cpctelera's original is a 63-LDI
 self-modifying unroll (cannot run from ROM, bloats the binary). The R4
@@ -36,6 +37,14 @@ Visible output is byte-identical; only the inner copy strategy differs.
 This is the cpc-renderer.md R-1 mitigation ("hand-write the equivalent
 z80asm from cpctelera's API docs"). These primitives back the real CPC gfx
 backend `engine/src/gfx_cpctel.c` (Phase R4).
+
+**Note on `cpct_keyboard.asm` (IN6):** faithful translations (no behavioural
+change) of cpctelera's keyboard primitives. They back the real CPC input HAL
+bodies in `engine/src/input.c` and the `input_*` macros in
+`rage1/input_cpc.h` (Phase IN6). `cpct_isKeyPressed` keeps the
+`__z88dk_fastcall` ABI (keyID in HL: high byte = bit mask, low byte = matrix
+line); the scan routines self-manage DI/EI, so they are safe to call from the
+main-loop call site (`input_scan()` in `check_controller()`).
 
 ## Translation conventions (sdas → z80asm)
 

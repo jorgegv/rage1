@@ -9,10 +9,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 //
-// Amstrad CPC backend for the cross-platform input HAL — STUB (Phase IN5).
+// Amstrad CPC backend for the cross-platform input HAL (Phase IN6).
 //
 // This is the CPC analogue of rage1/input_zx.h.  It supplies the full input
-// HAL contract that the engine needs to compile under +cpc: the backend
+// HAL contract that the engine needs under +cpc: the backend
 // `struct input_udk_s` layout, the INPUT_SCANCODE_* / KBD_DEFAULT_* constants,
 // and the input_* macro family.
 // Phase IN6 wires this to the real cpctelera keyboard primitives that RAGE1
@@ -166,10 +166,11 @@ extern uint8_t cpct_isAnyKeyPressed_f( void );
 
 // Per-frame keyboard refresh.  ZX is a no-op (in_stick_* read the port
 // synchronously).  On CPC we must repopulate cpct_keyboardStatusBuffer once per
-// frame before any read.  cpct_scanKeyboard() manages its own DI/EI, so it is
+// frame before any read.  cpct_scanKeyboard_f() (unrolled, 170 us — ~42 us
+// faster than the rolled cpct_scanKeyboard) manages its own DI/EI, so it is
 // safe to call directly from C here (the _if variant requires caller-managed
-// DI/EI, which a bare macro cannot wrap — deviation noted in input.md §5).
-#define input_scan()                  cpct_scanKeyboard()
+// DI/EI, which a bare macro cannot wrap — deviation noted in input.md §4).
+#define input_scan()                  cpct_scanKeyboard_f()
 
 // "Is any key currently pressed?" -> cpct_isAnyKeyPressed_f() (reads the buffer
 // last filled by input_scan()).

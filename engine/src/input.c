@@ -231,7 +231,7 @@ input_scancode_t input_capture_scancode( void ) __z88dk_fastcall {
 
 // Busy-wait `ms` milliseconds, early-out on keypress, return remaining ms.
 // The CPC runs at 4 MHz; the inner delay loop below is calibrated so the
-// per-millisecond cost (scan + any-key poll + spin) is ~1 ms.  cpct_scanKeyboard
+// per-millisecond cost (scan + any-key poll + spin) is ~1 ms.  cpct_scanKeyboard_f
 // is ~170 us, so we spend the remaining ~830 us in a tuned NOP spin.
 uint16_t input_pause( uint16_t ms ) {
     while ( ms ) {
@@ -261,18 +261,36 @@ void input_wait_nokey( void ) {
     } while ( cpct_isAnyKeyPressed_f() );
 }
 
-// ASCII of the single key currently down (0 if none / unmapped).  Walks the
-// freshly-scanned buffer for the first pressed keyID, then reverse-maps it
-// through the ASCII<->keyID table.
+// ASCII of the single key currently down (0 if none, unmapped, OR ambiguous).
+// Matches z88dk's in_inkey() semantics: returns 0 when MORE THAN ONE key is
+// pressed.  Counts pressed bits across the whole buffer; only when exactly one
+// is down do we reverse-map its keyID through the ASCII<->keyID table.
 uint16_t input_inkey( void ) {
     input_scancode_t keyid;
+    uint8_t line, pressed;
     uint8_t i;
 
     cpct_scanKeyboard();
-    keyid = cpc_first_pressed_keyid();
-    if ( keyid == 0 )
+
+    // bail out as soon as a second pressed key is seen (ambiguous -> 0)
+    pressed = 0;
+    for ( line = 0; line < 10; line++ ) {
+        uint8_t status = cpct_keyboardStatusBuffer[ line ];
+        if ( status != 0xFF ) {
+            uint8_t mask = 0x01;
+            uint8_t b;
+            for ( b = 0; b < 8; b++ ) {
+                if ( ( status & mask ) == 0 )
+                    if ( ++pressed > 1 )
+                        return 0;
+                mask <<= 1;
+            }
+        }
+    }
+    if ( pressed == 0 )
         return 0;
 
+    keyid = cpc_first_pressed_keyid();      // exactly one bit set -> the key
     for ( i = 0; i < CPC_ASCII_KEYID_TABLE_SIZE; i++ )
         if ( cpc_ascii_keyid_table[ i ].keyid == keyid )
             return (uint16_t) cpc_ascii_keyid_table[ i ].ascii;
