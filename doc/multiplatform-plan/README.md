@@ -705,6 +705,48 @@ is amended). Cross-referenced by §5.10 (overlay ergonomics depend
 on this) and §5.2 (sibling-tree overlays gain surgical-merge
 semantics).
 
+### 5.12 CPC Phase-4 execution scope: cpc-flat (cpc464) first; cpc6128 overlays + 16-bit coords tracked
+
+**Decision (2026-05-31, execution-time)**: Phase 4 CPC bring-up is
+executed on **cpc-flat (cpc464)** first, against a dedicated
+`games/minimal_cpc` stub. Several Phase-4 tasks (G7, R4, G8, IN6,
+AU5, TS3) carry literal `PLATFORM cpc6128` text in their per-doc
+specs, but cpc6128 **is** cpc-banked, whose toolchain lands **last**
+(toolchain.md T3). So each of those tasks was retargeted to
+`cpc464` + `games/minimal_cpc` during execution; the cpc6128 build
+of any real game is unavailable until T3.
+
+**Tracked deferrals to Phase 5 / G9 (gated on T3 building cpc6128)** —
+these are *not dropped*, only resequenced:
+
+- The cpc6128 **per-game overlays** of `games/minimal` and
+  `games/default` — `IN6-4`, `IN6-5`, `IN6-6` (CPC controller-select
+  menus + their regression) and `AU5-2`/`AU5-3` for `games/default`
+  (CPC music/SFX in a real game) — land in **Phase 5** (alongside
+  `G9` "CPC across 3+ games"). Phase-4 `IN6`/`AU5` are scoped to
+  `games/minimal_cpc` on cpc464.
+- `TS3`'s first CPC regression baseline is **cpc464** (`minimal_cpc`);
+  the cpc6128 baseline follows T3.
+
+**New tracked task — `G8a` (no-debt; genuinely engine-wide, so
+scheduled not crammed)**: **CPC 16-bit sprite/position coordinates +
+`gfx_cpctel` screen-bounds clamp.** `G4` widened the *gfx pixel*
+coordinate type to `uint16_t` on CPC, but the engine's sprite/enemy
+**fixed-point position** integer part is still `uint8_t`, so a sprite
+cannot be positioned at x>255 on CPC mode-1's 320 px (40-col) screen;
+and `blit_mono_cell` lacks a screen-bounds clamp (an edge-placed
+sprite could write past the 16 KB screen). Both are harmless for
+`minimal_cpc` (enemy stays <255, on-screen) but **must** land before
+any non-stub CPC game (`G9`). Scheduled at the cpc-flat hardening
+boundary (end of Phase 4 / start of Phase 5). Surfaced by the G8
+review.
+
+**Where it lives**: defined here; `G8a` mirrored into
+[management/gantt.md](management/gantt.md) and
+[management/00tasklist.md](management/00tasklist.md). The cpc6128
+deferrals already exist as sub-tasks in input.md / audio.md / testing.md;
+this note records the resequencing.
+
 ## 6. Consolidated Risks index
 
 The per-subsystem docs each carry their own detailed Risks section.

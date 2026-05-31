@@ -355,6 +355,7 @@ gantt
   section gfx
   G7 gfx_cpctel.c stub        :g7, after g6 r1, 7d
   G8 real CPC wiring          :g8, after r4 g7, 7d
+  G8a CPC 16bit coords+clamp  :g8a, after g8, 7d
 
   section input
   IN5 CPC skeleton            :in5, after in4 r2, 7d
