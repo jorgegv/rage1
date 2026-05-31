@@ -11,7 +11,9 @@
 #ifndef _FLOW_H
 #define _FLOW_H
 
-#include <arch/spectrum.h>
+// G7: route ZX <arch/spectrum.h> through the platform shim so this header
+// compiles under +cpc (byte-identical on ZX — see rage1/platform.h).
+#include "rage1/platform.h"
 
 #include "features.h"
 

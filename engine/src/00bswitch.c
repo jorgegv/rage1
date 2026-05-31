@@ -9,9 +9,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
-#include <arch/zx.h>
 
 #include "features.h"
+
+// G7: <arch/zx.h> (IO_7FFD etc.) is ZX-only; it is only referenced by the
+// ZX-128 banking code below (guarded by BUILD_FEATURE_ZX_TARGET_128).  Guard
+// the include too so this file compiles under +cpc.  features.h is included
+// first so the platform macro is defined; on ZX the branch is taken exactly as
+// before (byte-identical — the include simply moved one line below features.h,
+// which is itself header-guarded and order-independent here).
+#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
+#include <arch/zx.h>
+#endif
 
 #include "rage1/interrupts.h"
 

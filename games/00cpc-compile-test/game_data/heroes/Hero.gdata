@@ -1,0 +1,15 @@
+// Hero declaration (G7-4).  No BULLET — per the G7-4 spec the compile-test
+// carries no music/enemies/bullets; it still exercises hero/animation/lives
+// engine surface.  LIVES reuses the single Tile BTile as its life icon.
+BEGIN_HERO
+	NAME		Hero
+	SPRITE		Hero
+	SEQUENCE_UP	WalkUp
+	SEQUENCE_DOWN	WalkDown
+	SEQUENCE_LEFT	WalkLeft
+	SEQUENCE_RIGHT	WalkRight
+	ANIMATION_DELAY	3
+	HSTEP		2
+	VSTEP		2
+	LIVES		NUM_LIVES=3 BTILE=Tile
+END_HERO

@@ -8,7 +8,15 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
+// G7: <arch/zx.h> is ZX-only and unused on the CPC code path here; guard it
+// so this file compiles under +cpc (byte-identical on ZX). The CPC input/
+// bank HAL equivalents land in IN5 / B-phase.  features.h is included first so
+// the BUILD_FEATURE_PLATFORM_* macros are defined for the guard (on ZX the
+// branch is taken exactly as before — byte-identical).
+#include "features.h"
+#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
 #include <arch/zx.h>
+#endif
 
 #include "rage1/game_state.h"
 #include "rage1/sprite.h"

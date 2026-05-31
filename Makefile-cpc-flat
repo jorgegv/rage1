@@ -76,11 +76,27 @@ CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -
 # The custom mmap file for section-check
 CPC_MMAP_INC		= mmap-cpc-flat.inc
 
+# ---- Phase G7: engine compile-test path --------------------------------
+# G7-4: type-check the WHOLE RAGE1 engine (engine/src/*.c) under +cpc against
+# the 'cpctel' stub gfx backend.  This is COMPILE-ONLY — we drive each .c to a
+# .o (via Makefile.common's generic `%.o: %.c` rule) and deliberately do NOT
+# link.  Linkage may fail at G7 and that is explicitly acceptable (gfx.md
+# Phase G7 phase-exit); the goal is C-level type-checking of the engine
+# sources against the stub backend.  Used by `make build-00cpc-compile-test`.
+#
+# The gfx_sp1.c / gfx_jsp.c backend bodies self-#ifdef out under cpctel
+# (they compile to empty translation units), so only gfx_cpctel.c carries a
+# body — exactly one gfx backend is active, matching the ZX selection model.
+ENGINE_COMPILE_TEST_CSRC	= $(wildcard $(ENGINE_DIR)/src/*.c) \
+				  $(wildcard $(GENERATED_DIR)/*.c) \
+				  $(wildcard $(GAME_SRC_DIR)/*.c)
+ENGINE_COMPILE_TEST_OBJS	= $(ENGINE_COMPILE_TEST_CSRC:.c=.o)
+
 # NOTE: section-check-cpc / final-cpc carry the '-cpc' suffix so they do NOT
 # override the same-named targets already defined in Makefile.common (which is
 # -included above). Reusing the bare names produced 7x "overriding recipe for
 # target" GNU Make warnings on every build.
-.PHONY: build main loader asmloader cpc dsk cdt final-cpc section-check-cpc
+.PHONY: build main loader asmloader cpc dsk cdt final-cpc section-check-cpc compile-test
 
 build:
 	$(MYMAKE) loader
@@ -90,6 +106,12 @@ build:
 	$(MYMAKE) cdt
 	$(MYMAKE) section-check-cpc
 	echo "Build completed SUCCESSFULLY (cpc-flat)"
+
+# G7-4: compile-only engine type-check (no link).  Compiles every engine/src/*.c
+# (plus generated + game_src) to .o under +cpc with the cpctel stub backend.
+# Exits 0 if all sources type-check; linkage is intentionally NOT attempted.
+compile-test: $(ENGINE_COMPILE_TEST_OBJS)
+	echo "Engine compile-test (cpc-flat / cpctel stub) SUCCESSFUL — all engine/src/*.c type-checked under +cpc (no link)."
 
 ##
 ## CPC artifacts — built single-step with `zcc -create-app`.

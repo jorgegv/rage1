@@ -132,4 +132,12 @@ input_scancode_t input_capture_scancode( void ) __z88dk_fastcall;
 #include "rage1/input_zx.h"
 #endif
 
+// G7: CPC input HAL is Phase IN5, but compiling the whole engine under +cpc
+// for the G7 gfx-stub compile-test needs a complete `struct input_udk_s` and
+// the input_* macro surface — provided by this minimal STUB header (no real
+// CPC keyboard reading yet; IN5 wires cpctelera).
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT )
+#include "rage1/input_cpc.h"
+#endif
+
 #endif // _RAGE1_INPUT_H

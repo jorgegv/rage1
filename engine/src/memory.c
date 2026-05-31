@@ -42,11 +42,33 @@
     unsigned char _rage1_heap[ MALLOC_HEAP_SIZE ];
 #endif
 
+// G7: cpc-flat (cpc464) is a flat 64K model with no banking — like ZX48, the
+// heap lives in the BSS segment.  This is the G7-stub memory map; the real CPC
+// memory layout (and cpc6128 banking) is finalised in Phase B/T3.
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT )
+    #ifndef MALLOC_HEAP_START
+    #define MALLOC_HEAP_START       (&_rage1_heap[0])
+    unsigned char _rage1_heap[ MALLOC_HEAP_SIZE ];
+    #endif
+#endif
+
 // memory initialization
 unsigned char *_malloc_heap;
 void init_memory(void) {
     _malloc_heap = MALLOC_HEAP_START;
+    // G7: heap_init( heap, size ) is the z88dk new-lib (-clib=sdcc_iy)
+    // 2-argument API the ZX engine is written against.  The +cpc build uses a
+    // DIFFERENT default clib whose <alloc.h> does not expose that 2-arg form
+    // (SDCC error 101 "too many parameters").  Wiring the CPC heap/allocator
+    // is the memory-HAL's job in Phase B/T3 — out of scope for the G7 gfx
+    // stub.  On CPC the heap BSS array is still reserved above; we just skip
+    // the new-lib heap_init() call so the file compiles.  ZX path unchanged
+    // (byte-identical).
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT )
+    (void) _malloc_heap;    // G7 STUB: CPC allocator wired in Phase B/T3
+#else
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
+#endif
 
 #ifdef BUILD_FEATURE_ZX_TARGET_128
     // initial memory bank

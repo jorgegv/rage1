@@ -15,10 +15,21 @@
 /////////////////////////////////////
 
 #include <stdlib.h>
-#include <im2.h>
 #include <string.h>
 #include <intrinsic.h>
+
+#include "features.h"
+
+// G7: <im2.h> (IM2 ISR macros) and <z80.h> (z80_bpoke/z80_wpoke) are ZX-only
+// — the CPC uses a different interrupt mechanism (Phase B/T3).  Guard these
+// includes (and the ZX ISR/IM2 machinery below) so this file compiles under
+// +cpc against the gfx-stub.  features.h is included first so the platform
+// macro is defined; on ZX both includes are taken exactly as before
+// (byte-identical).
+#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
+#include <im2.h>
 #include <z80.h>
+#endif
 
 #include "rage1/audio.h"
 #include "rage1/interrupts.h"
@@ -64,6 +75,14 @@ void interrupt_enable_periodic_isr_tasks( void ) {
 // ISR CONFIGURATION
 ///////////////////////
 
+// G7: the IM2 ISR + init_interrupts() below are ZX-specific (IM2 mode, z80
+// pokes, fixed IV/ISR hardware addresses).  The CPC interrupt path is a
+// different mechanism and lands in Phase B/T3.  Guard the whole ZX block so
+// this file compiles under +cpc; a no-op CPC stub init_interrupts() is
+// provided in the #else.  ZX output is byte-identical (the guard is taken on
+// both ZX48 and ZX128, exactly as the per-platform #ifdefs below already are).
+#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
+
 // ISR definition
 IM2_DEFINE_ISR(service_interrupt)
 {
@@ -107,14 +126,6 @@ IM2_DEFINE_ISR(service_interrupt)
    #endif
 #endif
 
-// Defensive fallback: if neither PLATFORM_ZX48 nor PLATFORM_ZX128 was
-// emitted (e.g. a future non-ZX platform missing its own interrupts.c
-// path) compilation would fail with an undefined IV_ADDR — surface the
-// real cause early with a clearer #error so the symptom is obvious.
-#if !defined(BUILD_FEATURE_PLATFORM_ZX48) && !defined(BUILD_FEATURE_PLATFORM_ZX128)
-   #error "interrupts.c: no BUILD_FEATURE_PLATFORM_ZX{48,128} defined; add a platform branch above (see Phase B2-3 / README §5.6)."
-#endif
-
 // code to patch at ISR_ADDR: jp xxxx
 #define Z80_OPCODE_JP	( 0xc3 )
 
@@ -144,3 +155,15 @@ void init_interrupts(void) {
    // everything is setup, allow everything now
    intrinsic_ei();
 }
+
+#else // not ZX — CPC (and any future non-ZX platform)
+
+// G7 STUB: CPC interrupt setup is Phase B/T3 (different mechanism: the CPC
+// firmware/Gate-Array raster interrupt, not Z80 IM2).  No-op stub so the
+// engine type-checks/links shape stays intact under +cpc.  do_timer_tick() /
+// do_periodic_isr_tasks() above are portable C and remain available for the
+// real CPC ISR to call when it lands.
+void init_interrupts( void ) {
+}
+
+#endif // PLATFORM_ZX{48,128}
