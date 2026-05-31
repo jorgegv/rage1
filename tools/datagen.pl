@@ -4679,6 +4679,34 @@ sub create_dataset_dependencies {
 
 # fixes dependencies between build features.  put here all exceptions and
 # mangling needed for build features that need/exclude others, etc.
+# AU4-3: derive CPC audio backend macros (Phase AU4 of
+# doc/multiplatform-plan/audio.md). CPC has only the AY backend (no
+# beeper). On CPC, Arkos2 is the only tracker — vortex2 is a ZX-only
+# tracker and is rejected at validation time (check_game_config_is_valid).
+#
+#   PLATFORM cpc464 + TRACKER            -> MUSIC: CPC_AY
+#                                          (+ CPC_AY SFX if FX_CHANNEL set)
+#
+# The always-present beeper-SFX compat shims that satisfy the engine's
+# unconditional audio_sfx_beeper_*() calls live in audio_cpc_ay.h and are
+# pulled in for EVERY CPC build by audio.h's CPC platform predicate — they
+# need no feature macro of their own.
+#
+# This is its own sub (not inlined in fix_feature_dependencies) because the
+# screen-less CPC fast path in main() bypasses fix_feature_dependencies; it
+# calls this directly so the AU4-3 macros are emitted on minimal CPC games too.
+sub derive_cpc_audio_backend_features {
+    if ( defined( $conditional_build_features{ 'PLATFORM_CPC464' } ) and
+         defined( $conditional_build_features{ 'TRACKER' } ) ) {
+        # Music backend: AY music on CPC whenever a TRACKER is configured.
+        add_build_feature( 'AUDIO_MUSIC_BACKEND_CPC_AY' );
+        # SFX backend: AY SFX channel, only when FX_CHANNEL is set.
+        if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
+            add_build_feature( 'AUDIO_SFX_BACKEND_CPC_AY' );
+        }
+    }
+}
+
 sub fix_feature_dependencies {
 
     # currently, the CRUMBS feature needs to have byte-size tile types, so
@@ -4723,27 +4751,10 @@ sub fix_feature_dependencies {
         }
     }
 
-    # AU4-3: derive CPC audio backend macros (Phase AU4 of
-    # doc/multiplatform-plan/audio.md). CPC has only the AY backend (no
-    # beeper). On CPC, Arkos2 is the only tracker — vortex2 is a ZX-only
-    # tracker and is rejected at validation time (see check_game_config).
-    #
-    #   PLATFORM cpc464 + TRACKER            -> MUSIC: CPC_AY
-    #                                          (+ CPC_AY SFX if FX_CHANNEL set)
-    #
-    # The always-present beeper-SFX compat shims that satisfy the engine's
-    # unconditional audio_sfx_beeper_*() calls live in audio_cpc_ay.h and are
-    # pulled in for EVERY CPC build by audio.h's CPC platform predicate — they
-    # need no feature macro of their own.
-    if ( defined( $conditional_build_features{ 'PLATFORM_CPC464' } ) and
-         defined( $conditional_build_features{ 'TRACKER' } ) ) {
-        # Music backend: AY music on CPC whenever a TRACKER is configured.
-        add_build_feature( 'AUDIO_MUSIC_BACKEND_CPC_AY' );
-        # SFX backend: AY SFX channel, only when FX_CHANNEL is set.
-        if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
-            add_build_feature( 'AUDIO_SFX_BACKEND_CPC_AY' );
-        }
-    }
+    # AU4-3: derive CPC audio backend macros. Factored into its own sub so
+    # the screen-less CPC fast path (which bypasses fix_feature_dependencies)
+    # can derive them too — see derive_cpc_audio_backend_features.
+    derive_cpc_audio_backend_features;
 
     # AU3-5: rename the legacy BUILD_FEATURE_TRACKER* capability macros to
     # the BUILD_FEATURE_AUDIO_* family (doc/multiplatform-plan/audio.md
@@ -4878,6 +4889,22 @@ if ( $is_cpc_platform and not $has_screens ) {
     # The full ZX dataset/codeset/hero pipeline cannot run without a hero
     # and screens; it will be integrated in Phase G7/IN5/AU4 when the CPC
     # HAL backends land and cpc-hello gains a real RAGE1 gdata set.
+    #
+    # AU4-3: this fast path bypasses run_consistency_checks AND
+    # fix_feature_dependencies, where the CPC-audio validation and macro
+    # derivation live. Run the config-level (screen-independent) parts here so
+    # they are not dead code on screen-less CPC games (every CPC game today):
+    #   - check_game_config_is_valid: tracker validation incl. the
+    #     vortex2-on-CPC rejection. It only inspects $game_config (no screens/
+    #     hero/btiles), so it runs cleanly on a bare skeleton. The screen-
+    #     dependent checks in run_consistency_checks are deliberately NOT run.
+    #   - derive_cpc_audio_backend_features: emits AUDIO_*_BACKEND_CPC_AY.
+    my $cfg_errors = check_game_config_is_valid;
+    die sprintf( "*** %d errors were found in configuration\n", $cfg_errors )
+        if ( $cfg_errors );
+    # Derive the CPC-AY macros BEFORE generate_conditional_build_features, which
+    # snapshots %conditional_build_features into the features.h output lines.
+    derive_cpc_audio_backend_features;
     generate_conditional_build_features;
     # Emit minimal stub game_data.h (just the include guard)
     push @h_game_data_lines, "// CPC minimal stub — no RAGE1 engine integration at Phase T2\n";
