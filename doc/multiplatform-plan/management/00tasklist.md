@@ -20,6 +20,8 @@ update [gantt.md](gantt.md) first, then mirror the change here.
 A top-level phase ticks complete only when every nested phase
 under it is ticked complete.
 
+Tasks that are in-progress should be ticked with [~] as soon as they are started.
+
 ## Status
 
 - [x] **Phase 1 — Foundation (no CPC code; pure preparation)**
@@ -61,13 +63,13 @@ under it is ticked complete.
   - [x] G7 — `gfx_cpctel.c` stub skeleton
   - [x] IN5 — input CPC skeleton (stub)
   - [x] AU4 — audio CPC skeleton + AT2 player relocation
-  - [ ] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
+  - [~] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
   - [x] TS2 — Caprice32 + Xvfb in dev env + Docker
   - [x] R4 — real `gfx_cpctel.c` + `games/minimal_cpc/`
   - [x] G8 — real CPC backend wiring
   - [ ] IN6 — real CPC input via cpctelera keyboard scan
   - [ ] AU5 — real CPC audio via AT2 AKG generic player
-  - [ ] TS3 — first CPC regression baseline
+  - [~] TS3 — first CPC regression baseline
   - [ ] B6 — cpc-banked banking infrastructure
   - [ ] B7 — cpc-banked banking tooling
   - [ ] T3 — cpc-banked Makefile; first banked `.dsk` build
