@@ -63,7 +63,7 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] G7 — `gfx_cpctel.c` stub skeleton
   - [x] IN5 — input CPC skeleton (stub)
   - [x] AU4 — audio CPC skeleton + AT2 player relocation
-  - [~] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
+  - [x] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
   - [x] TS2 — Caprice32 + Xvfb in dev env + Docker
   - [x] R4 — real `gfx_cpctel.c` + `games/minimal_cpc/`
   - [x] G8 — real CPC backend wiring
