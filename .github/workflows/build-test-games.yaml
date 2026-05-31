@@ -22,6 +22,16 @@ jobs:
         with:
           submodules: recursive
 
+      # R3-1: build cpctelera's Img2CPC and install cpct_img2tileset on PATH.
+      # Must run after the (recursive) checkout, since it needs the vendored
+      # external/cpctelera submodule.  The image already provides freeimage-devel
+      # (see docker/Dockerfile).  This is the CI-verified exit criterion.
+      - name: Install cpctelera asset converters
+        run: |
+          cd /src/rage1 && \
+          tools/install-cpctelera-converters.sh && \
+          cpct_img2tileset --help 2>&1 | grep -q USAGE
+
       - name: Build test games
         run: |
           cd /src/rage1 && \

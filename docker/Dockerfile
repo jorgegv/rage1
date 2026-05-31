@@ -47,6 +47,14 @@ RUN \
 	&& gcc -o ${Z88DK_PATH}/bin/2cdt ${TWOCDT_PATH}/cpclib/2cdt/2cdt.c \
 	|| ( echo "2cdt build failed — CDT generation will be skipped at runtime" ; true )
 
+# Phase R3: build dependency for cpctelera's host asset converter
+# (Img2CPC + cpct_img2tileset).  Requires gcc-c++ (already above) + freeimage.
+# The converter itself is built/installed at CI time by
+# tools/install-cpctelera-converters.sh (see .github/workflows/build-test-games.yaml),
+# because Img2CPC needs the external/cpctelera submodule which only exists after
+# the workspace checkout (CI uses `submodules: recursive`) — not at image build.
+RUN dnf install -y freeimage freeimage-devel
+
 ENV PATH="${Z88DK_PATH}/bin:$HOME/perl5/bin:${PATH}" \
     ZCCCFG="${Z88DK_PATH}/lib/config/" \
     PERL5LIB="$HOME/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}" \
