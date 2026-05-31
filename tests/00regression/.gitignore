@@ -1,3 +1,11 @@
+# legacy (top-level) per-test artefacts — kept for back-compat
 */actual.png
 */diff.png
 */game.tap
+# per-platform artefacts
+*/*/actual.png
+*/*/diff.png
+*/*/game.tap
+*/*/game.dsk
+*/*/game.cdt
+*/*/game.cpc
