@@ -56,6 +56,13 @@ done
 #   - engine/include/rage1/input_zx.h  : the ZX backend wrapper, which
 #                                        includes <input.h> and defines
 #                                        the input_* -> in_* macros.
+#   - engine/include/rage1/input_cpc.h : the CPC backend wrapper (Phase
+#                                        IN5), analogue of input_zx.h;
+#                                        its prose comments reference the
+#                                        ZX symbols (in_pause/in_inkey)
+#                                        to document the cross-platform
+#                                        mapping, and IN6 names cpctelera
+#                                        symbols here.
 #   - engine/src/input.c               : the dispatch body for
 #                                        input_state_read; calls the
 #                                        z88dk `in_stick_*` primitives.
@@ -66,6 +73,7 @@ done
 ALLOWED_REL=(
     "engine/include/rage1/input.h"
     "engine/include/rage1/input_zx.h"
+    "engine/include/rage1/input_cpc.h"
     "engine/src/input.c"
 )
 
