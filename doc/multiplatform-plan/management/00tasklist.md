@@ -69,7 +69,7 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] G8 — real CPC backend wiring
   - [ ] IN6 — real CPC input via cpctelera keyboard scan
   - [ ] AU5 — real CPC audio via AT2 AKG generic player
-  - [~] TS3 — first CPC regression baseline
+  - [x] TS3 — first CPC regression baseline
   - [ ] B6 — cpc-banked banking infrastructure
   - [ ] B7 — cpc-banked banking tooling
   - [ ] T3 — cpc-banked Makefile; first banked `.dsk` build
