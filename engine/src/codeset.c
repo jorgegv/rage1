@@ -18,7 +18,15 @@
 
 #include "game_data.h"
 
+// B5-4: codesets require banking — they can only be compiled for banked
+// platforms (ZX 128 or future cpc-banked).  datagen.pl already suppresses
+// BUILD_FEATURE_CODESETS for zx48; this guard adds the same protection for
+// cpc-flat.  The outer BUILD_FEATURE_CODESETS gate still applies.
 #ifdef BUILD_FEATURE_CODESETS
+
+#if !defined( BUILD_FEATURE_PLATFORM_ZX128 ) && !defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
+#  error "BUILD_FEATURE_CODESETS requires a banked platform (ZX128 or CPC_BANKED)"
+#endif
 
 // this should be here, but we need to ensure that it is _always_ in low
 // memory below 0xC000, so we put it in lowmem/asmdata.asm

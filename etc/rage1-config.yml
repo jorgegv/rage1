@@ -28,6 +28,25 @@
 ##     ZX 128 this is 0xC000 (the upper 16K page). The banked-function
 ##     table and the codeset_assets_s struct are both anchored at this
 ##     address.
+##   bank_size
+##     Size in bytes of each RAM bank. 16384 for both ZX 128 and CPC
+##     6128. null for platforms with no banking (zx48, cpc-flat).
+##   dataset_banks / codeset_banks (cpc-flat only)
+##     Explicit empty lists — cpc-flat has no banking, so these are
+##     kept for structural consistency with cpc-banked (Phase B6) and
+##     to confirm that banktool.pl skips banking-specific work for
+##     cpc-flat.
+##
+## B4-3: Bank-ID convention (per banking.md §3.3)
+##   Bank IDs are PLATFORM-SPECIFIC. They are NOT shared between ZX
+##   and CPC. ZX bank 4 ≠ CPC RAM 4 in any meaningful semantic sense.
+##   The valid-banks lists are themselves per-platform:
+##     zx128:    dataset_valid_banks = [1, 3, 7, 6, 4]
+##     cpc-flat: no banking (null/empty)
+##     cpc-banked (Phase B6): dataset_valid_banks = [5, 6, 7, 4]
+##   The `engine_code_memory_bank` value coincidentally equals 4 on
+##   both ZX 128 and cpc-banked (by hardware convention); this
+##   coincidence is documented as incidental (see banking.md §3.3).
 ##
 banking:
   zx128:
@@ -35,6 +54,29 @@ banking:
     codeset_valid_banks:    [ 6, 1, 3, 7 ]
     engine_code_memory_bank: 4
     swap_window:             0xC000
+    bank_size:               16384
+
+  ## cpc-flat (CPC 464/664): no banking.
+  ## B5-1: mirrors the ZX 48 "banking compiles out" pattern.
+  ## All banking-related fields are null/empty so banktool.pl (when
+  ## called with --platform=cpc-flat) knows there is nothing to lay out.
+  ## banking.md §3.1.3 is the normative memory map for this platform.
+  cpc-flat:
+    swap_window:              ~
+    bank_size:                ~
+    dataset_banks:            []
+    codeset_banks:            []
+    engine_code_bank:         ~
+
+  ## cpc-banked (CPC 6128): placeholder for Phase B6.
+  ## Numbers from banking.md §3.1.4 Shape A.  banktool.pl does NOT
+  ## yet process this section (Phase B7 extends banktool for CPC).
+  cpc-banked:
+    swap_window:             0x4000
+    bank_size:               16384
+    dataset_valid_banks:     [ 5, 6, 7, 4 ]
+    codeset_valid_banks:     [ 5, 6, 7, 4 ]
+    engine_code_memory_bank: 4
 
 ##
 ## build configuration
@@ -73,15 +115,29 @@ tools:
 ## So the real code starts at ISR address + 3.
 ##
 
-# 128K interrupt map — used by both sprite engines (SP1 and JSP). The IV
-# table, ISR and stack live at the bottom of memory; only the top-of-memory
-# sprite-data layout differs between engines, not the interrupt config.
+# Interrupt map — per-platform sub-keys under `interrupts:`.
+# 128K: IV table, ISR and stack at bottom of upper 16 KB window.
+# cpc-flat (B5-1): IM 1, ISR entry fixed at 0x0038 (RST 38).
 interrupts:
   zx128: &interrupts_zx128
     iv_table_addr: 0x8000
     isr_vector_byte: 0x81
     isr_vector_address: 0x8181
     base_code_address: 0x8184
+
+  # B5-1: cpc-flat interrupt config.
+  # CPC uses IM 1 (the only standard interrupt mode on stock CPC firmware).
+  # The ISR entry is at 0x0038 (RST 38 vector, hardware fixed).
+  # No IM 2 vector table needed.  base_code_address = CRT_ORG_CODE =
+  # 0x1200 (z88dk +cpc default; validated by Phase T2 — see
+  # zpragma-cpc-flat.inc and banking.md §3.1.3 B4-1 reconciliation).
+  # iv_table_addr and isr_vector_byte are ZX 128 / IM 2 specific; null
+  # on all CPC profiles (cpc-flat and cpc-banked share IM 1).
+  cpc-flat:
+    iv_table_addr:      ~
+    isr_vector_byte:    ~
+    isr_vector_address: 0x0038
+    base_code_address:  0x1200
 
 # Legacy flat alias — permanent (README §5.6). All existing tools that
 # read `interrupts_128:` keep working unchanged.

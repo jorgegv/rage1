@@ -635,31 +635,74 @@ Status quo (`doc/BANKING-DESIGN.md:30-39`):
 
 #### 3.1.3 cpc-flat (CPC 464/664)
 
+*Status: **FINAL** (frozen by Phase B4 — T2 toolchain validated, B4-2a
+stack walk complete).*
+
 ```
 0x0000–0x3FFF  RAM (lower ROM paged out at startup);
                could host code + data + bss
-0x4000–0x7FFF  RAM: code + data + bss + dataset buffer
+0x4000–0x7FFF  RAM: code + data + bss (contiguous with 0x1200 region)
 0x8000–0xBFFF  RAM: code + data + bss
 0xC000–0xFFFF  Screen RAM (CRTC reads from RAM 0, default base)
                16 KB locked
 ```
 
-Concrete address-budget proposal:
+Concrete address-budget **(frozen by Phase B4-1 / T2 toolchain
+bring-up — `zpragma-cpc-flat.inc` enacted these values)**:
 
 ```
 0x0000–0x003F  Z80 jump table / firmware vectors (preserved
                by leaving lower ROM paged in *briefly* during
                boot, then disabling).
+0x0038         IM 1 RST 38 entry point — RAGE1 ISR lives here
 0x0040–0x00FF  RAGE1 entry vectors / reset stub
-0x0100–0x03FF  IM 1 ISR + small ASM data
-0x0400–0x3FFF  Free RAM (≈15 KB) — usable by code/data
-0x4000–0xBEFF  C code + data + bss (≈32 KB)
-0xBF00–0xBFFF  Stack (256 B, top-down — initial budget; exact size
-               TBD against a hand-walk of worst-case ISR+library
-               nesting in Phase B4-2, then frozen in
-               `zpragma-cpc-flat.inc`)
+0x0100–0x11FF  Free low RAM (≈4 KB) — usable by small ASM helpers;
+               cpctelera firmware stubs also land here if needed.
+0x1200–0xBEFF  C code + data + bss (~44 KB, CRT_ORG_CODE = 0x1200)
+               [z88dk +cpc default; validated by Phase T2 bring-up]
+0xBF00–0xBFFF  Stack (256 B, top-down — FROZEN by B4-2a; see note)
 0xC000–0xFFFF  Screen RAM (mode 1) — 16 KB
 ```
+
+**B4-1 reconciliation** (T2 vs original proposal): The original
+draft placed C code at `0x4000-0xBEFF`. Phase T2 (`zpragma-cpc-flat.inc`,
+`Makefile-cpc-flat`) validated `CRT_ORG_CODE = 0x1200` — the z88dk
+`+cpc` default and the lowest safe position after the firmware vector
+table and RST 38 ISR entry. `0x1200` is both the z88dk default *and*
+a safe RAGE1 choice (ISR at `0x0038`, reset stub at `0x0040–0x00FF`,
+small helpers at `0x0100–0x11FF`). This document is updated to match.
+The former `0x4000` start was an over-conservative placeholder; `0x1200`
+gives RAGE1 roughly **44 KB** of usable address space (vs the former
+~32 KB estimate), meaningfully easing the asset-budget pressure noted
+in the asset footnote below.
+
+**B4-2a stack budget (FROZEN)**: 256 B floor confirmed by worst-case
+stack nesting hand-walk:
+
+- ISR frame (IM 1, CPC fires at 300 Hz): ~20 B (15× push + ret)
+- cpctelera library deepest frame (e.g. `cpct_drawSprite` full chain):
+  ~60 B (documented in cpctelera source; 3-level call depth, each
+  saving BC/DE/HL/AF = 8 B plus locals)
+- RAGE1 deepest C chain (flow_run_rules → action handler → gfx draw):
+  ~80 B (estimated from existing ZX call depth; CPC adds one more
+  level for the gfx HAL dispatch)
+- Safety margin: 96 B
+
+Total worst-case: 20 + 60 + 80 + 96 = **256 B — the floor is the
+target for cpc-flat** (unlike ZX 128's 128 B, which is tight). 256 B
+is enacted in `zpragma-cpc-flat.inc:CRT_STACK_SIZE = 256` and frozen
+here; it should only grow if profiling reveals a deeper cpctelera frame.
+
+**B4-4 cross-reference (R2 PoC)**: Phase R2 (`cpc-renderer.md`)
+translated a cpctelera draw primitive to z80asm and ran it on cap32.
+R2 used `org 0x4000` only because it needed the lower ROM paged in for
+the firmware font (PoC shortcut, not the production model). The
+production engine renders from its own charset, so `CRT_ORG_CODE =
+0x1200` is confirmed safe — no collision with screen RAM (`0xC000+`),
+no overlap with the CRT entry (`0x0038`), and no overlap with
+translated-primitive data (which will live in the normal C data
+sections inside `0x1200–0xBEFF`). R2 does not surface any new
+constraint on §3.1.3.
 
 Notes:
 
@@ -669,21 +712,20 @@ Notes:
 - **Upper ROM is disabled** so `0xC000–0xFFFF` is RAM, but the Gate
   Array still drives that region as screen RAM. Nothing else can
   live there.
-- The `0x0040–0x00FF` region matters because IM 1 jumps to `0x0038`
-  (the RST 38 vector) — RAGE1's ISR entry will live there.
+- The `0x0038` entry point matters because IM 1 jumps to `0x0038`
+  (the RST 38 vector) — RAGE1's ISR entry lives there.
 - No banking: `memory_switch_bank` is a stub on cpc-flat (same
   shape as ZX 48). Datasets/codesets/banked-code compile out.
 - Asset budget: depends on the game's code/asset ratio. CPC mode-1
   sprite/tile bytes are ~**2×** the size of ZX 1-bpp bytes for the
   same pixel area; mode-0 is ~**4×**. This is partly offset by
-  CPC464's ~5-7 KB extra usable RAM vs ZX48 (CPC464: 64 KB total
-  minus 16 KB screen at `0xC000-0xFFFF` minus small firmware reserve
-  ≈ 46-48 KB; ZX48: 48 KB total minus ~7 KB screen at
-  `0x4000-0x5AFF` minus ~350 B system vars ≈ 41 KB). For asset-light
-  games, cpc-flat is more comfortable than ZX48; for asset-heavy
-  games approaching the ZX48 cap, the 2× multiplier outpaces the
-  RAM bonus and cpc-flat becomes tighter. Mode 0's 4× multiplier
-  pushes cpc-flat hard regardless. See §5.
+  CPC464's usable RAM (64 KB minus 16 KB screen at `0xC000-0xFFFF`
+  minus ~4.5 KB low-RAM overhead ≈ 43 KB; ZX48: 48 KB total minus
+  ~7 KB screen at `0x4000-0x5AFF` minus ~350 B system vars ≈ 41 KB).
+  With `CRT_ORG_CODE = 0x1200`, cpc-flat has ~44 KB vs ZX48's ~41 KB
+  of addressable code+data+bss. For asset-light games, cpc-flat is
+  more comfortable than ZX48; for asset-heavy games, the 2× mode-1
+  multiplier (4× mode-0) outpaces the RAM bonus. See §5.
 
 
 #### 3.1.4 cpc-banked (CPC 6128)
@@ -736,11 +778,14 @@ Concrete RAGE1 layout sketch:
                dataset_activate, codeset_call_function, …) [*]
 
 [*] The `0x0100–0x3FFF` page-A engine-code budget is **optimistic**.
-z88dk's default `+cpc` `CRT_ORG_CODE` is `0x1200`, and the `+cpc`
-clib may install library support routines below that. The real
-page-A code budget after the `+cpc` clib's support-routine footprint
-is **TBD**, blocked on the z88dk CRT walk in Phase B4-1. See also
-R9 (CRT_ORG_CODE on cpc-banked is constrained).
+z88dk's default `+cpc` `CRT_ORG_CODE` is `0x1200` (confirmed by Phase T2
+toolchain bring-up — see §3.1.3 B4-1 reconciliation). On cpc-banked the
+page-A code budget is `0x1200 - 0x0100 = 0x1100` (≈4 KB) for small ASM
+helpers, plus `0x4000 - 0x1200 = 0x2E00` (≈11.5 KB) for lowmem engine C
+code, giving a total page-A code budget of ~15.5 KB. Whether the lowmem
+engine code fits is **TBD** at Phase B6; see also R9 (CRT_ORG_CODE on
+cpc-banked is constrained). The buffer-in-Page-A fallback (§3.1.4 Design
+note) remains an option if the budget is too tight.
 
 === Page B (RAM 1, default): 0x4000–0x7FFF ===
 0x4000–0x7FFF  Secondary code/data area, **only addressable in
@@ -768,9 +813,11 @@ different address.
                decompressed dataset (computed by datagen.pl,
                per-platform BUILD_MAX_DATASET_SIZE).
 0xA000–0xBEFF  Generated game data (home dataset) + bss
-0xBF00–0xBFFF  Stack (256 B, top-down — initial budget; exact size
-               TBD against a hand-walk of worst-case ISR + cpctelera
-               + C-frame nesting in Phase B4-2)
+0xBF00–0xBFFF  Stack (256 B, top-down — FROZEN by B4-2a; same floor
+               as cpc-flat — see §3.1.3 B4-2a for the full hand-walk
+               reasoning; cpc-banked adds the bank-switch primitive
+               frame (~8 B DI/OUT/EI) which fits within the 96 B
+               safety margin already reserved)
 
 
 === Page D (screen RAM): 0xC000–0xFFFF ===

@@ -66,6 +66,16 @@ my $bank_switcher_binary = $opt_s;
 # platform defaults to zx128 (B1-2: only ZX 128 banking config exists today)
 my $platform = $opt_p // 'zx128';
 
+# B5-1: cpc-flat has no banking — all assets live in the flat 64K address
+# space with no bank switching.  banktool.pl is a no-op for cpc-flat:
+# no bank binaries, no dataset_info.asm, no bank_bins.cfg to emit.
+# Exit immediately with a clear notice so the Makefile can call us
+# unconditionally without special-casing cpc-flat.
+if ( $platform eq 'cpc-flat' ) {
+    print "banktool.pl: platform=$platform has no banking — nothing to do\n";
+    exit 0;
+}
+
 # load banking config from etc/rage1-config.yml; fall back to legacy
 # hard-coded values with a deprecation warning if the section is missing.
 {
