@@ -22,7 +22,10 @@ struct hotzone_info_s {
     uint8_t state_index;
 };
 
-uint8_t hotzone_is_inside( struct hotzone_info_s *h, uint8_t x, uint8_t y );
+// x/y are pixel coordinates compared against the (now per-platform-wide)
+// position integer part / xmax / ymax, so they take pos_int_t (uint8_t on ZX —
+// byte-identical; uint16_t on CPC — full screen width).
+uint8_t hotzone_is_inside( struct hotzone_info_s *h, pos_int_t x, pos_int_t y );
 
 // hotzone flags macros and definitions
 #define GET_HOTZONE_FLAG(s,f)	( (s) & (f) )

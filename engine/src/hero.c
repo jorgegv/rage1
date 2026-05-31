@@ -118,14 +118,16 @@ void hero_reset_position(void) {
 #endif
 }
 
-// X and Y setting functions - take care of setting XMAX and YMAX also
-void hero_set_position_x( struct hero_info_s *h, uint8_t x ) {
-    h->position.x.value = 256 * x;
+// X and Y setting functions - take care of setting XMAX and YMAX also.
+// x/y are pos_int_t: uint8_t on ZX (byte-identical), uint16_t on CPC so the
+// hero can be placed across the full 320-px width (G8a).
+void hero_set_position_x( struct hero_info_s *h, pos_int_t x ) {
+    h->position.x.value = FFP_FROM_PIXEL( x );
     h->position.xmax = h->position.x.part.integer + HERO_SPRITE_WIDTH - 1;
 }
 
-void hero_set_position_y( struct hero_info_s *h, uint8_t y ) {
-    h->position.y.value = 256 * y;
+void hero_set_position_y( struct hero_info_s *h, pos_int_t y ) {
+    h->position.y.value = FFP_FROM_PIXEL( y );
     h->position.ymax = h->position.y.part.integer + HERO_SPRITE_HEIGHT - 1;
 }
 

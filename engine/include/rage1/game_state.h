@@ -62,8 +62,10 @@ struct game_state_s {
    uint8_t current_screen;
    struct {
       uint8_t num_screen;
-      uint8_t hero_x;
-      uint8_t hero_y;
+      // hero re-entry pixel position after a warp — pos_int_t so it spans the
+      // full CPC width (uint8_t on ZX, byte-identical — G8a).
+      pos_int_t hero_x;
+      pos_int_t hero_y;
    } warp_next_screen;
    struct map_screen_s *current_screen_ptr;
    struct asset_state_s *current_screen_asset_state_table_ptr;
