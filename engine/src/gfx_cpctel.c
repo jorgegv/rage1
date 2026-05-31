@@ -73,14 +73,20 @@ extern void  cpct_drawSprite( void *src, void *mem, uint8_t w, uint8_t h ) __z88
 #define MONO_BG_PEN         0u
 #define MONO_FG_PEN         1u
 
-// CPC Gate-Array hardware ink values (6-bit, the value the GA expects after
-// it ORs in 0x40).  These four are a clean, high-contrast mode-1 palette:
-//   pen 0 = black, pen 1 = bright white, pen 2 = bright yellow, pen 3 = bright red
-#define HW_BLACK            0x14
-#define HW_WHITE            0x4B
-#define HW_YELLOW           0x4A
-#define HW_RED              0x4C
-#define HW_BORDER_BLUE      0x44
+// CPC Gate-Array hardware ink codes — the RAW 6-bit cpctelera HW_* values
+// (external/cpctelera/.../src/video/colours.h enum CPCT_HW_Colour).  Our
+// cpct_setPALColour / cpct_setBorder primitives OR in the 0x40 INKR command
+// themselves, so these must be the raw codes (0x00..0x1F), NOT pre-ORed GA
+// bytes.  All entries below are raw codes for consistency (the earlier mix of
+// 0x14 raw and 0x4B/0x4A/0x4C/0x44 happened to work only because the GA reads
+// just the low 6 bits — corrected to all-raw per the canonical table).
+// Palette: pen 0 = black, pen 1 = bright white, pen 2 = bright yellow,
+//          pen 3 = bright red.
+#define HW_BLACK            0x14    // HW_BLACK
+#define HW_WHITE            0x0B    // HW_BRIGHT_WHITE
+#define HW_YELLOW           0x0A    // HW_BRIGHT_YELLOW
+#define HW_RED              0x0C    // HW_BRIGHT_RED
+#define HW_BORDER_BLUE      0x04    // HW_BLUE
 
 // ---------------------------------------------------------------------------
 // Mono 1bpp -> mode-1 2bpp lookup table (README §5.9).
@@ -92,14 +98,17 @@ extern void  cpct_drawSprite( void *src, void *mem, uint8_t w, uint8_t h ) __z88
 static uint8_t mono_lut[256][2];
 
 // Pack 4 mode-1 pixels (each pen 0..3) into one byte.  Mode-1 byte layout
-// (cpctelera cpct_px2byteM1): pixel A bit7/bit3, B bit6/bit2, C bit5/bit1,
-// D bit4/bit0 (high bit = colour bit1, low bit = colour bit0).
+// (cpctelera cpctm_px2byteM1 / dc_mode1_ct = {0x00,0xF0,0x0F,0xFF}):
+// per pixel, colour BIT0 -> the HIGH-nibble bit, colour BIT1 -> the LOW-nibble
+// bit.  i.e. pixel A: bit0->byte bit7, bit1->byte bit3;  B: bit6/bit2;
+// C: bit5/bit1;  D: bit4/bit0.  (pen 1 -> 0xF0, pen 2 -> 0x0F — verified
+// against the dc_mode1_ct table in engine/src/cpc/cpct_strings_m1.asm.)
 static uint8_t pack4_m1( uint8_t a, uint8_t b, uint8_t c, uint8_t d ) {
     uint8_t out = 0;
-    if ( a & 2 ) out |= 0x80;   if ( a & 1 ) out |= 0x08;
-    if ( b & 2 ) out |= 0x40;   if ( b & 1 ) out |= 0x04;
-    if ( c & 2 ) out |= 0x20;   if ( c & 1 ) out |= 0x02;
-    if ( d & 2 ) out |= 0x10;   if ( d & 1 ) out |= 0x01;
+    if ( a & 1 ) out |= 0x80;   if ( a & 2 ) out |= 0x08;
+    if ( b & 1 ) out |= 0x40;   if ( b & 2 ) out |= 0x04;
+    if ( c & 1 ) out |= 0x20;   if ( c & 2 ) out |= 0x02;
+    if ( d & 1 ) out |= 0x10;   if ( d & 2 ) out |= 0x01;
     return out;
 }
 
@@ -219,10 +228,14 @@ void gfx_cpctel_update( void ) {
 
 void gfx_cpctel_set_border( uint8_t color ) {
     // gfx_set_border is the SINGLE attr-consuming entry point on CPC.
-    // Map ZX colour 0..7 -> a CPC hardware ink (cheap fixed table).
+    // Map ZX colour 0..7 (black,blue,red,magenta,green,cyan,yellow,white) ->
+    // a CPC RAW hardware ink code (cpct_setBorder ORs in 0x40 itself).  Values
+    // are the canonical cpctelera HW_* codes (src/video/colours.h).
     static const uint8_t zx2hw[8] = {
-        HW_BLACK, 0x44 /*blue*/, HW_RED, 0x4D /*magenta*/,
-        0x55 /*green*/, 0x56 /*cyan*/, HW_YELLOW, HW_WHITE
+        0x14 /*black:   HW_BLACK         */, 0x04 /*blue:    HW_BLUE          */,
+        0x0C /*red:     HW_BRIGHT_RED    */, 0x0D /*magenta: HW_BRIGHT_MAGENTA*/,
+        0x16 /*green:   HW_GREEN         */, 0x06 /*cyan:    HW_CYAN          */,
+        0x0A /*yellow:  HW_BRIGHT_YELLOW */, 0x0B /*white:   HW_BRIGHT_WHITE  */
     };
     cpct_setBorder( zx2hw[ color & 0x07 ] );
 }
