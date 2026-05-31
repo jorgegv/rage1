@@ -3051,8 +3051,17 @@ sub check_game_config_is_valid {
             warn "TRACKER: unknown song name in IN_GAME_SONG parameter\n";
             $errors++;
         }
-        if ( $game_config->{'zx_target'} ne '128' ) {
-            warn "TRACKER: must be used together with ZX_TARGET = 128\n";
+        # AU4-3: TRACKER is supported on ZX128 (AY) and on CPC (AY). It is
+        # NOT supported on ZX48 (no AY hardware exposed by the engine).
+        my $tracker_platform = $game_config->{'platform'} // '';
+        my $is_cpc = ( $tracker_platform =~ /^cpc/ );
+        if ( ( not $is_cpc ) and ( ( $game_config->{'zx_target'} // '' ) ne '128' ) ) {
+            warn "TRACKER: must be used together with ZX_TARGET = 128 (or a CPC platform)\n";
+            $errors++;
+        }
+        # AU4-3: vortex2 is a ZX-only tracker; CPC only supports arkos2.
+        if ( $is_cpc and ( lc( $game_config->{'tracker'}{'type'} ) eq 'vortex2' ) ) {
+            warn "TRACKER: tracker type vortex2 is not supported on CPC (use arkos2)\n";
             $errors++;
         }
         if ( ( lc( $game_config->{'tracker'}{'type'} ) eq 'vortex2' ) ) {
@@ -4711,6 +4720,28 @@ sub fix_feature_dependencies {
         # (today's TRACKER_SOUNDFX gate; vortex2 forbids it at parse time).
         if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
             add_build_feature( 'AUDIO_SFX_BACKEND_ZX_AY' );
+        }
+    }
+
+    # AU4-3: derive CPC audio backend macros (Phase AU4 of
+    # doc/multiplatform-plan/audio.md). CPC has only the AY backend (no
+    # beeper). On CPC, Arkos2 is the only tracker — vortex2 is a ZX-only
+    # tracker and is rejected at validation time (see check_game_config).
+    #
+    #   PLATFORM cpc464 + TRACKER            -> MUSIC: CPC_AY
+    #                                          (+ CPC_AY SFX if FX_CHANNEL set)
+    #
+    # The always-present beeper-SFX compat shims that satisfy the engine's
+    # unconditional audio_sfx_beeper_*() calls live in audio_cpc_ay.h and are
+    # pulled in for EVERY CPC build by audio.h's CPC platform predicate — they
+    # need no feature macro of their own.
+    if ( defined( $conditional_build_features{ 'PLATFORM_CPC464' } ) and
+         defined( $conditional_build_features{ 'TRACKER' } ) ) {
+        # Music backend: AY music on CPC whenever a TRACKER is configured.
+        add_build_feature( 'AUDIO_MUSIC_BACKEND_CPC_AY' );
+        # SFX backend: AY SFX channel, only when FX_CHANNEL is set.
+        if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
+            add_build_feature( 'AUDIO_SFX_BACKEND_CPC_AY' );
         }
     }
 
