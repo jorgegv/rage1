@@ -1,0 +1,72 @@
+---
+# TS3-2: screenshot-regression workflow (multi-platform).
+#
+# Runs tests/00regression/regression.sh after building, on PR and master push,
+# using the :test Docker image (TS2). The matrix is per-platform (§4.3) so a
+# baseline failure is cleanly attributable to one platform.
+#
+# IMPORTANT — current image coverage (2026-05-31):
+#   The :test image (docker/Dockerfile, TS2-3) bundles Caprice32 + Xvfb +
+#   ImageMagick, so the cpc464 lane runs in CI today. It does NOT yet bundle
+#   JNEXT + the NextZXOS SD-card image; baking those in is a future image
+#   change (testing.md §4.2, owned by toolchain.md). Until that lands the
+#   zx48/zx128 lanes have no emulator in CI and would hard-fail, so they are
+#   marked continue-on-error here and run green locally instead. Flip the
+#   `continue-on-error` to false (or drop it) once JNEXT is in the image.
+#
+# cpc6128 is NOT in the matrix yet: the cpc-banked toolchain is Phase T3 and
+# does not build; the first CPC baseline is cpc464 (cpc-flat). Add cpc6128
+# after T3.
+
+name: regression
+
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  regression:
+    name: "regression (${{ matrix.platform }})"
+    runs-on: ubuntu-latest
+    container:
+      image: zxjogv/rage1-z88dk:test
+      volumes:
+        - ${{ github.workspace }}:/src/rage1
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: cpc464
+            continue_on_error: false
+          - platform: zx48
+            continue_on_error: true    # no JNEXT in :test image yet (see header)
+          - platform: zx128
+            continue_on_error: true    # no JNEXT in :test image yet (see header)
+    continue-on-error: ${{ matrix.continue_on_error }}
+    env:
+      # cap32 binary + config baked into the :test image (docker/Dockerfile).
+      CAPRICE32: /usr/local/bin/cap32
+      CAPRICE32_CFG: /etc/cap32.cfg
+    steps:
+
+      - name: Checkout RAGE1 repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # R3-1: cpctelera asset converters are needed by the CPC build/data step.
+      - name: Install cpctelera asset converters
+        run: |
+          cd /src/rage1 && \
+          tools/install-cpctelera-converters.sh && \
+          cpct_img2tileset --help 2>&1 | grep -q USAGE
+
+      # The runner builds each test game itself (per platform) before running
+      # the emulator, so no separate build step is needed here.
+      - name: Run screenshot regression (${{ matrix.platform }})
+        run: |
+          cd /src/rage1 && \
+          bash tests/00regression/regression.sh --platform ${{ matrix.platform }}

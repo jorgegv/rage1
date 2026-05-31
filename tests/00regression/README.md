@@ -1,51 +1,95 @@
-# RAGE1 screenshot regression — JNEXT-driven
+# RAGE1 screenshot regression — multi-platform
 
 Pixel-perfect screenshot regression tests for RAGE1 games. Each test builds
-a game, runs it headless in the [JNEXT](https://github.com/ZXjogv/jnext)
-emulator, captures a PNG at a defined emulated frame, and compares it
-against a checked-in baseline.
+a game, runs it headless in the right emulator, captures a PNG at a defined
+emulated frame, and compares it against a checked-in baseline. The runner is
+**platform-aware**: ZX platforms (`zx48`, `zx128`) drive the
+[JNEXT](https://github.com/ZXjogv/jnext) emulator; CPC platforms (`cpc464`)
+drive [Caprice32](https://github.com/ColinPitrat/caprice32). A test declares
+the platforms it covers via the `PLATFORMS` key in `test.conf`, and stores one
+baseline per platform under `<test>/<platform>/reference.png`.
 
 ## Quick start
 
 ```bash
-# Run the full suite (also exposed as `make regression` from the repo root)
+# Run the full suite, every test × every platform it declares
+# (also exposed as `make regression` from the repo root)
 bash tests/00regression/regression.sh
 
 # Run only specific tests
 bash tests/00regression/regression.sh minimal minimal_jsp
 
+# Run only one platform (across all tests, or named tests)
+bash tests/00regression/regression.sh --platform cpc464
+bash tests/00regression/regression.sh --platform cpc464 minimal_cpc
+
 # Capture / refresh baselines (deliberate action — review before committing)
 bash tests/00regression/regression.sh --update minimal
+bash tests/00regression/regression.sh --update --platform cpc464 minimal_cpc
 ```
 
-## Layout
+## Layout (multi-platform, "Option B" subdir-per-platform)
 
 ```
 tests/00regression/
-├── regression.sh           # runner
-├── README.md               # this file
-├── .gitignore              # ignores actual.png, diff.png, game.tap
+├── regression.sh                  # runner
+├── README.md                      # this file
+├── .gitignore                     # ignores actual/diff/artefacts (top-level + per-platform)
 └── <test_name>/
-    ├── test.conf           # required: shell-sourceable config
-    ├── reference.png       # checked-in baseline
-    ├── actual.png          # last run's capture (gitignored)
-    ├── diff.png            # diff visualisation if FAIL (gitignored)
-    └── game.tap            # built TAP used for the run (gitignored)
+    ├── test.conf                  # required: shell-sourceable config
+    ├── zx48/reference.png         # checked-in baseline for that platform
+    ├── zx128/reference.png
+    ├── cpc464/reference.png
+    └── <platform>/actual.png      # last run's capture (gitignored)
+        <platform>/diff.png        # diff visualisation if FAIL (gitignored)
+        <platform>/game.{tap,dsk}  # built artefact used for the run (gitignored)
 ```
+
+Each platform's `reference.png` lives in its own subdir, so per-platform
+`git status` / diffs stay cleanly scoped (changing a CPC baseline only
+touches `cpc464/`).
 
 ## test.conf
 
 ```bash
 TARGET_GAME=games/minimal     # arg to `make build target_game=...`
-MACHINE=48k                   # 48k | 128k | next
-DELAY_FRAMES=300              # emulated frames before screenshot
-EXTRA_ARGS=""                 # optional JNEXT flags
-SKIP_REGRESSION=true          # optional: skip the comparison (see below)
+PLATFORMS="zx48"              # space-separated platform list (see below)
+MACHINE=48k                   # LEGACY — kept for back-compat; derives PLATFORMS if absent
+DELAY_FRAMES=150              # emulated frames before screenshot (all platforms)
+DELAY_FRAMES_CPC464=300      # optional per-platform override (DELAY_FRAMES_<PLATFORM>)
+TOLERANCE_CPC464=0           # optional per-platform tolerance (TOLERANCE_<PLATFORM>)
+EXTRA_ARGS=""                 # optional JNEXT flags (ZX only)
+SKIP_REGRESSION=true          # optional: skip the test entirely (see below)
 ```
+
+- **`PLATFORMS`** — space-separated list of platforms the test covers, e.g.
+  `zx48`, `zx128`, `cpc464`, or `"zx48 cpc464"` for a two-platform game.
+  If absent, the runner derives it from the legacy `MACHINE` field
+  (`48k → zx48`, `128k → zx128`; default `zx48`).
+- **`DELAY_FRAMES_<PLATFORM>`** — per-platform frame count, overriding the
+  shared `DELAY_FRAMES`. For ZX this is the JNEXT screenshot frame; for CPC
+  it is cap32's `system.boot_time` (the screenshot fires at ~2× this value
+  emulated frames — see the CPC section below).
+- **`TOLERANCE_<PLATFORM>`** — per-platform pixel-diff tolerance, overriding
+  the default (0 = pixel-perfect, or `JNEXT_TEST_TOLERANCE`). The default is
+  0 on every platform; the knob exists for acknowledged-flaky tests
+  (reviewed at baseline-commit time).
 
 `SKIP_REGRESSION=true` makes the runner skip the test entirely (no build, no
 emulator run, no comparison). Use it for games that have no deterministic
 post-boot frame yet — see "Non-deterministic baselines" below.
+
+### Backwards compatibility (indefinite, README §5.6)
+
+The pre-multi-platform layout had a single top-level `<test>/reference.png`
+and a `MACHINE` field. Both are honoured **indefinitely**:
+
+- If a test has a top-level `reference.png` but no `<platform>/reference.png`,
+  the top-level file is used as the implicit baseline for the test's single
+  declared platform.
+- If `PLATFORMS` is absent, it is derived from `MACHINE` as above.
+
+No deprecation, no removal — old tests keep working unchanged.
 
 ## Requirements
 
@@ -165,6 +209,35 @@ has visible animation at the capture point, the test will flake — capture
 earlier or drive past it via keypress.
 
 ---
+
+## CPC regression baselines
+
+The runner drives CPC tests through the same `regression.sh` as ZX tests;
+the `run_emulator_cpc()` helper wraps the verified Caprice32 recipe below.
+
+- **Platform**: the first CPC baseline is **`cpc464`** (cpc-flat). The
+  spec's TS3-3 names `cpc6128`, but the cpc6128 (cpc-banked) toolchain is
+  Phase T3 and does not build yet; `games/minimal_cpc` builds as cpc464 via
+  `make build-minimal_cpc` (G8). The `cpc6128` baseline is added after T3.
+- **Artefact**: CPC tests produce `game.dsk` (cpc-flat). The runner RUNs the
+  AMSDOS binary `GAME` inside the dsk (`run"game.`).
+- **Capture frame**: `DELAY_FRAMES_CPC464` is passed to cap32 as
+  `system.boot_time`; the screenshot fires after the boot wait plus one
+  `CAP32_DELAY` (≈2× that value emulated frames). This is **frame-counted**,
+  not wall-clock — so the capture is deterministic and byte-reproducible
+  run-to-run and across rebuilds, even though `minimal_cpc` has a moving
+  enemy. `TOLERANCE_CPC464=0` (pixel-perfect) is therefore safe; the moving
+  enemy lands on the same pixels every time at a fixed frame.
+- **Determinism note**: verified by capturing `minimal_cpc/cpc464` twice and
+  after a fresh rebuild — all three captures were 0 px diff (identical SHA).
+
+To add or refresh a CPC baseline:
+
+```bash
+bash tests/00regression/regression.sh --update --platform cpc464 minimal_cpc
+# then eyeball tests/00regression/minimal_cpc/cpc464/reference.png
+bash tests/00regression/regression.sh --platform cpc464 minimal_cpc   # 0 px diff
+```
 
 ## CPC emulator (Caprice32) — headless screenshot
 
