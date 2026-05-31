@@ -40,7 +40,11 @@
 #include "rage1/banked.h"
 
 // auxiliary functions for hero_can_move_in_direction()
-uint8_t hero_can_move_vertical( uint8_t x, uint8_t r, uint8_t c ) {
+// x/y are pixel coordinates (pos_int_t: uint8_t on ZX — byte-identical;
+// uint16_t on CPC), passed straight from position.x/y.part.integer.  They MUST
+// be wide so PIXEL_TO_CELL_COORD scans the right column/row when the hero is at
+// x>255 (or y>255) on CPC — G8a.  `i` stays uint8_t: it is a cell index (<=39).
+uint8_t hero_can_move_vertical( pos_int_t x, uint8_t r, uint8_t c ) {
     uint8_t i;
     for ( i = PIXEL_TO_CELL_COORD( x ) ; i <= c ; i++ )
         if ( GET_TILE_TYPE_AT( r, i ) == TT_OBSTACLE )
@@ -48,7 +52,7 @@ uint8_t hero_can_move_vertical( uint8_t x, uint8_t r, uint8_t c ) {
     return 1;
 }
 
-uint8_t hero_can_move_horizontal( uint8_t y, uint8_t r, uint8_t c ) {
+uint8_t hero_can_move_horizontal( pos_int_t y, uint8_t r, uint8_t c ) {
     uint8_t i;
     for ( i = PIXEL_TO_CELL_COORD( y ) ; i <= r ; i++ )
         if ( GET_TILE_TYPE_AT( i, c ) == TT_OBSTACLE )

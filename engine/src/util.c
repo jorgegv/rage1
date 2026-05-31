@@ -21,7 +21,7 @@ uint8_t pixel_to_cell_coord( pos_int_t a ) __z88dk_fastcall {
 }
 
 pos_int_t cell_to_pixel_coord( uint8_t a ) __z88dk_fastcall {
-    return (pos_int_t)( (pos_int_t)a << 3 );
+    return (pos_int_t)( a << 3 );
 }
 
 #else
