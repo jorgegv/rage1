@@ -31,6 +31,18 @@
 #include <z80.h>
 #endif
 
+// G8: CPC platforms use the firmware-free IM1 path.  The z88dk +cpc CRT, built
+// with CRT_DISABLE_FIRMWARE_ISR=1 (set in zpragma-cpc-flat.inc), owns the
+// 0x0038 IM1 vector and calls registered "fast" handlers at the raw CPC 300 Hz
+// rate WITHOUT paging the lower ROM (no firmware).  We register a fast handler
+// and divide its 300 Hz cadence by six to drive RAGE1's 50 Hz tick.  banking.md
+// §3.5 ("divide-by-six in software").  <arch/cpc.h> provides cpc_add_fast_isr();
+// <interrupt.h> provides isr_t.
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
+#include <arch/cpc/cpc.h>
+#include <interrupt.h>
+#endif
+
 #include "rage1/audio.h"
 #include "rage1/interrupts.h"
 #include "rage1/debug.h"
@@ -156,14 +168,79 @@ void init_interrupts(void) {
    intrinsic_ei();
 }
 
-#else // not ZX — CPC (and any future non-ZX platform)
+#elif defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
 
-// G7 STUB: CPC interrupt setup is Phase B/T3 (different mechanism: the CPC
-// firmware/Gate-Array raster interrupt, not Z80 IM2).  No-op stub so the
-// engine type-checks/links shape stays intact under +cpc.  do_timer_tick() /
-// do_periodic_isr_tasks() above are portable C and remain available for the
-// real CPC ISR to call when it lands.
+// G8: real CPC IM1 interrupt path (firmware-free, owns 0x0038 via the +cpc CRT
+// interposer; banking.md §3.5).  This is the cpc-flat implementation; it is
+// written so Phase B6 can extend it for cpc-banked.  The divide-by-six counter
+// and the 50 Hz tick dispatch are kept platform-neutral here; any bank-specific
+// interlock (interrupt_nesting_level vs the bank-switch primitive — banking.md
+// §3.5.1) is guarded OUT of cpc-flat and added by B6 for cpc-banked.
+
+// Divide-by-six counter: the CPC raster ISR fires at 300 Hz (fixed by the Gate
+// Array).  Every sixth fast tick is one RAGE1 50 Hz frame tick.  banking.md §3.5.
+#define CPC_ISR_DIVIDER     6
+static uint8_t cpc_isr_div_counter = 0;
+
+// CPC fast ISR (300 Hz), registered with cpc_add_fast_isr().  The +cpc CRT
+// fast-isr interposer preserves AF/BC/DE/HL around this call but NOT IX/IY, so
+// we save/restore them explicitly (SDCC may use IX as a frame pointer in the
+// callees).  Interrupts are already disabled by the CPU on ISR entry.
+//
+// Body: bump the divide-by-six counter; on every sixth tick run the SAME
+// portable do_timer_tick() / do_periodic_isr_tasks() the ZX ISR drives.  Kept
+// short so the 300 Hz budget (banking.md §3.5) is respected.
+static void cpc_fast_isr( void ) {
+   __asm
+      push ix
+      push iy
+   __endasm;
+
+   if ( ++cpc_isr_div_counter >= CPC_ISR_DIVIDER ) {
+      cpc_isr_div_counter = 0;
+
+      // one 50 Hz frame tick — identical semantics to the ZX IM2 ISR body
+      do_timer_tick();
+      if ( periodic_tasks_enabled )
+         do_periodic_isr_tasks();
+   }
+
+   __asm
+      pop iy
+      pop ix
+   __endasm;
+}
+
+// Initialize the CPC interrupt path.  No IM2 table / z80 pokes (those are ZX):
+// we hand our fast handler to the CRT's IM1 interposer.  cpc_add_fast_isr()
+// installs cpc_fast_isr into the CRT 'fast_vectors' table; the CRT's 0x0038
+// interposer (CRT_DISABLE_FIRMWARE_ISR=1) calls it at 300 Hz with no firmware.
+void init_interrupts( void ) {
+
+   // do not disturb while we wire the ISR
+   intrinsic_di();
+
+   // reset the divide-by-six counter
+   cpc_isr_div_counter = 0;
+
+   // reset interrupt nesting level (shared interlock; inert on cpc-flat, used
+   // by B6 on cpc-banked — banking.md §3.5.1)
+   interrupt_nesting_level = 0;
+
+   // ensure periodic tasks do not run yet
+   periodic_tasks_enabled = 0;
+
+   // register the 300 Hz fast handler with the +cpc CRT IM1 interposer
+   cpc_add_fast_isr( (isr_t) cpc_fast_isr );
+
+   // everything is setup, allow interrupts now
+   intrinsic_ei();
+}
+
+#else // any other future non-ZX, non-CPC platform
+
+// No-op stub: a platform that is neither ZX nor CPC has no ISR wiring yet.
 void init_interrupts( void ) {
 }
 
-#endif // PLATFORM_ZX{48,128}
+#endif // PLATFORM_ZX{48,128} / PLATFORM_CPC{464,6128}

@@ -105,6 +105,17 @@ void hero_reset_position(void) {
         game_state.hero.position.x.part.integer,
         game_state.hero.position.y.part.integer
     );
+
+    // G8 (CPC direct-write renderer): cache the steady frame in last_frame_ptr
+    // so the deferred hero_draw() (requested by game_loop.c's F_GAME_START
+    // block on CPC, after map_draw_screen() clears the area) has a valid frame
+    // to draw.  On the ZX/SP1 backend the hero is a composited sprite LAYER and
+    // survives the tile-layer clear, so no deferred redraw happens and this
+    // cache is unnecessary — hence guarded out (ZX byte-identical).
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
+    game_state.hero.animation.last_frame_ptr =
+        home_assets->all_sprite_graphics[ HERO_SPRITE_ID ].frame_data.frames[ HERO_SPRITE_STEADY_FRAME_DOWN ];
+#endif
 }
 
 // X and Y setting functions - take care of setting XMAX and YMAX also

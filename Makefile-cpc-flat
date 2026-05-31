@@ -88,6 +88,45 @@ ASMSRC			+= $(CPC_ENGINE_GFX_ASMSRC)
 CPC_EXTRA_INC		= -I$(GAME_SRC_DIR) -I$(GAME_SRC_DIR)/assets
 endif
 
+# ---- Phase G8: full RAGE1 ENGINE LOOP link set (cpc-flat) --------------
+# A CPC game that opts in (CPC_LINK_ENGINE_FULL=1, set by `make build-minimal_cpc`)
+# links the WHOLE RAGE1 engine so the interrupt-driven game loop runs on real
+# CPC hardware (gfx.md Phase G8).  This is the cpc-flat analogue of the zx48
+# link set (Makefile-zx48 adds BANKED_CODE_SRC_COMMON to a flat, no-banking
+# build): engine/src/*.{c,asm} + the platform-neutral banked_code/common game
+# loop sources + generated + game_src.  The game supplies NO main() — the
+# engine's engine/src/main.c entry is pulled.
+#
+# Two banked_code/common sources are ZX-only and EXCLUDED on cpc-flat:
+#   - audio_zx_beeper.c : ZX beeper (bit_beepfx); the CPC has no beeper backend.
+#       The engine's audio_sfx_beeper_*() calls resolve to AU4's inline CPC
+#       shims in rage1/audio_cpc_ay.h, so no .c body is needed.
+#   - bullet.c          : weapon/bullet logic; minimal_cpc has no HERO_HAS_WEAPON.
+# (cpc6128 / cpc-banked relocates these into real banks — Phase T3/B6.)
+# engine/src/*.c, MINUS nothing (the ZX-only bodies self-#ifdef out under +cpc).
+# engine/src/*.asm MINUS 00asmdata.asm: that file hand-places the timekeeping /
+# asset / interrupt globals in the ZX-only `code_crt_common` low-memory section,
+# which the +cpc CRT does not map (the linker would silently drop it at $0000,
+# colliding with the CPC restart + 0x0038 IM1 vectors).  On cpc-flat those
+# globals have no low-memory constraint and are defined as plain C BSS in
+# engine/src/cpc/asmdata_cpc.c instead (pulled in via engine/src/cpc/*.c below).
+CPC_ENGINE_FULL_CSRC	= $(wildcard $(ENGINE_DIR)/src/*.c) \
+			  $(wildcard $(ENGINE_DIR)/src/cpc/*.c)
+CPC_ENGINE_FULL_ASMSRC	= $(filter-out %/00asmdata.asm, \
+			    $(wildcard $(ENGINE_DIR)/src/*.asm))
+CPC_BANKED_COMMON_CSRC	= $(filter-out %/audio_zx_beeper.c %/bullet.c, \
+			    $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c))
+CPC_BANKED_COMMON_ASMSRC = $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm)
+
+ifeq ($(CPC_LINK_ENGINE_FULL),1)
+CSRC			= $(CPC_ENGINE_FULL_CSRC) $(CPC_BANKED_COMMON_CSRC) \
+			  $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
+ASMSRC			= $(CPC_ENGINE_FULL_ASMSRC) $(CPC_BANKED_COMMON_ASMSRC) \
+			  $(CPC_ENGINE_GFX_ASMSRC) \
+			  $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
+CPC_EXTRA_INC		= -I$(GAME_SRC_DIR)
+endif
+
 OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 
 # Override CFLAGS: +cpc uses the default clib (NOT -clib=sdcc_iy, which is
