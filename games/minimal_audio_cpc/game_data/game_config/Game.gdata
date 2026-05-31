@@ -21,6 +21,7 @@ BEGIN_GAME_CONFIG
 	DEFAULT_BG_ATTR	INK_WHITE | PAPER_BLACK
 	SCREEN		INITIAL=Screen01
 	GAME_AREA	TOP=1 LEFT=1 BOTTOM=23 RIGHT=38
+	GAME_FUNCTION	TYPE=MENU NAME=my_menu_screen FILE=menu.c
 
 	// music tracker options (Phase AU5: real CPC Arkos2 AY backend).
 	// The .asm song/FX are the AT2-exported (SongToAkg) byte arrays — the
