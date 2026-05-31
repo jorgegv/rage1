@@ -64,10 +64,16 @@ struct input_udk_s {
 #define INPUT_SCANCODE_DEFAULT_RIGHT  IN_KEY_SCANCODE_p
 #define INPUT_SCANCODE_DEFAULT_FIRE   IN_KEY_SCANCODE_SPACE
 
-#define KBD_DEFAULT_UP                'Q'
-#define KBD_DEFAULT_DOWN              'A'
-#define KBD_DEFAULT_LEFT              'O'
-#define KBD_DEFAULT_RIGHT             'P'
+// Lowercase letters: z88dk's in_key_scancode() (input_lookup_key on ZX)
+// resolves an UPPERCASE letter through the CAPS-SHIFTed block of its
+// key-translation table, yielding a scancode that requires CAPS SHIFT to
+// be held — so 'Q'/'A'/'O'/'P' would only register as movement with CAPS
+// SHIFT down. The unshifted (plain-keypress) scancodes are produced by the
+// lowercase chars, matching the legacy INPUT_SCANCODE_DEFAULT_* (q/a/o/p).
+#define KBD_DEFAULT_UP                'q'
+#define KBD_DEFAULT_DOWN              'a'
+#define KBD_DEFAULT_LEFT              'o'
+#define KBD_DEFAULT_RIGHT             'p'
 #define KBD_DEFAULT_FIRE              ' '
 
 ////////////////////////////////////////////////////////////////////////////////
