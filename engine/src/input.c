@@ -114,14 +114,20 @@ __endasm;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// CPC backend — STUB (Phase IN5).
+// CPC backend (Phase IN6).
 //
-// These are the real (but stubbed) bodies for the parts of the input HAL that
-// are macros on ZX but must be functions on CPC (input.md §3.2): there is no
-// native cpctelera one-liner for them, so they live here rather than in
-// rage1/input_cpc.h.  At IN5 every body returns zero / does nothing — NO
-// busy-waiting, NO real keyboard access.  Phase IN6 fills these in with
-// cpctelera reads (cpct_scanKeyboard / cpct_isKeyPressed / cpct_keyID ...).
+// Real cpctelera-backed bodies for the parts of the input HAL that are macros
+// on ZX but must be functions on CPC (input.md §3.2).  They drive the
+// hand-translated cpctelera keyboard primitives in
+// engine/src/cpc/cpct_keyboard.asm (declared in rage1/input_cpc.h):
+//   cpct_scanKeyboard() / cpct_scanKeyboard_f() — refill the 10-byte
+//     cpct_keyboardStatusBuffer (0 = pressed, 1 = not pressed);
+//   cpct_isKeyPressed( keyID ) — single-key query against the buffer;
+//   cpct_isAnyKeyPressed_f()   — "any key down?".
+//
+// A cpct_keyID is (bit_mask << 8) | matrix_line: low byte = matrix line (0..9,
+// index into the buffer), high byte = bit mask (one bit).  When we walk the
+// buffer we rebuild a keyID as ( line | (mask << 8) ).
 //
 // `struct input_udk_s` (rage1/input_cpc.h) keeps the ZX field order
 // (fire, right, left, down, up) so engine code that assigns keys.up / keys.fire
@@ -129,48 +135,175 @@ __endasm;
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+// ASCII <-> cpct_keyID lookup table, shared by input_lookup_key() (ASCII ->
+// keyID, used by init_controllers / key-redefine) and input_inkey() (keyID ->
+// ASCII).  Only the characters RAGE1's defaults / menus need are mapped; any
+// other key resolves to keyID 0 / ASCII 0.  keyID values come from cpctelera
+// keyboard.h (mirrored as CPC_Key_* in rage1/input_cpc.h).
+struct cpc_ascii_keyid_s {
+    uint8_t          ascii;
+    input_scancode_t keyid;
+};
+
+static const struct cpc_ascii_keyid_s cpc_ascii_keyid_table[] = {
+    { 'Q', CPC_Key_Q     },
+    { 'A', CPC_Key_A     },
+    { 'O', CPC_Key_O     },
+    { 'P', CPC_Key_P     },
+    { ' ', CPC_Key_Space },
+    { 'H', CPC_Key_H     },
+    { 'Y', CPC_Key_Y     },
+    { 'N', CPC_Key_N     },
+    { '0', CPC_Key_0     },
+    { 13,  CPC_Key_Return },
+    { 27,  CPC_Key_Esc   },
+};
+
+#define CPC_ASCII_KEYID_TABLE_SIZE \
+    ( sizeof( cpc_ascii_keyid_table ) / sizeof( cpc_ascii_keyid_table[0] ) )
+
 // Read controller state -> packed INPUT_STATE_* bits.
-// IN6: CTRL_TYPE_KEYBOARD ORs five cpct_isKeyPressed() calls over `udk`;
-// CTRL_TYPE_JOY0 / CTRL_TYPE_JOY1 OR the Joy0_*/Joy1_* keyIDs.
+// CTRL_TYPE_KEYBOARD ORs five cpct_isKeyPressed() calls over `udk`;
+// CTRL_TYPE_JOY0 / CTRL_TYPE_JOY1 OR the Joy0_*/Joy1_* keyIDs.  input_scan()
+// (cpct_scanKeyboard) is called once per frame by check_controller() before
+// this, so the status buffer is already fresh.
 input_state_t input_state_read( uint8_t type, input_udk_t *udk ) {
-    (void) type;
-    (void) udk;
-    return INPUT_STATE_NONE;
+    input_state_t state = INPUT_STATE_NONE;
+
+    switch ( type ) {
+        case CTRL_TYPE_KEYBOARD:
+            if ( cpct_isKeyPressed( udk->up    ) ) state |= INPUT_STATE_UP;
+            if ( cpct_isKeyPressed( udk->down  ) ) state |= INPUT_STATE_DOWN;
+            if ( cpct_isKeyPressed( udk->left  ) ) state |= INPUT_STATE_LEFT;
+            if ( cpct_isKeyPressed( udk->right ) ) state |= INPUT_STATE_RIGHT;
+            if ( cpct_isKeyPressed( udk->fire  ) ) state |= INPUT_STATE_FIRE;
+            break;
+        case CTRL_TYPE_JOY0:
+            if ( cpct_isKeyPressed( CPC_Joy0_Up    ) ) state |= INPUT_STATE_UP;
+            if ( cpct_isKeyPressed( CPC_Joy0_Down  ) ) state |= INPUT_STATE_DOWN;
+            if ( cpct_isKeyPressed( CPC_Joy0_Left  ) ) state |= INPUT_STATE_LEFT;
+            if ( cpct_isKeyPressed( CPC_Joy0_Right ) ) state |= INPUT_STATE_RIGHT;
+            if ( cpct_isKeyPressed( CPC_Joy0_Fire1 ) ) state |= INPUT_STATE_FIRE;
+            break;
+        case CTRL_TYPE_JOY1:
+            if ( cpct_isKeyPressed( CPC_Joy1_Up    ) ) state |= INPUT_STATE_UP;
+            if ( cpct_isKeyPressed( CPC_Joy1_Down  ) ) state |= INPUT_STATE_DOWN;
+            if ( cpct_isKeyPressed( CPC_Joy1_Left  ) ) state |= INPUT_STATE_LEFT;
+            if ( cpct_isKeyPressed( CPC_Joy1_Right ) ) state |= INPUT_STATE_RIGHT;
+            if ( cpct_isKeyPressed( CPC_Joy1_Fire1 ) ) state |= INPUT_STATE_FIRE;
+            break;
+    }
+    return state;
 }
 
-// Blocking raw keyboard scan for key-redefine flows.
-// IN6: cpct_scanKeyboard() + walk cpct_keyboardStatusBuffer[] for the first
-// 0-bit, return (matrix_line | (bit_mask << 8)).
-input_scancode_t input_capture_scancode( void ) __z88dk_fastcall {
+// Walk the freshly-scanned status buffer for the first pressed key and return
+// its cpct_keyID ( line | (mask << 8) ), or 0 if none is pressed.  Shared by
+// input_capture_scancode() (blocking) and input_inkey() (non-blocking).
+static input_scancode_t cpc_first_pressed_keyid( void ) {
+    uint8_t line;
+    for ( line = 0; line < 10; line++ ) {
+        uint8_t status = cpct_keyboardStatusBuffer[ line ];
+        if ( status != 0xFF ) {
+            // at least one bit is 0 (pressed); find the lowest pressed bit
+            uint8_t mask = 0x01;
+            uint8_t b;
+            for ( b = 0; b < 8; b++ ) {
+                if ( ( status & mask ) == 0 )
+                    return (input_scancode_t) ( line | ( (uint16_t) mask << 8 ) );
+                mask <<= 1;
+            }
+        }
+    }
     return (input_scancode_t) 0;
 }
 
-// Busy-wait `ms` ms, early-out on keypress, return remaining ms.
-// IN6: poll cpct_scanKeyboard_f() + cpct_isAnyKeyPressed_f(), calibrated for
-// 4 MHz.  Stub returns immediately (no busy-wait) with 0 ms remaining.
+// Blocking raw keyboard scan for key-redefine flows: spin until exactly one
+// key is detected, then return its cpct_keyID.  Mirrors the ZX
+// input_capture_scancode() contract (returns the udk-storable scancode).
+input_scancode_t input_capture_scancode( void ) __z88dk_fastcall {
+    input_scancode_t keyid;
+    do {
+        cpct_scanKeyboard();
+        keyid = cpc_first_pressed_keyid();
+    } while ( keyid == 0 );
+    return keyid;
+}
+
+// Busy-wait `ms` milliseconds, early-out on keypress, return remaining ms.
+// The CPC runs at 4 MHz; the inner delay loop below is calibrated so the
+// per-millisecond cost (scan + any-key poll + spin) is ~1 ms.  cpct_scanKeyboard_f
+// is ~170 us, so we spend the remaining ~830 us in a tuned NOP spin.
 uint16_t input_pause( uint16_t ms ) {
-    (void) ms;
-    return 0;
+    while ( ms ) {
+        volatile uint16_t spin;
+        cpct_scanKeyboard_f();
+        if ( cpct_isAnyKeyPressed_f() )
+            break;                      // early-out: a key was pressed
+        // ~830 us spin at 4 MHz (calibrated NOP loop)
+        for ( spin = 0; spin < 360; spin++ )
+            ;
+        ms--;
+    }
+    return ms;
 }
 
-// Block until any key is pressed.  IN6: loop on cpct_isAnyKeyPressed_f().
+// Block until at least one key is pressed.
 void input_wait_key( void ) {
+    do {
+        cpct_scanKeyboard_f();
+    } while ( ! cpct_isAnyKeyPressed_f() );
 }
 
-// Block until no key is pressed.  IN6: loop while cpct_isAnyKeyPressed_f().
+// Block until no key is pressed.
 void input_wait_nokey( void ) {
+    do {
+        cpct_scanKeyboard_f();
+    } while ( cpct_isAnyKeyPressed_f() );
 }
 
-// ASCII of the single key currently down (0 if none/ambiguous).
-// IN6: walk the status buffer + a small cpct_keyID -> ASCII table.
+// ASCII of the single key currently down (0 if none, unmapped, OR ambiguous).
+// Matches z88dk's in_inkey() semantics: returns 0 when MORE THAN ONE key is
+// pressed.  Counts pressed bits across the whole buffer; only when exactly one
+// is down do we reverse-map its keyID through the ASCII<->keyID table.
 uint16_t input_inkey( void ) {
+    input_scancode_t keyid;
+    uint8_t line, pressed;
+    uint8_t i;
+
+    cpct_scanKeyboard();
+
+    // bail out as soon as a second pressed key is seen (ambiguous -> 0)
+    pressed = 0;
+    for ( line = 0; line < 10; line++ ) {
+        uint8_t status = cpct_keyboardStatusBuffer[ line ];
+        if ( status != 0xFF ) {
+            uint8_t mask = 0x01;
+            uint8_t b;
+            for ( b = 0; b < 8; b++ ) {
+                if ( ( status & mask ) == 0 )
+                    if ( ++pressed > 1 )
+                        return 0;
+                mask <<= 1;
+            }
+        }
+    }
+    if ( pressed == 0 )
+        return 0;
+
+    keyid = cpc_first_pressed_keyid();      // exactly one bit set -> the key
+    for ( i = 0; i < CPC_ASCII_KEYID_TABLE_SIZE; i++ )
+        if ( cpc_ascii_keyid_table[ i ].keyid == keyid )
+            return (uint16_t) cpc_ascii_keyid_table[ i ].ascii;
     return 0;
 }
 
-// ASCII -> backend scancode for udk population.
-// IN6: small ASCII -> cpct_keyID lookup table.  Stub returns 0.
+// ASCII -> backend scancode (cpct_keyID) for udk population / key-redefine.
+// Returns 0 for any unmapped character.
 input_scancode_t input_lookup_key( uint8_t ascii ) {
-    (void) ascii;
+    uint8_t i;
+    for ( i = 0; i < CPC_ASCII_KEYID_TABLE_SIZE; i++ )
+        if ( cpc_ascii_keyid_table[ i ].ascii == ascii )
+            return cpc_ascii_keyid_table[ i ].keyid;
     return (input_scancode_t) 0;
 }
 

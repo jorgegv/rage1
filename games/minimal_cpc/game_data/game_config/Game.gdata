@@ -12,8 +12,12 @@
 // game-loop sources) so the interrupt-driven game loop runs on real CPC
 // hardware.  The 50 Hz frame interrupt drives enemy movement and animation.
 //
-// Real CPC input (IN6) / audio (AU5) are still HAL stubs, so the hero is
-// stationary; the autonomously-moving ENEMY proves the loop is live.
+// Phase IN6: real CPC keyboard input is now wired (engine/src/input.c CPC
+// branch + engine/src/cpc/cpct_keyboard.asm).  The MENU game-function below
+// selects CTRL_TYPE_KEYBOARD at boot — the cpc464 analogue of the deferred
+// cpc6128 controller-select overlay (IN6-4/5/6 are Phase 5, README §5.12) —
+// so the engine's check_controller() drives the hero from the Q/A/O/P + Space
+// keys.  Audio (AU5) is still a HAL stub.
 BEGIN_GAME_CONFIG
 	NAME		MinimalCpc
 	PLATFORM	cpc464
@@ -22,4 +26,5 @@ BEGIN_GAME_CONFIG
 	DEFAULT_BG_ATTR	INK_WHITE | PAPER_BLACK
 	SCREEN		INITIAL=Screen01
 	GAME_AREA	TOP=1 LEFT=1 BOTTOM=23 RIGHT=38
+	GAME_FUNCTION	TYPE=MENU NAME=my_menu_screen FILE=menu.c
 END_GAME_CONFIG
