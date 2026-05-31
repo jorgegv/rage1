@@ -163,3 +163,106 @@ sequence; you'll capture a `LOAD ""` mid-typing or mid-load screen.
 If `reference.png` shows `LOAD ""` text, the delay is too low. If the game
 has visible animation at the capture point, the test will flake — capture
 earlier or drive past it via keypress.
+
+---
+
+## CPC emulator (Caprice32) — headless screenshot
+
+### Install
+
+Caprice32 is built from source and installed at `~/src/cpc/caprice32/`.
+The binary is `~/src/cpc/caprice32/cap32`; the config is
+`~/src/cpc/caprice32/cap32.cfg`.  The CI Docker `:test` image also includes
+Caprice32 (built from the same pinned commit at image-build time).
+
+Verified version: **v4.6.0** (git tag `v4.6.0`, commit `93486f8…`).
+
+### Headless invocation (verified recipe)
+
+```bash
+DISP=:99
+SCRNDIR=/tmp/cap32-scrnshots
+mkdir -p "$SCRNDIR"
+
+Xvfb "$DISP" -screen 0 640x480x24 &
+XVFB_PID=$!
+
+DISPLAY="$DISP" SDL_VIDEODRIVER=x11 WAYLAND_DISPLAY= \
+  cap32 -c ~/src/cpc/caprice32/cap32.cfg \
+  -O "system.boot_time=300" \
+  -O "file.sdump_dir=$SCRNDIR" \
+  -a $'run"<binary>.\r' \
+  -a "CAP32_DELAY" \
+  -a "CAP32_SCRNSHOT" \
+  -a "CAP32_EXIT" \
+  game.dsk
+
+kill "$XVFB_PID"
+# Screenshot is at: $SCRNDIR/screenshot_<YYYYMMdd_HHmmss>.png
+```
+
+Key points:
+
+- `SDL_VIDEODRIVER=x11 WAYLAND_DISPLAY=` forces SDL to use the Xvfb
+  X11 server.  Without this SDL2 follows `WAYLAND_DISPLAY` to the live
+  compositor and the Xvfb root returns a black image.
+- The `-O` flag overrides config values: `system.boot_time` and
+  `file.sdump_dir` are the two that matter for headless automation.
+- `CAP32_SCRNSHOT` saves `screenshot_<date>.png` to `sdump_dir`.
+  There is no way to specify the filename directly; collect with `ls
+  sdump_dir/screenshot_*.png | sort | tail -1`.
+
+### OQ-TS1 resolution — verified autocmd token spellings
+
+Verified against pinned Caprice32 v4.6.0 source (`src/argparse.cpp`,
+`src/keyboard.cpp`, `src/cap32.cpp`) and confirmed working in a live
+headless Xvfb test run on 2026-05-31:
+
+| Token | Present | Parameterisation | Notes |
+|-------|---------|-----------------|-------|
+| `CAP32_SCRNSHOT` | Yes | No argument | Saves `screenshot_<date>.png` to `file.sdump_dir` from config. Output filename cannot be specified directly. |
+| `CAP32_DELAY` | Yes | **No argument** | Pauses for `system.boot_time` frames (config value). The spec sketch `CAP32_DELAY=300` is WRONG for this version — the `=300` suffix would be typed as CPC keyboard input. Control the delay via `-O system.boot_time=<frames>` instead. |
+| `CAP32_WAITBREAK` | Yes | No argument | Sets a Z80 breakpoint at address 0 and waits for it. `CAP32_DELAY` is simpler for frame-counted timing. |
+| `CAP32_EXIT` | Yes | No argument | Calls `cleanExit(0)` — cap32 exits with code 0. |
+| `CAP32_NEXTDISKA` | Yes | No argument | Switches to next disk in a zip. Not needed for single-dsk use. |
+| `CAP32_SNAPSHOT` | Yes | No argument | Saves a `.sna` snapshot (different from screenshot). |
+
+**CONFIRMED WORKING sequence** (verified 2026-05-31):
+
+```
+cap32 -O system.boot_time=300 -O file.sdump_dir=/tmp/out \
+  -a $'run"poc.\r' \
+  -a CAP32_DELAY \
+  -a CAP32_SCRNSHOT \
+  -a CAP32_EXIT \
+  poc.dsk
+```
+
+This exits 0 and produces a PNG showing the running CPC binary.
+
+**Tokens that do NOT exist** in v4.6.0 (from source survey):
+- There is no combined "screenshot-and-exit" shortcut token.
+- There is no `CAP32_SCRNSHOT=<filename>` parameterisation.
+
+**Workaround for `CAP32_DELAY <N>`**: Use `-O system.boot_time=<N>` to
+set the per-DELAY wait in frames before the `-a CAP32_DELAY` token.
+Multiple `CAP32_DELAY` tokens in one autocmd sequence each wait
+`boot_time` frames.
+
+### Why not `import -window root` (the R2 Xvfb-grab approach)?
+
+The existing `tools/cap32-shot.sh` uses `import -window root` + `xdotool
+key F3` as a dual-grab approach.  The `CAP32_SCRNSHOT` autocmd path is
+strictly cleaner:
+
+- No `ImageMagick import` dependency for capture (only needed for `compare`
+  in regression).
+- No `xdotool` focus + F3 dance; the screenshot happens inside the emulator
+  at the exact frame the autocmd fires.
+- Deterministic: the screenshot fires at `boot_time` frames after
+  `CAP32_DELAY`; not dependent on `sleep` wall-clock timing.
+- cap32 exits 0 cleanly; the script does not need to `kill` a lingering
+  process.
+
+The `import -window root` fallback remains documented in `cap32-shot.sh`
+for reference, but is superseded by the autocmd approach.

@@ -24,10 +24,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      - name: Build and push
+      # TS2-3: Build and push the :build stage (compile environment only).
+      # This is the image used by build-test-games.yaml.
+      - name: Build and push :build image
         uses: docker/build-push-action@v3
         with:
           context: ./docker
           file: ./docker/Dockerfile
+          target: build
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/rage1-z88dk:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/rage1-z88dk:build
+
+      # TS2-3: Build and push the :test stage (build + Caprice32 + Xvfb +
+      # ImageMagick).  Used by the regression workflow (TS3) for headless
+      # CPC screenshot testing.
+      - name: Build and push :test image
+        uses: docker/build-push-action@v3
+        with:
+          context: ./docker
+          file: ./docker/Dockerfile
+          target: test
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/rage1-z88dk:test
