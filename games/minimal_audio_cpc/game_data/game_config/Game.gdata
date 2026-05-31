@@ -1,0 +1,32 @@
+// minimal_audio_cpc — CPC (cpc464/cpc-flat) game that runs the REAL RAGE1
+// ENGINE GAME LOOP (Phase G8) AND the REAL CPC Arkos2 AY audio backend
+// (Phase AU5).  It is games/minimal_cpc plus a TRACKER (arkos2) music song
+// and a sound-effect table, so the AT2 AKG player is linked for +cpc, the
+// 50 Hz ISR runs the music tick, and a flow rule plays a tracker SFX.
+//
+// AU5 PLATFORM-scope deviation (documented, README §5.12 / audio.md AU5):
+// the audio.md AU5-2/AU5-3 spec references games/minimal + games/default on
+// cpc6128, but cpc6128 does not build until Phase T3, so the CPC audio
+// demonstrator targets cpc464 / cpc-flat.  This dedicated cpc464 audio test
+// game is the cpc-flat analogue.  games/default's CPC build (real-game SFX)
+// is deferred to Phase 5.
+//
+// MONO mode (README §5.9): inline PIXELS/MASK graphics, exactly like
+// games/minimal_cpc; no datagen CPC PNG asset conversion.
+BEGIN_GAME_CONFIG
+	NAME		MinimalAudioCpc
+	PLATFORM	cpc464
+	GFX_BACKEND	cpctel
+	COLOR		MODE=MONO GAMEAREA_ATTR=INK_WHITE|PAPER_BLACK
+	DEFAULT_BG_ATTR	INK_WHITE | PAPER_BLACK
+	SCREEN		INITIAL=Screen01
+	GAME_AREA	TOP=1 LEFT=1 BOTTOM=23 RIGHT=38
+
+	// music tracker options (Phase AU5: real CPC Arkos2 AY backend).
+	// The .asm song/FX are the AT2-exported (SongToAkg) byte arrays — the
+	// conversion is target-agnostic, so these are the SAME bytes a ZX build
+	// would reference (audio.md AU5-5).
+	TRACKER		TYPE=arkos2 IN_GAME_SONG=game_song FX_CHANNEL=1 FX_VOLUME=16
+	TRACKER_SONG	NAME=game_song FILE=game_data/music/music1.asm
+	TRACKER_FXTABLE	FILE=game_data/music/soundfx.asm
+END_GAME_CONFIG

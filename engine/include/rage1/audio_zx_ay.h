@@ -74,6 +74,18 @@ static inline void audio_music_tick( void ) {
     tracker_do_periodic_tasks();
 }
 
+// audio_music_set_volume(vol) — AU5-4. The Arkos2 AKG player (and the Vortex2
+// player) expose NO fade / master-volume primitive in RAGE1's integration, so
+// this is a documented no-op on the ZX AY backend, matching the CPC AY backend
+// (audio_cpc_ay.h).
+//
+// IMPORTANT — this MUST be a macro, not a static-inline: SDCC emits unreferenced
+// static-inline bodies into every TU that includes this header (see the note
+// below re: the SFX aliases), which would add a real function to the ZX binary
+// and shift all downstream addresses — breaking the load-bearing ZX
+// byte-identity guarantee. A macro expands to nothing and emits no symbol.
+#define audio_music_set_volume( vol )	( (void)( vol ) )
+
 ////////////////////////////////////////////////////////
 // HAL contract — SFX ops (AY tracker channel)
 ////////////////////////////////////////////////////////

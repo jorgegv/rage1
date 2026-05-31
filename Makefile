@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello build-00cpc-compile-test all-test-builds all-test-builds-zx all-test-builds-cpc
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello build-00cpc-compile-test build-minimal_cpc build-minimal_audio_cpc all-test-builds all-test-builds-zx all-test-builds-cpc
 
 help:
 	echo "============================================================"
@@ -198,6 +198,17 @@ build-minimal_cpc:
 	$(MYMAKE) clean
 	$(MYMAKE) PLATFORM=cpc464 config target_game=$(TEST_GAMES_DIR)/minimal_cpc
 	$(MYMAKE) PLATFORM=cpc464 data-cpc464 target_game=$(TEST_GAMES_DIR)/minimal_cpc
+	$(MYMAKE) -f Makefile-cpc-flat CPC_LINK_ENGINE_FULL=1 build
+
+# AU5: minimal_audio_cpc — minimal_cpc + a real CPC Arkos2 AY tracker song and
+# SFX table.  Links the AT2 AKG player for +cpc (CPC PSG output via the 8255
+# PPI), runs the music tick in the 50 Hz ISR, and plays a tracker SFX from a
+# flow rule.  cpc-flat (cpc464) per AU5 PLATFORM-scope deviation (README §5.12);
+# cpc6128 + games/default CPC SFX deferred to Phase T3/Phase 5.
+build-minimal_audio_cpc:
+	$(MYMAKE) clean
+	$(MYMAKE) PLATFORM=cpc464 config target_game=$(TEST_GAMES_DIR)/minimal_audio_cpc
+	$(MYMAKE) PLATFORM=cpc464 data-cpc464 target_game=$(TEST_GAMES_DIR)/minimal_audio_cpc
 	$(MYMAKE) -f Makefile-cpc-flat CPC_LINK_ENGINE_FULL=1 build
 
 # G7-4: synthetic CPC engine compile-test. Configures + datagens the

@@ -1,0 +1,12 @@
+// Phase AU5-3: exercise the CPC Arkos2 AY SFX path.  When the game has been
+// running for >0 seconds (i.e. right after the loop starts), play tracker
+// sound-effect #1.  This pulls in the audio_sfx_tracker_* HAL ops, which on
+// CPC alias to the generic tracker_* SFX layer ->
+//   ply_akg_playsoundeffect( 1, TRACKER_SOUNDFX_CHANNEL, 16 - TRACKER_SOUNDFX_VOLUME )
+// via the AT2 CPC player (PPI PSG output).
+BEGIN_RULE
+	SCREEN	Screen01
+	WHEN	enter_screen
+	CHECK	GAME_TIME_MORE_THAN 0
+	DO	TRACKER_PLAY_FX 1
+END_RULE
