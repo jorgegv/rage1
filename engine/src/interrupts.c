@@ -198,12 +198,13 @@ static uint8_t cpc_isr_div_counter = 0;
 // of what the tick body does — defensive correctness, not a pre-optimisation.
 //
 // Save/restore sequence mirrors the ZX IM2 ISR (asm_im2_push/pop_registers):
-//   entry: exx + ex af,af' (defb 0x08) swaps shadow→main position; push the four
-//          regs; exx returns to the C-visible main set for the rest of the handler.
+//   entry: exx + ex af,af' swaps shadow→main position; push the four regs; exx
+//          returns to the C-visible main set for the rest of the handler.
 //   exit:  reverse: exx swaps shadow back to main position; pop in LIFO order;
-//          ex af,af' (defb 0x08) + exx restores both halves.
-//   ex af,af' (opcode 0x08) is encoded as defb in SDCC __asm blocks: the trailing
-//   apostrophe in the mnemonic confuses the SDCC C parser.
+//          ex af,af' + exx restores both halves.
+//   The mnemonic is written "ex af,af" (no trailing apostrophe): SDCC's C lexer
+//   reads the ' inside an __asm block as an unterminated char literal, but z80asm
+//   accepts the no-apostrophe form and emits the identical EX AF,AF' opcode (0x08).
 //
 // Body: bump the divide-by-six counter; on every sixth tick run the SAME
 // portable do_timer_tick() / do_periodic_isr_tasks() the ZX ISR drives.  Kept
@@ -215,10 +216,10 @@ static void cpc_fast_isr( void ) {
       push iy
       ; --- save shadow/alternate register set ---
       ; exx swaps shadow regs into main position for pushing.
-      ; defb 0x08 = ex af,af (single-quote omitted: SDCC C parser treats
-      ; the apostrophe in the mnemonic as a char literal delimiter).
+      ; "ex af,af" (apostrophe omitted: SDCC's C lexer treats the trailing ' in
+      ; an __asm block as a char-literal delimiter; z80asm emits opcode 0x08).
       exx
-      defb 0x08           ; = ex af,af (shadow AF into main position)
+      ex af,af            ; EX AF,AF — shadow AF into main position
       push af
       push bc
       push de
@@ -244,7 +245,7 @@ static void cpc_fast_isr( void ) {
       pop de
       pop bc
       pop af
-      defb 0x08           ; = ex af,af (restore shadow AF; apostrophe omitted)
+      ex af,af            ; EX AF,AF — restore shadow AF
       exx
       ; --- restore IX, IY ---
       pop iy
