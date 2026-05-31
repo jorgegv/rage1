@@ -175,7 +175,10 @@ The binary is `~/src/cpc/caprice32/cap32`; the config is
 `~/src/cpc/caprice32/cap32.cfg`.  The CI Docker `:test` image also includes
 Caprice32 (built from the same pinned commit at image-build time).
 
-Verified version: **v4.6.0** (git tag `v4.6.0`, commit `93486f8…`).
+Verified version: **post-v4.6.0 master HEAD, commit `93486f8`** (tag
+`v4.6.0` = `0eb07f5`, ~647 commits earlier; the `VERSION_STRING` in
+`cap32.h` still reads `v4.6.0` because it was never bumped — so
+`cap32 -V` prints `v4.6.0` even though the binary is well past that tag).
 
 ### Headless invocation (verified recipe)
 

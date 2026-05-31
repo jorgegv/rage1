@@ -10,9 +10,11 @@
 # Run a build (using :build):
 #   docker run -v ${PWD}:/src/ -it rage1-z88dk:build make all-test-builds
 #
-# Run a headless CPC screenshot (using :test):
-#   docker run --rm rage1-z88dk:test \
-#     xvfb-run cap32 -V
+# Check the emulator is present (using :test):
+#   docker run --rm rage1-z88dk:test cap32 -V
+# (cap32 -V exits before SDL_Init, so no xvfb-run needed for the version check;
+#  a real headless screenshot run does need xvfb-run / a live Xvfb — see
+#  tests/00regression/README.md for the verified autocmd recipe.)
 #
 # Phase T0 (cross-platform plan) additions:
 #   - gcc / gcc-c++: needed to build cpctelera's bundled host tools
@@ -91,7 +93,9 @@ FROM build AS test
 # Pixel comparison:       ImageMagick
 #
 # Caprice32 is built from source, pinned to the verified commit.
-# Pinned commit: 93486f87189397f3ae80e7c5c2966ac8bfae9897 (v4.6.0, 2026-05-31)
+# Pinned commit: 93486f87189397f3ae80e7c5c2966ac8bfae9897 — post-v4.6.0 master
+# HEAD (tag v4.6.0 = 0eb07f5, ~647 commits earlier; the VERSION_STRING in
+# cap32.h still reads "v4.6.0" — it was never bumped). Pinned 2026-05-31.
 # Verified to support: CAP32_SCRNSHOT, CAP32_DELAY (no argument, uses
 # boot_time frames), CAP32_WAITBREAK, CAP32_EXIT (see TS2-2 findings in
 # tests/00regression/README.md).

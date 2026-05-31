@@ -32,7 +32,7 @@ RES=640x480x24
 for f in "$CAP32_BIN" "$CAP32_CFG" "$DSK"; do
   [ -e "$f" ] || { echo "MISSING: $f"; exit 1; }
 done
-for bin in Xvfb; do
+for bin in Xvfb xdpyinfo; do
   command -v "$bin" >/dev/null || { echo "MISSING tool: $bin"; exit 1; }
 done
 

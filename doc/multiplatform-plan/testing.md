@@ -341,6 +341,14 @@ Docker CI (`xvfb-run caprice32 -a CAP32_DELAY=300 -a CAP32_SCRNSHOT=out.png
 -a CAP32_EXIT game.dsk` — sketch). This pattern is exactly analogous to
 JNEXT's headless mode.
 
+> **Note (TS2-2 / OQ-TS1):** the `=300` / `=out.png` arguments in the
+> sketch above were a pre-TS2 guess and are **invalid** in the pinned
+> Caprice32 (commit `93486f8`): `CAP32_DELAY` takes no argument (it waits
+> `system.boot_time` frames — set that with `-O system.boot_time=<N>`), and
+> `CAP32_SCRNSHOT` takes no filename (the PNG lands in `file.sdump_dir` as
+> `screenshot_<timestamp>.png`). The verified, corrected invocation is in
+> `tests/00regression/README.md`.
+
 Caprice32 supports loading `.dsk`, `.cdt`, `.sna`, `.cpr`, `.voc`, and
 `.m3u` files natively (libretro core docs; same set in standalone) —
 matches the CPC outputs that the RAGE1 build will produce
@@ -963,6 +971,18 @@ Coordinated with `toolchain.md` Phase T0 (z88dk `+cpc` spike) and
   a combined screenshot-and-exit shortcut. Caprice32 master source is
   the authoritative reference; `man cap32` is currently out of date.
   Record the verified syntax in `tests/00regression/README.md`.
+
+  > **Resolved (TS2-2 / OQ-TS1):** the `CAP32_DELAY=300` and
+  > `CAP32_SCRNSHOT=out.png` argument forms in TS2-1 above were a
+  > pre-TS2 sketch and do **not** work in the pinned build (commit
+  > `93486f8`): `=300` would be typed as CPC keystrokes, and the
+  > screenshot filename is not configurable. Verified syntax: control
+  > the delay with `-O system.boot_time=<N>` before a bare
+  > `-a CAP32_DELAY`; `-a CAP32_SCRNSHOT` (no arg) writes
+  > `screenshot_<timestamp>.png` into `file.sdump_dir`. Pinned cap32 is
+  > post-v4.6.0 master HEAD (tag `v4.6.0` = `0eb07f5`, ~647 commits
+  > earlier). No combined screenshot-and-exit shortcut exists. Full
+  > corrected recipe + token table in `tests/00regression/README.md`.
 - **TS2-3** Add Caprice32 + Xvfb + ImageMagick `compare` to the
   `rage1-z88dk` Dockerfile, as a new build stage (multi-stage
   Dockerfile) tagged `:test`. The existing single image becomes
