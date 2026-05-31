@@ -32,7 +32,7 @@
 #include "rage1/input.h"
 #include "rage1/controller.h"   // CTRL_TYPE_* constants
 
-#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
+#if defined( BUILD_FEATURE_INPUT_BACKEND_ZX )
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -108,4 +108,70 @@ search_loop:
 __endasm;
 }
 
-#endif // ZX48 || ZX128
+#endif // BUILD_FEATURE_INPUT_BACKEND_ZX
+
+#if defined( BUILD_FEATURE_INPUT_BACKEND_CPC )
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// CPC backend — STUB (Phase IN5).
+//
+// These are the real (but stubbed) bodies for the parts of the input HAL that
+// are macros on ZX but must be functions on CPC (input.md §3.2): there is no
+// native cpctelera one-liner for them, so they live here rather than in
+// rage1/input_cpc.h.  At IN5 every body returns zero / does nothing — NO
+// busy-waiting, NO real keyboard access.  Phase IN6 fills these in with
+// cpctelera reads (cpct_scanKeyboard / cpct_isKeyPressed / cpct_keyID ...).
+//
+// `struct input_udk_s` (rage1/input_cpc.h) keeps the ZX field order
+// (fire, right, left, down, up) so engine code that assigns keys.up / keys.fire
+// stays source-compatible across both backends.
+//
+////////////////////////////////////////////////////////////////////////////////
+
+// Read controller state -> packed INPUT_STATE_* bits.
+// IN6: CTRL_TYPE_KEYBOARD ORs five cpct_isKeyPressed() calls over `udk`;
+// CTRL_TYPE_JOY0 / CTRL_TYPE_JOY1 OR the Joy0_*/Joy1_* keyIDs.
+input_state_t input_state_read( uint8_t type, input_udk_t *udk ) {
+    (void) type;
+    (void) udk;
+    return INPUT_STATE_NONE;
+}
+
+// Blocking raw keyboard scan for key-redefine flows.
+// IN6: cpct_scanKeyboard() + walk cpct_keyboardStatusBuffer[] for the first
+// 0-bit, return (matrix_line | (bit_mask << 8)).
+input_scancode_t input_capture_scancode( void ) __z88dk_fastcall {
+    return (input_scancode_t) 0;
+}
+
+// Busy-wait `ms` ms, early-out on keypress, return remaining ms.
+// IN6: poll cpct_scanKeyboard_f() + cpct_isAnyKeyPressed_f(), calibrated for
+// 4 MHz.  Stub returns immediately (no busy-wait) with 0 ms remaining.
+uint16_t input_pause( uint16_t ms ) {
+    (void) ms;
+    return 0;
+}
+
+// Block until any key is pressed.  IN6: loop on cpct_isAnyKeyPressed_f().
+void input_wait_key( void ) {
+}
+
+// Block until no key is pressed.  IN6: loop while cpct_isAnyKeyPressed_f().
+void input_wait_nokey( void ) {
+}
+
+// ASCII of the single key currently down (0 if none/ambiguous).
+// IN6: walk the status buffer + a small cpct_keyID -> ASCII table.
+uint16_t input_inkey( void ) {
+    return 0;
+}
+
+// ASCII -> backend scancode for udk population.
+// IN6: small ASCII -> cpct_keyID lookup table.  Stub returns 0.
+input_scancode_t input_lookup_key( uint8_t ascii ) {
+    (void) ascii;
+    return (input_scancode_t) 0;
+}
+
+#endif // BUILD_FEATURE_INPUT_BACKEND_CPC

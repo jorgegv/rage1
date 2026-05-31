@@ -235,6 +235,17 @@ sub is_build_feature_enabled {
     return defined( $conditional_build_features{ $f } );
 }
 
+# IN5-3: the input backend is forced by PLATFORM (no user choice — see
+# input.md §3.2). zx48/zx128 -> ZX backend; cpc464/cpc6128 -> CPC backend.
+# cpc6128 is recognised here even though it is not yet an accepted PLATFORM
+# value (Phase T3 enables it) so the mapping is ready ahead of time.
+sub input_backend_for_platform {
+    my $platform = shift;
+    return ( $platform eq 'cpc464' or $platform eq 'cpc6128' )
+        ? 'INPUT_BACKEND_CPC'
+        : 'INPUT_BACKEND_ZX';
+}
+
 sub get_gfx_backend {
     return ( defined( $game_config ) && defined( $game_config->{'gfx_backend'} ) )
         ? $game_config->{'gfx_backend'} : 'sp1';
@@ -951,6 +962,8 @@ sub read_input_data {
                         # No ZX_TARGET for CPC; skip derived_zx_target.
                         add_build_feature( 'PLATFORM_CPC464' );      # machine identity
                         add_build_feature( 'PLATFORM_CPC_FLAT' );    # memory model
+                        # IN5-3: input backend is forced by PLATFORM (cpc* -> CPC).
+                        add_build_feature( input_backend_for_platform( $platform ) );
                         next;
                     }
                     my $derived_zx_target = ( $platform eq 'zx48' ) ? '48' : '128';
@@ -964,6 +977,8 @@ sub read_input_data {
                     $game_config->{'platform'}  = $platform;
                     add_build_feature( sprintf( "ZX_TARGET_%s", $derived_zx_target ) );
                     add_build_feature( sprintf( "PLATFORM_%s", uc( $platform ) ) );
+                    # IN5-3: input backend is forced by PLATFORM (zx* -> ZX).
+                    add_build_feature( input_backend_for_platform( $platform ) );
                     next;
                 }
                 # A1-2: ZX_TARGET is a permanent silent alias for PLATFORM
@@ -984,6 +999,8 @@ sub read_input_data {
                     $game_config->{'platform'} = ( $game_config->{'zx_target'} eq '48' ) ? 'zx48' : 'zx128';
                     add_build_feature( sprintf( "ZX_TARGET_%s", $game_config->{'zx_target'} ) );
                     add_build_feature( sprintf( "PLATFORM_ZX%s", $game_config->{'zx_target'} ) );
+                    # IN5-3: input backend is forced by PLATFORM (zx* -> ZX).
+                    add_build_feature( input_backend_for_platform( $game_config->{'platform'} ) );
                     next;
                 }
                 # GFX_BACKEND is the canonical name; SPRITE_ENGINE is the
