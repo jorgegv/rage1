@@ -62,10 +62,11 @@ struct input_udk_s {
 // CPC controller-type constants.
 //
 // CTRL_TYPE_UNDEFINED / CTRL_TYPE_KEYBOARD live in rage1/controller.h (shared,
-// platform-independent).  The CPC joystick types JOY0 / JOY1 take the same
-// numeric slots the ZX KEMPSTON / SINCLAIR1 types occupy, so input_state_read()
-// can dispatch on a single contiguous range on both backends (input.md §3.3,
-// IN6-3).  These are stub placeholders at IN5; IN6 wires the cpctelera reads.
+// platform-independent).  The CPC joystick types JOY0 / JOY1 occupy the next
+// free contiguous slots (4, 5) after the ZX joystick types (KEMPSTON=2,
+// SINCLAIR1=3), so input_state_read() can dispatch on a single contiguous
+// CTRL_TYPE_* range on both backends (input.md §3.3, IN6-3).  These are stub
+// placeholders at IN5; IN6 wires the cpctelera reads.
 ////////////////////////////////////////////////////////////////////////////////
 
 #define CTRL_TYPE_JOY0  4
