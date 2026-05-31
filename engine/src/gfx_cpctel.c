@@ -139,11 +139,28 @@ static uint8_t  glyph_valid[256];
 // ---------------------------------------------------------------------------
 // Blit one 8x8 mono cell (8 UDG bytes) to cell (row,col), expanding each row
 // to 2 mode-1 bytes via the mono LUT.  Direct write to video memory.
+//
+// SCREEN-BOUNDS CLAMP (G8a): the mode-1 grid is 40 cols x 25 rows (320x200 px,
+// 16 KB at 0xC000..0xFFFF).  A cell whose column >= GFX_SCREEN_COLS or row >=
+// GFX_SCREEN_ROWS computes a video address OUTSIDE that 16 KB window
+// (cpct_getScreenPtr would wrap or run past the screen and corrupt RAM).  With
+// 16-bit sprite/enemy coordinates (G8a) an edge-placed or partially-off-screen
+// sprite can produce such out-of-range cells, so we SKIP them here — the single
+// chokepoint every BTile / sprite / glyph / clear blit funnels through.  This
+// matches the CPC 0x800-per-pixel-line / 0xC050-wrap addressing: clamping at
+// the cell-grid boundary keeps every emitted address within [0xC000,0xFFFF].
 // ---------------------------------------------------------------------------
 static void blit_mono_cell( uint8_t row, uint8_t col, const uint8_t *udg ) {
-    uint8_t x_byte = (uint8_t)( col * CPC_BYTES_PER_CELL );
-    uint8_t y0     = (uint8_t)( row * 8 );
+    uint8_t x_byte;
+    uint8_t y0;
     uint8_t r;
+
+    // off-grid cell: skip entirely (would write past the 16 KB screen)
+    if ( col >= GFX_SCREEN_COLS || row >= GFX_SCREEN_ROWS )
+        return;
+
+    x_byte = (uint8_t)( col * CPC_BYTES_PER_CELL );
+    y0     = (uint8_t)( row * 8 );
     for ( r = 0; r < 8; r++ ) {
         uint8_t *dst = cpct_getScreenPtr( CPC_VMEM, x_byte, (uint8_t)( y0 + r ) );
         uint8_t  b   = udg[ r ];

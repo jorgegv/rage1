@@ -9,14 +9,27 @@ BEGIN_SCREEN
 
 	HERO		STARTUP_XPOS=160 STARTUP_YPOS=120
 
-	// NOTE: the enemy position integer part is still 8-bit (uint8_t) — the
-	// Phase G4 coordinate widening to 16-bit is NOT yet wired, so X must stay
-	// <= 255.  We sweep X in [16, 240] (cols 2..30) so the motion is clearly
-	// visible across most of the 40-col screen without 8-bit wraparound.
+	// G8a: the position integer part is now 16-bit on CPC (uint16_t), so a
+	// sprite can be placed at x in [0,319] — the right ~64 px (x>255) that were
+	// previously unreachable are now usable.
+	//
+	// Enemy "Blob" sweeps the FULL screen width: XMIN=16 .. XMAX=296 (cols
+	// 2..37), crossing x=255 in both directions — visible proof that 16-bit
+	// coordinates render correctly past the old 8-bit ceiling.  296+16(=2 cells)
+	// = 312 = the rightmost on-grid pixel column (cols 37-38, fully on-screen).
 	ENEMY		NAME=Blob SPRITE=Enemy MOVEMENT=LINEAR \
-			XMIN=16 YMIN=64 XMAX=240 YMAX=64 \
+			XMIN=16 YMIN=64 XMAX=296 YMAX=64 \
 			INITX=120 INITY=64 DX=2 DY=0 \
 			SPEED_DELAY=1 ANIMATION_DELAY=8 BOUNCE=1 COLOR=INK_YELLOW
+
+	// Enemy "Blob2" lives ENTIRELY in the right-hand region beyond x=255
+	// (XMIN=264 .. XMAX=296), which was completely impossible under 8-bit
+	// coords.  Its visible presence at the far right (and the gfx_cpctel bounds
+	// clamp keeping it on-screen) is the core G8a proof.
+	ENEMY		NAME=Blob2 SPRITE=Enemy MOVEMENT=LINEAR \
+			XMIN=264 YMIN=96 XMAX=296 YMAX=96 \
+			INITX=280 INITY=96 DX=2 DY=0 \
+			SPEED_DELAY=2 ANIMATION_DELAY=8 BOUNCE=1 COLOR=INK_YELLOW
 
 	DECORATION	NAME=Deco1 BTILE=Live ROW=4 COL=6  ACTIVE=1
 	DECORATION	NAME=Deco2 BTILE=Live ROW=4 COL=33 ACTIVE=1

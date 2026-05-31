@@ -50,7 +50,9 @@ struct map_screen_s {
         struct enemy_info_s *enemies;
     } enemy_data;
     struct {
-        uint8_t	startup_x,startup_y;
+        // hero startup pixel position — pos_int_t so it can span the full
+        // screen width on CPC (uint8_t on ZX, byte-identical — G8a).
+        pos_int_t	startup_x,startup_y;
     } hero_data;
 #ifdef BUILD_FEATURE_INVENTORY
     struct {

@@ -17,6 +17,8 @@
 
 #include "features.h"
 
+#include "rage1/types.h"	// pos_int_t (warp hero re-entry coords — G8a)
+
 ////////////////////////////////////////////////
 //
 // FLOWGEN RULE CHECKS
@@ -123,10 +125,10 @@ struct flow_rule_action_s {
         struct { uint8_t	num_hotzone; }		hotzone;	// ENABLE/DISABLE_HOTZONE
         struct { uint8_t	num_btile; }		btile;		// ENABLE/DISABLE_BTILE
         struct { uint8_t	num_enemy; }		enemy;		// ENABLE/DISABLE_ENEMY
-        struct { 
+        struct {
             uint8_t	num_screen;
-            uint8_t	hero_x;
-            uint8_t	hero_y;
+            pos_int_t	hero_x;		// pos_int_t: full CPC width (G8a)
+            pos_int_t	hero_y;
             uint8_t	flags;
             }						warp_to_screen;	// WARP_TO_SCREEN
         struct { uint16_t	item_id; }		item;		// ADD_TO/REMOVE_FROM_INVENTORY

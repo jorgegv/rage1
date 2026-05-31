@@ -23,10 +23,14 @@ struct  enemy_movement_data_s {
     uint8_t delay_counter;			// current movement delay counter
     union {					// this union must be the last struct component
         struct {
-            uint8_t xmin,xmax;			// enemy moves bouncing in a rectangle
-            uint8_t ymin,ymax;			// (xmin,ymin)-(xmax,ymax)
+            // bounce rectangle + reset position use pos_int_t so they widen in
+            // lock-step with the position integer part (uint8_t on ZX, uint16_t
+            // on CPC — G8a) and can address the full screen width.  dx/dy are
+            // small per-frame step increments and stay int8_t on both.
+            pos_int_t xmin,xmax;		// enemy moves bouncing in a rectangle
+            pos_int_t ymin,ymax;		// (xmin,ymin)-(xmax,ymax)
             int8_t dx,dy;			// current position increments
-            uint8_t initx,inity;		// reset positions
+            pos_int_t initx,inity;		// reset positions
             int8_t initdx,initdy;		// reset increments
             uint8_t sequence_a, sequence_b;	// sprite animation sequences (see FLAGS)
         } linear;
