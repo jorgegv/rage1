@@ -64,7 +64,7 @@ under it is ticked complete.
   - [ ] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
   - [x] TS2 — Caprice32 + Xvfb in dev env + Docker
   - [x] R4 — real `gfx_cpctel.c` + `games/minimal_cpc/`
-  - [ ] G8 — real CPC backend wiring
+  - [x] G8 — real CPC backend wiring
   - [ ] IN6 — real CPC input via cpctelera keyboard scan
   - [ ] AU5 — real CPC audio via AT2 AKG generic player
   - [ ] TS3 — first CPC regression baseline
