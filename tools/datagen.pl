@@ -493,6 +493,13 @@ sub read_input_data {
                     );
                     $cur_btile->{'pixels'} = $data->{'pixels'};
                     $cur_btile->{'png_attr'} = $data->{'attrs'};
+                    # A5-2: CPC full-color — converter returns cpc_extern_stem
+                    # instead of inline pixel bytes.  Store on the btile so
+                    # validate_and_compile_btile / generate_btiles can detect it.
+                    if ( defined $data->{'cpc_extern_stem'} ) {
+                        $cur_btile->{'cpc_extern_stem'}    = $data->{'cpc_extern_stem'};
+                        $cur_btile->{'cpc_extern_basename'} = $data->{'cpc_extern_basename'};
+                    }
                     next;
                 }
                 if ( $line =~ /^FRAMES\s+(\d+)$/ ) {
@@ -578,11 +585,20 @@ sub read_input_data {
                     dispatch_png_asset_handling( $platform,
                         'map_png_colors_to_zx_colors', $png );
 
-                    push @{$cur_sprite->{'pixels'}}, @{ dispatch_png_asset_handling( $platform,
+                    my $pix = dispatch_png_asset_handling( $platform,
                         'pick_pixel_data_by_color_from_png',
                         $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $fgcolor,
                         ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
-                        ) };
+                        );
+                    push @{$cur_sprite->{'pixels'}}, @{ $pix };
+                    # A5-2: CPC full-color — propagate cpc_extern_stem from
+                    # the PNG object (set by _cpc_fullcolor_dispatch) to the
+                    # sprite so validate_and_compile_sprite / generate_sprite
+                    # can detect the extern path.
+                    if ( ref $png eq 'HASH' && defined $png->{'cpc_extern_stem'} ) {
+                        $cur_sprite->{'cpc_extern_stem'}    = $png->{'cpc_extern_stem'};
+                        $cur_sprite->{'cpc_extern_basename'} = $png->{'cpc_extern_basename'};
+                    }
                     next;
                 }
                 if ( $line =~ /^PNG_MASK\s+(.*)$/ ) {
@@ -602,11 +618,12 @@ sub read_input_data {
                     dispatch_png_asset_handling( $platform,
                         'map_png_colors_to_zx_colors', $png );
 
-                    push @{$cur_sprite->{'mask'}}, @{ dispatch_png_asset_handling( $platform,
+                    my $msk = dispatch_png_asset_handling( $platform,
                         'pick_pixel_data_by_color_from_png',
                         $png, $vars->{'xpos'}, $vars->{'ypos'}, $vars->{'width'}, $vars->{'height'}, $maskcolor,
                         ( $vars->{'hmirror'} || 0 ), ( $vars->{'vmirror'} || 0 )
-                        ) };
+                        );
+                    push @{$cur_sprite->{'mask'}}, @{ $msk };
                     next;
                 }
                 if ( $line =~ /^ATTR\s+(.+)$/ ) {
@@ -1101,6 +1118,16 @@ sub read_input_data {
                     }
                     next;
                 }
+                # A5-2: CPC_PALETTE — comma-separated CPC firmware colour indices
+                # forwarded to cpct_img2tileset --palette-fw.  CPC-only; parsed on
+                # ZX builds and silently ignored.  Typically in the CPC overlay
+                # game_config or via PATCH_GAME_CONFIG.  Unset => wrapper uses its
+                # built-in default (mode 1: 1,24,20,6).  Per assets.md Q5 / §5.10.
+                if ( $line =~ /^CPC_PALETTE\s+([\d,\s]+)$/ ) {
+                    ( my $pal = $1 ) =~ s/\s+//g;   # strip whitespace
+                    $game_config->{'cpc_palette'} = $pal;
+                    next;
+                }
                 if ( $line =~ /^(GAME_AREA|LIVES_AREA|INVENTORY_AREA|DEBUG_AREA|TITLE_AREA)\s+(\w.*)$/ ) {
                     # ARG1=val1 ARG2=va2 ARG3=val3...
                     my ( $directive, $args ) = ( $1, $2 );
@@ -1479,17 +1506,15 @@ sub read_input_data {
 ## Per-platform PNG asset dispatcher
 ######################################
 
-# A3-1: per-platform dispatch seam for PNG-driven BTile / sprite
-# asset handling. Phase A3 is ZX-only; the CPC branch is a
-# placeholder that errors out cleanly so Phase A5 can land additively
-# without touching this dispatcher.
+# A3-1 / A5-2: per-platform dispatch seam for PNG-driven BTile / sprite
+# asset handling.
 #
 # Per doc/multiplatform-plan/README.md §5.1 and
 # doc/multiplatform-plan/assets.md §3.1, CPC asset conversion is
 # handled by a subprocess (cpctelera's cpct_img2tileset) called from
-# a future helper here — NOT by adding per-platform branches inside
-# RAGE::PNGFileUtils. The seam lives in datagen.pl, not in the PNG
-# utility module.
+# tools/cpc_asset_convert.pl — NOT by adding per-platform branches
+# inside RAGE::PNGFileUtils. The seam lives in datagen.pl, not in the
+# PNG utility module.
 #
 # Usage:
 #   my $png  = dispatch_png_asset_handling($platform, 'load_png_file', $path);
@@ -1497,9 +1522,10 @@ sub read_input_data {
 #                                          $png, $x, $y, $w, $h);
 #
 # Dispatch keys:
-#   /^zx/   — route to existing RAGE::PNGFileUtils:: subs (current behaviour).
-#   /^cpc/  — die: "CPC asset conversion not yet wired — see Phase A5".
-#   default — die: "Unknown platform '<name>' in dispatch_png_asset_handling".
+#   /^zx/   — route to existing RAGE::PNGFileUtils:: subs.
+#   /^cpc/  — MONO: same route as ZX (shared 1bpp UDG bytes, §5.9).
+#             FULL-COLOR: invoke cpc_asset_convert.pl via subprocess.
+#   default — die: "Unknown platform '<name>'".
 sub dispatch_png_asset_handling {
     my ( $platform, $fn, @args ) = @_;
 
@@ -1524,10 +1550,172 @@ sub dispatch_png_asset_handling {
     }
 
     if ( $platform =~ /^cpc/ ) {
-        die "CPC asset conversion not yet wired — see Phase A5\n";
+        # A5-2: CPC PNG asset dispatch.
+        # §5.9 rule: MONO mode skips cpct_img2tileset for BTiles — shared
+        # 1bpp UDG bytes flow to both platforms unchanged.  Route MONO
+        # through the ZX path so validate_and_compile_btile works normally.
+        # FULL-COLOR mode delegates to _cpc_fullcolor_dispatch which invokes
+        # tools/cpc_asset_convert.pl as a subprocess.
+        my $color_mode = lc( $game_config->{'color'}{'mode'} // 'full' );
+        if ( $color_mode eq 'mono' ) {
+            my $code = main->can( $fn ) or
+                die "dispatch_png_asset_handling(cpc/mono): no PNG-asset sub '$fn' " .
+                    "(expected from RAGE::PNGFileUtils)\n";
+            return $code->( @args );
+        }
+        # FULL-COLOR CPC
+        return _cpc_fullcolor_dispatch( $fn, @args );
     }
 
     die "Unknown platform '$platform' in dispatch_png_asset_handling\n";
+}
+
+# A5-2: CPC full-color PNG asset dispatch.
+#
+# Models a lightweight "CPC PNG object" returned by load_png_file so
+# subsequent dispatcher calls (png_rotate, map_png_colors_to_zx_colors,
+# png_to_pixels_and_attrs, pick_pixel_data_by_color_from_png) can act on
+# it without touching RAGE::PNGFileUtils at all.
+#
+# On png_to_pixels_and_attrs / pick_pixel_data_by_color_from_png, invokes
+# tools/cpc_asset_convert.pl (tileset / spritesheet mode), emits .c/.h into
+# build/generated/cpc/, and returns a sentinel that marks the asset as
+# CPC-extern.  The sentinel carries:
+#   cpc_extern_stem     — full path stem (no extension) of the generated files
+#   cpc_extern_basename — basename of the stem, used as C identifier prefix
+#
+# validate_and_compile_{btile,sprite} and generate_{btiles,sprites} check for
+# cpc_extern_stem and take the CPC-extern path instead of the ZX pixel path.
+#
+# doc/CPC-ASSET-WRAPPER.md documents the wrapper↔datagen contract.
+sub _cpc_fullcolor_dispatch {
+    my ( $fn, @args ) = @_;
+
+    if ( $fn eq 'load_png_file' ) {
+        my $path = $args[0];
+        # Return a CPC PNG object (hashref); transforms accumulate here
+        return { __cpc_png => 1, path => $path, transforms => [] };
+    }
+
+    if ( $fn eq 'png_rotate' ) {
+        my ( $obj, $deg ) = @args;
+        push @{ $obj->{'transforms'} }, { op => 'rotate', deg => $deg };
+        return $obj;
+    }
+
+    if ( $fn eq 'png_hmirror' ) {
+        my $obj = $args[0];
+        push @{ $obj->{'transforms'} }, { op => 'hmirror' };
+        return $obj;
+    }
+
+    if ( $fn eq 'png_vmirror' ) {
+        my $obj = $args[0];
+        push @{ $obj->{'transforms'} }, { op => 'vmirror' };
+        return $obj;
+    }
+
+    if ( $fn eq 'map_png_colors_to_zx_colors' ) {
+        # No-op for CPC: colour mapping is handled by cpct_img2tileset
+        return 1;
+    }
+
+    # BTile path: png_to_pixels_and_attrs → invoke converter in tileset mode
+    if ( $fn eq 'png_to_pixels_and_attrs' ) {
+        my ( $obj, $xpos, $ypos, $width, $height ) = @args;
+        my ( $stem, $base ) = _cpc_invoke_tileset_converter(
+            $obj->{'path'}, $xpos, $ypos, $width, $height,
+            { mode => 'tileset' }
+        );
+        # Return sentinel: pixels/attrs are empty (not used for CPC extern),
+        # cpc_extern_stem drives the generate_btiles path instead.
+        return {
+            pixels          => [],
+            attrs           => [],
+            cpc_extern_stem => $stem,
+            cpc_extern_basename => $base,
+        };
+    }
+
+    # Sprite path: pick_pixel_data_by_color_from_png → invoke converter in
+    # spritesheet mode on the FIRST call; subsequent calls (mask) are skipped.
+    if ( $fn eq 'pick_pixel_data_by_color_from_png' ) {
+        my ( $obj, $xpos, $ypos, $width, $height, $color, $hmirror, $vmirror ) = @args;
+        # Only invoke converter once per PNG object (first call sets extern_stem)
+        unless ( defined $obj->{'cpc_extern_stem'} ) {
+            my ( $stem, $base ) = _cpc_invoke_tileset_converter(
+                $obj->{'path'}, $xpos, $ypos, $width, $height,
+                { mode => 'spritesheet', mask => 1 }
+            );
+            $obj->{'cpc_extern_stem'}    = $stem;
+            $obj->{'cpc_extern_basename'} = $base;
+        }
+        # Return empty arrayref as placeholder; the real data is in the extern
+        return [];
+    }
+
+    die "_cpc_fullcolor_dispatch: unhandled function '$fn'\n";
+}
+
+# A5-2: invoke tools/cpc_asset_convert.pl for a PNG region, emit .c/.h
+# into build/generated/cpc/<name>, and return the (stem, basename) pair.
+#
+# $opts hashref: { mode => 'tileset'|'spritesheet', mask => 0|1 }
+# $xpos, $ypos, $width, $height are in pixels (same as PNG_DATA args).
+# The stem is derived from the PNG basename so repeated calls for the same
+# PNG (different frames / transforms) all land in the same file — which is
+# correct since cpct_img2tileset processes the whole PNG sheet in one shot.
+sub _cpc_invoke_tileset_converter {
+    my ( $png_path, $xpos, $ypos, $width, $height, $opts ) = @_;
+    $opts //= {};
+
+    # CPC mode-1: tile cell is 8×8 pixels = 16 bytes (2bpp packed)
+    # The converter expects tile dimensions in pixels.
+    my $tile_w = 8;   # pixels per cell column
+    my $tile_h = 8;   # pixels per cell row
+
+    # Output dir: $output_dest_dir/cpc/
+    my $cpc_dir = ( $output_dest_dir // 'build/generated' ) . '/cpc';
+    unless ( -d $cpc_dir ) {
+        make_path( $cpc_dir )
+            or die "_cpc_invoke_tileset_converter: could not create $cpc_dir\n";
+    }
+
+    # Derive stem basename from the PNG filename
+    ( my $png_base = basename( $png_path ) ) =~ s/\.[^.]+$//;
+    my $stem = "$cpc_dir/$png_base";
+    my $base = $png_base;
+
+    # Gather CPC_PALETTE from game_config if present
+    my $palette_fw = $game_config->{'cpc_palette'} // '';
+
+    # Build wrapper invocation
+    my $wrapper = "$FindBin::Bin/cpc_asset_convert.pl";
+    -f $wrapper or die "_cpc_invoke_tileset_converter: wrapper not found: $wrapper\n";
+
+    my @cmd = (
+        'perl', $wrapper,
+        '--mode', ( $opts->{'mode'} // 'tileset' ),
+        '--cpc-mode', 1,
+        '--tile-w', $tile_w,
+        '--tile-h', $tile_h,
+        '--basename', "cpc_asset_${base}",
+        '--output',  $stem,
+    );
+    push @cmd, '--mask'        if $opts->{'mask'};
+    push @cmd, '--palette-fw', $palette_fw  if $palette_fw ne '';
+
+    push @cmd, $png_path;
+
+    print "A5: CPC asset conversion: @cmd\n";
+    my $rc = system( @cmd );
+    die "_cpc_invoke_tileset_converter: cpc_asset_convert.pl exited " .
+        ( $rc >> 8 ) . " for $png_path\n" if $rc;
+
+    -f "$stem.c" or die "_cpc_invoke_tileset_converter: expected $stem.c not generated\n";
+    -f "$stem.h" or die "_cpc_invoke_tileset_converter: expected $stem.h not generated\n";
+
+    return ( $stem, $base );
 }
 
 ######################################
@@ -1548,6 +1736,19 @@ sub validate_and_compile_btile {
         die "Btile '$tile->{name}' has no ROWS\n";
     defined( $tile->{'cols'} ) or
         die "Btile '$tile->{name}' has no COLS\n";
+
+    # A5-2: CPC full-color extern BTile — pixel bytes live in the
+    # cpctelera-generated .c/.h (build/generated/cpc/<name>.c).  Skip
+    # the ZX pixel format checks and compilation; generate_btiles will
+    # emit an extern reference instead of inline pixel data.
+    if ( defined $tile->{'cpc_extern_stem'} ) {
+        # Compile animation sequences if any (no pixel bytes to compile)
+        foreach my $seq ( @{ $tile->{'sequences'} } ) {
+            $seq->{'frame_list'} = [ split( /,/, $seq->{'frames'} ) ];
+        }
+        return;
+    }
+
     defined( $tile->{'pixels'} ) or
         die "Btile '$tile->{name}' has no PIXELS\n";
     defined( $tile->{'attr'} ) or defined( $tile->{'png_attr'} ) or
@@ -1598,6 +1799,26 @@ sub validate_and_compile_sprite {
         die "Sprite '$sprite->{name}' has no ROWS\n";
     defined( $sprite->{'cols'} ) or
         die "Sprite '$sprite->{name}' has no COLS\n";
+
+    # A5-2: CPC full-color extern sprite — pixel/mask bytes live in the
+    # cpctelera-generated .c/.h (build/generated/cpc/<name>.c).  Skip the
+    # ZX pixel format checks and compilation; generate_sprite will emit an
+    # extern reference instead of inline SP1/JSP pixel data.
+    if ( defined $sprite->{'cpc_extern_stem'} ) {
+        # Ensure FRAMES is set (required for later struct generation)
+        $sprite->{'frames'} //= 1;
+        # Build the 'Main' animation sequence placeholder
+        my $index = ( defined( $sprite->{'sequences'} ) ? scalar( @{ $sprite->{'sequences'} } ) : 0 );
+        push @{ $sprite->{'sequences'} },
+            { 'name' => 'Main', 'frames' => join( ',', 0 .. ( $sprite->{'frames'} - 1 ) ) };
+        $sprite->{'sequence_name_to_index'}{'Main'} = $index;
+        $sprite->{'sequence_delay'} //= 1;
+        foreach my $seq ( @{ $sprite->{'sequences'} } ) {
+            $seq->{'frame_list'} = [ split( /,/, $seq->{'frames'} ) ];
+        }
+        return;
+    }
+
     defined( $sprite->{'pixels'} ) or
         die "Sprite '$sprite->{name}' has no PIXELS\n";
 #    defined( $sprite->{'attr'} ) or
@@ -1684,6 +1905,45 @@ sub generate_sprite {
     my $sprite_name = $sprite->{'name'};
 
     my $using_jsp = ( get_gfx_backend() eq 'jsp' );
+
+    # A5-2: CPC full-color extern sprite — pixel/mask bytes live in the
+    # cpctelera-generated .c/.h.  Emit an #include and extern frame array;
+    # skip the SP1/JSP column-layout generation which is ZX-specific.
+    if ( defined $sprite->{'cpc_extern_stem'} ) {
+        my $base     = $sprite->{'cpc_extern_basename'};
+        my $base_id  = "cpc_asset_$base";
+        push @{ $c_dataset_lines->{ $dataset } },
+            "// CPC extern Sprite '$sprite_name' — pixel/mask data from cpctelera converter\n",
+            "#include \"cpc/$base.h\"\n\n";
+        # Emit a frames pointer array using the cpctelera tileset array.
+        # cpc_asset_convert.pl emits <bn>_tileset[] with one pointer per frame-cell.
+        # For a sprite, frames are sequential: frame N = tileset[N].
+        my $tileset = "${base_id}_tileset";
+        push @{ $c_dataset_lines->{ $dataset } },
+            sprintf( "uint8_t *sprite_%s_frames[ %d ] = {\n%s\n};\n",
+                $sprite_name,
+                $sprite_frames,
+                join( ",\n",
+                    map { sprintf( "\t(uint8_t*)%s[%d]", $tileset, $_ ) }
+                    ( 0 .. ( $sprite_frames - 1 ) )
+                )
+            );
+        # Emit sequence tables (same structure as the non-extern path)
+        if ( scalar( @{ $sprite->{'sequences'} } ) ) {
+            push @{ $c_dataset_lines->{ $dataset } }, join( "", map {
+                sprintf( "uint8_t sprite_%s_sequence_%s[%d] = { %s };\n",
+                    $sprite_name, $_->{'name'}, scalar( @{ $_->{'frame_list'} } ), join( ',', @{ $_->{'frame_list'} } ) );
+            } @{ $sprite->{'sequences'} } );
+            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct animation_sequence_s sprite_%s_sequences[%d] = {\n\t",
+                $sprite_name, scalar( @{ $sprite->{'sequences'} } ) );
+            push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t", map {
+                sprintf( "{ %d, &sprite_%s_sequence_%s[0] }", scalar( @{ $_->{'frame_list'} } ), $sprite_name, $_->{'name'} );
+            } @{ $sprite->{'sequences'} } );
+            push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
+        }
+        return;
+    }
+
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (%s format)\n\n",
         $sprite->{'name'}, $using_jsp ? 'JSP' : 'SP1' );
 
@@ -3317,13 +3577,25 @@ EOF_TILES
 
     my $gamearea_color_full = $conditional_build_features{'GAMEAREA_COLOR_FULL'} || 0;
 
-    # generate the offsets and byte arena for all btiles in the dataset
+    # A5-2: partition btiles into inline (have pixel_bytes) vs CPC extern
+    # (full-color CPC, pixel bytes live in the cpctelera-generated .c/.h).
+    my @inline_btiles = grep { !defined $_->{'cpc_extern_stem'} } @dataset_btiles;
+    my @extern_btiles = grep {  defined $_->{'cpc_extern_stem'} } @dataset_btiles;
 
+    # A5-2: emit #include directives for CPC extern BTiles
+    for my $tile ( @extern_btiles ) {
+        my $base = $tile->{'cpc_extern_basename'};
+        push @{ $c_dataset_lines->{ $dataset } },
+            "// CPC extern BTile '$tile->{name}' — pixel data from cpctelera converter\n",
+            "#include \"cpc/$base.h\"\n\n";
+    }
+
+    # generate the offsets and byte arena for INLINE btiles only
     # the whole dedupe schema works also for animated btiles, since
     # everything is stored as 8-byte tiles
     my @orig_cell_offsets;
     my @orig_byte_arena;
-    foreach my $tile ( @dataset_btiles ) {
+    foreach my $tile ( @inline_btiles ) {
         my $initial_offset = scalar( @orig_byte_arena );
         push @orig_byte_arena, map { @$_ } @{ $tile->{'pixel_bytes'} };
         my $offset = 0;
@@ -3333,54 +3605,81 @@ EOF_TILES
         }
     }
 
-    # deduplication code goes here!
-    my ( $new_cell_offsets, $new_arena ) = btile_deduplicate_arena_best( \@orig_cell_offsets, \@orig_byte_arena );
-    my @cell_offsets = @$new_cell_offsets;
-    my @byte_arena = @$new_arena;
+    # deduplication and arena output — only needed when there are inline tiles
+    my @cell_offsets;
+    if ( @inline_btiles ) {
+        my ( $new_cell_offsets, $new_arena ) = btile_deduplicate_arena_best( \@orig_cell_offsets, \@orig_byte_arena );
+        @cell_offsets = @$new_cell_offsets;
+        my @byte_arena = @$new_arena;
 
-    # generate the code for the arena (offsets will be used later)
-    push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTILE byte arena\n";
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t all_dataset_btile_data[ %d ] = {\n", scalar( @byte_arena ) );
-    my @bytes = @byte_arena;	# splice (below) is destructive!
-    while ( @bytes ) {		# output the arena in 16-byte chunks
-        push @{ $c_dataset_lines->{ $dataset } }, "\t" . join('', map { sprintf( '0x%02x,', $_ ) } splice( @bytes, 0, 16 ) ) . "\n";
+        # generate the code for the arena (offsets will be used later)
+        push @{ $c_dataset_lines->{ $dataset } }, "// Dataset BTILE byte arena\n";
+        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t all_dataset_btile_data[ %d ] = {\n", scalar( @byte_arena ) );
+        my @bytes = @byte_arena;	# splice (below) is destructive!
+        while ( @bytes ) {		# output the arena in 16-byte chunks
+            push @{ $c_dataset_lines->{ $dataset } }, "\t" . join('', map { sprintf( '0x%02x,', $_ ) } splice( @bytes, 0, 16 ) ) . "\n";
+        }
+        push @{ $c_dataset_lines->{ $dataset } }, "};\n";
     }
-    push @{ $c_dataset_lines->{ $dataset } }, "};\n";
-    
-    # generate btile data structs
+
+    # generate btile data structs (frame arrays, attr arrays, sequence arrays)
     # btiles always have 'frames' == 1, or the number of frames if specified
     my $cell_index = 0;
     foreach my $tile ( @dataset_btiles ) {
 
         push @{ $c_dataset_lines->{ $dataset } }, sprintf( "\n// Start of Big tile '%s'\n\n", $tile->{'name'} );
 
-        # output frame tiles
-        foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
-            my $num_cells = scalar( @{ $tile->{'pixel_bytes'} } ) / $tile->{'frames'};
-            my @btile_cell_offsets = @cell_offsets[ $cell_index .. ( $cell_index + $num_cells - 1 ) ];
-            push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_frame_%d_tiles[ %d ] = {\n\t%s\n};\n",
-                $tile->{'name'},
-                $frame,
-                $num_cells,
-                join( ",\n\t",
-                    map { sprintf( "&all_dataset_btile_data[ %d ]", $_ ) }
-                    @btile_cell_offsets
-                ) );
-            $cell_index += $num_cells;
-        }
-
-        # manually specified attrs have preference over PNG ones
-        # warning: this list will be destroyed by splice calls later!
-        # attrs are not output when in monochrome mode
-        if ( $gamearea_color_full ) {
-            my @attrs = @{ $tile->{'attr'} || $tile->{'png_attr'} };
+        if ( defined $tile->{'cpc_extern_stem'} ) {
+            # A5-2: CPC full-color extern BTile — frame tile pointers reference
+            # the tileset pointer array from the cpctelera-generated .h:
+            #   <bn>_tileset[N] — pointer to the Nth tile's mode-1 byte array
+            # where <bn> is the --basename passed to cpc_asset_convert.pl
+            # (convention: cpc_asset_<png_basename>).
+            # Tile cells within the BTile are laid out left-right, top-bottom,
+            # in ROWS*COLS order per frame; tile global index = frame*ROWS*COLS + cell.
+            my $num_cells = $tile->{'rows'} * $tile->{'cols'};
+            my $tileset   = "cpc_asset_$tile->{'cpc_extern_basename'}_tileset";
             foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
-                my @frame_attrs = splice( @attrs, 0, $tile->{'rows'} * $tile->{'cols'} );
-                push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_frame_%d_attrs[ %d ] = {\n\t%s\n};\n",
+                # Build a pointer array btile_<name>_frame_<n>_tiles[] referencing
+                # the tileset entries for this frame's cells.
+                my @cell_ptrs = map {
+                    sprintf( "(uint8_t*)%s[%d]", $tileset, $frame * $num_cells + $_ )
+                } ( 0 .. ( $num_cells - 1 ) );
+                push @{ $c_dataset_lines->{ $dataset } },
+                    sprintf( "uint8_t *btile_%s_frame_%d_tiles[ %d ] = {\n\t%s\n};\n",
+                        $tile->{'name'}, $frame, $num_cells,
+                        join( ",\n\t", @cell_ptrs ) );
+            }
+            # No ZX attr arrays for CPC full-color (colour is in the pixel bytes).
+        } else {
+            # Inline BTile — frame tiles reference the shared arena.
+            foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
+                my $num_cells = scalar( @{ $tile->{'pixel_bytes'} } ) / $tile->{'frames'};
+                my @btile_cell_offsets = @cell_offsets[ $cell_index .. ( $cell_index + $num_cells - 1 ) ];
+                push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_frame_%d_tiles[ %d ] = {\n\t%s\n};\n",
                     $tile->{'name'},
                     $frame,
-                    scalar( @frame_attrs ),
-                    join( ",\n\t", @frame_attrs ) );
+                    $num_cells,
+                    join( ",\n\t",
+                        map { sprintf( "&all_dataset_btile_data[ %d ]", $_ ) }
+                        @btile_cell_offsets
+                    ) );
+                $cell_index += $num_cells;
+            }
+
+            # manually specified attrs have preference over PNG ones
+            # warning: this list will be destroyed by splice calls later!
+            # attrs are not output when in monochrome mode
+            if ( $gamearea_color_full ) {
+                my @attrs = @{ $tile->{'attr'} || $tile->{'png_attr'} };
+                foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
+                    my @frame_attrs = splice( @attrs, 0, $tile->{'rows'} * $tile->{'cols'} );
+                    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_frame_%d_attrs[ %d ] = {\n\t%s\n};\n",
+                        $tile->{'name'},
+                        $frame,
+                        scalar( @frame_attrs ),
+                        join( ",\n\t", @frame_attrs ) );
+                }
             }
         }
 
@@ -3388,8 +3687,8 @@ EOF_TILES
         if ( $animated_btiles ) {
 
             # output frame table
-            # attrs are not output when in monochrome mode
-            if ( $gamearea_color_full ) {
+            # attrs are not output when in monochrome mode or for CPC extern tiles
+            if ( $gamearea_color_full && !defined $tile->{'cpc_extern_stem'} ) {
                 push @{ $c_dataset_lines->{ $dataset } },
                     sprintf( "struct btile_frame_s btile_%s_frames[ %d ] = {\n\t%s\n};\n\n",
                         $tile->{'name'},
@@ -3488,7 +3787,7 @@ EOF_TILES
             push @{ $c_dataset_lines->{ $dataset } },
                 sprintf( ".num_sequences = %d, .sequences = %s },\n",
                     scalar( @{ $tile->{'sequences'} } ),
-                    ( scalar( @{ $tile->{'sequences'} } ) ? 
+                    ( scalar( @{ $tile->{'sequences'} } ) ?
                         sprintf( "&btile_%s_sequences[0]", $tile->{'name'} ) :
                         'NULL'
                     )
@@ -3497,8 +3796,8 @@ EOF_TILES
             # when no ANIMATED_BTILES are used, the tiles and attrs pointers
             # are short-circuited to frame 0, which always exists
 
-            # attrs are not output when in monochrome mode
-            if ( $gamearea_color_full ) {
+            # attrs are not output when in monochrome mode or for CPC extern tiles
+            if ( $gamearea_color_full && !defined $tile->{'cpc_extern_stem'} ) {
                 push @{ $c_dataset_lines->{ $dataset } },
                     sprintf( "\t{ %d, %d, &btile_%s_frame_0_tiles[0], &btile_%s_frame_0_attrs[0] },\n",
                         $tile->{'rows'},
