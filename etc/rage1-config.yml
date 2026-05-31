@@ -31,11 +31,11 @@
 ##   bank_size
 ##     Size in bytes of each RAM bank. 16384 for both ZX 128 and CPC
 ##     6128. null for platforms with no banking (zx48, cpc-flat).
-##   dataset_banks / codeset_banks (cpc-flat only)
+##   (cpc-flat) dataset_valid_banks / codeset_valid_banks
 ##     Explicit empty lists — cpc-flat has no banking, so these are
-##     kept for structural consistency with cpc-banked (Phase B6) and
-##     to confirm that banktool.pl skips banking-specific work for
-##     cpc-flat.
+##     kept (using the canonical key names shared with zx128 and
+##     cpc-banked) for structural consistency and to confirm that
+##     banktool.pl skips banking-specific work for cpc-flat.
 ##
 ## B4-3: Bank-ID convention (per banking.md §3.3)
 ##   Bank IDs are PLATFORM-SPECIFIC. They are NOT shared between ZX
@@ -64,9 +64,9 @@ banking:
   cpc-flat:
     swap_window:              ~
     bank_size:                ~
-    dataset_banks:            []
-    codeset_banks:            []
-    engine_code_bank:         ~
+    dataset_valid_banks:      []
+    codeset_valid_banks:      []
+    engine_code_memory_bank:  ~
 
   ## cpc-banked (CPC 6128): placeholder for Phase B6.
   ## Numbers from banking.md §3.1.4 Shape A.  banktool.pl does NOT

@@ -679,7 +679,8 @@ in the asset footnote below.
 **B4-2a stack budget (FROZEN)**: 256 B floor confirmed by worst-case
 stack nesting hand-walk:
 
-- ISR frame (IM 1, CPC fires at 300 Hz): ~20 B (15× push + ret)
+- ISR frame (IM 1, CPC fires at 300 Hz): ~20 B (2 B auto-pushed PC +
+  6× push AF/BC/DE/HL/IX/IY = 12 B + ~6 B local scratch)
 - cpctelera library deepest frame (e.g. `cpct_drawSprite` full chain):
   ~60 B (documented in cpctelera source; 3-level call depth, each
   saving BC/DE/HL/AF = 8 B plus locals)
