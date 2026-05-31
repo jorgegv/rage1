@@ -30,7 +30,13 @@ void init_controllers(void) {
    game_state.controller.keys.left  = input_lookup_key( KBD_DEFAULT_LEFT  );
    game_state.controller.keys.right = input_lookup_key( KBD_DEFAULT_RIGHT );
    game_state.controller.keys.fire  = input_lookup_key( KBD_DEFAULT_FIRE  );
-   game_state.controller.type = 0;
+   // Default to keyboard control so input works out of the box. A game's
+   // MENU function may still override this (e.g. a controller-select
+   // screen), but a game with no MENU function no longer boots with a
+   // dead controller: previously type stayed CTRL_TYPE_UNDEFINED (0),
+   // which input_state_read() does not dispatch, so the hero could not
+   // move at all (see games/minimal_audio_cpc regression).
+   game_state.controller.type = CTRL_TYPE_KEYBOARD;
 }
 
 uint8_t controller_read_state(void) {
