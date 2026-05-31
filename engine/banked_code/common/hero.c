@@ -10,8 +10,18 @@
 
 // hero.c
 
+#include "features.h"
+
 #include "rage1/input.h"
+
+// G8: <arch/spectrum.h> is ZX-only and is not actually used by this file (no
+// in_*/zx_* symbol is referenced here).  Guard it so banked_code/common/hero.c
+// compiles under +cpc when the full engine links for cpc-flat (gfx.md Phase G8).
+// features.h is included first so the platform macro is defined; on ZX the
+// include is taken exactly as before (byte-identical).
+#if defined( BUILD_FEATURE_PLATFORM_ZX48 ) || defined( BUILD_FEATURE_PLATFORM_ZX128 )
 #include <arch/spectrum.h>
+#endif
 
 #include "rage1/hero.h"
 #include "rage1/game_state.h"

@@ -70,15 +70,20 @@ typedef struct gfx_cpctel_rect_s {
     uint8_t height;
 } gfx_rect_t;
 
-// Opaque sprite handle.  Minimal placeholder descriptor at G7; the real
-// cpctel backend (G8) extends/replaces this with its native sprite struct.
-// Carries the fields the HAL query/threshold macros below reference so they
-// type-check.  Coordinates use the widened pixel typedefs.
+// CPC sprite handle (real — Phase G8).  width/height are in CELLS (8x8), set
+// by gfx_sprite_create(rows,cols).  The renderer is direct-write with no back
+// buffer, so to MOVE a sprite we must erase its previous cell footprint before
+// drawing at the new one; prev_row/prev_col/drawn track that.  Coordinates use
+// the widened pixel typedefs.  row/col carry the current CELL position (used by
+// the gfx_sprite_get_row/col query macros).
 typedef struct gfx_cpctel_sprite_s {
-    uint8_t      row;
-    uint8_t      col;
-    uint8_t      width;
-    uint8_t      height;
+    uint8_t      row;        // current cell row
+    uint8_t      col;        // current cell col
+    uint8_t      width;      // width in cells
+    uint8_t      height;     // height in cells
+    uint8_t      prev_row;   // last drawn cell row (for erase-on-move)
+    uint8_t      prev_col;   // last drawn cell col
+    uint8_t      drawn;      // 1 once drawn at least once (so erase is valid)
     gfx_xpos_t   xthresh;
     gfx_ypos_t   ythresh;
 } gfx_sprite_t;

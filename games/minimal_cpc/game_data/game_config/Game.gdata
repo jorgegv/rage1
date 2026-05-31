@@ -1,22 +1,25 @@
-// minimal_cpc — smallest CPC game that RENDERS through the real RAGE1 gfx HAL
-// (Phase R4).  MONO mode: BTile/glyph cells are 8 mono UDG bytes (README §5.9),
-// bit-expanded to mode-1 at blit time by the gfx_cpctel mono LUT.  No datagen
-// CPC PNG asset conversion is used (that is Phase A5); the sprite is pre-baked
-// OFFLINE via tools/cpc_asset_convert.pl and checked in under game_src/assets/.
+// minimal_cpc — smallest CPC game that runs the REAL RAGE1 ENGINE GAME LOOP
+// (Phase G8).  MONO mode: BTile/sprite cells are 8 mono UDG bytes
+// (README §5.9), bit-expanded to mode-1 at blit time by the gfx_cpctel mono
+// LUT.  No datagen CPC PNG asset conversion is used (that is Phase A5); all
+// graphics are inline PIXELS/MASK in the .gdata, exactly like games/minimal.
 //
-// This game supplies its OWN main() (game_src/main_cpc.c) so the engine's
-// interrupt-driven main loop (datasets/controllers/banking) is NOT pulled —
-// the R4 bar is a STATIC render exercising the HAL->cpctelera mapping
-// (gfx_init + a tile + a sprite + a HAL flush).  The real game loop / input /
-// audio / banking are Phase G8 / IN6 / AU5 / B6.
+// G8 deviation (documented): this targets cpc464 / cpc-flat — the only
+// working CPC toolchain (T2/R4).  cpc6128 / cpc-banked comes with Phase T3.
 //
-// PLATFORM cpc464 (cpc-flat, the only CPC toolchain that exists at R4) +
-// GFX_BACKEND cpctel selects the real CPC backend (gfx_cpctel.c).  No
-// per-BTile colour data anywhere => datagen emits BUILD_FEATURE_GAMEAREA_COLOR_MONO.
+// Unlike the R4 static-render stub, this game DOES NOT supply its own main():
+// it links the full RAGE1 engine (engine/src/main.c + the banked_code/common
+// game-loop sources) so the interrupt-driven game loop runs on real CPC
+// hardware.  The 50 Hz frame interrupt drives enemy movement and animation.
+//
+// Real CPC input (IN6) / audio (AU5) are still HAL stubs, so the hero is
+// stationary; the autonomously-moving ENEMY proves the loop is live.
 BEGIN_GAME_CONFIG
 	NAME		MinimalCpc
 	PLATFORM	cpc464
 	GFX_BACKEND	cpctel
 	COLOR		MODE=MONO GAMEAREA_ATTR=INK_WHITE|PAPER_BLACK
 	DEFAULT_BG_ATTR	INK_WHITE | PAPER_BLACK
+	SCREEN		INITIAL=Screen01
+	GAME_AREA	TOP=1 LEFT=1 BOTTOM=23 RIGHT=38
 END_GAME_CONFIG

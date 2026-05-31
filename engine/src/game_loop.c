@@ -62,6 +62,18 @@ void check_loop_flags( void ) {
        bullet_reset_all();
 #endif // BUILD_FEATURE_HERO_HAS_WEAPON
 
+       // G8 (CPC direct-write renderer): map_draw_screen() just cleared the
+       // game area (wiping the hero that hero_reset_position() drew), and the
+       // hero is steady so the loop would not otherwise redraw it.  On the
+       // ZX/SP1 backend the hero is a composited sprite LAYER and survives the
+       // tile-layer clear, so no redraw is needed.  Request a hero redraw here
+       // (handled by the F_LOOP_REDRAW_HERO branch immediately below, in this
+       // same call — AFTER the screen has been drawn) so the hero is visible
+       // on the first frame.  ZX is unaffected (guarded out — byte-identical).
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
+       SET_LOOP_FLAG( F_LOOP_REDRAW_HERO );
+#endif
+
        RESET_GAME_FLAG( F_GAME_START );
     }
 

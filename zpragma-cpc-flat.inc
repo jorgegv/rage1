@@ -35,6 +35,16 @@
 // the engine initialises hardware).
 #pragma output CRT_ENABLE_EIDI        = 1
 
+// G8: firmware-free IM1 interrupt model (banking.md §3.5).  With this set, the
+// +cpc CRT installs its OWN IM1 interposer at 0x0038 (no AMSDOS/firmware ISR,
+// so the lower ROM is never paged in during an interrupt — avoiding the R2
+// lower-ROM-font masking caveat) and calls handlers registered via
+// cpc_add_fast_isr() (300 Hz) / cpc_add_vsync_isr() (50 Hz).  RAGE1's CPC ISR
+// (engine/src/interrupts.c) registers a fast handler and divides by six to a
+// 50 Hz tick.  Without this, cpc_add_*_isr route through firmware tickers that
+// page the lower ROM — undesirable for the engine.
+#pragma output CRT_DISABLE_FIRMWARE_ISR = 1
+
 // Standard no-file-system build (same as ZX48 profile).
 #pragma output CRT_ENABLE_CLOSE       = 0
 #pragma output CRT_ENABLE_RESTART     = 1

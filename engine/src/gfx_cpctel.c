@@ -203,9 +203,11 @@ gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols ) {
     if ( sprite_pool_used >= CPC_SPRITE_POOL_SIZE )
         return &sprite_pool[ CPC_SPRITE_POOL_SIZE - 1 ];   // overflow guard
     s = &sprite_pool[ sprite_pool_used++ ];
-    s->height = rows;
-    s->width  = cols;
+    s->height = rows;       // cells
+    s->width  = cols;       // cells
     s->row = 0; s->col = 0;
+    s->prev_row = 0; s->prev_col = 0;
+    s->drawn = 0;
     return s;
 }
 
@@ -244,15 +246,79 @@ void gfx_cpctel_sprite_destroy( gfx_sprite_t *s ) {
     (void) s;           // pool is bump-allocated for R4; real free is G8
 }
 
+// ---------------------------------------------------------------------------
+// SP1-frame -> mono-cell decode (Phase G8).
+//
+// datagen emits sprite frames in SP1/JSP COLUMN-MAJOR interleaved layout
+// (tools/datagen.pl generate_sprite): from the frame pointer, the data is
+// laid out column by column; within a column each scanline is a (mask,pixel)
+// PAIR (mask first).  For a sprite `h` cells tall, the column stride is
+// (h+1)*16 bytes (the +1 is the leading blank row already skipped for column 0
+// by datagen's +16 frame offset).  The pixel byte for sprite cell (cr,cc),
+// scanline s (0..7) is therefore at:
+//     frame[ cc*(h+1)*16 + (cr*8 + s)*2 + 1 ]
+// In CPC MONO mode we render the pixel layer only (README §5.9; mask-aware
+// compositing is A5/later) — we pull each cell's 8 pixel bytes and blit them
+// through the same mono LUT used for BTiles/glyphs.
+// ---------------------------------------------------------------------------
+static void blit_sprite_frame( uint8_t cell_row, uint8_t cell_col,
+                               const uint8_t *frame, uint8_t w, uint8_t h ) {
+    uint8_t cc, cr, s;
+    uint16_t col_stride = (uint16_t)( h + 1 ) * 16u;
+    for ( cc = 0; cc < w; cc++ ) {
+        for ( cr = 0; cr < h; cr++ ) {
+            uint8_t cell[8];
+            uint16_t base = (uint16_t)cc * col_stride;
+            for ( s = 0; s < 8; s++ )
+                cell[s] = frame[ base + (uint16_t)( ( cr * 8 + s ) * 2 + 1 ) ];
+            blit_mono_cell( (uint8_t)( cell_row + cr ), (uint8_t)( cell_col + cc ), cell );
+        }
+    }
+}
+
+// Erase a sprite's w x h cell footprint at (cell_row,cell_col) to background pen.
+static void erase_sprite_cells( uint8_t cell_row, uint8_t cell_col,
+                                uint8_t w, uint8_t h ) {
+    static const uint8_t blank[8] = { 0,0,0,0,0,0,0,0 };
+    uint8_t cc, cr;
+    for ( cc = 0; cc < w; cc++ )
+        for ( cr = 0; cr < h; cr++ )
+            blit_mono_cell( (uint8_t)( cell_row + cr ), (uint8_t)( cell_col + cc ), blank );
+}
+
+// Move a sprite to pixel position (x,y).  Direct-write renderer: we erase the
+// previous cell footprint, then draw the new frame.  Movement is cell-aligned
+// on CPC for G8 (functional bar — gfx.md §G8-5): pixel coords are quantised to
+// the 8x8 cell grid (col = x>>3, row = y>>3).  Sub-cell-smooth masked shifting
+// is a later refinement; cell-granular motion is enough to prove the loop is
+// live (the enemy visibly steps across the screen).  A NULL frame (sprite park)
+// just erases.
 void gfx_cpctel_move_sprite_clipped( gfx_sprite_t *s, gfx_rect_t *clip,
                                      uint8_t *frame, gfx_xpos_t x, gfx_ypos_t y ) {
-    (void) s;
-    (void) clip;
-    (void) frame;
-    (void) x;
-    (void) y;
-    // DEFERRED to G8 (IN6/interrupt loop): masked/clipped per-frame sprite
-    // movement.  R4 renders sprites statically via gfx_cpctel_draw_sprite_cell.
+    uint8_t new_row = (uint8_t)( y >> 3 );
+    uint8_t new_col = (uint8_t)( x >> 3 );
+
+    (void) clip;        // CPC clipping refinement is later; cell math stays on-grid
+
+    // erase the previous footprint (if we have drawn before)
+    if ( s->drawn )
+        erase_sprite_cells( s->prev_row, s->prev_col, s->width, s->height );
+
+    // park (NULL frame): leave it erased and off the live area
+    if ( frame == 0 ) {
+        s->drawn = 0;
+        s->row = new_row;
+        s->col = new_col;
+        return;
+    }
+
+    // draw the new frame at the new cell position
+    blit_sprite_frame( new_row, new_col, frame, s->width, s->height );
+
+    // remember where we drew so the next move can erase it
+    s->row = new_row;     s->col = new_col;
+    s->prev_row = new_row; s->prev_col = new_col;
+    s->drawn = 1;
 }
 
 /////////////////////////////////////
