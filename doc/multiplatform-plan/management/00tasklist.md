@@ -62,7 +62,7 @@ under it is ticked complete.
   - [x] IN5 — input CPC skeleton (stub)
   - [x] AU4 — audio CPC skeleton + AT2 player relocation
   - [ ] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
-  - [ ] TS2 — Caprice32 + Xvfb in dev env + Docker
+  - [x] TS2 — Caprice32 + Xvfb in dev env + Docker
   - [x] R4 — real `gfx_cpctel.c` + `games/minimal_cpc/`
   - [ ] G8 — real CPC backend wiring
   - [ ] IN6 — real CPC input via cpctelera keyboard scan
