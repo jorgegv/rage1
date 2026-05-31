@@ -1,0 +1,22 @@
+// minimal_cpc — smallest CPC game that RENDERS through the real RAGE1 gfx HAL
+// (Phase R4).  MONO mode: BTile/glyph cells are 8 mono UDG bytes (README §5.9),
+// bit-expanded to mode-1 at blit time by the gfx_cpctel mono LUT.  No datagen
+// CPC PNG asset conversion is used (that is Phase A5); the sprite is pre-baked
+// OFFLINE via tools/cpc_asset_convert.pl and checked in under game_src/assets/.
+//
+// This game supplies its OWN main() (game_src/main_cpc.c) so the engine's
+// interrupt-driven main loop (datasets/controllers/banking) is NOT pulled —
+// the R4 bar is a STATIC render exercising the HAL->cpctelera mapping
+// (gfx_init + a tile + a sprite + a HAL flush).  The real game loop / input /
+// audio / banking are Phase G8 / IN6 / AU5 / B6.
+//
+// PLATFORM cpc464 (cpc-flat, the only CPC toolchain that exists at R4) +
+// GFX_BACKEND cpctel selects the real CPC backend (gfx_cpctel.c).  No
+// per-BTile colour data anywhere => datagen emits BUILD_FEATURE_GAMEAREA_COLOR_MONO.
+BEGIN_GAME_CONFIG
+	NAME		MinimalCpc
+	PLATFORM	cpc464
+	GFX_BACKEND	cpctel
+	COLOR		MODE=MONO GAMEAREA_ATTR=INK_WHITE|PAPER_BLACK
+	DEFAULT_BG_ATTR	INK_WHITE | PAPER_BLACK
+END_GAME_CONFIG

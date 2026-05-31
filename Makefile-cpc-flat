@@ -57,12 +57,37 @@ SUB_DIRS		=
 SUB_BINS		=
 SUB_TAPS		=
 
-# Phase T2: the RAGE1 engine sources (engine/src/*.c) are ZX-specific and
-# cannot be compiled for CPC at this phase (Phase G7/IN5/AU4 add CPC HAL
-# backends). Override CSRC/ASMSRC/OBJS to include ONLY game_src and
-# build/generated sources for the CPC build.
+# cpc-flat base source set: game_src + build/generated only.  (For cpc-hello
+# the RAGE1 engine is NOT linked.)  Override CSRC/ASMSRC/OBJS accordingly.
 CSRC			= $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC			= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
+
+# ---- Phase R4: real CPC gfx HAL link set -------------------------------
+# A CPC game that opts in (CPC_LINK_ENGINE_GFX=1, set by `make build-minimal_cpc`)
+# links the REAL RAGE1 gfx HAL: the generic gfx.c/screen.c, the active CPC
+# backend gfx_cpctel.c (gfx_sp1.c/gfx_jsp.c compile to EMPTY TUs under cpctel),
+# and the translated cpctelera asm primitives under engine/src/cpc/.  This is
+# the minimal engine subset needed to RENDER statically (R4); the full engine
+# main loop / datasets / banking stay OUT (deferred to G8/B6).  The game then
+# supplies its OWN main() in game_src (so engine/src/main.c is NOT pulled).
+CPC_ENGINE_GFX_CSRC	= $(ENGINE_DIR)/src/gfx.c \
+			  $(ENGINE_DIR)/src/gfx_cpctel.c \
+			  $(ENGINE_DIR)/src/gfx_sp1.c \
+			  $(ENGINE_DIR)/src/gfx_jsp.c \
+			  $(ENGINE_DIR)/src/screen.c
+CPC_ENGINE_GFX_ASMSRC	= $(wildcard $(ENGINE_DIR)/src/cpc/*.asm)
+# Pre-baked CPC asset sources live in a game_src/assets/ subdir (not matched by
+# the top-level $(GAME_SRC_DIR)/*.c wildcard) — pull them in explicitly.
+CPC_ASSET_CSRC		= $(wildcard $(GAME_SRC_DIR)/assets/*.c)
+
+ifeq ($(CPC_LINK_ENGINE_GFX),1)
+CSRC			+= $(CPC_ENGINE_GFX_CSRC) $(CPC_ASSET_CSRC)
+ASMSRC			+= $(CPC_ENGINE_GFX_ASMSRC)
+# -I the assets dir so the cpct_img2tileset-generated header's <types.h>
+# (cpctelera u8 shim) resolves; -I game_src so "assets/sprite.h" resolves.
+CPC_EXTRA_INC		= -I$(GAME_SRC_DIR) -I$(GAME_SRC_DIR)/assets
+endif
+
 OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 
 # Override CFLAGS: +cpc uses the default clib (NOT -clib=sdcc_iy, which is
@@ -71,7 +96,7 @@ OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 # Phase T2 it deliberately does NOT set __MMAP=-1 — see the long note in
 # zpragma-cpc-flat.inc (the +cpc CRT pre-defines __MMAP=0 and rejects the
 # override). The +cpc CRT's built-in section layout is used.
-CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
+CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(DEBUG_FLAGS)
 
 # The custom mmap file for section-check
 CPC_MMAP_INC		= mmap-cpc-flat.inc

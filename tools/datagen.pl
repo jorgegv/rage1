@@ -4922,10 +4922,29 @@ if ( $is_cpc_platform and not $has_screens ) {
     # Derive the CPC-AY macros BEFORE generate_conditional_build_features, which
     # snapshots %conditional_build_features into the features.h output lines.
     derive_cpc_audio_backend_features;
+    # R4: emit the GFX_BACKEND macro on the screen-less CPC fast path too.
+    # In the full pipeline this is done by generate_game_config (line ~3700),
+    # which the fast path bypasses — so a screen-less CPC game that selects
+    # GFX_BACKEND cpctel would otherwise never get BUILD_FEATURE_GFX_BACKEND_CPCTEL
+    # and the real CPC backend would self-#ifdef out. Mirror that emission here
+    # (canonical + legacy SPRITE_ENGINE alias, per README §5.6).
+    my $r4_engine_upper = uc( get_gfx_backend() );
+    add_build_feature( 'GFX_BACKEND_'   . $r4_engine_upper );
+    add_build_feature( 'SPRITE_ENGINE_' . $r4_engine_upper );
     generate_conditional_build_features;
-    # Emit minimal stub game_data.h (just the include guard)
-    push @h_game_data_lines, "// CPC minimal stub — no RAGE1 engine integration at Phase T2\n";
-    push @h_game_data_lines, "#ifndef _GAME_DATA_H\n#define _GAME_DATA_H\n#endif // _GAME_DATA_H\n";
+    # Emit minimal stub game_data.h.
+    # R4: also emit DEFAULT_BG_ATTR — engine/src/gfx.c's init_gfx() references
+    # GFX_DEFAULT_BG_ATTR (= DEFAULT_BG_ATTR).  In the full pipeline this comes
+    # from generate_game_config (line ~3706), which this fast path bypasses, so
+    # a CPC game that LINKS the real gfx HAL (minimal_cpc, R4) would otherwise
+    # fail to compile.  Inert on CPC (two-layer colour model) but must be
+    # defined.  Default to 0 when the game declared no DEFAULT_BG_ATTR.
+    my $r4_bg_attr = defined( $game_config->{'default_bg_attr'} )
+                     ? $game_config->{'default_bg_attr'} : '0';
+    push @h_game_data_lines, "// CPC minimal stub — no full RAGE1 engine integration\n";
+    push @h_game_data_lines, "#ifndef _GAME_DATA_H\n#define _GAME_DATA_H\n";
+    push @h_game_data_lines, sprintf( "#define DEFAULT_BG_ATTR ( %s )\n", $r4_bg_attr );
+    push @h_game_data_lines, "#endif // _GAME_DATA_H\n";
     # Emit minimal stub .c file (empty translation unit)
     push @c_game_data_lines, "// CPC minimal stub — no RAGE1 engine integration at Phase T2\n";
     # Initialise dataset/codeset hashrefs so output_game_data does not crash

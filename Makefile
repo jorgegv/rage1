@@ -171,12 +171,26 @@ ALL_TEST_GAMES		= $(shell cd $(TEST_GAMES_DIR)/ && ls -1 )
 # G7-4: CPC games are matched by the 'cpc-' name prefix OR the '00cpc'
 # compile-test prefix (the leading '00' keeps the synthetic compile-test
 # first in `ls`; it must land in the CPC subset, NOT the ZX one).
-CPC_TEST_GAMES		= $(filter cpc-% 00cpc%,$(ALL_TEST_GAMES))
-ZX_TEST_GAMES		= $(filter-out cpc-% 00cpc%,$(ALL_TEST_GAMES))
+# R4-4: also match the '*_cpc' suffix (e.g. minimal_cpc) — a CPC game named
+# after its ZX sibling (minimal -> minimal_cpc) must land in the CPC subset.
+CPC_TEST_GAMES		= $(filter cpc-% 00cpc% %_cpc,$(ALL_TEST_GAMES))
+ZX_TEST_GAMES		= $(filter-out cpc-% 00cpc% %_cpc,$(ALL_TEST_GAMES))
 
 # T2-10: CPC hello-world test game build target
 build-cpc-hello:
 	$(MYMAKE) build-cpc464 target_game=$(TEST_GAMES_DIR)/cpc-hello
+
+# R4-4: minimal_cpc — the first CPC game that LINKS the real RAGE1 gfx HAL
+# (gfx.c + gfx_cpctel.c + translated cpctelera primitives) and RENDERS a
+# static screen (tile + sprite + text) under Caprice32.  Symmetric with
+# build-cpc464, but sets CPC_LINK_ENGINE_GFX=1 so Makefile-cpc-flat links the
+# engine gfx subset.  The game supplies its own main() (static render); the
+# interrupt-driven loop / input / audio / banking are deferred (G8/IN6/AU5/B6).
+build-minimal_cpc:
+	$(MYMAKE) clean
+	$(MYMAKE) PLATFORM=cpc464 config target_game=$(TEST_GAMES_DIR)/minimal_cpc
+	$(MYMAKE) PLATFORM=cpc464 data-cpc464 target_game=$(TEST_GAMES_DIR)/minimal_cpc
+	$(MYMAKE) -f Makefile-cpc-flat CPC_LINK_ENGINE_GFX=1 build
 
 # G7-4: synthetic CPC engine compile-test. Configures + datagens the
 # 00cpc-compile-test game for cpc464, then COMPILE-ONLY type-checks the whole
