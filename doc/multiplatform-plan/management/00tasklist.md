@@ -58,7 +58,7 @@ under it is ticked complete.
   - [x] T2 — cpc-flat Makefile; first `.cpc`/`.cdt` build
   - [ ] B4 — CPC banking config seam (cpc-flat = no banking)
   - [ ] B5 — cpc-flat banking materialised
-  - [ ] G7 — `gfx_cpctel.c` stub skeleton
+  - [x] G7 — `gfx_cpctel.c` stub skeleton
   - [ ] IN5 — input CPC skeleton (stub)
   - [ ] AU4 — audio CPC skeleton + AT2 player relocation
   - [ ] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
