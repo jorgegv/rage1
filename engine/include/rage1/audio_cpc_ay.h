@@ -39,6 +39,11 @@
 #include <stdint.h>
 
 #include "features.h"
+// tracker.h declares the generic tracker_* orchestration layer. On CPC-flat
+// (no banking) those symbols are real linkable functions provided by
+// engine/src/audio_cpc_ay_arkos2.c; the music/SFX HAL ops below alias to them,
+// exactly mirroring the ZX path (audio_zx_ay.h -> tracker_*).
+#include "rage1/tracker.h"
 
 // This header is the single CPC-audio include path. It must only ever be
 // reached on a CPC build (audio.h gates it behind the CPC platform predicate).
@@ -79,8 +84,9 @@ static inline void audio_sfx_beeper_play_pending( void ) {
 // Music ops — CPC AY music backend (Arkos2 forced on CPC; no Vortex2).
 //
 // Gated to match the backend macro so a CPC build with no TRACKER (e.g. the
-// synthetic compile-test) does not reference these symbols. STUB: no-ops at
-// AU4; AU5 redirects to the ply_akg_* / tracker_* player like the ZX path.
+// synthetic compile-test) does not reference these symbols. AU5: these alias
+// to the generic tracker_* orchestration layer (provided on CPC-flat by
+// engine/src/audio_cpc_ay_arkos2.c), exactly mirroring the ZX path.
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifdef BUILD_FEATURE_AUDIO_MUSIC_BACKEND_CPC_AY
@@ -94,33 +100,40 @@ typedef uint8_t audio_sfx_tracker_t;
 
 // audio_music_init() — initialise the CPC AY music backend.
 static inline void audio_music_init( void ) {
-    // no-op (CPC stub)
+    init_tracker();
 }
 
 // audio_music_select_song(song_id) — pick the active song.
 static inline void audio_music_select_song( uint8_t song_id ) {
-    (void) song_id;     // no-op (CPC stub)
+    tracker_select_song( song_id );
 }
 
 // audio_music_start() — start playback of the selected song.
 static inline void audio_music_start( void ) {
-    // no-op (CPC stub)
+    tracker_start();
 }
 
 // audio_music_stop() — stop playback.
 static inline void audio_music_stop( void ) {
-    // no-op (CPC stub)
+    tracker_stop();
 }
 
 // audio_music_rewind() — rewind the active song to the start.
 static inline void audio_music_rewind( void ) {
-    // no-op (CPC stub)
+    tracker_rewind();
 }
 
 // audio_music_tick() — ISR-time per-frame service tick.
 static inline void audio_music_tick( void ) {
-    // no-op (CPC stub)
+    tracker_do_periodic_tasks();
 }
+
+// audio_music_set_volume(vol) — AU5-4. The Arkos2 AKG player exposes NO fade /
+// master-volume primitive (no ply_akg_*_fade symbol exists in the shared
+// player asm), so this is a documented no-op on the CPC AY (arkos2) backend.
+// A macro (not a static-inline) so it emits no symbol — matching the ZX arkos2
+// backend (audio_zx_ay.h).
+#define audio_music_set_volume( vol )	( (void)( vol ) )
 
 #endif // BUILD_FEATURE_AUDIO_MUSIC_BACKEND_CPC_AY
 
@@ -128,7 +141,10 @@ static inline void audio_music_tick( void ) {
 // SFX ops — CPC AY tracker channel.
 //
 // Gated by BUILD_FEATURE_AUDIO_SFX_BACKEND_CPC_AY (set when the game configures
-// a TRACKER FX_CHANNEL). STUB: no-ops at AU4.
+// a TRACKER FX_CHANNEL). AU5-3: these alias to the generic tracker_* SFX layer
+// (provided on CPC-flat by engine/src/audio_cpc_ay_arkos2.c), exactly mirroring
+// the ZX AY SFX path. The underlying tracker_specific_play_fx() issues
+// ply_akg_playsoundeffect( id, TRACKER_SOUNDFX_CHANNEL, 16 - TRACKER_SOUNDFX_VOLUME ).
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifdef BUILD_FEATURE_AUDIO_SFX_BACKEND_CPC_AY
@@ -141,23 +157,24 @@ typedef uint8_t audio_sfx_tracker_t;
 
 // audio_sfx_tracker_init() — initialise the AY SFX channel.
 static inline void audio_sfx_tracker_init( void ) {
-    // no-op (CPC stub)
+    init_tracker_sound_effects();
 }
 
 // audio_sfx_tracker_request(sfx) — queue an AY SFX for the next
-// game-loop chokepoint drain.
+// game-loop chokepoint drain. The legacy entry point takes a uint16_t for ABI
+// reasons; the HAL type is uint8_t, so we widen at the call boundary.
 static inline void audio_sfx_tracker_request( audio_sfx_tracker_t sfx ) {
-    (void) sfx;     // no-op (CPC stub)
+    tracker_request_fx( (uint16_t)sfx );
 }
 
 // audio_sfx_tracker_play(sfx) — play an AY SFX immediately.
 static inline void audio_sfx_tracker_play( audio_sfx_tracker_t sfx ) {
-    (void) sfx;     // no-op (CPC stub)
+    tracker_play_fx( sfx );
 }
 
 // audio_sfx_tracker_play_pending() — drain queued AY SFX requests.
 static inline void audio_sfx_tracker_play_pending( void ) {
-    // no-op (CPC stub)
+    tracker_play_pending_fx();
 }
 
 #endif // BUILD_FEATURE_AUDIO_SFX_BACKEND_CPC_AY

@@ -10,7 +10,8 @@
 ;;
 ;; The only hardware-specific part is the PSG register-output routine
 ;; (PLY_AKG_SENDPSGREGISTERS), guarded below. The SPECTRUM branch is BYTE-FOR-
-;; BYTE the pre-move ZX player; the CPC branch is a Phase AU5 placeholder.
+;; BYTE the pre-move ZX player; the CPC branch (Phase AU5) drives the PSG via
+;; the 8255 PPI and is translated from the canonical AT2 CPC AKG player.
 ;;
 ;; If no hardware symbol was set by a wrapper, default to SPECTRUM so that the
 ;; assembled ZX bytes are identical to the pre-move single-file player (the
@@ -1334,7 +1335,16 @@ PLY_AKG_CHANNEL1_SETINSTRUMENTSTEP:
 	ld (PLY_AKG_CHANNEL1_INSTRUMENTSTEP+2),a
 	ld a,e
 	ld (PLY_AKG_PSGREG8),a
+	;; R7 mixer-bit shift for channel 1. On CPC bit 6 of R7 MUST stay 0 (it
+	;; controls the keyboard/PSG function on the PPI — `srl d` forces a 0 in
+	;; from the left; `rr d` would rotate the carry in and could set bit 6,
+	;; "no more keyboard on CPC!"). The Spectrum/Pentagon path uses `rr d`
+	;; (don't-care), so the ZX bytes are unchanged. (AT2 canonical behaviour.)
+	IF PLY_AKG_HARDWARE_CPC
+	srl d
+	ELSE
 	rr d
+	ENDIF
 	exx
 	ld (PLY_AKG_PSGREG01_INSTR+1),hl
 
@@ -1370,7 +1380,12 @@ PLY_AKG_CHANNEL2_SETINSTRUMENTSTEP:
 	ld (PLY_AKG_CHANNEL2_INSTRUMENTSTEP+2),a
 	ld a,e
 	ld (PLY_AKG_PSGREG9),a
+	;; R7 mixer-bit shift for channel 2 — CPC keeps bit 6 = 0 (see channel 1).
+	IF PLY_AKG_HARDWARE_CPC
+	srl d
+	ELSE
 	rr d
+	ENDIF
 	exx
 	ld (PLY_AKG_PSGREG23_INSTR+1),hl
 
@@ -1526,15 +1541,240 @@ PLY_AKG_PSGREG13_INSTR:
 
 ELSE
 ;;
-;; CPC PSG register output — Phase AU5 placeholder.
-;; The CPC drives the AY through the PPI (8255): port A carries the data /
-;; register number, port C the BDIR/BC1 control lines. AU5 (real CPC audio)
-;; fills this branch in, defining the same PLY_AKG_PSGREG* / RETRIG / PSGREG13
-;; self-modifying-code operand labels the init code patches. Until then a CPC
-;; build must not assemble the player (the CPC backend is a no-op stub at AU4),
-;; so reaching this branch is a build error.
+;; CPC PSG register output — Phase AU5 (real CPC audio).
 ;;
-	defc PLY_AKG_CPC_PLAYER_NOT_IMPLEMENTED = 1 / 0	; AU5: implement CPC PSG output
+;; Translated BYTE-FOR-FUNCTION from the canonical Arkos Tracker 2 AKG player
+;; (PLY_AKG_HARDWARE_CPC branch of misc/au-spike/PlayerAkg.asm) into z88dk
+;; z80asm syntax. The CPC has no AY ports; the PSG is driven through the 8255
+;; PPI:
+;;   - PPI port A  (#F4xx) carries the register number / data byte.
+;;   - PPI port C  (#F6xx) carries the PSG control lines (function select):
+;;       #F600 = inactive,  #F6C0 = "select register",  #F680 = "write data".
+;;   - We use Madram's trick: the very first control write is #F6C0 via
+;;     `out (c),e` (E=#C0) rather than `out (c),b`, so K7's tape relay is NOT
+;;     toggled. `out (c),0` (defb 237,113) writes the #F600 (inactive) state.
+;;
+;; The main BC pair (B=#F4) addresses port A; the alternate BC' pair (B=#F6,
+;; C=#80, E=#C0) addresses port C. We flip between them with `exx`. C in the
+;; main pair doubles as the running PSG register number (0,1,2,...): it starts
+;; at #F401 so `out (c),c` emits register 1, register 0 being emitted with the
+;; literal `out (c),0`.
+;;
+;; The SAME self-modifying-code operand labels as the Spectrum branch are
+;; (re)defined here at the SAME +1/+2 operand offsets (every value holder is a
+;; 3-byte `ld hl,nn` / `ld l,n`), so the init/play code that patches
+;; PLY_AKG_PSGREG01_INSTR+1 etc. works unchanged.
+;;
+	ld bc,0xf680
+	ld e,0xc0
+	out (c),e			; #F6C0 — Madram's trick (avoid relay toggle)
+	exx
+	ld bc,0xf401			; B=#F4 (port A), C=PSG register counter (=1)
+
+	;; Register 0 and 1
+PLY_AKG_PSGREG01_INSTR:
+	ld hl,0
+	defb 237			; out (c),0  -> #F400 + register 0
+	defb 113
+	exx
+	defb 237			; out (c),0  -> #F600 (inactive)
+	defb 113
+	exx
+	out (c),l			; #F400 + value (R0)
+	exx
+	out (c),c			; #F680 (write data)
+	out (c),e			; #F6C0
+	exx
+
+	out (c),c			; #F400 + register 1
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),h			; #F400 + value (R1)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 2 and 3
+PLY_AKG_PSGREG23_INSTR:
+	ld hl,0
+	inc c
+	out (c),c			; #F400 + register 2
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),l			; #F400 + value (R2)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	inc c
+	out (c),c			; #F400 + register 3
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),h			; #F400 + value (R3)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 4 and 5
+PLY_AKG_PSGREG45_INSTR:
+	ld hl,0
+	inc c
+	out (c),c			; #F400 + register 4
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),l			; #F400 + value (R4)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	inc c
+	out (c),c			; #F400 + register 5
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),h			; #F400 + value (R5)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 6 (noise) and 8 (volume A) — L is R6, H is R8
+defc PLY_AKG_PSGREG6 = ASMPC +1
+defc PLY_AKG_PSGREG8 = ASMPC +2
+PLY_AKG_PSGREG6_8_INSTR:
+	ld hl,0
+	inc c
+	out (c),c			; #F400 + register 6
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),l			; #F400 + value (R6)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 7 (mixer) — value is in A
+	inc c
+	out (c),c			; #F400 + register 7
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),a			; #F400 + value (R7, mixer)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 8 (volume A) — value loaded above in H
+	inc c
+	out (c),c			; #F400 + register 8
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),h			; #F400 + value (R8)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 9 (volume B) and 10 (volume C) — L is R9, H is R10
+defc PLY_AKG_PSGREG9 = ASMPC +1
+defc PLY_AKG_PSGREG10 = ASMPC +2
+PLY_AKG_PSGREG9_10_INSTR:
+	ld hl,0
+	inc c
+	out (c),c			; #F400 + register 9
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),l			; #F400 + value (R9)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	inc c
+	out (c),c			; #F400 + register 10
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),h			; #F400 + value (R10)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 11 and 12 (hardware-envelope period) — L is R11, H is R12
+PLY_AKG_PSGHARDWAREPERIOD_INSTR:
+	ld hl,0
+	inc c
+	out (c),c			; #F400 + register 11
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),l			; #F400 + value (R11)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	inc c
+	out (c),c			; #F400 + register 12
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),h			; #F400 + value (R12)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	exx
+
+	;; Register 13 (hardware-envelope shape) — only written when changed, with
+	;; retrig support (same SMC dance as the Spectrum branch).
+PLY_AKG_PSGREG13_OLDVALUE:
+	ld a,255
+PLY_AKG_RETRIG:
+	or 0				; 0 = no retrig
+PLY_AKG_PSGREG13_INSTR:
+	ld l,0				; R13 new value
+	cp l				; same as old? then skip
+	jr z,PLY_AKG_PSGREG13_END
+	ld a,l
+	ld (PLY_AKG_PSGREG13_OLDVALUE+1),a
+	inc c
+	out (c),c			; #F400 + register 13
+	exx
+	defb 237			; out (c),0  -> #F600
+	defb 113
+	exx
+	out (c),a			; #F400 + value (R13)
+	exx
+	out (c),c			; #F680
+	out (c),e			; #F6C0
+	;; (no trailing exx: main BC no longer needed before PLY_AKG_SAVESP)
+	xor a
+	ld (PLY_AKG_RETRIG+1),a
 
 ENDIF
 ;; --- end HARDWARE-SPECIFIC PSG register output ---------------------------

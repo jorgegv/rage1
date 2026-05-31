@@ -92,6 +92,10 @@ my $asm_file_game_data		= 'asm_game_data.asm';
 my $h_file_game_data		= 'game_data.h';
 my $h_file_build_features	= 'features.h';
 my $c_file_banked_data_128	= 'banked/128/game_data_128.c';
+# AU5: on CPC-flat there is no banking; the tracker song/FX data + tables land
+# in a top-level generated C file (picked up by the cpc-flat $(GENERATED_DIR)/*.c
+# glob) instead of banked/128/game_data_128.c.
+my $c_file_tracker_cpc		= 'game_data_tracker_cpc.c';
 
 # global directories
 my $output_dest_dir;
@@ -122,6 +126,10 @@ my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
 my @h_game_data_lines;
 my @h_build_features_lines;
 my @c_banked_data_128_lines;
+# AU5: CPC-flat tracker data lines (songs/FX byte-array externs + tables),
+# written to a top-level generated C file. On CPC the @c_banked_data_128_lines
+# accumulator is redirected here (see generate_tracker_data).
+my @c_tracker_cpc_lines;
 
 # misc vars
 my $forced_build_target;
@@ -4753,13 +4761,35 @@ sub generate_tracker_data {
     # tracker songs
     if ( defined( $game_config->{'tracker'} ) ) {
 
+        # AU5: on CPC-flat there is no banking. The song/FX byte-array .asm
+        # files and the all_songs/all_sound_effects tables must land where the
+        # cpc-flat build globs them: the song .asm into the top-level
+        # generated/ dir ($(GENERATED_DIR)/*.asm) and the C table into
+        # game_data_tracker_cpc.c ($(GENERATED_DIR)/*.c). On ZX128 they keep
+        # going into generated/banked/128/ as before (byte-identical). $trk is
+        # the C-table accumulator; $trk_dir is the song/FX .asm destination dir.
+        # The .aks -> .asm conversion (lib/RAGE/Arkos2.pm) is TARGET-AGNOSTIC,
+        # so ZX and CPC reference the SAME tracker_song_*.asm bytes (AU5-5).
+        my $is_cpc = ( defined( $game_config->{'platform'} ) and
+                       $game_config->{'platform'} =~ /^cpc/ );
+        my $trk = $is_cpc ? \@c_tracker_cpc_lines : \@c_banked_data_128_lines;
+        my $trk_dir = $is_cpc
+            ? "$build_dir/generated"
+            : "$build_dir/generated/banked/128";
+
+        if ( $is_cpc ) {
+            # CPC tracker data is its own top-level TU; give it a header.
+            push @{ $trk }, "#include <stdint.h>\n";
+            push @{ $trk }, "#include <stdlib.h>\n\n";
+        }
+
         push @h_game_data_lines, "/////////////////////\n";
         push @h_game_data_lines, "// Tracker songs\n";
         push @h_game_data_lines, "/////////////////////\n\n";
 
-        push @c_banked_data_128_lines, "//////////////////////////////////\n";
-        push @c_banked_data_128_lines, "// Tracker songs data and table\n";
-        push @c_banked_data_128_lines, "//////////////////////////////////\n\n";
+        push @{ $trk }, "//////////////////////////////////\n";
+        push @{ $trk }, "// Tracker songs data and table\n";
+        push @{ $trk }, "//////////////////////////////////\n\n";
 
         # output the songs data
 
@@ -4767,7 +4797,7 @@ sub generate_tracker_data {
             my $symbol_name = "tracker_song_" . $song->{'name'};
 
             # generate extern declaration for later use in C file
-            push @c_banked_data_128_lines, sprintf( "extern uint8_t %s[];\n", $symbol_name );
+            push @{ $trk }, sprintf( "extern uint8_t %s[];\n", $symbol_name );
 
             # generate song ID in header file
             push @h_game_data_lines, sprintf( "#define TRACKER_SONG_%s\t%d\n",
@@ -4784,11 +4814,12 @@ sub generate_tracker_data {
                 } else {
                     die "Arkos songs can only be in AKS or ASM format\n";
                 }
-                my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+                my $dest_asm_file = "$trk_dir/" . basename( $asm_file );
                 move( $asm_file, $dest_asm_file ) or
                     die "Could not rename $asm_file to $dest_asm_file\n";
             }
             if ( $game_config->{'tracker'}{'type'} eq 'vortex2' ) {
+                # vortex2 is ZX-only (rejected on CPC at validation); 128 path.
                 # for Vortex2, copy the binary .PT3 file and add an ASM shim to include the binary as-is
                 copy( "$build_dir/$song->{'file'}", "$build_dir/generated/banked/128" ) or
                     die "Could not copy $build_dir/$song->{'file'} to $build_dir/generated/banked/128\n";
@@ -4806,14 +4837,14 @@ sub generate_tracker_data {
         }
 
         # now output the songs table
-        push @c_banked_data_128_lines, "\n// songs table\n";
-        push @c_banked_data_128_lines, sprintf( "uint8_t *all_songs[ %d ] = {\n",
+        push @{ $trk }, "\n// songs table\n";
+        push @{ $trk }, sprintf( "uint8_t *all_songs[ %d ] = {\n",
             scalar( @{ $game_config->{'tracker'}{'songs'} } ) );
         foreach my $song ( @{ $game_config->{'tracker'}{'songs'} } ) {
             my $symbol_name = "tracker_song_" . $song->{'name'};
-            push @c_banked_data_128_lines, sprintf( "\t&%s[0],\n", $symbol_name );
+            push @{ $trk }, sprintf( "\t&%s[0],\n", $symbol_name );
         }
-        push @c_banked_data_128_lines, "};\n";
+        push @{ $trk }, "};\n";
 
         # output sound effects table and constants
         if ( defined( $game_config->{'tracker'}{'fxtable'} ) ) {
@@ -4827,7 +4858,7 @@ sub generate_tracker_data {
             } else {
                 die "Arkos sound FX can only be in AKS or ASM format\n";
             }
-            my $dest_asm_file = "$build_dir/generated/banked/128/" . basename( $asm_file );
+            my $dest_asm_file = "$trk_dir/" . basename( $asm_file );
 
             my $effects_count = arkos2_count_sound_effects( $asm_file );
             push @h_game_data_lines, sprintf( "#define TRACKER_SOUNDFX_NUM_EFFECTS %d\n", $effects_count );
@@ -5066,7 +5097,18 @@ sub output_game_data {
         print $output_fh join( "", @c_banked_data_128_lines );
         close $output_fh;
     }
-    
+
+    # AU5: output generated tracker data for CPC-flat into a top-level C file
+    # (no banking). Only written when there is actual tracker data to emit.
+    if ( defined( $game_config->{'platform'} ) and
+         $game_config->{'platform'} =~ /^cpc/ and
+         scalar( @c_tracker_cpc_lines ) ) {
+        open( $output_fh, ">", $c_file_tracker_cpc ) or
+            die "Could not open $c_file_tracker_cpc for writing\n";
+        print $output_fh join( "", @c_tracker_cpc_lines );
+        close $output_fh;
+    }
+
 
     # output game_data.h file
     open( $output_fh, ">", $h_file_game_data ) or
@@ -5369,6 +5411,7 @@ if ( defined( $opt_d ) ) {
     $h_file_game_data		= "$opt_d/$h_file_game_data";
     $h_file_build_features	= "$opt_d/$h_file_build_features";
     $c_file_banked_data_128	=  "$opt_d/$c_file_banked_data_128";
+    $c_file_tracker_cpc		=  "$opt_d/$c_file_tracker_cpc";
     $dump_file = "$opt_d/$dump_file";
     $output_dest_dir = $opt_d;
 }

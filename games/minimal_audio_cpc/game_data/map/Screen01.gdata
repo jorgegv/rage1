@@ -1,0 +1,27 @@
+// The single screen.  Exercises the engine map-draw path (a row of Wall
+// BTiles + a Live decoration), the hero, and ONE autonomously-moving ENEMY.
+// The enemy moves horizontally (LINEAR, DX=2) and BOUNCEs off the game-area
+// edges, animating its two frames — visible proof the 50 Hz interrupt loop is
+// live even though the hero is stationary (input is stubbed until IN6).
+BEGIN_SCREEN
+	NAME		Screen01
+	DATASET		0
+
+	HERO		STARTUP_XPOS=160 STARTUP_YPOS=120
+
+	// NOTE: the enemy position integer part is still 8-bit (uint8_t) — the
+	// Phase G4 coordinate widening to 16-bit is NOT yet wired, so X must stay
+	// <= 255.  We sweep X in [16, 240] (cols 2..30) so the motion is clearly
+	// visible across most of the 40-col screen without 8-bit wraparound.
+	ENEMY		NAME=Blob SPRITE=Enemy MOVEMENT=LINEAR \
+			XMIN=16 YMIN=64 XMAX=240 YMAX=64 \
+			INITX=120 INITY=64 DX=2 DY=0 \
+			SPEED_DELAY=1 ANIMATION_DELAY=8 BOUNCE=1 COLOR=INK_YELLOW
+
+	DECORATION	NAME=Deco1 BTILE=Live ROW=4 COL=6  ACTIVE=1
+	DECORATION	NAME=Deco2 BTILE=Live ROW=4 COL=33 ACTIVE=1
+
+	BACKGROUND	BTILE=Wall ROW=2 COL=2 WIDTH=36 HEIGHT=1 PROBABILITY=255
+	BACKGROUND	BTILE=Wall ROW=21 COL=2 WIDTH=36 HEIGHT=1 PROBABILITY=255
+
+END_SCREEN

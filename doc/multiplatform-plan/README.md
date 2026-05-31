@@ -728,6 +728,17 @@ these are *not dropped*, only resequenced:
 - `TS3`'s first CPC regression baseline is **cpc464** (`minimal_cpc`);
   the cpc6128 baseline follows T3.
 
+**AU5 execution note (2026-05-31)**: Phase AU5 (real CPC Arkos2 AY audio)
+was executed on **cpc464 / cpc-flat** with a dedicated audio test game
+**`games/minimal_audio_cpc`** (= `minimal_cpc` + a `TRACKER arkos2` song +
+SFX table + a `TRACKER_PLAY_FX` flow rule). It links the AT2 AKG player for
+`+cpc`, runs the music tick in the 50 Hz ISR, and boots + runs stably in
+Caprice32 (the shadow-reg ISR fix makes the tracker-in-ISR safe). The
+`games/default` CPC music/SFX build remains deferred to **Phase 5** per the
+scope above. AU5's ZX output is byte-identical (the shared AT2 player's ZX
+PSG-output + R7-mixer paths are guarded `IF PLY_AKG_HARDWARE_SPECTRUM`;
+`default` + `vortex2` `main.map`/`banked_code.map` show zero address drift).
+
 **New tracked task — `G8a` (no-debt; genuinely engine-wide, so
 scheduled not crammed)**: **CPC 16-bit sprite/position coordinates +
 `gfx_cpctel` screen-bounds clamp.** `G4` widened the *gfx pixel*
