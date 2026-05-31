@@ -183,17 +183,48 @@ void init_interrupts(void) {
 static uint8_t cpc_isr_div_counter = 0;
 
 // CPC fast ISR (300 Hz), registered with cpc_add_fast_isr().  The +cpc CRT
-// fast-isr interposer preserves AF/BC/DE/HL around this call but NOT IX/IY, so
-// we save/restore them explicitly (SDCC may use IX as a frame pointer in the
-// callees).  Interrupts are already disabled by the CPU on ISR entry.
+// fast-isr interposer (CRT_DISABLE_FIRMWARE_ISR=1 path, cpc_crt0.asm) saves
+// AF/HL/BC before calling asm_interrupt_handler, which saves BC/DE around each
+// registered handler.  Neither layer saves IX, IY, or the Z80 shadow/alternate
+// register set (AF'/BC'/DE'/HL').
+//
+// IX/IY must be saved because SDCC uses IX as a frame pointer in callees.
+//
+// The shadow registers must ALSO be saved because a future AU5 music tracker
+// running inside this ISR (or any library called from do_periodic_isr_tasks)
+// may use exx/ex af,af' internally.  Without the save/restore the shadow set
+// of the interrupted main code would be silently corrupted, causing intermittent
+// crashes once AU5 is wired.  Save them now so the ISR is correct regardless
+// of what the tick body does — defensive correctness, not a pre-optimisation.
+//
+// Save/restore sequence mirrors the ZX IM2 ISR (asm_im2_push/pop_registers):
+//   entry: exx + ex af,af' (defb 0x08) swaps shadow→main position; push the four
+//          regs; exx returns to the C-visible main set for the rest of the handler.
+//   exit:  reverse: exx swaps shadow back to main position; pop in LIFO order;
+//          ex af,af' (defb 0x08) + exx restores both halves.
+//   ex af,af' (opcode 0x08) is encoded as defb in SDCC __asm blocks: the trailing
+//   apostrophe in the mnemonic confuses the SDCC C parser.
 //
 // Body: bump the divide-by-six counter; on every sixth tick run the SAME
 // portable do_timer_tick() / do_periodic_isr_tasks() the ZX ISR drives.  Kept
 // short so the 300 Hz budget (banking.md §3.5) is respected.
 static void cpc_fast_isr( void ) {
    __asm
+      ; --- save IX, IY (not preserved by CRT dispatcher) ---
       push ix
       push iy
+      ; --- save shadow/alternate register set ---
+      ; exx swaps shadow regs into main position for pushing.
+      ; defb 0x08 = ex af,af (single-quote omitted: SDCC C parser treats
+      ; the apostrophe in the mnemonic as a char literal delimiter).
+      exx
+      defb 0x08           ; = ex af,af (shadow AF into main position)
+      push af
+      push bc
+      push de
+      push hl
+      ; exx restores the main register set for C code that follows
+      exx
    __endasm;
 
    if ( ++cpc_isr_div_counter >= CPC_ISR_DIVIDER ) {
@@ -206,6 +237,16 @@ static void cpc_fast_isr( void ) {
    }
 
    __asm
+      ; --- restore shadow/alternate register set ---
+      ; exx brings shadow regs back to main position for popping
+      exx
+      pop hl
+      pop de
+      pop bc
+      pop af
+      defb 0x08           ; = ex af,af (restore shadow AF; apostrophe omitted)
+      exx
+      ; --- restore IX, IY ---
       pop iy
       pop ix
    __endasm;
