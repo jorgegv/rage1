@@ -30,6 +30,8 @@ use Data::Compare;
 use File::Path qw( make_path );
 use File::Copy;
 use File::Basename;
+use File::Temp qw( tempfile );
+use GD;
 
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
@@ -1551,23 +1553,184 @@ sub dispatch_png_asset_handling {
 
     if ( $platform =~ /^cpc/ ) {
         # A5-2: CPC PNG asset dispatch.
-        # §5.9 rule: MONO mode skips cpct_img2tileset for BTiles — shared
-        # 1bpp UDG bytes flow to both platforms unchanged.  Route MONO
-        # through the ZX path so validate_and_compile_btile works normally.
-        # FULL-COLOR mode delegates to _cpc_fullcolor_dispatch which invokes
-        # tools/cpc_asset_convert.pl as a subprocess.
+        # §5.9 rule (review fix #3): MONO mode is ASSET-KIND-specific:
+        #   - BTiles keep shared 1bpp UDG bytes (skip cpct_img2tileset) — they
+        #     route through the ZX path so the bytes are byte-identical to ZX.
+        #   - Sprites stay 2bpp PRE-BAKED via cpct_img2tileset, using the
+        #     resolved mono pen pair as the palette (§5.10).  They route through
+        #     the converter, NOT the ZX path.
+        # FULL-COLOR mode sends both BTiles and sprites through the converter.
         my $color_mode = lc( $game_config->{'color'}{'mode'} // 'full' );
         if ( $color_mode eq 'mono' ) {
-            my $code = main->can( $fn ) or
-                die "dispatch_png_asset_handling(cpc/mono): no PNG-asset sub '$fn' " .
-                    "(expected from RAGE::PNGFileUtils)\n";
-            return $code->( @args );
+            return _cpc_mono_dispatch( $fn, @args );
         }
         # FULL-COLOR CPC
         return _cpc_fullcolor_dispatch( $fn, @args );
     }
 
     die "Unknown platform '$platform' in dispatch_png_asset_handling\n";
+}
+
+# A5 review fix #3: CPC MONO PNG asset dispatch — asset-kind-specific (§5.9).
+#
+# BTiles (PNG_DATA → png_to_pixels_and_attrs):
+#   Keep shared 1bpp UDG bytes, byte-identical to the ZX build.  All BTile
+#   functions route straight to the ZX RAGE::PNGFileUtils subs.  cpct_img2tileset
+#   is NOT invoked for mono BTiles.
+#
+# Sprites (PNG_DATA / PNG_MASK → pick_pixel_data_by_color_from_png):
+#   Stay 2bpp PRE-BAKED via cpct_img2tileset, baked with the resolved mono pen
+#   pair (§5.10) as the palette.  Sprite functions route to the converter.
+#
+# The shared entry points (load_png_file, map_png_colors_to_zx_colors) cannot
+# know up-front which asset kind they belong to (the function name is the same
+# for BTile and sprite).  We resolve this by returning a lightweight CPC PNG
+# object from load_png_file that carries the source path; the terminal function
+# then decides:
+#   - png_to_pixels_and_attrs  → BTile  → run the ZX pipeline lazily on the path
+#                                          (load → transforms → colour-map →
+#                                          extract), returning ZX 1bpp data.
+#   - pick_pixel_data_by_color_from_png → Sprite → invoke the converter (2bpp).
+# This keeps mono-BTile output byte-identical to ZX while baking mono sprites
+# through cpctelera.
+sub _cpc_mono_dispatch {
+    my ( $fn, @args ) = @_;
+
+    if ( $fn eq 'load_png_file' ) {
+        my $path = $args[0];
+        # Defer: carry path + accumulate transforms; ZX load happens lazily
+        # in png_to_pixels_and_attrs (BTile) and is irrelevant for sprites.
+        return { __cpc_mono => 1, path => $path, transforms => [] };
+    }
+
+    if ( $fn eq 'png_rotate' ) {
+        my ( $obj, $deg ) = @args;
+        push @{ $obj->{'transforms'} }, { op => 'rotate', deg => $deg };
+        return $obj;
+    }
+    if ( $fn eq 'png_hmirror' ) {
+        my $obj = $args[0];
+        push @{ $obj->{'transforms'} }, { op => 'hmirror' };
+        return $obj;
+    }
+    if ( $fn eq 'png_vmirror' ) {
+        my $obj = $args[0];
+        push @{ $obj->{'transforms'} }, { op => 'vmirror' };
+        return $obj;
+    }
+    if ( $fn eq 'map_png_colors_to_zx_colors' ) {
+        # Deferred to png_to_pixels_and_attrs for BTiles; no-op for sprites.
+        return 1;
+    }
+
+    # BTile terminal: run the ZX pipeline so the 1bpp bytes are identical to ZX.
+    if ( $fn eq 'png_to_pixels_and_attrs' ) {
+        my ( $obj, $xpos, $ypos, $width, $height ) = @args;
+        my $png = load_png_file( $obj->{'path'} )
+            or die "_cpc_mono_dispatch: could not load PNG $obj->{'path'}\n";
+        # replay the recorded transforms in order (same order as the ZX
+        # BTile call site applies them)
+        for my $t ( @{ $obj->{'transforms'} } ) {
+            if    ( $t->{'op'} eq 'rotate'  ) { $png = png_rotate( $png, $t->{'deg'} ); }
+            elsif ( $t->{'op'} eq 'hmirror' ) { $png = png_hmirror( $png ); }
+            elsif ( $t->{'op'} eq 'vmirror' ) { $png = png_vmirror( $png ); }
+        }
+        map_png_colors_to_zx_colors( $png );
+        return png_to_pixels_and_attrs( $png, $xpos, $ypos, $width, $height );
+    }
+
+    # Sprite terminal: bake 2bpp via cpct_img2tileset using the mono pen pair.
+    if ( $fn eq 'pick_pixel_data_by_color_from_png' ) {
+        my ( $obj, $xpos, $ypos, $width, $height, $color, $hmirror, $vmirror ) = @args;
+        # Invoke the converter once per PNG object (first call = pixels; the
+        # PNG_MASK second call reuses the already-set extern stem).
+        unless ( defined $obj->{'cpc_extern_stem'} ) {
+            my $palette = _cpc_mono_pen_palette();   # resolved mono pen pair (§5.10)
+            my ( $stem, $base ) = _cpc_invoke_tileset_converter(
+                $obj->{'path'}, $xpos, $ypos, $width, $height,
+                { mode => 'spritesheet', mask => 1, palette_override => $palette }
+            );
+            $obj->{'cpc_extern_stem'}    = $stem;
+            $obj->{'cpc_extern_basename'} = $base;
+        }
+        # Empty placeholder; the real bytes live in the generated .c/.h.
+        return [];
+    }
+
+    die "_cpc_mono_dispatch: unhandled function '$fn'\n";
+}
+
+# A5 review fix #3: resolve the mono-mode CPC pen pair (§5.10) into a 4-entry
+# mode-1 firmware palette for cpct_img2tileset --palette-fw.
+#
+# Per README §5.10 "CPC palette construction from tokens" (mono mode):
+#   pen 0 = gamearea_attr BG (PAPER) colour
+#   pen 1 = gamearea_attr FG (INK) colour
+#   pens 2-3 = black (unused)
+#
+# The gamearea_attr text (e.g. "INK_WHITE | PAPER_BLACK", possibly + BRIGHT)
+# is parsed for its INK/PAPER colour names + BRIGHT modifier, then mapped to
+# CPC firmware-colour numbers via the canonical §5.10 table.  A per-game
+# CPC_COLOR_MAP override (if present) takes precedence.  When CPC_PALETTE is
+# set explicitly it wins outright (it is the authoritative palette source).
+sub _cpc_mono_pen_palette {
+    # Explicit CPC_PALETTE wins (authoritative; assets.md Q5 / §5.10).
+    if ( defined $game_config->{'cpc_palette'} && $game_config->{'cpc_palette'} ne '' ) {
+        return $game_config->{'cpc_palette'};
+    }
+
+    my $attr = $game_config->{'color'}{'gamearea_attr'} // '';
+    my ( $ink, $paper, $bright ) = _parse_zx_attr_tokens( $attr );
+
+    my $pen_bg = _cpc_fw_color_for( $paper // 'BLACK', $bright );
+    my $pen_fg = _cpc_fw_color_for( $ink   // 'WHITE', $bright );
+
+    # pens 2-3 unused → black (0)
+    return join( ',', $pen_bg, $pen_fg, 0, 0 );
+}
+
+# Parse a ZX attr expression ("INK_WHITE | PAPER_BLACK | BRIGHT") into
+# ( INK_COLORNAME, PAPER_COLORNAME, BRIGHT_BOOL ).
+sub _parse_zx_attr_tokens {
+    my $expr = shift // '';
+    my ( $ink, $paper, $bright );
+    for my $tok ( split /\|/, $expr ) {
+        $tok =~ s/^\s+|\s+$//g;
+        if    ( $tok =~ /^INK_(\w+)$/ )   { $ink   = uc $1; }
+        elsif ( $tok =~ /^PAPER_(\w+)$/ ) { $paper = uc $1; }
+        elsif ( $tok =~ /^BRIGHT$/ )      { $bright = 1; }
+    }
+    return ( $ink, $paper, $bright );
+}
+
+# Map a colour name (+ optional BRIGHT) to a CPC firmware-colour number using
+# the canonical §5.10 table, honouring a per-game CPC_COLOR_MAP override.
+sub _cpc_fw_color_for {
+    my ( $color, $bright ) = @_;
+    $color = uc $color;
+
+    # canonical §5.10 table (verified against the README mapping)
+    my %fw = (
+        BLACK   => [ 0,  0  ],   # [ normal, bright ]
+        BLUE    => [ 1,  2  ],
+        RED     => [ 3,  6  ],
+        MAGENTA => [ 4,  8  ],
+        GREEN   => [ 9,  18 ],
+        CYAN    => [ 10, 20 ],
+        YELLOW  => [ 12, 24 ],
+        WHITE   => [ 13, 26 ],
+    );
+
+    # per-game CPC_COLOR_MAP override: keyed by token (with or without BRIGHT_)
+    my $cmap = $game_config->{'cpc_color_map'} // {};
+    my $key_bright = "BRIGHT_$color";
+    if ( $bright && defined $cmap->{ $key_bright } ) { return $cmap->{ $key_bright }; }
+    if ( !$bright && defined $cmap->{ $color } )     { return $cmap->{ $color }; }
+    # also accept a bright-spelled override applied to the plain token
+    if ( $bright && defined $cmap->{ $color } )      { return $cmap->{ $color }; }
+
+    my $row = $fw{ $color } // $fw{ 'WHITE' };
+    return $bright ? $row->[1] : $row->[0];
 }
 
 # A5-2: CPC full-color PNG asset dispatch.
@@ -1662,9 +1825,17 @@ sub _cpc_fullcolor_dispatch {
 #
 # $opts hashref: { mode => 'tileset'|'spritesheet', mask => 0|1 }
 # $xpos, $ypos, $width, $height are in pixels (same as PNG_DATA args).
-# The stem is derived from the PNG basename so repeated calls for the same
-# PNG (different frames / transforms) all land in the same file — which is
-# correct since cpct_img2tileset processes the whole PNG sheet in one shot.
+#
+# CROP (A5 review fix #2): cpct_img2tileset / img2cpc do NOT crop — they
+# convert the WHOLE PNG sheet.  The ZX path honours the PNG_DATA crop region
+# (RAGE::PNGFileUtils slices [ypos..ypos+h-1][xpos..xpos+w-1]); the CPC path
+# must too.  We therefore pre-extract the WIDTH×HEIGHT region at (XPOS,YPOS)
+# from the source PNG into a temp PNG using GD, then feed THAT temp PNG to
+# the converter.  This makes the generated tiles exactly the requested region
+# (e.g. a 1×1 btile → 1 tile), not the whole sheet.
+#
+# The output stem/basename are derived from the *original* PNG name (not the
+# temp file) so generated C identifiers are stable and human-meaningful.
 sub _cpc_invoke_tileset_converter {
     my ( $png_path, $xpos, $ypos, $width, $height, $opts ) = @_;
     $opts //= {};
@@ -1681,13 +1852,22 @@ sub _cpc_invoke_tileset_converter {
             or die "_cpc_invoke_tileset_converter: could not create $cpc_dir\n";
     }
 
-    # Derive stem basename from the PNG filename
+    # Derive stem basename from the *original* PNG filename
     ( my $png_base = basename( $png_path ) ) =~ s/\.[^.]+$//;
     my $stem = "$cpc_dir/$png_base";
     my $base = $png_base;
 
-    # Gather CPC_PALETTE from game_config if present
-    my $palette_fw = $game_config->{'cpc_palette'} // '';
+    # Crop the requested region into a temp PNG (mirrors the ZX crop).
+    my $cropped_png = _cpc_crop_png_region( $png_path, $xpos, $ypos, $width, $height );
+
+    # Palette precedence:
+    #   1. explicit per-call override (mono sprites pass the resolved mono pen
+    #      pair via $opts->{palette_override}, per §5.9/§5.10)
+    #   2. game-config CPC_PALETTE (full-colour authoritative source)
+    #   3. wrapper built-in default (when neither is set)
+    my $palette_fw = $opts->{'palette_override'}
+                  // $game_config->{'cpc_palette'}
+                  // '';
 
     # Build wrapper invocation
     my $wrapper = "$FindBin::Bin/cpc_asset_convert.pl";
@@ -1705,10 +1885,13 @@ sub _cpc_invoke_tileset_converter {
     push @cmd, '--mask'        if $opts->{'mask'};
     push @cmd, '--palette-fw', $palette_fw  if $palette_fw ne '';
 
-    push @cmd, $png_path;
+    push @cmd, $cropped_png;
 
-    print "A5: CPC asset conversion: @cmd\n";
+    print "A5: CPC asset conversion (region ${width}x${height}+${xpos}+${ypos} of $png_path): @cmd\n";
     my $rc = system( @cmd );
+    # Clean up the temp cropped PNG regardless of success
+    my $saved_errno = $!;
+    unlink $cropped_png if defined $cropped_png && -f $cropped_png;
     die "_cpc_invoke_tileset_converter: cpc_asset_convert.pl exited " .
         ( $rc >> 8 ) . " for $png_path\n" if $rc;
 
@@ -1716,6 +1899,45 @@ sub _cpc_invoke_tileset_converter {
     -f "$stem.h" or die "_cpc_invoke_tileset_converter: expected $stem.h not generated\n";
 
     return ( $stem, $base );
+}
+
+# A5 review fix #2: extract a WIDTH×HEIGHT region at (XPOS,YPOS) from a source
+# PNG into a temporary PNG file, returning its path.  Mirrors the ZX crop
+# semantics in RAGE::PNGFileUtils::pick_pixel_data_by_color_from_png (which
+# slices rows [ypos..ypos+h-1] and cols [xpos..xpos+w-1]).  Caller must unlink
+# the returned temp file.
+sub _cpc_crop_png_region {
+    my ( $png_path, $xpos, $ypos, $width, $height ) = @_;
+
+    # Defaults: if the .gdata omitted any crop arg, fall back to the whole
+    # image dimension for that axis (defensive — PNG_DATA normally sets all 4).
+    my $src = GD::Image->newFromPng( $png_path )
+        or die "_cpc_crop_png_region: could not load PNG $png_path\n";
+    $xpos   //= 0;
+    $ypos   //= 0;
+    $width  //= $src->width  - $xpos;
+    $height //= $src->height - $ypos;
+
+    # Validate the region lies within the source image
+    if ( $xpos < 0 || $ypos < 0 ||
+         $xpos + $width  > $src->width ||
+         $ypos + $height > $src->height ) {
+        die sprintf(
+            "_cpc_crop_png_region: region %dx%d+%d+%d is outside PNG %s (%dx%d)\n",
+            $width, $height, $xpos, $ypos, $png_path, $src->width, $src->height );
+    }
+
+    # Build the cropped image (true-colour to preserve exact RGB for the
+    # converter's palette quantisation).
+    my $dst = GD::Image->newTrueColor( $width, $height );
+    $dst->copy( $src, 0, 0, $xpos, $ypos, $width, $height );
+
+    my ( $fh, $tmp ) = tempfile( 'cpc_crop_XXXXXX', SUFFIX => '.png', TMPDIR => 1 );
+    binmode $fh;
+    print {$fh} $dst->png;
+    close $fh;
+
+    return $tmp;
 }
 
 ######################################

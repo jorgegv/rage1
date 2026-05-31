@@ -30,15 +30,31 @@ perl <repo>/tools/cpc_asset_convert.pl \
     --output  <build/generated/cpc/<png_basename>> \
     [--mask]                           \
     [--palette-fw <n,n,n,...>]         \
-    <absolute-path-to-png>
+    <absolute-path-to-CROPPED-temp-png>
 ```
+
+### PNG crop region (review fix #2)
+
+`cpct_img2tileset` / `img2cpc` do **not** crop — they convert the *whole* PNG
+sheet.  The ZX path honours the `PNG_DATA XPOS=.. YPOS=.. WIDTH=.. HEIGHT=..`
+crop region (via `RAGE::PNGFileUtils`); the CPC path must too.
+
+Therefore `datagen.pl` (`_cpc_crop_png_region`, using GD) **pre-extracts** the
+`WIDTH×HEIGHT` region at `(XPOS,YPOS)` from the source PNG into a temporary PNG
+and feeds *that* temp file to the wrapper (the last positional argument above).
+The temp file is deleted after conversion.  So a `ROWS=1 COLS=1` BTile with
+`WIDTH=8 HEIGHT=8` yields exactly **one** tile (the requested 8×8 region), not
+the full sheet's worth of tiles.
+
+The generated C identifiers are still derived from the *original* PNG basename
+(not the temp file name), so they remain stable and meaningful.
 
 ### Invocation modes
 
 | Mode           | Used for            | Extra flag   |
 |----------------|---------------------|--------------|
-| `tileset`      | BTile `PNG_DATA`    | (none)       |
-| `spritesheet`  | Sprite `PNG_DATA`   | `--mask`     |
+| `tileset`      | BTile `PNG_DATA` (full-colour) | (none)        |
+| `spritesheet`  | Sprite `PNG_DATA` (full-colour AND mono) | `--mask` |
 
 ### Fixed arguments (Phase A5)
 
@@ -63,10 +79,17 @@ and are easily grep-able.
 
 ### Palette
 
-`CPC_PALETTE` from `Game.gdata` (comma-separated firmware colour numbers) is
-forwarded to `--palette-fw`.  When absent, the wrapper uses its built-in
-default (`mode 1: 1,24,20,6`).  For real games, `CPC_PALETTE` MUST be
-specified; the default is a generic fallback only.
+The `--palette-fw` value is resolved with this precedence (in
+`_cpc_invoke_tileset_converter`):
+
+1. **Per-call override** — mono sprites pass the resolved mono pen pair
+   (§5.10; see §4) via `$opts->{palette_override}`.
+2. **`CPC_PALETTE`** from `Game.gdata` (comma-separated firmware colour
+   numbers) — the authoritative source for full-colour assets.
+3. **Wrapper built-in default** (`mode 1: 1,24,20,6`) when neither is set.
+
+For full-colour games, `CPC_PALETTE` MUST be specified; the built-in default
+is a generic fallback only.
 
 ---
 
@@ -111,20 +134,24 @@ given `--basename cpc_asset_<base>`:
 | Identifier                       | Type                          | Description                    |
 |----------------------------------|-------------------------------|--------------------------------|
 | `cpc_asset_<base>_tileset[N]`    | `u8 * const`                  | Pointer array, 1 entry per tile|
-| `cpc_asset_<base>_NN`            | `const u8[W * H]`             | Pixel bytes for tile NN        |
-| `CPC_ASSET_<BASE>_NN_W`          | `#define`                     | Tile width in bytes            |
-| `CPC_ASSET_<BASE>_NN_H`          | `#define`                     | Tile height in bytes           |
+| `cpc_asset_<base>` (1 tile) /<br>`cpc_asset_<base>_NN` (≥2 tiles) | `const u8[W * H]` | Pixel bytes for tile NN |
+| `CPC_ASSET_<BASE>[_NN]_W`        | `#define`                     | Tile width in bytes            |
+| `CPC_ASSET_<BASE>[_NN]_H`        | `#define`                     | Tile height in bytes           |
 
 - `N` indexes into the tileset (0-based).
-- Tile indices use as many decimal digits as needed (minimum 2: `_00`, `_01`,
-  …, `_09`, `_10`, …, `_99`, `_100`, …).
+- **Single-tile output omits the numeric suffix**: a converted region yielding
+  exactly one tile is named `cpc_asset_<base>` (no `_00`); multi-tile output uses
+  `_00`, `_01`, … with as many digits as needed.  Because the post-crop region
+  (review fix #2) is sized to exactly the requested `WIDTH×HEIGHT`, a 1×1 BTile
+  produces a single unsuffixed tile.
 - `W` and `H` are the byte dimensions: for mode-1 8×8 pixels, `W=2`, `H=8`
   (2 bytes × 8 rows = 16 bytes/tile).
 
 ### How datagen consumes the tileset array
 
-`datagen.pl` generates `btile_<name>_frame_<f>_tiles[]` arrays that reference
-the tileset pointer array:
+`datagen.pl` references the `_tileset[]` **pointer array** (NOT the individual
+tile symbols) so it never has to reproduce cpctelera's per-tile naming/suffix
+rule.  It generates `btile_<name>_frame_<f>_tiles[]` arrays:
 
 ```c
 // Emitted by datagen.pl for a 1×1 BTile (ROWS=1, COLS=1, FRAMES=1):
@@ -137,6 +164,17 @@ uint8_t *btile_PngBtile_frame_0_tiles[1] = {
 For a 2×3 BTile (rows=2, cols=3), frame 0 references tileset entries 0..5;
 frame 1 (if animated) references entries 6..11; and so on.
 
+Sprites likewise reference the `_tileset[]` array (one entry per frame):
+
+```c
+// Emitted by datagen.pl for an N-frame extern Sprite:
+#include "cpc/<base>.h"
+uint8_t *sprite_<name>_frames[N] = {
+    (uint8_t*)cpc_asset_<base>_tileset[0],
+    ...
+};
+```
+
 This indirection avoids hardcoding `cpct_img2tileset`'s index-numbering format
 in datagen.
 
@@ -144,16 +182,43 @@ in datagen.
 
 ## §4. MONO vs FULL-COLOR dispatch
 
-Controlled by `COLOR MODE=MONO|FULL` in `Game.gdata`.
+Controlled by `COLOR MODE=MONO|FULL` in `Game.gdata`.  The dispatch is
+**asset-kind-specific** — BTiles and sprites diverge under MONO (README §5.9):
 
-| Mode        | BTile dispatch                              | Sprite dispatch                    |
-|-------------|---------------------------------------------|------------------------------------|
-| MONO        | ZX path (1bpp UDG bytes, shared with ZX)    | cpctelera (2bpp pre-baked, §5.9)   |
-| FULL-COLOR  | cpctelera via `_cpc_invoke_tileset_converter`| cpctelera via same                |
+| Mode        | BTile dispatch                                   | Sprite dispatch                                  |
+|-------------|--------------------------------------------------|--------------------------------------------------|
+| MONO        | **ZX path** — shared 1bpp UDG bytes, byte-identical to ZX (cpct_img2tileset SKIPPED) | **cpctelera** — 2bpp pre-baked via `--mode spritesheet --mask`, palette = resolved mono pen pair (§5.10) |
+| FULL-COLOR  | cpctelera via `_cpc_invoke_tileset_converter` (tileset mode) | cpctelera (spritesheet mode), palette = `CPC_PALETTE` |
 
-Implementation: `dispatch_png_asset_handling` in `datagen.pl` checks
-`$game_config->{'color'}{'mode'}` and routes accordingly.  See the function
-comment and `tools/datagen.pl` ~line 1560 for the dispatch code.
+Implementation:
+
+- `dispatch_png_asset_handling` (`tools/datagen.pl`) checks
+  `$game_config->{'color'}{'mode'}` and routes to `_cpc_mono_dispatch`
+  (MONO) or `_cpc_fullcolor_dispatch` (FULL-COLOR).
+- `_cpc_mono_dispatch` distinguishes BTile vs sprite by the terminal function
+  name: `png_to_pixels_and_attrs` ⇒ BTile (replays the ZX pipeline lazily on
+  the source path, returning ZX 1bpp data); `pick_pixel_data_by_color_from_png`
+  ⇒ sprite (invokes the converter).  The shared entry points (`load_png_file`,
+  `map_png_colors_to_zx_colors`, the `png_*mirror`/`png_rotate` transforms) are
+  deferred onto a lightweight CPC PNG object so the terminal function can decide.
+
+### Mono pen pair → palette resolution (§5.10)
+
+For mono sprites, `_cpc_mono_pen_palette` derives the 4-entry mode-1
+`--palette-fw` from the game's `gamearea_attr`:
+
+- pen 0 = `gamearea_attr` **PAPER** (background) colour → CPC firmware number
+- pen 1 = `gamearea_attr` **INK** (foreground) colour → CPC firmware number
+- pens 2–3 = `0` (black, unused)
+
+Colour-name → CPC firmware-number uses the canonical README §5.10 table
+(`BLACK 0, BLUE 1/2, RED 3/6, MAGENTA 4/8, GREEN 9/18, CYAN 10/20, YELLOW
+12/24, WHITE 13/26` for normal/BRIGHT), honouring any per-game
+`CPC_COLOR_MAP` override.  An explicit `CPC_PALETTE` directive, if present,
+overrides the auto-derived palette outright (it is the authoritative source).
+
+Example: `GAMEAREA_ATTR=INK_YELLOW|PAPER_BLUE` → palette `1,12,0,0`
+(pen0=BLUE=1, pen1=YELLOW=12).
 
 ---
 

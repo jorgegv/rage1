@@ -1,11 +1,14 @@
-// a5-cpc-png-test — Phase A5-3 manual test.
+// cpc-a5-png-test — Phase A5-3 MANUAL test (not in all-test-builds).
 //
 // Tiny CPC464 game in FULL-COLOR mode with one PNG-based BTile.
 // Purpose: verify that datagen.pl invokes tools/cpc_asset_convert.pl
 // and produces build/generated/cpc/btile.c + .h from the PNG.
 //
-// NOT wired into make all-test-builds (no CPC end-to-end toolchain
-// for full-color exists yet at A5).
+// The 'cpc-' prefix keeps this OUT of the ZX test subset, and the
+// MANUAL_TEST_GAMES exclusion in the top Makefile keeps it out of the
+// CPC subset too — so `make all-test-builds[-zx|-cpc]` never touch it
+// (A5 phase-exit: "No CPC binary built end-to-end yet"). Exercise by
+// hand: make config + data-cpc464 target_game=games/cpc-a5-png-test.
 //
 // DEVIATION from A5-3 spec (cpc6128 vs cpc464): cpc6128 does not exist
 // yet (Phase T3). Using cpc464 (cpc-flat, the only CPC toolchain at A5).
