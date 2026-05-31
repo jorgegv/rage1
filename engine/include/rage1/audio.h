@@ -16,6 +16,20 @@
 #include "features.h"
 
 /////////////////////////////////////////////////////////////////////
+// Unified CPC platform predicate.
+//
+// "Is this any CPC model?" — covers cpc464 today and cpc6128 later.
+// Both audio.h and audio_cpc_ay.h key off this SAME predicate so no
+// path silently misses a future model. It is the machine-identity
+// umbrella (cpc464 / cpc6128), independent of the memory model
+// (BUILD_FEATURE_PLATFORM_CPC_FLAT vs a future banked model).
+/////////////////////////////////////////////////////////////////////
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || \
+    defined( BUILD_FEATURE_PLATFORM_CPC6128 )
+    #define AUDIO_PLATFORM_IS_CPC
+#endif
+
+/////////////////////////////////////////////////////////////////////
 // Generic AUDIO API (Phase AU2 of doc/multiplatform-plan/audio.md)
 //
 // All engine code is encouraged to use these audio_* names.  Each
@@ -39,16 +53,12 @@
 // same build); CPC has only one SFX backend.
 /////////////////////////////////////////////////////////////////////
 
-// ----- Music backend selection -----
+// ----- ZX music backend selection -----
 #ifdef BUILD_FEATURE_AUDIO_MUSIC_BACKEND_ZX_AY
     #include "rage1/audio_zx_ay.h"
 #endif
 
-#ifdef BUILD_FEATURE_AUDIO_MUSIC_BACKEND_CPC_AY
-    #include "rage1/audio_cpc_ay.h"
-#endif
-
-// ----- SFX backend selection -----
+// ----- ZX SFX backend selection -----
 #ifdef BUILD_FEATURE_AUDIO_SFX_BACKEND_ZX_BEEPER
     #include "rage1/audio_zx_beeper.h"
 #endif
@@ -62,22 +72,17 @@
     #endif
 #endif
 
-#ifdef BUILD_FEATURE_AUDIO_SFX_BACKEND_CPC_AY
-    #ifndef BUILD_FEATURE_AUDIO_MUSIC_BACKEND_CPC_AY
-        #include "rage1/audio_cpc_ay.h"
-    #endif
-#endif
-
-// G7: the real CPC audio backends are Phase AU4 — datagen emits no CPC
-// AUDIO_*_BACKEND_* feature yet.  But the engine calls a few SFX entry points
-// (audio_sfx_beeper_*) UNCONDITIONALLY.  Pull in a no-op CPC audio stub so the
-// whole engine type-checks under +cpc for the G7 gfx-stub compile-test, unless
-// a real CPC audio backend header was already included above.  See
-// rage1/audio_cpc_stub.h.
-#if ( defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT ) ) \
-    && !defined( BUILD_FEATURE_AUDIO_SFX_BACKEND_CPC_AY ) \
-    && !defined( BUILD_FEATURE_AUDIO_MUSIC_BACKEND_CPC_AY )
-    #include "rage1/audio_cpc_stub.h"
+// ----- CPC audio backend (single include path) -----
+//
+// audio_cpc_ay.h is the ONE CPC-audio header (the old audio_cpc_stub.h is gone).
+// It is included on EVERY CPC build — not only when a CPC AY backend macro is
+// set — because the engine calls audio_sfx_beeper_*() unconditionally and the
+// CPC has no beeper backend to provide those symbols. The header carries:
+//   - the always-present beeper-SFX compat shims (route through CPC SFX HAL),
+//   - the music ops      (gated BUILD_FEATURE_AUDIO_MUSIC_BACKEND_CPC_AY),
+//   - the AY tracker SFX ops (gated BUILD_FEATURE_AUDIO_SFX_BACKEND_CPC_AY).
+#ifdef AUDIO_PLATFORM_IS_CPC
+    #include "rage1/audio_cpc_ay.h"
 #endif
 
 #endif // _AUDIO_H
