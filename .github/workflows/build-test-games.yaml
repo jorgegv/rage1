@@ -12,7 +12,7 @@ jobs:
     name: Build test games
     runs-on: ubuntu-latest
     container:
-      image: zxjogv/rage1-z88dk:latest
+      image: zxjogv/rage1-z88dk:build
       volumes:
         - ${{ github.workspace }}:/src/rage1
     steps:
