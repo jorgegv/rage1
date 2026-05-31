@@ -17,7 +17,11 @@
 
 #include "game_data.h"
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+// B5-4: guard updated from BUILD_FEATURE_ZX_TARGET_128 to the canonical
+// banked-platform condition.  ZX 128 defines both macros, so the new
+// condition is equivalent there (byte-identical output).  cpc-flat
+// (no banking) compiles this entire block out cleanly.
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 // trampoline function to call banked functions
 void memory_call_banked_function( uint8_t function_id ) {
     // pointer to table of functions in bank
@@ -74,4 +78,4 @@ uint8_t memory_call_banked_function_a16_a8_r8( uint8_t function_id, uint16_t arg
 
     return retval;
 }
-#endif
+#endif // BUILD_FEATURE_PLATFORM_ZX128 || BUILD_FEATURE_PLATFORM_CPC_BANKED

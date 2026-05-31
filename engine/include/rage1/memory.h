@@ -20,7 +20,10 @@
 // memory subsystem initialization (heap, banks. etc.)
 void init_memory(void);
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+// B5-4: guard updated from BUILD_FEATURE_ZX_TARGET_128 to the canonical
+// banked-platform condition.  ZX 128 defines both macros; the new
+// condition is equivalent there (byte-identical).  cpc-flat compiles out.
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 
     extern uint8_t memory_current_memory_bank;
     // returns previous memory bank
@@ -63,6 +66,6 @@ void init_memory(void);
 
     #include "banked_function_defs.h"
 
-#endif
+#endif // BUILD_FEATURE_PLATFORM_ZX128 || BUILD_FEATURE_PLATFORM_CPC_BANKED
 
 #endif // _MEMORY_H

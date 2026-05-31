@@ -24,7 +24,10 @@
 // struct dataset_assets_s *banked_assets;
 // struct dataset_assets_s *home_assets;
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+// B5-4: guard updated from BUILD_FEATURE_ZX_TARGET_128 to the canonical
+// banked-platform condition.  ZX 128 defines both macros; the new
+// condition is equivalent there (byte-identical).  cpc-flat compiles out.
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 void dataset_activate( uint8_t d ) __z88dk_fastcall {
     uint8_t previous_memory_bank;
 
@@ -56,20 +59,21 @@ void dataset_activate_force( uint8_t d ) __z88dk_fastcall {
     game_state.active_dataset = NO_DATASET;
     dataset_activate( d );
 }
-#endif
+#endif // BUILD_FEATURE_PLATFORM_ZX128 || BUILD_FEATURE_PLATFORM_CPC_BANKED
 
 void init_datasets(void) {
     // setup home dataset
     home_assets = &all_assets_dataset_home;
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
     // setup banked dataset; it is always at the same address
     banked_assets = (struct dataset_assets_s *) BANKED_DATASET_BASE_ADDRESS;
     // activate dataset
     dataset_activate( 0 );
 #endif
 
-#ifdef BUILD_FEATURE_ZX_TARGET_48
+// cpc-flat and zx48 have no banking; banked_assets aliases home_assets
+#if defined( BUILD_FEATURE_ZX_TARGET_48 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT )
     banked_assets = home_assets;
 #endif
 }

@@ -53,8 +53,12 @@
 
 #define DEFAULT_IO_7FFD_BANK_CFG	( 0x10 )
 
-// this only makes sense in the 128K build
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+// this only makes sense in banked builds (ZX 128 or future CPC 6128)
+// B5-4: guard updated from BUILD_FEATURE_ZX_TARGET_128 to the canonical
+// platform condition so cpc-flat (no banking) compiles this code out.
+// ZX 128 defines both BUILD_FEATURE_ZX_TARGET_128 and
+// BUILD_FEATURE_PLATFORM_ZX128, so the new condition is equivalent on ZX.
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 uint8_t memory_current_memory_bank;
 
 // The following function implemented below in asm to minimize T-states with
@@ -113,4 +117,4 @@ memory_switch_bank_no_ei:
     __endasm;
 }
 
-#endif
+#endif // BUILD_FEATURE_PLATFORM_ZX128 || BUILD_FEATURE_PLATFORM_CPC_BANKED
