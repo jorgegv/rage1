@@ -68,7 +68,7 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] R4 — real `gfx_cpctel.c` + `games/minimal_cpc/`
   - [x] G8 — real CPC backend wiring
   - [ ] G8a — CPC 16-bit sprite/position coords + `gfx_cpctel` bounds clamp (no-debt task, surfaced by G8 review — see README §5.12)
-  - [ ] IN6 — real CPC input via cpctelera keyboard scan
+  - [x] IN6 — real CPC input via cpctelera keyboard scan
   - [x] AU5 — real CPC audio via AT2 AKG generic player
   - [x] TS3 — first CPC regression baseline
   - [ ] B6 — cpc-banked banking infrastructure
