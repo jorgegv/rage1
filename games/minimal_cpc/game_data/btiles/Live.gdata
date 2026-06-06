@@ -1,6 +1,3 @@
-// A single 8x8 BTile used as on-screen decoration.  MONO game => the ATTR is
-// inert on CPC (the gfx_cpctel backend (void)-discards it); the pixel layer is
-// what renders, bit-expanded to mode-1 by the mono LUT.
 BEGIN_BTILE
 	NAME	Live
 	ROWS	1

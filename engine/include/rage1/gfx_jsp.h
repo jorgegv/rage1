@@ -140,7 +140,14 @@ typedef uint16_t                 gfx_tile_id_t;
 #define gfx_tile_register(idx,gfx)          jsp_tile_register((idx),(gfx))
 
 //--- Rectangle operations ---
+// On CPC, route through a RAGE1 helper that clears with the 16-byte mode-1 blank
+// tile (JSP's jsp_clear_rect uses an 8-byte ZX blank cell — wrong size on CPC).
+#ifdef GFX_JSP_CPC
+#define gfx_clear_rect(rect,attr,ch,flags)  gfx_jsp_cpc_clear_rect((rect))
+void gfx_jsp_cpc_clear_rect( gfx_rect_t *rect ) __z88dk_fastcall;
+#else
 #define gfx_clear_rect(rect,attr,ch,flags)  jsp_clear_rect((rect),(attr),(ch),(flags))
+#endif
 
 //--- Text printing ---
 #define gfx_print_set_pos(ctx,r,c)          jsp_print_set_pos((ctx),(r),(c))

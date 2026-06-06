@@ -1,30 +1,22 @@
-// minimal_cpc — smallest CPC game that runs the REAL RAGE1 ENGINE GAME LOOP
-// (Phase G8).  MONO mode: BTile/sprite cells are 8 mono UDG bytes
-// (README §5.9), bit-expanded to mode-1 at blit time by the gfx_cpctel mono
-// LUT.  No datagen CPC PNG asset conversion is used (that is Phase A5); all
-// graphics are inline PIXELS/MASK in the .gdata, exactly like games/minimal.
+// minimal_cpc — clone of games/minimal_jsp built for the Amstrad CPC with the
+// JSP graphics backend (Task 5 / R9, README §5.13).  Same assets as minimal_jsp
+// (8-frame animated hero, Live btile, Bullet) — converted to CPC mode-1 by
+// datagen's CPC asset backend (RAGE::AssetBackend::CPCMode1).  GFX_BACKEND=jsp
+// gives pixel-smooth (1 px) movement; PLATFORM cpc464 = cpc-flat.
 //
-// G8 deviation (documented): this targets cpc464 / cpc-flat — the only
-// working CPC toolchain (T2/R4).  cpc6128 / cpc-banked comes with Phase T3.
-//
-// Unlike the R4 static-render stub, this game DOES NOT supply its own main():
-// it links the full RAGE1 engine (engine/src/main.c + the banked_code/common
-// game-loop sources) so the interrupt-driven game loop runs on real CPC
-// hardware.  The 50 Hz frame interrupt drives enemy movement and animation.
-//
-// Phase IN6: real CPC keyboard input is now wired (engine/src/input.c CPC
-// branch + engine/src/cpc/cpct_keyboard.asm).  The MENU game-function below
-// selects CTRL_TYPE_KEYBOARD at boot — the cpc464 analogue of the deferred
-// cpc6128 controller-select overlay (IN6-4/5/6 are Phase 5, README §5.12) —
-// so the engine's check_controller() drives the hero from the Q/A/O/P + Space
-// keys.  Audio (AU5) is still a HAL stub.
+// The ZX beeper SOUND lines from minimal_jsp are dropped: cpc-flat has no
+// beeper backend (CPC audio is the AT2 AKG player, exercised by
+// minimal_audio_cpc, not here).  The MENU game-function uses the cpc-flat
+// keyboard-select menu (game_src/menu.c, Phase IN6).
 BEGIN_GAME_CONFIG
 	NAME		MinimalCpc
 	PLATFORM	cpc464
-	GFX_BACKEND	cpctel
-	COLOR		MODE=MONO GAMEAREA_ATTR=INK_WHITE|PAPER_BLACK
-	DEFAULT_BG_ATTR	INK_WHITE | PAPER_BLACK
+	GFX_BACKEND	JSP
 	SCREEN		INITIAL=Screen01
-	GAME_AREA	TOP=1 LEFT=1 BOTTOM=23 RIGHT=38
+	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK
 	GAME_FUNCTION	TYPE=MENU NAME=my_menu_screen FILE=menu.c
+	GAME_AREA	TOP=1 LEFT=1 BOTTOM=21 RIGHT=30
+	LIVES_AREA	TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
+	INVENTORY_AREA	TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
+	DEBUG_AREA	TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
 END_GAME_CONFIG

@@ -11,10 +11,17 @@
 #ifndef _BEEPER_H
 #define _BEEPER_H
 
-// for the beepfx FX constants
-#include <sound/bit.h>
-
 #include "features.h"
+
+// for the beepfx FX constants.  <sound/bit.h> is a z88dk ZX-only header; on the
+// CPC there is no beeper backend (audio is the AT2 AKG player), so skip it —
+// keeps beeper.h includable from platform-neutral engine sources (e.g.
+// bullet.c) under +cpc.  ZX builds stay byte-identical (the include still
+// happens, only after features.h).
+#if !( defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT ) \
+    || defined( BUILD_FEATURE_PLATFORM_CPC6128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED ) )
+#include <sound/bit.h>
+#endif
 
 // On 128K builds these symbols are provided as banked-call macros from
 // banked_function_defs.h (included via memory.h). When that header is

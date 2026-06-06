@@ -97,11 +97,15 @@ endif
 # loop sources + generated + game_src.  The game supplies NO main() — the
 # engine's engine/src/main.c entry is pulled.
 #
-# Two banked_code/common sources are ZX-only and EXCLUDED on cpc-flat:
+# One banked_code/common source is ZX-only and EXCLUDED on cpc-flat:
 #   - audio_zx_beeper.c : ZX beeper (bit_beepfx); the CPC has no beeper backend.
 #       The engine's audio_sfx_beeper_*() calls resolve to AU4's inline CPC
 #       shims in rage1/audio_cpc_ay.h, so no .c body is needed.
-#   - bullet.c          : weapon/bullet logic; minimal_cpc has no HERO_HAS_WEAPON.
+# bullet.c (weapon/bullet logic) IS included: it is fully guarded by
+# #ifdef BUILD_FEATURE_HERO_HAS_WEAPON, so it compiles to an empty TU for
+# no-weapon games (minimal_audio_cpc) and provides bullet_add /
+# bullet_animate_and_move_all for games with a weapon (minimal_cpc clone of
+# minimal_jsp — R9).
 # (cpc6128 / cpc-banked relocates these into real banks — Phase T3/B6.)
 # engine/src/*.c, MINUS nothing (the ZX-only bodies self-#ifdef out under +cpc).
 # engine/src/*.asm MINUS 00asmdata.asm: that file hand-places the timekeeping /
@@ -114,7 +118,7 @@ CPC_ENGINE_FULL_CSRC	= $(wildcard $(ENGINE_DIR)/src/*.c) \
 			  $(wildcard $(ENGINE_DIR)/src/cpc/*.c)
 CPC_ENGINE_FULL_ASMSRC	= $(filter-out %/00asmdata.asm, \
 			    $(wildcard $(ENGINE_DIR)/src/*.asm))
-CPC_BANKED_COMMON_CSRC	= $(filter-out %/audio_zx_beeper.c %/bullet.c, \
+CPC_BANKED_COMMON_CSRC	= $(filter-out %/audio_zx_beeper.c, \
 			    $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c))
 CPC_BANKED_COMMON_ASMSRC = $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm)
 

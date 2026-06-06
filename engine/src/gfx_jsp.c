@@ -56,10 +56,32 @@ void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
     cpct_setPALColour( 2, HW_YELLOW );
     cpct_setPALColour( 3, HW_RED );
     cpct_setBorder( HW_BORDER_BLUE );
+    // Clear the 16 KB screen RAM (0xC000-0xFFFF) to pen 0.  Setting the video
+    // mode via the gate array does NOT clear VRAM, so the firmware boot screen
+    // would otherwise show through the new palette (as speckle) in any cell the
+    // engine does not repaint.  (The interim cpctel backend did the same.)
+    {
+        uint8_t *vmem = (uint8_t *) 0xC000;
+        uint16_t i;
+        for ( i = 0; i < 0x4000u; i++ ) vmem[i] = 0x00u;
+    }
     jsp_init( (uint8_t *)_blank_tile, 0 );
     jsp_sprite_pool_init( _sprite_pool, GFX_JSP_MAX_SPRITES );
     gfx_invalidate( &full_screen );
     gfx_update();
+}
+
+// CPC rectangle clear.  JSP's own jsp_clear_rect() uses an 8-byte blank cell
+// and the ZX firmware-font address (0x3D00) for the char glyph — both ZX-sized;
+// on CPC mode 1 a cell is JSP_CELL_BYTES (16), so jsp_draw_background_tile would
+// read 8 valid bytes + 8 garbage (the yellow speckle).  Until JSP's library
+// gains a CPC-aware clear, RAGE1 clears CPC rects here with the proper
+// JSP_CELL_BYTES blank tile.  attr/ch are inert on CPC (README §5.5).
+void gfx_jsp_cpc_clear_rect( gfx_rect_t *rect ) __z88dk_fastcall {
+    uint8_t r, c;
+    for ( r = rect->row; r < rect->row + rect->height; r++ )
+        for ( c = rect->col; c < rect->col + rect->width; c++ )
+            jsp_draw_background_tile( r, c, (uint8_t *)_blank_tile );
 }
 
 #else // ZX

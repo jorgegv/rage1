@@ -1,7 +1,3 @@
-// Hero definition.  No BULLET (no weapon) to keep the CPC engine link set
-// minimal.  HSTEP/VSTEP/SEQUENCE_* are required by datagen even though the
-// hero stays put on CPC (real input is Phase IN6 — the stubbed input HAL
-// reports no movement).  LIVES reuses the Live BTile.
 BEGIN_HERO
 	NAME		Hero
 	SPRITE		Hero
@@ -13,4 +9,5 @@ BEGIN_HERO
 	HSTEP		2
 	VSTEP		2
 	LIVES		NUM_LIVES=3 BTILE=Live
+	BULLET		SPRITE=Bullet01 DX=3 DY=3 DELAY=0 MAX_BULLETS=4 RELOAD_DELAY=3
 END_HERO
