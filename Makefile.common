@@ -164,12 +164,33 @@ APPMAKE			= z88dk-appmake $(ZCC_TARGET)
 INC			= -I$(ENGINE_DIR)/include -I$(GENERATED_DIR)
 
 # JSP sprite engine: add library sources and include path
-# JSP is vendored as a git submodule at external/jsp
+# JSP is vendored as a git submodule at external/jsp.
+#
+# JSP's tree is: lib/*.{c,asm} = platform-neutral engine; lib/zx/*.asm = ZX
+# platform layer; lib/cpc/*.asm = CPC platform layer (README §5.13 / §5.13b,
+# cpc-renderer.md R6). Exactly ONE platform layer is compiled, chosen by the
+# z88dk target ($(ZCC_TARGET), set by the including Makefile-* before this file
+# is -included). The shared C/asm and include path are common to both.
 JSP_DIR			= external/jsp
+# Extra CFLAGS the JSP CPC build requires; defined here, appended to CFLAGS by
+# the CPC Makefile (Makefile-cpc-flat). Empty on ZX. CPC_MODE1 (regular, not
+# mono) is the Phase-1 mode (README §5.13a). The macros must reach both the C
+# preprocessor (-D) and the z80 assembler (-Ca-D); -Ca-I$(JSP_DIR) lets the CPC
+# asm resolve its JSP-root-relative includes (lib/cpc/jsp_cpc_geom.inc).
+JSP_CPC_CFLAGS		=
 ifeq ($(BUILD_GFX_BACKEND),jsp)
     CSRC		+= $(wildcard $(JSP_DIR)/lib/*.c)
     ASMSRC		+= $(wildcard $(JSP_DIR)/lib/*.asm)
     INC			+= -I$(JSP_DIR)/include
+    ifeq ($(ZCC_TARGET),+cpc)
+        ASMSRC		+= $(wildcard $(JSP_DIR)/lib/cpc/*.asm)
+        JSP_CPC_CFLAGS	= -DJSP_TARGET_CPC -Ca-DJSP_TARGET_CPC \
+				  -DCPC_MODE1 -Ca-DCPC_MODE1 \
+				  -DJSP_CELL_MODEL_PIXEL -Ca-DJSP_CELL_MODEL_PIXEL \
+				  -Ca-I$(JSP_DIR) -pragma-define:REGISTER_SP=0x9800
+    else
+        ASMSRC		+= $(wildcard $(JSP_DIR)/lib/zx/*.asm)
+    endif
 endif
 
 CFLAGS			= -vn -SO3 --opt-code-size -compiler=sdcc -clib=sdcc_iy --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(DEBUG_FLAGS)
