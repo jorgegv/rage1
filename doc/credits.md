@@ -41,38 +41,49 @@ Repository: <https://github.com/jorgegv/rage1>
 - **Licence**: see `external/jsp/LICENSE`.
 - **URL**: <https://github.com/jorgegv/jsp>
 
-### cpctelera
+### cpctelera (submodule removed — translated primitives retained)
 
 - **Component**: cpctelera — engine + low-level library for the
-  Amstrad CPC family, used by RAGE1's CPC renderer backend
-  (Phase R / Phase 3 of the cross-platform plan).
-- **Path in tree**: `external/cpctelera/` (git submodule).
-- **Pinned commit**: `662fc885adc3301205c87d2cd89462d67a64d809`
-  (on upstream `development` branch; tag base `v1.3.2-1322-g662fc885`).
+  Amstrad CPC family. RAGE1 no longer vendors cpctelera as a submodule.
+  A small set of its low-level hardware-I/O primitives was **hand-translated**
+  from `sdas` to z88dk `z80asm` and lives permanently in-tree under
+  `engine/src/cpc/` (`cpct_video.asm`, `cpct_gfx_m1.asm`, `cpct_strings_m1.asm`,
+  `cpct_keyboard.asm`). Those files compile standalone under z88dk with **no
+  cpctelera library dependency**; their cpctelera attribution / credit headers
+  are kept verbatim.
+- **Status**: The `external/cpctelera/` git submodule was **removed in
+  Phase 4J R10** (reference-only, never compiled), together with the interim
+  `gfx_cpctel` graphics backend and the `cpct_img2tileset` host asset converter.
+  RAGE1's CPC graphics engine is now JSP (see
+  `doc/multiplatform-plan/cpc-renderer.md`): byte-aligned CPC sprite libraries
+  cannot do 1-px horizontal movement, which is why a realtime-shift engine (JSP)
+  was chosen instead. Only the translated `engine/src/cpc/` primitives remain.
+- **Pinned commit (when vendored)**: `662fc885adc3301205c87d2cd89462d67a64d809`
+  (upstream `development` branch; tag base `v1.3.2-1322-g662fc885`) — the commit
+  the `engine/src/cpc/` translations were derived from.
 - **Author(s)**: Francisco Gallego-Durán (ronaldo / FremosCPM) and
   the cpctelera contributors.
-- **Licence**: GNU Lesser General Public License v3.0 (LGPL-3.0). See
-  `external/cpctelera/LICENSE` for the full text.
+- **Licence**: GNU Lesser General Public License v3.0 (LGPL-3.0). The
+  per-file LGPL-3.0 attribution headers in `engine/src/cpc/` carry the
+  licence for the retained translated code.
 - **URL**: <https://github.com/lronaldo/cpctelera>
 
 ### Arkos Tracker 2 / AKG player
 
 - **Component**: AKG (Arkos Tracker 2 generic / "Arkos 2 Keyframed
-  Generic") music + SFX player routines, used indirectly via
-  cpctelera's AT2 wrapper for CPC audio playback.
-- **Path in tree**: vendored inside `external/cpctelera/` (see
-  cpctelera's own attribution and licence headers for the exact
-  source files).
+  Generic") music + SFX player routine, used by RAGE1's ZX and CPC AY
+  audio backends.
+- **Path in tree**: `engine/banked_code/audio/arkos2_player.asm` — a single
+  canonical in-tree copy (translated to z88dk `z80asm`), shared by the ZX
+  (`audio_zx_ay`) and CPC (`audio_cpc_ay`) backends via per-hardware wrapper
+  `.inc` files. No longer vendored inside the (R10-removed) cpctelera submodule.
 - **Author(s)**: Julien Névo (Targhan) — Arkos Tracker 2 team.
-- **Licence**: see the headers of the AT2 source files distributed
-  by cpctelera (typically free for non-commercial use; check upstream
-  before shipping a commercial title).
+- **Licence**: see the AT2 player licence (typically free for non-commercial
+  use; check upstream before shipping a commercial title).
 - **URL**: <https://www.julien-nevo.com/arkostracker/>
-- **Status**: **Placeholder attribution.** RAGE1 does not yet link
-  the AKG player; this entry is recorded here per the Phase R1 plan
-  (see `doc/multiplatform-plan/cpc-renderer.md` § R1-3) and **must be
-  verified and tightened in Phase AU5** (audio.md) when the audio
-  backend actually integrates cpctelera's AT2 wrapper.
+- **Status**: RAGE1 links the AKG player (Phase AU4/AU5): ZX 128K AY music +
+  SFX, and CPC AY via the 8255 PPI. The Spectrum branch is byte-for-byte the
+  pre-move single-file player.
 
 ---
 
@@ -80,8 +91,8 @@ Repository: <https://github.com/jorgegv/rage1>
 
 - **z88dk**: C cross-compiler and standard library, used as the
   RAGE1 build driver. <https://github.com/z88dk/z88dk>
-- **SDCC**: C compiler backend, used by z88dk and also bundled inside
-  cpctelera for prebuilding its `.lib`. <http://sdcc.sourceforge.net/>
+- **SDCC**: C compiler backend, used by z88dk (`zcc ... -compiler=sdcc`).
+  <http://sdcc.sourceforge.net/>
 - **z88dk-zx0**: ZX0 compressor for datasets / codesets.
 - **Perl 5** + CPAN modules (`Data::Compare`, `List::MoreUtils`, `GD`,
   `YAML`, `Algorithm::FastPermute`, `Digest::SHA1`) for `tools/datagen.pl`,

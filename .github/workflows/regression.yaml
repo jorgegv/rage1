@@ -57,12 +57,9 @@ jobs:
         with:
           submodules: recursive
 
-      # R3-1: cpctelera asset converters are needed by the CPC build/data step.
-      - name: Install cpctelera asset converters
-        run: |
-          cd /src/rage1 && \
-          tools/install-cpctelera-converters.sh && \
-          cpct_img2tileset --help 2>&1 | grep -q USAGE
+      # R10: the cpctelera asset-converter install step was removed with the
+      # external/cpctelera submodule; CPC asset conversion is now in-process
+      # (datagen's RAGE::AssetBackend).  No external host tool is needed.
 
       # The runner builds each test game itself (per platform) before running
       # the emulator, so no separate build step is needed here.

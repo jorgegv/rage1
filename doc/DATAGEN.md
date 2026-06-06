@@ -873,17 +873,15 @@ Dispatch keys:
 | Platform pattern | Behaviour |
 | --- | --- |
 | `/^zx/`  | Routes to the matching `RAGE::PNGFileUtils` sub (current ZX 48 / ZX 128 behaviour). |
-| `/^cpc/` | Hard error: `die "CPC asset conversion not yet wired — see Phase A5"`. |
+| `/^cpc/` | MONO BTiles route through the ZX `RAGE::PNGFileUtils` pipeline (shared 1bpp UDG bytes, byte-identical to ZX); the per-cell mode-1 repack is done later by `RAGE::AssetBackend`. Full-colour CPC and CPC PNG *sprites* are a hard error (the `cpct_img2tileset` converter path was retired at R10). |
 | default  | Hard error: `die "Unknown platform '<name>' in dispatch_png_asset_handling"`. |
 
-Architectural convention (see
-`doc/multiplatform-plan/README.md` §5.1 and
-`doc/multiplatform-plan/assets.md` §3.1): **CPC asset conversion
-shells out to cpctelera's `cpct_img2tileset` as a subprocess** —
-new per-platform encoders are *not* added inside
-`RAGE::PNGFileUtils`. The seam therefore lives in `datagen.pl`, not
-in the PNG utility module, and the `^cpc` branch of this dispatcher
-is reserved for that subprocess wiring (landed in Phase A5).
+Architectural convention (R10, 2026-06-06): **CPC asset conversion is
+done in-process** by datagen's `RAGE::AssetBackend` (CPC Mode-1) — it no
+longer shells out to cpctelera's `cpct_img2tileset` (that converter, its
+`tools/cpc_asset_convert.pl` wrapper, and the `external/cpctelera`
+submodule were all removed). New per-platform encoders are *not* added
+inside `RAGE::PNGFileUtils`; the platform seam lives in `datagen.pl`.
 
 # FLOWGEN
 

@@ -638,10 +638,11 @@ These ZX-isms are **not** moved into the HAL, intentionally:
 > **INTERIM / SUPERSEDED 2026-06-05 (README §5.13).** This section
 > documents the **interim `gfx_cpctel`** backend (built under G7/G8,
 > cell-granular). The live CPC backend is **JSP** — see **Phase G10**
-> (§4) and cpc-renderer.md §0. `gfx_cpctel.{c,h}` is retired at R10 once
-> JSP-CPC reaches parity. §3 is retained as historical record of the
-> transitional renderer; every `gfx_cpctel.*` reference and "CPC renderer
-> library" framing below maps to "JSP in CPC mode" in the live design.
+> (§4) and cpc-renderer.md §0. `gfx_cpctel.{c,h}` was **retired (deleted) at
+> R10** (2026-06-06), together with the `external/cpctelera` submodule. §3 is
+> retained as historical record of the transitional renderer; every
+> `gfx_cpctel.*` reference and "CPC renderer library" framing below maps to
+> "JSP in CPC mode" in the live design.
 
 This section is the HAL-side integration. **Choice of CPC graphics
 library (cpctelera vs alternatives), licence audit, asset-tool

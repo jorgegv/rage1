@@ -729,8 +729,9 @@ The changes needed inside datagen are:
    parameterisation is `gfx.md`'s territory.
 5. **`get_sprite_engine()` generalises** — today it returns
    `'sp1'` or `'jsp'`; it becomes `get_gfx_backend()` returning
-   `'sp1'`, `'jsp'`, `'cpctel'`, etc. (per README §5.4 naming
-   rule: library short-name). The CPC backend choice is forced by
+   `'sp1'` or `'jsp'` (per README §5.4 naming rule: library
+   short-name; the interim CPC `'cpctel'` value was retired at R10).
+   The CPC backend choice is forced by
    the platform; the ZX backend remains user-selectable
    (`SPRITE_ENGINE` or `GFX_BACKEND` directive in GAME_CONFIG —
    both spellings accepted indefinitely per README §5.6).

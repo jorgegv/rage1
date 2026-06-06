@@ -5,19 +5,29 @@
 > **cpctelera is fully revoked** (README [§5.13](README.md#513-cpc-graphics-engine-switched-from-cpctelera-to-jsp-cpctelera-fully-revoked)).
 > The CPC graphics backend is **JSP in CPC mode** (`GFX_BACKEND=jsp`,
 > platform-discriminated), which gives **pixel-smooth (1 px) horizontal
-> movement** — the capability no byte-aligned CPC library (cpctelera
-> included) could provide. The **current** CPC-renderer plan is
+> movement**.
+>
+> **Explored & discarded — no 1-px horizontal movement.** cpctelera (and
+> byte-aligned CPC sprite libraries in general — e.g. cpcrslib) were evaluated
+> and rejected as the RAGE1 CPC sprite engine: a byte-aligned blitter can only
+> place sprites on byte boundaries, so the finest horizontal step it can render
+> is one screen byte = **2 px in Mode 0, 4 px in Mode 1, 8 px in Mode 2**. None
+> can do single-pixel horizontal motion. JSP — a **realtime-shift** sprite
+> engine (it shifts pixels at draw time rather than pre-shifting byte-aligned
+> frames) — delivers 1-px movement, which is why it was chosen instead. The
+> interim cpctelera-based `gfx_cpctel` backend was therefore retired and the
+> `external/cpctelera` submodule removed in **R10**.
+>
+> The **current** CPC-renderer plan is
 > **[§0 below](#0-current-plan-cpc-graphics-engine--jsp-phases-r6r10)**
 > (phases **R6–R10**).
 >
 > Everything from **§1 onward** (the cpctelera library survey, licence
 > audit, submodule layout, sdas→z80asm translation workflow, and the
 > original phases **R1–R5**) is **retained as history**. R1–R5 were
-> executed and produced the *interim* `gfx_cpctel` backend that
-> `games/minimal_cpc` runs today; they are not deleted because (a) the
-> interim backend stays green until JSP-CPC reaches parity, and (b) the
-> hand-translated CPC hardware-I/O primitives they produced are **kept,
-> with their cpctelera credit intact** (see §0.6).
+> executed and produced the *interim* `gfx_cpctel` backend (retired at R10);
+> they are not deleted because the hand-translated CPC hardware-I/O primitives
+> they produced are **kept, with their cpctelera credit intact** (see §0.6).
 
 ## 0. CURRENT PLAN: CPC graphics engine = JSP (phases R6–R10)
 
@@ -146,16 +156,20 @@ assets.md **A8-7** text-mode→PNG bridge (the ZX games author sprites/btiles as
 End goal: building `games/minimal` for a CPC `PLATFORM` works off the shared
 core, and the CPC-only stub is on track for retirement at testing.md TS6.
 
-**R10 — retire the interim backend + remove cpctelera.** Once R9 is green:
-delete `engine/src/gfx_cpctel.{c,h}` and `BUILD_FEATURE_GFX_BACKEND_CPCTEL`;
-`git rm external/cpctelera` and drop its `.gitmodules` entry; from
-`engine/src/cpc/` drop only what JSP supersedes (`cpct_drawSprite` in
-`cpct_gfx_m1.asm`; `cpct_strings_m1.asm` if no production path draws
-firmware-font text). **Keep** `cpct_video.asm`, `cpct_keyboard.asm`,
-`cpct_getScreenPtr`/`cpct_setBorder`, and `asmdata_cpc.c` — with their
-attribution headers intact (§0.6). Update README §5.13's "interim" notes
-to "removed". Audio (R5-4) is already cpctelera-independent; input (R5-5)
-keeps using `cpct_keyboard.asm`.
+**R10 — retire the interim backend + remove cpctelera. DONE (2026-06-06).**
+Deleted `engine/src/gfx_cpctel.{c,h}` and `BUILD_FEATURE_GFX_BACKEND_CPCTEL`;
+migrated `games/minimal_audio_cpc` and `games/00cpc-compile-test` to
+`GFX_BACKEND=jsp`; retired `games/cpc-a5-png-test`; removed the
+`cpct_img2tileset` full-colour converter wiring from `datagen.pl` (plus the
+`cpc_asset_convert.pl` wrapper, the `install-cpctelera-converters.sh` installer,
+and the matching CI / Dockerfile steps); `git rm external/cpctelera` and dropped
+its `.gitmodules` stanza. **`engine/src/cpc/` was kept UNCHANGED** — all four
+asm files (`cpct_video.asm`, `cpct_gfx_m1.asm`, `cpct_strings_m1.asm`,
+`cpct_keyboard.asm`) plus `asmdata_cpc.c` stay, with their cpctelera
+attribution headers intact (§0.6); JSP links them as its CPC HW-I/O layer.
+ZX output is byte-identical and `games/minimal_cpc` renders unchanged. Audio
+(R5-4) was already cpctelera-independent; input (R5-5) keeps using
+`cpct_keyboard.asm`.
 
 ### 0.5 Banking / firmware primitives (cross-ref banking.md)
 

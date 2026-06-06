@@ -17,11 +17,11 @@
 #  tests/00regression/README.md for the verified autocmd recipe.)
 #
 # Phase T0 (cross-platform plan) additions:
-#   - gcc / gcc-c++: needed to build cpctelera's bundled host tools
-#     (2cdt, iDSK, hex2bin, dskgen, img2cpc) under external/cpctelera/
-#     on demand from the submodule. No system-wide install of cpctelera.
-#   - The cpctelera submodule itself is brought in via the workspace
-#     checkout (CI uses `submodules: recursive`); no clone happens here.
+#   - gcc / gcc-c++: needed to build the CPC host tool 2cdt (CDT generation)
+#     from cpc-dev-tool-chain at image build time.
+#   (R10: the cpctelera submodule and its host asset converter Img2CPC /
+#   cpct_img2tileset were removed; CPC asset conversion is now in-process in
+#   datagen's RAGE::AssetBackend, needing no external host tool.)
 
 # ============================================================
 # Stage 1: build — ZX + CPC compile environment
@@ -62,14 +62,6 @@ RUN \
 	git clone https://github.com/cpcitor/cpc-dev-tool-chain ${TWOCDT_PATH} \
 	&& gcc -o ${Z88DK_PATH}/bin/2cdt ${TWOCDT_PATH}/cpclib/2cdt/2cdt.c \
 	|| ( echo "2cdt build failed — CDT generation will be skipped at runtime" ; true )
-
-# Phase R3: build dependency for cpctelera's host asset converter
-# (Img2CPC + cpct_img2tileset).  Requires gcc-c++ (already above) + freeimage.
-# The converter itself is built/installed at CI time by
-# tools/install-cpctelera-converters.sh (see .github/workflows/build-test-games.yaml),
-# because Img2CPC needs the external/cpctelera submodule which only exists after
-# the workspace checkout (CI uses `submodules: recursive`) — not at image build.
-RUN dnf install -y freeimage freeimage-devel
 
 ENV PATH="${Z88DK_PATH}/bin:$HOME/perl5/bin:${PATH}" \
     ZCCCFG="${Z88DK_PATH}/lib/config/" \

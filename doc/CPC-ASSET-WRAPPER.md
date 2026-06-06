@@ -2,6 +2,14 @@
 
 Phase A5-4 documentation.
 
+> # ⚠ RETIRED 2026-06-06 (Phase 4J R10)
+> The `cpct_img2tileset` host converter, its `tools/cpc_asset_convert.pl`
+> wrapper, and the `external/cpctelera` submodule it depended on were **all
+> removed in R10**, together with the interim `gfx_cpctel` backend. CPC asset
+> conversion is now done **in-process** by datagen's `RAGE::AssetBackend`
+> (CPC Mode-1), needing no external host tool. This document is retained only
+> as a historical record of the removed wrapper↔datagen contract.
+
 ## Overview
 
 For CPC platforms, RAGE1's asset pipeline shells out to cpctelera's

@@ -449,29 +449,30 @@ own `Makefile-cpc-banked` and `zpragma-cpc-banked.inc`.
 Rename `SPRITE_ENGINE` → **`GFX_BACKEND`** at the Makefile/.gdata level
 (see also `gfx.md`). Default still `sp1`. Allowed values per platform:
 
-> **Updated 2026-06-05 (README §5.13 / §5.4):** the CPC default
-> `GFX_BACKEND` is **`jsp`**, not `cpctel`. JSP is the single
+> **Updated 2026-06-05 (README §5.13 / §5.4); R10 done 2026-06-06:** the CPC
+> default `GFX_BACKEND` is **`jsp`**, not `cpctel`. JSP is the single
 > cross-platform backend; the CPC build is chosen by the `PLATFORM` axis.
-> `cpctel` (cpctelera) and `cpcrs` (cpcrslib) are **reserved names only**;
-> `BUILD_FEATURE_GFX_BACKEND_CPCTEL` is removed at R10. The table/paragraph
-> below show the original cpctelera-era values for history.
+> The interim `cpctel` backend was **retired at R10**: `datagen.pl` now
+> accepts only `sp1` or `jsp` (declaring `cpctel` is a hard error — no
+> backward-compat alias, since no released game ever used CPC mode), and
+> `BUILD_FEATURE_GFX_BACKEND_CPCTEL` / `gfx_cpctel.{c,h}` / the
+> `external/cpctelera` submodule are removed. The table below shows the
+> live allowed values (the cpctelera-era `cpctel` value is history only).
 
-| PLATFORM  | Default `GFX_BACKEND` | Allowed                                   |
-|-----------|-----------------------|-------------------------------------------|
-| `zx48`    | `sp1`                 | `sp1`, `jsp`                              |
-| `zx128`   | `sp1`                 | `sp1`, `jsp`                              |
-| `cpc464`  | `jsp` *(was `cpctel`)*  | `jsp` (`cpctel`/`cpcrs` reserved names only) |
-| `cpc6128` | `jsp` *(was `cpctel`)*  | `jsp` (`cpctel`/`cpcrs` reserved names only) |
+| PLATFORM  | Default `GFX_BACKEND` | Allowed       |
+|-----------|-----------------------|---------------|
+| `zx48`    | `sp1`                 | `sp1`, `jsp`  |
+| `zx128`   | `sp1`                 | `sp1`, `jsp`  |
+| `cpc464`  | `jsp` *(was `cpctel`)*  | `jsp`         |
+| `cpc6128` | `jsp` *(was `cpctel`)*  | `jsp`         |
 
 **Backend naming rule**: a `GFX_BACKEND` value is the **short name of
 the underlying library**, never a generic platform tag. ZX backends
 follow this today (`sp1`, `jsp`); the CPC graphics engine is **`jsp`**
-too (same library, selected by `PLATFORM`). `cpctel`/`cpcrs`/`cpc<lib>`
-stay reserved for any future first-class CPC alternative. Engine code
-gates the CPC build on the `PLATFORM` macros
-(`BUILD_FEATURE_PLATFORM_CPC_*`), matching `gfx.md`'s G10 usage; the
-`BUILD_FEATURE_GFX_BACKEND_CPCTEL` macro is retired with the interim
-backend (R10).
+too (same library, selected by `PLATFORM`). A future first-class CPC
+alternative (e.g. `cpcrs` for cpcrslib) would be added as a new short
+name then. Engine code gates the CPC build on the `PLATFORM` macros
+(`BUILD_FEATURE_PLATFORM_CPC_*`), matching `gfx.md`'s G10 usage.
 
 `SPRITE_ENGINE` (old name) remains accepted at the `.gdata` level
 **indefinitely** as a silent alias for `GFX_BACKEND` (per README
