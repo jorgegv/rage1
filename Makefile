@@ -212,7 +212,7 @@ build-minimal_audio_cpc:
 
 # G7-4: synthetic CPC engine compile-test. Configures + datagens the
 # 00cpc-compile-test game for cpc464, then COMPILE-ONLY type-checks the whole
-# RAGE1 engine (engine/src/*.c) under +cpc against the 'cpctel' stub backend.
+# RAGE1 engine (engine/src/*.c) under +cpc against the live JSP backend.
 # Linkage is intentionally not attempted (gfx.md Phase G7 phase-exit: "linkage
 # may fail; that is acceptable"). The point is C-level type-checking.
 build-00cpc-compile-test:

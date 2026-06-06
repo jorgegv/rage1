@@ -23,7 +23,7 @@
 // no banking, so this single TU carries BOTH the generic tracker_* orchestration
 // AND the Arkos2 tracker_specific_* bindings.
 //
-// Like gfx_cpctel.c / audio_cpc_ay.c, this TU lives in engine/src/ (compiled by
+// Like audio_cpc_ay.c, this TU lives in engine/src/ (compiled by
 // every build) and self-#ifdefs out to an EMPTY translation unit unless the CPC
 // AY music backend is selected — so ZX builds stay byte-identical.
 //

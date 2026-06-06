@@ -65,13 +65,12 @@ ASMSRC			= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
 # ---- Phase R4: real CPC gfx HAL link set -------------------------------
 # A CPC game that opts in (CPC_LINK_ENGINE_GFX=1, set by `make build-minimal_cpc`)
 # links the REAL RAGE1 gfx HAL: the generic gfx.c/screen.c, the active CPC
-# backend gfx_cpctel.c (gfx_sp1.c/gfx_jsp.c compile to EMPTY TUs under cpctel),
-# and the translated cpctelera asm primitives under engine/src/cpc/.  This is
-# the minimal engine subset needed to RENDER statically (R4); the full engine
+# backend gfx_jsp.c (gfx_sp1.c compiles to an EMPTY TU under jsp), and the
+# translated CPC HW-I/O asm primitives under engine/src/cpc/.  This is the
+# minimal engine subset needed to RENDER statically (R4); the full engine
 # main loop / datasets / banking stay OUT (deferred to G8/B6).  The game then
 # supplies its OWN main() in game_src (so engine/src/main.c is NOT pulled).
 CPC_ENGINE_GFX_CSRC	= $(ENGINE_DIR)/src/gfx.c \
-			  $(ENGINE_DIR)/src/gfx_cpctel.c \
 			  $(ENGINE_DIR)/src/gfx_sp1.c \
 			  $(ENGINE_DIR)/src/gfx_jsp.c \
 			  $(ENGINE_DIR)/src/screen.c
@@ -83,8 +82,8 @@ CPC_ASSET_CSRC		= $(wildcard $(GAME_SRC_DIR)/assets/*.c)
 ifeq ($(CPC_LINK_ENGINE_GFX),1)
 CSRC			+= $(CPC_ENGINE_GFX_CSRC) $(CPC_ASSET_CSRC)
 ASMSRC			+= $(CPC_ENGINE_GFX_ASMSRC)
-# -I the assets dir so the cpct_img2tileset-generated header's <types.h>
-# (cpctelera u8 shim) resolves; -I game_src so "assets/sprite.h" resolves.
+# -I game_src so a game's own "assets/sprite.h" resolves; -I the assets dir for
+# any game-supplied pre-baked asset headers.
 CPC_EXTRA_INC		= -I$(GAME_SRC_DIR) -I$(GAME_SRC_DIR)/assets
 endif
 
@@ -126,9 +125,9 @@ ifeq ($(CPC_LINK_ENGINE_FULL),1)
 # CSRC/ASMSRC are REASSIGNED (=) here, which drops the JSP library sources that
 # Makefile.common added to CSRC/ASMSRC for GFX_BACKEND=jsp — so pull them back
 # in via $(JSP_CSRC)/$(JSP_ASMSRC) (empty unless the backend is jsp). With the
-# jsp backend the active gfx body is gfx_jsp.c (gfx_cpctel.c compiles to an
-# empty TU); the engine/src/cpc/*.asm HW-I/O primitives (mode/palette/keyboard)
-# are still linked via $(CPC_ENGINE_GFX_ASMSRC). README §5.13 / cpc-renderer R6.
+# jsp backend the active gfx body is gfx_jsp.c (gfx_sp1.c compiles to an empty
+# TU); the engine/src/cpc/*.asm HW-I/O primitives (mode/palette/keyboard) are
+# still linked via $(CPC_ENGINE_GFX_ASMSRC). README §5.13 / cpc-renderer R6.
 CSRC			= $(CPC_ENGINE_FULL_CSRC) $(CPC_BANKED_COMMON_CSRC) $(JSP_CSRC) \
 			  $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC			= $(CPC_ENGINE_FULL_ASMSRC) $(CPC_BANKED_COMMON_ASMSRC) \
@@ -155,15 +154,15 @@ CPC_MMAP_INC		= mmap-cpc-flat.inc
 
 # ---- Phase G7: engine compile-test path --------------------------------
 # G7-4: type-check the WHOLE RAGE1 engine (engine/src/*.c) under +cpc against
-# the 'cpctel' stub gfx backend.  This is COMPILE-ONLY — we drive each .c to a
+# the live JSP gfx backend.  This is COMPILE-ONLY — we drive each .c to a
 # .o (via Makefile.common's generic `%.o: %.c` rule) and deliberately do NOT
 # link.  Linkage may fail at G7 and that is explicitly acceptable (gfx.md
 # Phase G7 phase-exit); the goal is C-level type-checking of the engine
-# sources against the stub backend.  Used by `make build-00cpc-compile-test`.
+# sources against the active backend.  Used by `make build-00cpc-compile-test`.
 #
-# The gfx_sp1.c / gfx_jsp.c backend bodies self-#ifdef out under cpctel
-# (they compile to empty translation units), so only gfx_cpctel.c carries a
-# body — exactly one gfx backend is active, matching the ZX selection model.
+# The gfx_sp1.c backend body self-#ifdef out under jsp (it compiles to an
+# empty translation unit), so only gfx_jsp.c carries a body — exactly one
+# gfx backend is active, matching the ZX selection model.
 ENGINE_COMPILE_TEST_CSRC	= $(wildcard $(ENGINE_DIR)/src/*.c) \
 				  $(wildcard $(GENERATED_DIR)/*.c) \
 				  $(wildcard $(GAME_SRC_DIR)/*.c)
@@ -185,10 +184,10 @@ build:
 	echo "Build completed SUCCESSFULLY (cpc-flat)"
 
 # G7-4: compile-only engine type-check (no link).  Compiles every engine/src/*.c
-# (plus generated + game_src) to .o under +cpc with the cpctel stub backend.
+# (plus generated + game_src) to .o under +cpc with the live JSP backend.
 # Exits 0 if all sources type-check; linkage is intentionally NOT attempted.
 compile-test: $(ENGINE_COMPILE_TEST_OBJS)
-	echo "Engine compile-test (cpc-flat / cpctel stub) SUCCESSFUL — all engine/src/*.c type-checked under +cpc (no link)."
+	echo "Engine compile-test (cpc-flat / JSP backend) SUCCESSFUL — all engine/src/*.c type-checked under +cpc (no link)."
 
 ##
 ## CPC artifacts — built single-step with `zcc -create-app`.

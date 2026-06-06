@@ -8,9 +8,9 @@
 // 
 ////////////////////////////////////////////////////////////////////////////////
 
-// G7: ZX arch include routed through the platform shim so this file compiles
-// (to an empty TU) under +cpc when cpctel is the active backend; byte-identical
-// on ZX — see rage1/platform.h.
+// ZX arch include routed through the platform shim so this file compiles
+// (to an empty TU) under +cpc, where JSP is the active backend and SP1's body
+// self-#ifdefs out; byte-identical on ZX — see rage1/platform.h.
 #include "rage1/platform.h"
 
 #include "rage1/gfx.h"

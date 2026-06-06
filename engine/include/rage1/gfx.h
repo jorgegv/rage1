@@ -72,10 +72,6 @@
     #include "rage1/gfx_jsp.h"
 #endif
 
-#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL
-    #include "rage1/gfx_cpctel.h"
-#endif
-
 // Real functions (multi-step, backend-specific body in .c files)
 void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char );
 gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols );

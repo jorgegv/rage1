@@ -8,9 +8,9 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-// G7: ZX arch include routed through the platform shim so this file compiles
-// (to an empty TU) under +cpc when cpctel is the active backend; byte-identical
-// on ZX — see rage1/platform.h.
+// ZX arch include routed through the platform shim so this file compiles on
+// +cpc (where it is the active CPC backend) as well as ZX; byte-identical on
+// ZX — see rage1/platform.h.
 #include "rage1/platform.h"
 
 #include "rage1/gfx.h"
@@ -59,7 +59,7 @@ void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
     // Clear the 16 KB screen RAM (0xC000-0xFFFF) to pen 0.  Setting the video
     // mode via the gate array does NOT clear VRAM, so the firmware boot screen
     // would otherwise show through the new palette (as speckle) in any cell the
-    // engine does not repaint.  (The interim cpctel backend did the same.)
+    // engine does not repaint.
     {
         uint8_t *vmem = (uint8_t *) 0xC000;
         uint16_t i;

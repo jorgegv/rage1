@@ -35,8 +35,8 @@ typedef uint8_t                  gfx_attr_t;
 // Pixel coordinate widths (Phase G4 — gfx.md §G4-1).
 // On ZX backends 256x192 fits in a byte, so we stay at uint8_t to avoid the
 // 16-bit codegen cost.  On CPC mode 1 the screen is 320 px wide, so X needs 16
-// bits; both are widened (matching the interim cpctel backend and the engine's
-// G4-widened position handling) so engine arithmetic that mixes the two stays
+// bits; both are widened (matching the engine's G4-widened position handling)
+// so engine arithmetic that mixes the two stays
 // width-consistent.  Engine code must use these typedefs at every site that
 // holds an integer screen pixel coordinate so the same source compiles on
 // both byte- and word-coordinate backends.
@@ -146,7 +146,7 @@ typedef uint16_t                 gfx_tile_id_t;
 
 //--- Sprite query ---
 // Cross-backend contract: get_width/get_height return the sprite footprint in
-// 8x8 SCREEN CELLS (SP1/cpctel return ->width/->height in cells; engine code —
+// 8x8 SCREEN CELLS (SP1/JSP return ->width/->height in cells; engine code —
 // e.g. hero_check_tiles_below — uses these to index the 8x8 tile-type grid).
 // get_row/get_col return the 8-px cell the sprite's top-left sits in (xpos/ypos
 // are pixels; a cell is always 8x8 px in every mode -> /8 is correct).
