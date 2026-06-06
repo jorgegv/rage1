@@ -98,6 +98,18 @@ void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
 #endif // GFX_JSP_CPC
 
 gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols ) {
+#ifdef GFX_JSP_CPC
+    // RAGE1 callers count sprite width in 8-px source cells (width_px >> 3).
+    // JSP sizes a sprite descriptor in *mode-N screen byte-columns* — a cell is
+    // JSP_SPRITE_PPB px wide (4 on Mode 1, 2 on Mode 0, 8 on Mode 2 / MONO), so a
+    // 16-px sprite is cols=4 on Mode 1, not 2 (see external/jsp DEFINE_SPRITE /
+    // JSP_SPRITE_COLS).  Convert here so the footprint + the masked blit walk the
+    // full frame width; passing the raw 8-px-cell count under-sizes the sprite to
+    // half its byte-columns and it never composites.  Ratio = 8 / JSP_SPRITE_PPB
+    // (1 on Mode 2 / MONO -> ZX-equivalent, byte-identical on ZX where this whole
+    // block is compiled out).
+    cols = (uint8_t)( cols * ( 8 / JSP_SPRITE_PPB ) );
+#endif
     gfx_sprite_t *s = jsp_sprite_alloc( rows, cols );
     DEBUG_ASSERT( s, PANIC_SPRITE_IS_NULL );
     return s;
@@ -109,6 +121,35 @@ void gfx_sprite_set_color( gfx_sprite_t *s, gfx_attr_t color ) {
     jsp_sprite_set_color( s, color, 0xF8 );
 }
 
+#ifdef GFX_JSP_CPC
+// CPC-correct bounding-box clip test (RAGE1-side; JSP is consumed read-only).
+//
+// JSP's jsp_sprite_in_rect() computes the sprite's grid span as sc + sp->cols
+// (cell coords), with sc = xpos/8 the 8-px pixel-cell column.  That is right on
+// ZX, where cols counts 8-px cells; but on CPC mode 1 (pixel-cell model) cols is
+// in *mode-N screen byte-columns* — JSP_CELL_COLBYTES (=2 on mode 1) byte-cols
+// per 8-px cell — so a 16-px sprite has cols=4 while it only spans 2 pixel-cells.
+// Feeding that cols straight into sc + cols over-counts the sprite's grid width
+// by the COLBYTES factor and parks the hero ~JSP_CELL_COLBYTES cells early near
+// the right/bottom edge of the clip rect.  Re-derive the span here in 8-px-cell
+// units: width_cells = cols / JSP_CELL_COLBYTES, height_cells = rows.  Inclusive
+// of the sub-cell shift spill (the +0/+1 the renderer adds is a render-time
+// detail; for clipping we use the cell footprint).  ZX is byte-identical (this
+// block is compiled out; ZX keeps the original jsp_sprite_in_rect call).
+static uint8_t gfx_jsp_cpc_in_rect( gfx_sprite_t *s, gfx_rect_t *rect,
+                                    gfx_xpos_t x, gfx_ypos_t y )
+{
+    uint8_t sc = (uint8_t)( x >> 3 );           // 8-px-cell column
+    uint8_t sr = (uint8_t)( y >> 3 );           // 8-px-cell row
+    uint8_t wc = (uint8_t)( s->cols / JSP_CELL_COLBYTES );   // width in 8-px cells
+    if ( sc < rect->col )                            return 0;
+    if ( sr < rect->row )                            return 0;
+    if ( sc + wc       > rect->col + rect->width  )  return 0;
+    if ( sr + s->rows  > rect->row + rect->height )  return 0;
+    return 1;
+}
+#endif // GFX_JSP_CPC
+
 void gfx_jsp_move_sprite_clipped( gfx_sprite_t *s, gfx_rect_t *clip,
                                    uint8_t *frame, gfx_xpos_t x, gfx_ypos_t y )
 {
@@ -116,7 +157,11 @@ void gfx_jsp_move_sprite_clipped( gfx_sprite_t *s, gfx_rect_t *clip,
         jsp_sprite_park( s );
         return;
     }
+#ifdef GFX_JSP_CPC
+    if ( clip && !gfx_jsp_cpc_in_rect( s, clip, x, y ) ) {
+#else
     if ( clip && !jsp_sprite_in_rect( s, clip, x, y ) ) {
+#endif
         jsp_sprite_park( s );
         return;
     }
