@@ -22,6 +22,7 @@ require RAGE::PNGFileUtils;
 require RAGE::FileUtils;
 require RAGE::Arkos2;
 require RAGE::BTileUtils;
+require RAGE::AssetBackend;
 
 use Data::Dumper;
 use List::MoreUtils qw( zip uniq );
@@ -259,6 +260,20 @@ sub input_backend_for_platform {
 sub get_gfx_backend {
     return ( defined( $game_config ) && defined( $game_config->{'gfx_backend'} ) )
         ? $game_config->{'gfx_backend'} : 'sp1';
+}
+
+# Task 5: per-platform asset-generation backend (memoised). ZX is the default /
+# first backend (byte-identical to the pre-refactor output); CPC platforms get
+# the CPC mode-1 backend. Selected from the PLATFORM build features.
+my $_asset_backend;
+sub asset_backend {
+    return $_asset_backend if defined $_asset_backend;
+    my $is_cpc = is_build_feature_enabled( 'PLATFORM_CPC_FLAT' )
+              || is_build_feature_enabled( 'PLATFORM_CPC464' )
+              || is_build_feature_enabled( 'PLATFORM_CPC_BANKED' )
+              || is_build_feature_enabled( 'PLATFORM_CPC6128' );
+    $_asset_backend = RAGE::AssetBackend->create( platform => $is_cpc ? 'cpc' : 'zx' );
+    return $_asset_backend;
 }
 
 sub add_default_build_features {
@@ -2177,30 +2192,17 @@ sub generate_sprite {
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (%s format)\n\n",
         $sprite->{'name'}, $using_jsp ? 'JSP' : 'SP1' );
 
-    # prepare mask and bytes lists
-    # Both SP1 and JSP: each column has a blank leading row, all sprite rows, then a shared
-    # trailing blank row.  JSP's draw loop uses pix_ptr = sp->pixels - (ypos%8)*2, which reads
-    # up to 14 bytes before sp->pixels (the leading blank row provides this preamble).
-    my @col_bytes;
-    my @mask_bytes;
-    foreach my $frm ( 0 .. ( $sprite_frames - 1 ) ) {
-        foreach my $col ( 0 .. ( $sprite_cols - 1 ) ) {
-            push @col_bytes, (0) x 8;	# initial row with blank pixels and transparent mask
-            push @mask_bytes, (0xff) x 8;
-            foreach my $row ( 0 .. ( $sprite_rows - 1 ) ) {
-                push @col_bytes, @{ $sprite->{'pixel_bytes'}[ ( $frm * $sprite_rows * $sprite_cols ) + $row * $sprite_cols + $col ] };
-                push @mask_bytes,@{ $sprite->{'mask_bytes'}[ ( $frm * $sprite_rows * $sprite_cols ) + $row * $sprite_cols + $col ] };
-            }
-        }
-    }
-    push @col_bytes, (0) x 8;	# final row with blank pixels and transparent mask
-    push @mask_bytes, (0xff) x 8;
+    # Task 5: the platform asset backend owns the sprite frame byte layout.
+    # ZX (SP1/JSP): column-major, leading/trailing blank rows, mask,pixel
+    # interleaved, stride 16*(rows+1)*cols from offset 16 — byte-identical to the
+    # historical output.  CPC mode 1: JSP-CPC packed bytes (RAGE::CPCGfx).
+    my ( $data_bytes, $frame_offsets ) = asset_backend()->sprite_frame_data( $sprite );
 
-    # group mask and pixel bytes by 16-byte lines for easier reading
+    # group data bytes by 16-byte lines for easier reading
     my @groups_of_2m;
     my $group_cnt = 0;
     my $byte_cnt = 0;
-    foreach my $b ( zip( @mask_bytes, @col_bytes ) ) {
+    foreach my $b ( @$data_bytes ) {
         push @{$groups_of_2m[ $group_cnt ]}, $b;
         $byte_cnt++;
         if ( not $byte_cnt % 16 ) {
@@ -2213,22 +2215,12 @@ sub generate_sprite {
         $sprite->{'name'},
         join( ",\n", map { join( ", ", map { sprintf( "0x%02x", $_ ) } @{$_} ) } @groups_of_2m ) );
 
-    # output list of pointers to frames
-    # Both SP1 and JSP: each frame is (rows+1)*cols*16 bytes; first frame starts at offset 16
-    # (past the leading blank row of column 0), so sp->pixels - (ypos%8)*2 always lands within
-    # the blank preamble area for any sub-character vertical offset.
-    my @frame_offsets;
-    my $frame_stride = 16 * ( $sprite->{'rows'} + 1 ) * $sprite->{'cols'};
-    my $ptr = 16;
-    foreach ( 0 .. ( $sprite->{'frames'} - 1 ) ) {
-        push @frame_offsets, $ptr;
-        $ptr += $frame_stride;
-    }
+    # output list of pointers to frames (offsets owned by the backend)
     push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
         $sprite_name,
-        join( ",\n", 
+        join( ",\n",
             map { sprintf( "\t&sprite_%s_data[%d]", $sprite_name, $_ ) }
-            @frame_offsets
+            @$frame_offsets
         ) );
 
     # output list of animation sequences
