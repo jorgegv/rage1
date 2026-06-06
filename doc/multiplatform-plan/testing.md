@@ -1009,6 +1009,15 @@ Coordinated with `toolchain.md` Phase T0 (z88dk `+cpc` spike) and
 
 ### Phase TS3 — Extend `regression.sh` for multi-platform; first CPC baseline
 
+> **Updated 2026-06-05 (README §5.13):** the first CPC baseline was
+> captured against the **interim `cpctel`** backend (cell-granular). When
+> `games/minimal_cpc` moves to **`GFX_BACKEND=jsp`** (cpc-renderer.md R9 /
+> gfx.md G10), the CPC reference screenshot is **rebaselined** — JSP's
+> pixel-smooth output differs from the cell-granular one. The platform-aware
+> runner and the Caprice32 harness are unchanged. The dependency below
+> updates: `gfx.md G10` / `cpc-renderer.md R9` (JSP) supersede the original
+> `G8` / `R4` (cpctel).
+
 **Goal**: rewrite the regression runner to be platform-aware, dispatch
 to JNEXT vs Caprice32 per test, and land the first CPC baseline for
 `games/minimal_cpc/`. Depends on `gfx.md` G8 / `cpc-renderer.md` R4 /
@@ -1131,10 +1140,19 @@ generalise `make mem` to per-platform scripts.
 
 **Goal**: tidy up after the bring-up.
 
+> **Updated 2026-06-05 (README §5.13b):** convergence is now an explicit
+> goal of the JSP switch, not just a tidy-up. cpc-renderer.md R9 already
+> rewrites `games/minimal_cpc` to mirror `games/minimal` and **reuse its
+> assets** via the assets.md A8-7 text-mode→PNG bridge; TS6 finishes the
+> job by deleting the stubs once the shared game produces the CPC binary.
+> Also add `games/minimal_audio_cpc` and `games/cpc-a5-png-test` to the
+> retirement list below.
+
 - **TS6-1** As `games/minimal_cpc/` becomes redundant with
-  `games/minimal` (CPC-overlay) — i.e. once `assets.md` Phase A2
+  `games/minimal` (CPC-overlay) — i.e. once `assets.md` Phase A2/A8
   matures and `games/minimal/` can produce both ZX and CPC binaries
-  from one `.gdata` set — retire `games/minimal_cpc/`. Move its CPC
+  from one `.gdata` set (reusing the same `PIXELS`/`MASK` assets via the
+  A8-7 bridge) — retire `games/minimal_cpc/`. Move its CPC
   baseline into `tests/00regression/minimal/cpc6128/reference.png`.
   Delete the stub game directory.
 - **TS6-2** Same for `games/cpc-hello/` (created by `toolchain.md`
@@ -1142,6 +1160,14 @@ generalise `make mem` to per-platform scripts.
 - **TS6-3** Same for `games/00cpc-compile-test/` (created by `gfx.md`
   G7-4) once a real CPC test game covers the same compilation surface
   and more.
+- **TS6-6** Retire `games/minimal_audio_cpc/` (the cpc-flat AT2 audio
+  test) once its music/SFX coverage is absorbed into the converged
+  `minimal`/`default` CPC build (audio.md). Preserve its audio capture
+  baseline in the converged game's `tests/00regression/` entry.
+- **TS6-7** Retire `games/cpc-a5-png-test/` (the A5 cpctelera
+  asset-conversion fixture) once the A8 JSP PNG-bridge path is exercised
+  by a real converged game's regression. *(With cpctelera revoked the A5
+  fixture is doubly obsolete — README §5.13.)*
 - **TS6-4** Add a "tolerance budget" review: per `regression.yaml`
   run, summarise tests with non-zero tolerances and report drift.
   Goal: zero non-zero tolerances in steady state.

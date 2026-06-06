@@ -95,18 +95,25 @@ Sketched only (long-horizon future direction; no detailed analysis):
    See [assets.md](assets.md).
 2. **HAL position**: the existing `gfx_*` API (introduced for the
    SP1↔JSP split, stable post-JSP closure) **subsumes** into the
-   multi-platform graphics HAL. SP1, JSP, and a new CPC backend all
-   sit behind the same surface. No second abstraction layer above
-   `gfx_*`. See [gfx.md](gfx.md).
+   multi-platform graphics HAL. SP1 and JSP both sit behind the same
+   surface. No second abstraction layer above `gfx_*`. See
+   [gfx.md](gfx.md). **Updated 2026-06-05 (§5.13):** the CPC graphics
+   backend is **JSP in CPC mode**, not a separate "new CPC backend" —
+   JSP is the single cross-platform backend (ZX + CPC); SP1 stays
+   ZX-only.
 3. **`audio_*` HAL**: same shape — shared API surface, per-platform
    backends (ZX beeper, ZX AY, CPC AY). Music + SFX in scope. See
    [audio.md](audio.md).
 4. **`input_*` HAL**: same shape — gameplay-level events
    (up/down/fire/action keys) routed through a per-platform
    keyboard/joystick driver. See [input.md](input.md).
-5. **CPC graphics backend**: vendor **cpctelera** as a git submodule
-   under `external/cpctelera`, mirroring the JSP precedent. Not a
-   new owned library. See [cpc-renderer.md](cpc-renderer.md).
+5. **CPC graphics backend**: ~~vendor **cpctelera** as a git submodule
+   under `external/cpctelera`, mirroring the JSP precedent.~~
+   **REVOKED 2026-06-05 (§5.13).** The CPC graphics backend is **JSP**
+   (already vendored at `external/jsp`, already a RAGE1 backend on ZX,
+   now with CPC support). cpctelera is fully dropped; the
+   `external/cpctelera` submodule is removed. See
+   [cpc-renderer.md](cpc-renderer.md).
 6. **ZX back-compat**: best-effort, **green at phase boundaries**.
    Each phase must end with `make all-test-builds` green and
    `tests/00regression/` ZX screenshot tests green. Mid-phase
@@ -123,7 +130,7 @@ numbered tasks, phase-exit criteria, Risks, and Open Questions.
 | [gfx.md](gfx.md)                   | Graphics HAL audit; `gfx_*` API generalisation; `gfx_cpctel.c` interface; ZX-derived assumption removal                                                       | **G1–G9**   |
 | [assets.md](assets.md)             | Shared-core `.gdata` + sibling-tree overlays; `datagen.pl` / `mapgen.pl` / `btilegen.pl` changes; per-platform asset converters; tracker file / music overlay | **A1–A7**   |
 | [toolchain.md](toolchain.md)       | z88dk-only across all 4 platforms; `PLATFORM` axis; per-platform Makefile structure; CDT/DSK packaging; CI Docker image evolution                             | **T0–T4**   |
-| [cpc-renderer.md](cpc-renderer.md) | cpctelera library evaluation, vendoring, licence audit (LGPL-3.0 → GPL-3 conveyance), `cpct_img2tileset` subprocess wiring                                    | **R1–R5**   |
+| [cpc-renderer.md](cpc-renderer.md) | **CPC graphics engine = JSP bring-up** (build integration, `gfx_jsp` CPC sections, asset pipeline, retire `gfx_cpctel`, remove cpctelera) — see §5.13. R1–R5 (cpctelera vendor/licence/translate) retained as history. | **R6–R10** (R1–R5 superseded) |
 | [audio.md](audio.md)               | `audio_*` HAL design; ZX (beeper + AY/Vortex/Arkos2) and CPC (AT2 AKG generic player) backends; music/SFX asset overlay; `SOUND_MAP` directive                | **AU1–AU7** |
 | [input.md](input.md)               | `input_*` HAL design; ZX (keyboard/Kempston/Sinclair) and CPC (cpctelera `cpct_scanKeyboard_if`) backends; per-game key-mapping config                        | **IN1–IN8** |
 | [banking.md](banking.md)           | ZX 128 paging vs CPC Gate Array banking; datasets/codesets/SUBs per platform; per-platform memory maps; `banktool.pl` / `loadertool.pl` parametrisation       | **B1–B9**   |
@@ -150,6 +157,15 @@ Execution-tracking artefacts live under
 
 Each subsystem's phases are numbered with its own prefix (G/A/T/R/
 AU/IN/B/TS). The high-level sequence across all subsystems:
+
+> **Updated 2026-06-05 (§5.13):** every `R`-prefixed cpctelera phase
+> below (R1 submodule add, R2 cpctelera PoC, R3 `cpct_img2tileset`
+> wiring, R5 cpctelera hardening) is **superseded** by the switch to
+> JSP. They were executed and produced the *interim* `gfx_cpctel`
+> backend; the CPC graphics engine is now JSP (new `R6–R10`, `G10`,
+> `A8`). The sequence text below is preserved for history — read it
+> together with §5.13's per-doc ripple table and the rewritten
+> [cpc-renderer.md](cpc-renderer.md).
 
 **Phase 1 — Foundation (no CPC code; pure preparation).**
 
@@ -235,9 +251,18 @@ the canonical resolution; the per-subsystem docs reflect them.
 Decisions are dated; resolved-during-review decisions land in
 chronological order.
 
-### 5.1 CPC asset conversion: cpctelera subprocess, not Perl-side encoders
+### 5.1 CPC asset conversion: vendored subprocess, not Perl-side encoders
 
-**Decision**: for CPC builds, RAGE1's asset pipeline shells out to
+> **Updated 2026-06-05 (§5.13):** the *subprocess* decision stands, but
+> the tool is **JSP's vendored converters** — `external/jsp/tools/cpcgfx.pl
+> --mode 1` (4-pen colour) and `external/jsp/tools/gfxgen.pl` (1bpp /
+> Mode 2 / MONO) — **not** cpctelera's `cpct_img2tileset`. They emit Z80
+> **ASM** (`PUBLIC` + `db`), not C arrays, so the build links ASM rather
+> than compiling generated C. `CPCT_PATH` / Img2CPC install steps are
+> gone. The original cpctelera-worded decision below is retained for
+> history; see §5.13 and assets.md A8.
+
+**Decision (superseded)**: for CPC builds, RAGE1's asset pipeline shells out to
 cpctelera's `cpct_img2tileset` (and the equivalent of its
 `IMG2SPRITES` Makefile macro) to convert PNG → CPC C arrays. The
 ZX path stays Perl-internal (`RAGE::PNGFileUtils`). No CPC
@@ -303,12 +328,15 @@ semantics).
 
 ### 5.4 GFX_BACKEND naming rule: value = library short-name
 
-**Decision (2026-05-24)**: a `GFX_BACKEND` value is the **short name
-of the underlying library**, never a generic platform tag. ZX
-backends today: `sp1`, `jsp`. CPC backend today: `cpctel`
-(cpctelera). Reserved future CPC entrant: `cpcrs` (cpcrslib). Any
-other CPC graphics library added later follows the same pattern
-(`cpc<lib>`).
+**Decision (2026-05-24; updated 2026-06-05 §5.13)**: a `GFX_BACKEND`
+value is the **short name of the underlying library**, never a generic
+platform tag. Backends today: `sp1` (ZX-only), `jsp` (**cross-platform —
+ZX and CPC**). The CPC graphics engine is `jsp`, selected by the
+`PLATFORM` axis, not by a distinct backend value — the library is JSP on
+both platforms, so by this very rule the value is `jsp`. `cpctel`
+(cpctelera) and `cpcrs` (cpcrslib) remain **reserved names only** for any
+future CPC library added as a first-class alternative; the `cpctel`
+backend that Phase 4 built is the interim renderer being retired (§5.13).
 
 **Why**: a generic `cpc` backend value would prevent multiple CPC
 sprite libraries from coexisting as first-class backends. Naming by
@@ -476,6 +504,14 @@ bytes only for the pointer flavour) and
 default pen pair configuration).
 
 ### 5.9 CPC mono game mode reuses the existing mono path with 1bpp BTile cells
+
+> **Updated 2026-06-05 (§5.13a):** every `cpct_img2tileset` reference below
+> is replaced by JSP's tools (`cpcgfx.pl --mode 1` for 2bpp sprites,
+> `gfxgen.pl` for 1bpp). The whole mono optimisation is **re-evaluated
+> under A8**: JSP's blitter can expand 1bpp `gfxgen.pl` output at blit
+> time, so the bespoke 512-byte LUT below may be unnecessary. The
+> 1bpp-BTile / 2bpp-sprite *intent* stands; the tool and the LUT detail
+> may change.
 
 **Decision (2026-05-26)**: when a game is in mono mode (existing
 `BUILD_FEATURE_GAMEAREA_COLOR_MONO` build feature, emitted by
@@ -758,6 +794,196 @@ review.
 deferrals already exist as sub-tasks in input.md / audio.md / testing.md;
 this note records the resequencing.
 
+### 5.13 CPC graphics engine switched from cpctelera to JSP; cpctelera fully revoked
+
+**Decision (2026-06-05, execution-time — supersedes architectural anchor #2's
+"new CPC backend" framing and anchor #5 entirely, and reverses §5.1, the
+cpctelera half of §5.4, and the cpctelera dependency in §5.5/§5.8/§5.9):** the
+CPC graphics engine is **JSP** (Jorge's Sprite Library), not cpctelera.
+**cpctelera is fully revoked** as a RAGE1 dependency.
+
+#### Why the pivot
+
+The original plan chose cpctelera as a *new* CPC graphics backend
+(`GFX_BACKEND=cpctel`, backend file `gfx_cpctel.c`). Phase 4 executed that
+choice and produced a working — but **cell-granular** — CPC renderer: cpctelera
+(and every other reusable CPC sprite library: CPCRSLib, cpcsprite, AMSprite) is
+byte-aligned horizontally (Mode 1 = 4 px), so sprites only move in whole-cell
+(8 px) jumps. Pixel-smooth horizontal movement is a hard requirement for a
+RAGE1 game and was never achievable on a byte-aligned library without
+pre-shifting (rejected: too memory-heavy) or realtime bit-shifting (which no
+off-the-shelf CPC library offers). See
+[../CPC-SPRITE-ENGINE-ANALYSIS.md](../CPC-SPRITE-ENGINE-ANALYSIS.md) and the
+parked task in `.prompts/2026-06-05.md`.
+
+JSP solves this natively. JSP is the SP1-derived sprite engine **already vendored
+and already a first-class RAGE1 graphics backend** (`GFX_BACKEND=jsp`, in
+production on ZX today via `engine/src/gfx_jsp.c` / `gfx_jsp.h`). JSP has since
+gained full CPC support — `CPC_MODE1` with **1-pixel horizontal positioning via
+runtime rotation tables (no pre-shifting)**, masked compositing, deferred
+recompositing, and its own vendored PNG→asset converters — and builds natively
+with `zcc +cpc -compiler=sdcc`. JSP is vendored at `external/jsp` (git submodule;
+pin advanced to include CPC support on 2026-06-05).
+
+#### What this changes architecturally
+
+1. **JSP is the single cross-platform graphics backend.** SP1 stays ZX-only.
+   JSP serves **both** ZX and CPC under one `GFX_BACKEND=jsp` value. Per §5.4
+   (a backend value is the library short-name), no new backend value is created:
+   the **`PLATFORM` axis** (cpc-flat / cpc-banked) selects the CPC build, and
+   `engine/src/gfx_jsp.{c,h}` gain `#ifdef BUILD_FEATURE_PLATFORM_CPC_*` sections
+   for the CPC-specific divergences (16-bit X coordinate — already widened by
+   `G4`; mode + palette programming inside `gfx_init`; `attr`/colour API inert
+   per §5.5). Whether those CPC sections live as inline `#ifdef`s in
+   `gfx_jsp.{c,h}` or in a sibling `gfx_jsp_cpc.{c,h}` included under the CPC
+   guard is an execution-time implementation choice (cpc-renderer.md), not a
+   plan-level decision. Initial CPC mode is **`CPC_MODE1` (regular, NOT mono)**
+   per §5.13a below; other JSP CPC modes (Mode 0/2, MONO, FAST) are deferred.
+
+2. **The `cpctel` backend is retired.** `engine/src/gfx_cpctel.c` /
+   `gfx_cpctel.h` and the `BUILD_FEATURE_GFX_BACKEND_CPCTEL` macro are removed
+   once JSP-CPC reaches functional parity with the interim backend (its
+   `mono_lut` / `glyph_cache` / `blit_*` machinery is entirely subsumed by JSP's
+   internal engine). Until then `gfx_cpctel` remains as the **interim** CPC
+   backend (it is what Phase 4 built and what `games/minimal_cpc` runs today).
+
+3. **The `external/cpctelera` submodule is removed** (`git rm`, drop the
+   `.gitmodules` entry). It was vendored as reference-only and never compiled;
+   nothing in the JSP path needs it.
+
+4. **CPC asset conversion uses JSP's vendored tools**, not `cpct_img2tileset`:
+   `external/jsp/tools/cpcgfx.pl --mode 1` (4-pen colour, incl. `--multicolor`
+   + `--palette-symbol`) and `external/jsp/tools/gfxgen.pl` (1bpp, for Mode 2 /
+   MONO). These emit **Z80 ASM** (`PUBLIC` + `db`), not C arrays — the build
+   wiring links ASM instead of compiling generated C. `tools/cpc_asset_convert.pl`
+   is re-pointed to wrap these; `CPCT_PATH` / Img2CPC install steps disappear.
+
+5. **The cpctelera↔z88dk SDCC-fork compatibility risk evaporates.** It was the
+   single largest cross-doc risk (§6) and the entire reason for the Phase T0
+   spike and the Phase R1 "Option (b) file-by-file sdas→z80asm translation"
+   workflow. JSP is z88dk-native; none of that applies.
+
+#### What is explicitly **kept** (not part of "revoke")
+
+A handful of **CPC hardware-I/O primitives** already hand-translated into
+`engine/src/cpc/` are *cpctelera-derived by lineage* but compile standalone
+under z88dk z80asm with **zero** cpctelera library/toolchain dependency. They
+implement raw CPC hardware operations JSP deliberately leaves to the caller, so
+they stay. **Their cpctelera attribution / credit comments are kept** — the code
+genuinely comes from cpctelera and credit is given where it is due; we are
+dropping the *library and submodule dependency*, not the acknowledgement. (Each
+file keeps its "hand-translated from cpctelera <commit>, © ronaldo / cpctelera,
+LGPL-3.0" header.) Kept files:
+
+- `cpct_video.asm` — set video mode + program palette (`gfx_init` needs this
+  before the first `jsp_redraw`; JSP leaves mode/palette to the caller's `main`,
+  per [external/jsp/doc/CPC-USAGE.md §5](../../external/jsp/doc/CPC-USAGE.md)).
+- `cpct_keyboard.asm` — PPI keyboard-matrix scan + status buffer (JSP provides
+  no input; this is RAGE1's only CPC keyboard source — input.md IN6 already
+  depends on it, not on the cpctelera library).
+- `cpct_gfx_m1.asm` — keep `cpct_getScreenPtr` + `cpct_setBorder` (hardware
+  address arithmetic / border write); drop `cpct_drawSprite` (superseded by JSP).
+- `cpct_strings_m1.asm` — conditional: keep only if a production CPC code path
+  still draws firmware-font text; otherwise drop (JSP renders its own glyphs).
+- `asmdata_cpc.c` — already RAGE1-original (no cpctelera content); unaffected.
+
+#### Subsystems with **no** material change
+
+- **Audio (AU1–AU7):** zero cpctelera dependency — confirmed. CPC audio is the
+  Arkos Tracker 2 AKG generic player (`PLY_AKG_HARDWARE_CPC`), never cpctelera's
+  audio module. Untouched.
+- **Input (IN1–IN8):** the CPC backend already calls the standalone
+  `engine/src/cpc/cpct_keyboard.asm` (kept per above), not the cpctelera
+  library. Only doc language changes ("cpctelera keyboard scan" →
+  "hand-translated CPC keyboard scan in `engine/src/cpc/`").
+- **Banking memory maps (B-series):** addresses are CPC hardware facts,
+  unchanged. Only the *implementation* of the bank-switch / firmware-disable
+  primitives changes: `cpct_pageMemory()` / `cpct_disableFirmware()` → ~6-byte
+  direct Gate-Array port writes (already the preferred answer in banking.md
+  OQ-B2). Re-check the cpc-flat stack-budget estimate (was sized off cpctelera's
+  ~60 B deepest frame) against JSP's actual call depth.
+
+#### Per-doc ripple (authoritative index of follow-on edits)
+
+| Doc | What changes |
+|---|---|
+| [README.md](README.md) | Anchor #2 (CPC backend = JSP, not "new backend"); anchor #5 (vendor JSP not cpctelera) — **revoked**; §4 phase sequence (R-series re-pointed); §5.1 (asset tool = cpcgfx.pl/gfxgen.pl); §5.4 (CPC backend = `jsp`, platform-discriminated; `cpctel`/`cpcrs` remain reserved names only); §6 (drop the SDCC-fork compat risk); §7 OQ table (cpctelera OQs → resolved/moot) |
+| [cpc-renderer.md](cpc-renderer.md) | **Rewritten** as the JSP-CPC integration plan. R1–R5 (cpctelera vendor/licence/translate/asset-wire) marked **superseded**; new JSP-CPC bring-up phases **R6–R10** added (JSP `+cpc` build integration; `gfx_jsp` CPC sections; migrate `games/minimal_cpc` to `GFX_BACKEND=jsp` with pixel-smooth movement; retire `gfx_cpctel`; remove `external/cpctelera` submodule). Surviving concerns retained: mode/palette setup, `appmake` CDT/DSK packaging, loading screen, asset byte format. |
+| [gfx.md](gfx.md) | G7/G8/G8a re-annotated as the **interim** cpctel backend (built, now superseded). New **G10** "JSP CPC backend" (thin `gfx_*→jsp_*` HAL + mode/palette in `gfx_init`; pixel-smooth — closes the parked movement task). G9 (CPC across 3+ games) re-targets `GFX_BACKEND=jsp`; CI lane `cpctel-cpc*` → `jsp-cpc*`. |
+| [assets.md](assets.md) | A5 (CPC via `cpct_img2tileset`) re-annotated **superseded**. New **A8** "JSP CPC asset pipeline" (`cpc_asset_convert.pl` wraps `cpcgfx.pl`/`gfxgen.pl`; ASM output; §5.9 mono path may collapse to a single 1bpp `gfxgen.pl` output expanded by JSP's blitter). OQ-A9 (firmware-colour table) can be verified against `cpcgfx.pl`'s vendored palette now. |
+| [toolchain.md](toolchain.md) | T0 outcome annotated: cpctelera spike / SDCC-dialect findings **moot** (JSP is z88dk-native). Drop the SDCC-standalone-with-cpctelera alternative, the `zpragma-cpc-flat-cpctelera.inc` variant, and the cpctelera CI-tool install. Keep `+cpc` `sdcc_iy`-vs-default-clib finding (applies to JSP too), `2cdt`, DSK packaging. OQ-T4 resolved (JSP). Architecture diagram: `external/cpctelera/lib` → `external/jsp/lib`. |
+| [banking.md](banking.md) | §2.3 / B6-1 / loadertool bswitch stub: `cpct_pageMemory()` → direct MMR write; firmware-disable → direct Gate-Array write. Re-measure cpc-flat stack budget vs JSP. Memory-map addresses unchanged. |
+| [input.md](input.md) | Doc language in §3.2 / §4.3 / IN6: "cpctelera keyboard scan" → "hand-translated CPC keyboard scan in `engine/src/cpc/cpct_keyboard.asm` (standalone, no cpctelera library dependency)". No task spec change. |
+| [audio.md](audio.md) | No change (already cpctelera-independent). AU7-5 wording stays valid. |
+| [testing.md](testing.md) | TS3 CPC regression baseline is rebaselined when `minimal_cpc` moves to `GFX_BACKEND=jsp` (pixel-smooth output differs from the cell-granular cpctel baseline). Caprice32 harness unchanged. |
+| [management/00tasklist.md](management/00tasklist.md), [management/gantt.md](management/gantt.md) | Mirror: annotate the cpctelera-built Phase-4 tasks as interim/superseded; add R6–R10, G10, A8. |
+
+#### Migration sequencing (no regression to the playable cpc-flat game)
+
+The interim `gfx_cpctel` backend stays green throughout. JSP-CPC is brought up
+alongside it (new `R6–R10` / `G10` / `A8`), `games/minimal_cpc` is migrated to
+`GFX_BACKEND=jsp` and re-baselined, and only **then** are `gfx_cpctel` and the
+`external/cpctelera` submodule removed. Every phase still ends green per the
+§9 phase-exit invariant.
+
+### 5.13a CPC mode: JSP `CPC_MODE1` (regular, non-mono) is the Phase-1 target
+
+**Decision (2026-06-05):** the initial RAGE1 CPC build uses JSP's **`CPC_MODE1`**
+(4 pens, 320 px, per-pixel colour, 1 px X positioning) — **not** `CPC_MODE1_MONO`
+and not the `*_FAST` byte-aligned variants. This supersedes the cpctelera-era
+"Mode 1" resolutions (assets Q3, gfx Q7, banking OQ-B4, cpc-renderer OQ-1) by
+making them concrete against JSP's mode matrix. Mode 0 (16 pens) and Mode 2
+(640 px mono) and the MONO/FAST variants remain deferred; the two-layer colour
+model (§5.5) and JSP's compile-time mode guard accommodate them without API
+change. The §5.9 mono-mode BTile optimisation is re-evaluated under A8 (JSP's
+1bpp `gfxgen.pl` output can be expanded by the blitter, potentially simplifying
+the LUT path).
+
+### 5.13b CPC test games converge on the ZX test games; assets reused via a text-mode → PNG bridge
+
+**Decision (2026-06-05):** the CPC test games should be **rewritten to be as
+close to the ZX test games as possible** — same shared `game_data/` core +
+a thin `cpc*/game_data/` overlay (per §5.2/§5.3), reusing the **same authored
+assets**, rather than the bespoke divergent stubs that Phase 4 created
+(`games/minimal_cpc`, `games/minimal_audio_cpc`, `games/cpc-hello`,
+`games/00cpc-compile-test`, `games/cpc-a5-png-test`). The end state is that
+building `games/minimal` (and later `default`, `blobs`, …) for a CPC `PLATFORM`
+"just works" off the shared core, and the CPC-only stubs are retired (testing.md
+TS6). This is the existing direction (TS6 + README §5.12 cpc6128 overlays) made
+an explicit goal of the JSP switch.
+
+**The asset-reuse wrinkle (the reason this is a §5 decision):** the ZX test
+games author their graphics **in text mode inside `.gdata`** — `PIXELS` / `MASK`
+ASCII-art blocks (e.g.
+[games/minimal/game_data/sprites/Hero.gdata](../../games/minimal/game_data/sprites/Hero.gdata),
+[games/minimal/game_data/btiles/Live.gdata](../../games/minimal/game_data/btiles/Live.gdata)),
+**not** PNG files. But JSP's CPC asset converters (`cpcgfx.pl`, `gfxgen.pl`,
+A8) consume **PNG** input. To reuse the very same authored assets on CPC, the
+asset pipeline therefore needs a **text-mode → PNG bridge**: synthesise a PNG
+from the `PIXELS`/`MASK` definition (one transparent/fg/bg colour per pixel
+class), then feed that PNG to the JSP converter to emit CPC-format bytes.
+
+**Why a PNG bridge rather than a direct `PIXELS`→CPC-bytes encoder in datagen:**
+it keeps **one** canonical CPC pixel-encoding authority (the JSP tools), exactly
+as §5.1 keeps CPC encoding out of Perl. A parallel hand-rolled `PIXELS`→Mode-1
+encoder in `datagen.pl` would re-introduce the divergence risk §5.1 rejected.
+The PNG bridge is a thin, testable shim; the encoding stays in JSP's tools.
+
+**Mono assets:** note that JSP's mono converter `gfxgen.pl` **also takes PNG**,
+so the mono path normally goes through the **same bridge** (→ `gfxgen.pl`), not
+through a PNG-free route. A truly PNG-free path — datagen reusing its existing
+ZX 1bpp `PIXELS`→bytes output directly, with JSP's blitter expanding 1bpp at
+draw time — is available **only if A8-5 proves** RAGE1's ZX 1bpp byte layout is
+bit-identical to what JSP's CPC blitter consumes; if so it is adopted as a
+*documented §5.1 exception* (datagen becomes the mono CPC encoder for that one
+layout). Until A8-5 measures this, treat it as undecided: the bridge→`gfxgen.pl`
+route is the default for mono too. A8 decides per asset class which path applies.
+
+**Where it lives:** implemented under **assets.md A8** (new tasks: the
+text-mode→PNG bridge + reuse of shared `.gdata` assets on CPC) and
+**cpc-renderer.md R9** (rewrite `games/minimal_cpc` to mirror `games/minimal`,
+reusing its assets); retirement of the CPC-only stubs stays **testing.md TS6**.
+
 ## 6. Consolidated Risks index
 
 The per-subsystem docs each carry their own detailed Risks section.
@@ -770,6 +996,11 @@ holding in mind:
   `TS1` (backfill is the prerequisite for safe execution of every
   later refactor).
 - **Cross-doc — cpctelera + z88dk SDCC fork compatibility.**
+  **RESOLVED / MOOT 2026-06-05 (§5.13):** cpctelera is revoked; the CPC
+  graphics engine is JSP, which is z88dk-native (`zcc +cpc
+  -compiler=sdcc`). This risk — the largest in the plan, the reason for
+  Phase T0 and the R1 sdas→z80asm translation workflow — no longer
+  applies. The text below is retained for history.
   cpctelera ships SDCC 3.6.8 internally; z88dk ships SDCC 4.3.x.
   The `__z88dk_callee` / `__z88dk_fastcall` annotations should make
   them interchangeable, but it is not proven until phase `R2`'s

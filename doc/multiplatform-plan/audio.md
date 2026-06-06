@@ -1209,9 +1209,11 @@ and tester examples for CPC and ZX exist side-by-side
   - We carry the player asm in RAGE1's tree (we already do
     for ZX); on CPC builds we assemble the same source with
     a different `IFDEF`.
-  - We do **not** use cpctelera's audio module, even though
-    cpctelera is otherwise the CPC graphics backend.
-    Slightly asymmetric vs the gfx story.
+  - We do **not** use cpctelera's audio module. *(Updated
+    2026-06-05, README §5.13: cpctelera is fully revoked — the CPC
+    graphics backend is now JSP, and JSP ships no audio module either,
+    so there is no longer any asymmetry to note. The original "even
+    though cpctelera is the graphics backend" rationale is moot.)*
 
 **Option C — Standalone AY player (e.g. AYUMI, Vortex
 ZXAY)**.
@@ -1247,7 +1249,12 @@ Justification:
    — *that's the bridge*. Adding CPC requires zero changes
    to this code.
 
-3. **Slight asymmetry with gfx is acceptable.** The gfx
+3. **Slight asymmetry with gfx is acceptable.**
+   *(MOOT 2026-06-05, README §5.13: cpctelera is revoked and the
+   `external/cpctelera` source tree is removed, so there is no
+   `src/audio/` subtree to exclude and no asymmetry. The CPC gfx
+   backend is JSP, which ships no audio. This justification no longer
+   applies; retained for history.)* The gfx
    backend uses cpctelera; the audio backend uses
    Arkos-direct. Both are LGPL-3.0; both ship as source we
    compile. The only build-level cost is: when scanning

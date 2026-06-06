@@ -13,8 +13,9 @@ Architectural anchors that are *not* re-litigated here:
 
 - The asset model (shared `.gdata` + per-platform overlays) is owned
   by `assets.md`.
-- The graphics HAL (`gfx_*`) and CPC renderer (cpctelera vendored) are
-  owned by `gfx.md` and `cpc-renderer.md`.
+- The graphics HAL (`gfx_*`) and CPC renderer (**JSP** — cpctelera
+  revoked 2026-06-05, README §5.13) are owned by `gfx.md` and
+  `cpc-renderer.md`.
 - The build matrix (`PLATFORM=zx48|zx128|cpc-flat|cpc-banked`,
   `Makefile-cpc-flat`, `Makefile-cpc-banked`) is owned by
   `toolchain.md`.
@@ -508,6 +509,18 @@ Key facts:
   (`engine/src/00bswitch.c:49`).
 
 ### 2.3 cpctelera's banking primitives (`cpct_pageMemory`, RAM bank macros)
+
+> **NOT ADOPTED 2026-06-05 (README §5.13).** cpctelera is revoked, so
+> `cpct_pageMemory()` / `cpct_disableFirmware()` are **not** used. Bank
+> switching on cpc-banked is a ~6-byte **direct Gate-Array MMR write**
+> (port `0x7F00`), and firmware/ROM disable is a direct Gate-Array write —
+> both already the preferred answer in **OQ-B2**. This affects
+> *implementation only* (B6-1's `00bswitch_cpc.c`, the loadertool bswitch
+> snippet, the boot ROM-disable); the **memory-map addresses below are CPC
+> hardware facts and are unchanged**. Also re-measure the cpc-flat
+> stack-budget estimate (§3.1.3) against JSP's call depth (it was sized off
+> cpctelera's ~60 B deepest frame). The cpctelera reference below is
+> retained as the MMR-encoding reference.
 
 cpctelera exposes the MMR via two surfaces
 (`external/cpctelera/cpctelera/src/memutils/`):

@@ -635,6 +635,14 @@ These ZX-isms are **not** moved into the HAL, intentionally:
 
 ## 3. CPC backend integration
 
+> **INTERIM / SUPERSEDED 2026-06-05 (README §5.13).** This section
+> documents the **interim `gfx_cpctel`** backend (built under G7/G8,
+> cell-granular). The live CPC backend is **JSP** — see **Phase G10**
+> (§4) and cpc-renderer.md §0. `gfx_cpctel.{c,h}` is retired at R10 once
+> JSP-CPC reaches parity. §3 is retained as historical record of the
+> transitional renderer; every `gfx_cpctel.*` reference and "CPC renderer
+> library" framing below maps to "JSP in CPC mode" in the live design.
+
 This section is the HAL-side integration. **Choice of CPC graphics
 library (cpctelera vs alternatives), licence audit, asset-tool
 marriage, and CPC sprite/tile pixel format all live in
@@ -1006,6 +1014,14 @@ Goal: dispel the polysemic `uint16_t` tile parameter.
 
 ### Phase G7 — CPC backend skeleton (stub)
 
+> **Updated 2026-06-05 (README §5.13):** G7/G8/G8a were executed and
+> produced the **interim `cpctel` backend** (`gfx_cpctel.{c,h}`,
+> cell-granular movement). The CPC graphics engine is now **JSP**
+> (`GFX_BACKEND=jsp`, platform-discriminated, pixel-smooth). The real CPC
+> backend lands as **G10** (below) / cpc-renderer.md §0 phases R6–R10;
+> G7/G8 are retained as history of the interim renderer that stays green
+> until JSP-CPC reaches parity, then is removed (R10).
+
 Goal: prove the integration shape works with a no-op CPC backend
 target. **Still no real CPC rendering**; this is the framing.
 
@@ -1087,21 +1103,56 @@ where the CPC renderer library lands as live engine code.
   - `games/minimal` (ZX) and all other ZX test games still build
     and screenshot-match.
 
+### Phase G10 — JSP CPC backend (the real CPC renderer)
+
+> **Added 2026-06-05 (README §5.13).** Replaces the interim `cpctel`
+> backend (G7/G8) with **JSP in CPC mode**. Pairs with cpc-renderer.md §0
+> phases R6–R10 (build integration, asset pipeline, game migration,
+> retirement) and assets.md A8; this phase owns the **HAL-side** wiring.
+
+Goal: make `GFX_BACKEND=jsp` build for the CPC `PLATFORM` axis with real,
+**pixel-smooth** rendering, reusing the JSP backend that already serves ZX.
+
+- **G10-1** Add CPC platform sections to the JSP backend
+  (`engine/src/gfx_jsp.{c,h}`, or sibling `gfx_jsp_cpc.{c,h}` under
+  `#ifdef BUILD_FEATURE_PLATFORM_CPC_*`): `gfx_init` sets Mode 1 + pen
+  palette before the first `jsp_redraw` (via the kept
+  `engine/src/cpc/cpct_video.asm` primitives); `gfx_xpos_t` is 16-bit
+  (already from G4); `attr`/colour API inert (README §5.5); the remaining
+  `gfx_*` macros map straight to `jsp_*` as on ZX.
+- **G10-2** Build `games/minimal_cpc` with `GFX_BACKEND=jsp PLATFORM=cpc464`
+  (cpc-flat); verify it links JSP-CPC (cpc-renderer.md R6).
+- **G10-3** Verify **1-pixel** hero movement in Caprice32 — closes the
+  parked cell-granular task (`.prompts/2026-06-05.md` Task 1).
+- **G10-4** Rebaseline the CPC screenshot regression for the JSP backend
+  (testing.md TS3): pixel-smooth output differs from the cell-granular
+  `cptel` baseline.
+- **G10-5** Retire the interim backend (cpc-renderer.md R10): remove
+  `gfx_cpctel.{c,h}` + `BUILD_FEATURE_GFX_BACKEND_CPCTEL`. Keep the
+  `engine/src/cpc/` hardware-I/O asm **with cpctelera credit headers
+  intact** (README §5.13 / cpc-renderer.md §0.6).
+- **Phase-exit criteria**:
+  - `games/minimal_cpc` runs on cpc-flat with `GFX_BACKEND=jsp`, pixel-smooth.
+  - `make all-test-builds` + ZX `tests/00regression/` green.
+
 ### Phase G9 — CPC backend hardening
 
-Goal: bring more games up, address whatever surface-area issues G8
+> **Updated 2026-06-05 (README §5.13):** G9 re-targets `GFX_BACKEND=jsp`
+> (not `cpctel`); the CPC CI lane is `jsp-cpc*`. Sequence G9 **after** G10
+> (the real JSP backend) and cpc-renderer.md R9.
+
+Goal: bring more games up, address whatever surface-area issues G8/G10
 surfaced.
 
 - **G9-1** Bring up `games/blobs`, `games/crumbs`, `games/mapgen` on
-  CPC.
-- **G9-2** Address any HAL gaps discovered during G8 / G9-1 — e.g.
-  CPC-specific clipping wrinkles, glyph-cache eviction strategy,
-  border-flash timing.
+  CPC (`GFX_BACKEND=jsp`).
+- **G9-2** Address any HAL gaps discovered during G10 / G9-1 — e.g.
+  CPC-specific clipping wrinkles, JSP pool sizing, border-flash timing.
 - **G9-3** Add a CPC line to the CI matrix.
 - **Phase-exit criteria**:
   - At least 3 distinct test games run on CPC.
   - CI is green on `sp1-zx48`, `sp1-zx128`, `jsp-zx48`, `jsp-zx128`,
-    `cpctel-cpc6128` lanes.
+    `jsp-cpc6128` (and `jsp-cpc464`) lanes.
 
 ---
 

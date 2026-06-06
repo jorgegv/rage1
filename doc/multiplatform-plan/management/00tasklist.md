@@ -55,28 +55,41 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] AU3 — migrate to `audio_*` names (legacy stays as permanent silent aliases per README §5.6)
 
 - [ ] **Phase 4 — CPC bring-up (cpc-flat first, then cpc-banked)**
-  - [x] R2 — cpctelera + z88dk hello-world PoC (gating test)
-  - [x] R3 — `cpct_img2tileset` asset-converter wiring
+  > **2026-06-05 (README §5.13):** the cpctelera-tagged tasks below
+  > (R2/R3/R4/A5/G7/G8/G8a) were executed and produced the **interim
+  > `gfx_cpctel`** backend (cell-granular). cpctelera is revoked; the CPC
+  > graphics engine is now **JSP** — see the new "Phase 4J" below. The
+  > interim backend stays green until JSP-CPC reaches parity, then is
+  > removed (R10).
+  - [x] R2 — cpctelera + z88dk hello-world PoC (gating test) *(interim; superseded by JSP)*
+  - [x] R3 — `cpct_img2tileset` asset-converter wiring *(interim; superseded by A8)*
   - [x] T2 — cpc-flat Makefile; first `.cpc`/`.cdt` build
   - [x] B4 — CPC banking config seam (cpc-flat = no banking)
   - [x] B5 — cpc-flat banking materialised
-  - [x] G7 — `gfx_cpctel.c` stub skeleton
+  - [x] G7 — `gfx_cpctel.c` stub skeleton *(interim; superseded by G10)*
   - [x] IN5 — input CPC skeleton (stub)
   - [x] AU4 — audio CPC skeleton + AT2 player relocation
-  - [x] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets
+  - [x] A5 — `datagen.pl` invokes `cpct_img2tileset` for CPC assets *(interim; superseded by A8)*
   - [x] TS2 — Caprice32 + Xvfb in dev env + Docker
-  - [x] R4 — real `gfx_cpctel.c` + `games/minimal_cpc/`
-  - [x] G8 — real CPC backend wiring
+  - [x] R4 — real `gfx_cpctel.c` + `games/minimal_cpc/` *(interim; superseded by G10/R9)*
+  - [x] G8 — real CPC backend wiring *(interim; superseded by G10)*
   - [x] G8a — CPC 16-bit sprite/position coords + `gfx_cpctel` bounds clamp (no-debt task, surfaced by G8 review — see README §5.12)
-  - [x] IN6 — real CPC input via cpctelera keyboard scan
+  - [x] IN6 — real CPC input via hand-translated CPC keyboard scan (`engine/src/cpc/cpct_keyboard.asm`; no cpctelera library dep — README §5.13)
   - [x] AU5 — real CPC audio via AT2 AKG generic player
-  - [x] TS3 — first CPC regression baseline
+  - [x] TS3 — first CPC regression baseline *(cpctel; rebaselined for JSP at R9/G10)*
   - [ ] B6 — cpc-banked banking infrastructure
   - [ ] B7 — cpc-banked banking tooling
   - [ ] T3 — cpc-banked Makefile; first banked `.dsk` build
 
+- [ ] **Phase 4J — CPC graphics engine: switch to JSP (cpctelera revoked; README §5.13)**
+  - [x] R6 — JSP `+cpc` build integration into RAGE1 (Makefile.common CPC arm; JSP CPC flags; proven: JSP-CPC compiles+links under RAGE1 z88dk flags → bootable .dsk) — replaces R1/R2
+  - [ ] G10 — JSP CPC backend: `gfx_jsp` CPC platform sections (mode/palette in `gfx_init`; pixel-smooth) — replaces G7/G8
+  - [ ] A8 — JSP CPC asset pipeline (`cpc_asset_convert.pl` wraps `cpcgfx.pl`/`gfxgen.pl`; A8-7 text-mode→PNG bridge to reuse `.gdata` assets) — replaces A5
+  - [ ] R9 — migrate `games/minimal_cpc` to `GFX_BACKEND=jsp`; converge on `games/minimal` + reuse assets (README §5.13b); prove 1 px movement; rebaseline TS3
+  - [ ] R10 — retire `gfx_cpctel` backend + remove `external/cpctelera` submodule (keep `engine/src/cpc/` HW-I/O asm with cpctelera credit intact)
+
 - [ ] **Phase 5 — Hardening + CI matrix expansion**
-  - [ ] R5 — cpctelera hardening, upstream feedback
+  - [ ] R5 — ~~cpctelera hardening, upstream feedback~~ **DROPPED (README §5.13: cpctelera revoked)**; superseded by R10 (retirement)
   - [ ] G9 — CPC backend across 3+ games (blobs / crumbs / mapgen)
   - [ ] IN7 — optional `CONTROLLER` `.gdata` directive
   - [ ] AU6 — `SOUND_MAP` directive for cross-platform `SOUND` events

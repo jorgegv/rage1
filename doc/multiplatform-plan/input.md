@@ -525,17 +525,24 @@ typedef struct udk_s         input_udk_t;        // z88dk's struct
 // input_state_read, input_capture_scancode: real functions in input.c
 ```
 
-**`input_cpc.h`** (sketch):
+**`input_cpc.h`** (sketch — *stale; see note*):
+
+> **Updated 2026-06-05 (README §5.13):** this sketch predates IN6, which
+> is complete. There is **no `#include <keyboard/keyboard.h>`** — that
+> cpctelera header lives in the now-removed `external/cpctelera` submodule.
+> The shipped `input_cpc.h` declares the scancode constants locally and
+> calls the hand-translated `engine/src/cpc/cpct_keyboard.asm` (standalone,
+> no cpctelera library dep; cpctelera credit header kept). Read the sketch
+> with the `#include` removed.
 
 ```c
-#include <keyboard/keyboard.h>                 // cpctelera (provides
-                                               // the `cpct_keyID`
-                                               // enum we re-use here)
+// (NO cpctelera include — constants declared locally; primitives provided
+//  by engine/src/cpc/cpct_keyboard.asm. See note above.)
 
-// CPC scancode encoding (provided by cpctelera's `cpct_keyID` enum):
+// CPC scancode encoding (the `cpct_keyID` convention, values copied
+// verbatim from cpctelera keyboard.h, pinned commit — credit kept):
 // low byte = matrix line (0..9), high byte = bit mask within that
-// line. We deliberately do NOT redeclare `cpct_keyID` locally to
-// avoid shadowing the upstream definition from keyboard/keyboard.h.
+// line.
 //
 // Field order matches z88dk's `struct udk_s` (fire, right, left, down,
 // up) so user code that previously assigned to `keys.up`/`keys.fire`
@@ -900,6 +907,17 @@ dependency for input; no upstream surprises. Cons:
   theoretical minimum at 848 T-states).
 
 ### 4.3 Decision + justification
+
+> **Clarified 2026-06-05 (README §5.13):** the decision **stands**, but
+> "use cpctelera's keyboard scan" means **the hand-translated
+> `engine/src/cpc/cpct_keyboard.asm`** — a standalone z88dk z80asm source
+> *derived from* cpctelera (pinned commit) but with **no cpctelera library
+> dependency** (it does not link `external/cpctelera`, which is being
+> removed). Its cpctelera **credit header is kept** (README §5.13 /
+> cpc-renderer.md §0.6). The current IN6 implementation already calls this
+> file, so revoking the cpctelera *library* changes nothing here — only the
+> wording. The symmetry reference to `gfx_cpctel.*` is now the JSP backend;
+> the keyboard decision is independent of the gfx library.
 
 **Decision (2026-05-26): use cpctelera's `cpct_scanKeyboard_if` +
 `cpct_isKeyPressed`.** Resolves cpc-renderer.md OQ-4 (which

@@ -6,6 +6,14 @@ phases are grouped into 6 chronological **top-level phases**
 placeholders — the load-bearing content is **dependency topology**
 and **phase ordering**, not calendar time.
 
+> **Updated 2026-06-05 (README §5.13):** the CPC graphics engine switched
+> from cpctelera to **JSP**. The cpctelera phases charted below
+> (R1–R5) are **superseded** by the JSP bring-up wave **R6–R10 + G10 + A8**
+> ("Phase 4J" in [00tasklist.md](00tasklist.md)). New CPC-graphics
+> dependency chain: **R6 → G10 → A8 → R9 → R10**, with R9 also gating the
+> TS3 rebaseline and G9 (CPC across 3+ games). The charts below have not
+> been redrawn yet; read them with this override in mind.
+
 | Phase | Theme | Count | CPC code? | ZX byte-identical? |
 |---|---|---|---|---|
 | **Phase 1** | Foundation (preparation) | 4 | no | n/a (no engine changes) |

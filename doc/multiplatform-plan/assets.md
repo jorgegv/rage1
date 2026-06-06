@@ -660,6 +660,16 @@ copy described in §2.2.
 
 ## 3. Tooling changes
 
+> **Updated 2026-06-05 (README §5.13).** Every "CPC path delegates to
+> cpctelera / `cpct_img2tileset`" statement in §3 (incl. §3.2/§3.3 tables)
+> is **superseded**: the live CPC asset path (**Phase A8**) shells out to
+> JSP's vendored converters — `external/jsp/tools/cpcgfx.pl --mode 1`
+> (colour) and `gfxgen.pl` (mono) — which emit **Z80 ASM** (linked
+> directly), not C arrays. The *subprocess* architecture (CPC delegates to
+> an external converter; ZX stays Perl-internal) is unchanged. §3 below is
+> retained as historical context; substitute the JSP tools for
+> `cpct_img2tileset` throughout.
+
 ### 3.1 `datagen.pl` changes
 
 The bulk of datagen needs **minimal changes** if file-level
@@ -1114,6 +1124,13 @@ fixture instead of a transient ad-hoc check. See
 
 ### Phase A5 — CPC asset conversion via cpctelera subprocess
 
+> **SUPERSEDED 2026-06-05 (README §5.13).** A5 was executed against
+> cpctelera's `cpct_img2tileset`; cpctelera is now revoked. The CPC asset
+> pipeline uses **JSP's vendored converters** — see the new **A8** (below).
+> The *subprocess* architecture (CPC delegates to an external converter;
+> ZX stays Perl-internal) is unchanged — only the tool and its output
+> format change. A5 retained for history.
+
 **Goal**: stand up the CPC side of the asset pipeline by wiring
 `datagen.pl` to invoke cpctelera's `cpct_img2tileset` as a
 subprocess for CPC platforms. No Perl-side CPC encoders are added
@@ -1253,6 +1270,90 @@ story.
 - `make all-test-builds` green.
 - `tests/00regression/` green.
 - Docs reflect the final state.
+
+### Phase A8 — JSP CPC asset pipeline (replaces A5)
+
+> **Added 2026-06-05 (README §5.13 / §5.13a).** The CPC asset pipeline
+> uses JSP's vendored converters instead of `cpct_img2tileset`. Pairs with
+> cpc-renderer.md R8.
+
+**Goal**: re-point the CPC branch of the `datagen.pl` per-platform
+dispatcher (A3) at JSP's converters, emitting **Z80 ASM** assets that the
+build links directly.
+
+- **A8-1** Re-point `tools/cpc_asset_convert.pl` to wrap JSP's vendored
+  tools instead of `cpct_img2tileset`:
+  - `external/jsp/tools/cpcgfx.pl --mode 1` for Mode-1 colour
+    sprites/tiles: `-g sprite_mask` (→`JSP_TYPE_MASK2`) / `-g sprite_load`
+    (→`JSP_TYPE_LOAD1`) / `-g tile`; `--extra-top-rows --extra-bottom-row`
+    for sprites; `--multicolor` + `--palette-symbol` for >2 pens (≤4 in
+    Mode 1). Mask/fg/bg passed as `-m`/`-f`/`-b` RGB.
+  - `external/jsp/tools/gfxgen.pl` for the 1bpp path (Mode 2 / MONO).
+  - Output is `.asm` (`PUBLIC` + `db`), emitted under `build/generated/cpc/`;
+    the build **links** it (no generated-C compile step). `CPCT_PATH` /
+    Img2CPC install steps are gone.
+- **A8-2** Wire the A3 datagen CPC dispatch branch (currently a `die`
+  placeholder / cpctelera path) to call the re-pointed wrapper.
+- **A8-3** Smoke-test: `games/minimal_cpc` assets convert to JSP-format
+  ASM and link into the cpc-flat JSP build (cpc-renderer.md R9).
+- **A8-4** Rewrite `doc/CPC-ASSET-WRAPPER.md` for the JSP tools (byte
+  formats per [external/jsp/doc/CPC-ASSETS-FORMAT.md](../../external/jsp/doc/CPC-ASSETS-FORMAT.md));
+  drop the cpctelera `CPCT_PATH`/R3-2 coordination.
+- **A8-5** Re-evaluate the README §5.9 mono-mode BTile optimisation: JSP's
+  blitter can expand 1bpp `gfxgen.pl` output at blit time, so the bespoke
+  512-byte mono LUT may be unnecessary — measure and decide under this task.
+- **A8-6** OQ-A9 (FG/BG → CPC firmware-colour table) can now be verified
+  against the vendored palette in `external/jsp/tools/cpcgfx.pl` instead of
+  cpctelera's `cpct_firmware_palette.h`.
+- **A8-7** **Text-mode → PNG bridge for reusing in-`.gdata` assets on CPC
+  (README §5.13b).** The ZX test games author graphics as `PIXELS`/`MASK`
+  ASCII inside `.gdata` (sprites/btiles/heroes), not PNG; JSP's CPC
+  converters take PNG. Add a thin bridge — a `datagen.pl` helper (or a
+  small `tools/gdata_pixels2png.pl`) that renders the text-mode block(s) to
+  a PNG, then feeds that PNG to the A8-1 wrapper (`cpcgfx.pl` for colour,
+  `gfxgen.pl` for mono). Keeps a single CPC-encoding authority (the JSP
+  tools); avoids a parallel `PIXELS`→Mode-1 encoder in Perl (the divergence
+  §5.1 rejects — rendering ASCII to a *platform-neutral* PNG is not CPC
+  encoding). **Bridge contract** (the load-bearing detail — document in
+  `doc/CPC-ASSET-WRAPPER.md`):
+  - **Inputs are two parallel ASCII blocks**, a `PIXELS` block (`.`=bg,
+    `#`=fg) and, for sprites, a separate `MASK` block (`.`/`#`). Tri-state
+    merge per pixel: `MASK`=`#` → **transparent** (paint the `-m` colour,
+    default `FF0000`); else `PIXELS`=`#` → **fg** (`-f`); else **bg**
+    (`-b`). (Confirmed against `games/minimal/.../sprites/Hero.gdata`:
+    `PIXELS`+`MASK` are separate `.`/`#` blocks; btiles have `PIXELS`
+    only, no mask.) Mind `cpcgfx.pl`'s mask polarity: a transparent source
+    pixel yields a mask byte with both planes set.
+  - **Scope: 2-colour Mode-1 (and mono) only.** ASCII `.`/`#` expresses
+    exactly two ink classes, so the bridge **cannot** feed `cpcgfx.pl
+    --multicolor` (4-pen). A8-7 and A8-1's `--multicolor` path do **not**
+    compose: 4-pen CPC art must be authored as a real PNG overlay
+    (Tier 2), never via the bridge.
+  - **Colour from `ATTR`:** for an asset carrying an `ATTR` (e.g.
+    `games/minimal`'s `Live` btile = `INK_RED|PAPER_BLACK|BRIGHT`), the
+    bridge derives `-f`/`-b` from the INK/PAPER tokens via the §5.10 /
+    OQ-A9 colour-token→CPC-firmware-colour table (A8-6) — otherwise reused
+    colour assets render mono-in-one-colour on CPC and the §5 "attribute
+    leaks" risk materialises silently.
+  - **Multi-frame sprites:** iterate the N `PIXELS`/`MASK` block pairs
+    (one PNG per frame, or a frame-strip with per-frame `-x` offsets),
+    preserving `.gdata` frame order so `SEQUENCE` indices stay valid.
+  - **Mono path:** `gfxgen.pl` also takes PNG, so mono normally uses the
+    same bridge (→`gfxgen.pl`); a PNG-free direct path is gated on A8-5
+    (README §5.13b) and is a documented §5.1 exception if adopted.
+- **A8-8** **Reuse shared `.gdata` assets unchanged on CPC.** With A8-7 in
+  place, the same `game_data/` sprites/btiles feed both platforms; CPC adds
+  only what genuinely differs (palette, colour) via a `cpc*/game_data/`
+  overlay (§5.2/§5.3). Verify a shared asset (e.g. `games/minimal`'s Hero)
+  builds for both ZX and CPC from one source. Pairs with cpc-renderer.md R9
+  (rewrite `games/minimal_cpc` to mirror `games/minimal`).
+
+**Phase-exit criteria for A8**:
+- CPC assets for the (converging) `games/minimal_cpc` generate as
+  JSP-format ASM — including at least one asset reused from the shared
+  `games/minimal` `.gdata` via the A8-7 bridge — and link into the JSP
+  cpc-flat build.
+- `make all-test-builds` + ZX `tests/00regression/` green.
 
 ---
 
@@ -1487,9 +1588,9 @@ this list.
    reference (the values consumed by firmware `SCR SET INK` /
    cpctelera pen-setup helpers). Before merging A1-7, verify each
    entry against a definitive reference (the AMSTRAD CPC firmware
-   manual, the cpctelera firmware-colour table in
-   `external/cpctelera/cpctelera/cfg/cpct_firmware_palette.h` once
-   the submodule is vendored under Phase R1, or a screenshot
+   manual, **the vendored CPC palette in `external/jsp/tools/cpcgfx.pl`**
+   — README §5.13 / A8-6; *the cpctelera `cpct_firmware_palette.h` is no
+   longer a source — that submodule is removed at R10* — or a screenshot
    comparison on a Caprice32 emulator). Specifically check the
    "dark vs bright" pairing assumption (e.g. firmware 3 vs 6 for
    non-bright vs bright red) — it is the most likely place for an

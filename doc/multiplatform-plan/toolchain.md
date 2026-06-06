@@ -1,5 +1,18 @@
 # Toolchain & build matrix: ZX + CPC
 
+> # ⚠ Document-wide override 2026-06-05 (README §5.13)
+> **The CPC graphics engine is JSP, not cpctelera; cpctelera is fully
+> revoked.** Throughout this document, every reference to cpctelera as the
+> CPC graphics library / its SDCC fork / its asset tools / its submodule is
+> **superseded**. Concretely, document-wide: CPC `GFX_BACKEND` is **`jsp`**
+> (selected by `PLATFORM`); there is **no `external/cpctelera` submodule and
+> no cpctelera SDCC-dialect problem** (JSP builds with `zcc +cpc
+> -compiler=sdcc`); CPC asset tools are JSP's vendored Perl scripts
+> (`external/jsp/tools/cpcgfx.pl`, `gfxgen.pl`), needing no binary install.
+> The hand-translated CPC hardware-I/O asm under `engine/src/cpc/` is kept,
+> **with its cpctelera credit intact**. Specific spots are annotated inline;
+> where they are not, this banner governs.
+
 This document specifies how the RAGE1 build system evolves to produce binaries
 for both ZX Spectrum (48K, 128K) **and** Amstrad CPC (464, 664, 6128) from the
 same source tree. It is **toolchain-only**: how compilers, assemblers, linkers,
@@ -336,14 +349,19 @@ Rationale:
 
 The chosen architecture is therefore:
 
+> **Updated 2026-06-05 (README §5.13):** the CPC arm now uses **JSP**, not
+> cpctelera — read the right side as `gfx_jsp` (CPC sections) +
+> `external/jsp/lib/cpc`. cpctelera is revoked; `external/cpctelera` is
+> removed. The diagram is left as-drawn for history.
+
 ```
                   zcc +zx                            zcc +cpc
                   -clib=sdcc_iy                      -clib=sdcc_iy
                        │                                  │
    engine/src  ────────┤                                  ├──── engine/src
     gfx_sp1 ───────────┤    one shared C corpus           │
-    gfx_jsp ───────────┤    + per-platform backends ──────┤───── gfx_cpctel
-    external/jsp/lib ──┘                                  └──── external/cpctelera/lib
+    gfx_jsp ───────────┤    + per-platform backends ──────┤───── gfx_jsp (CPC) [was: gfx_cpctel]
+    external/jsp/lib ──┘                                  └──── external/jsp/lib/cpc [was: external/cpctelera/lib]
 
       ↓ link                                                  ↓ link
       ↓                                                       ↓
@@ -431,20 +449,29 @@ own `Makefile-cpc-banked` and `zpragma-cpc-banked.inc`.
 Rename `SPRITE_ENGINE` → **`GFX_BACKEND`** at the Makefile/.gdata level
 (see also `gfx.md`). Default still `sp1`. Allowed values per platform:
 
+> **Updated 2026-06-05 (README §5.13 / §5.4):** the CPC default
+> `GFX_BACKEND` is **`jsp`**, not `cpctel`. JSP is the single
+> cross-platform backend; the CPC build is chosen by the `PLATFORM` axis.
+> `cpctel` (cpctelera) and `cpcrs` (cpcrslib) are **reserved names only**;
+> `BUILD_FEATURE_GFX_BACKEND_CPCTEL` is removed at R10. The table/paragraph
+> below show the original cpctelera-era values for history.
+
 | PLATFORM  | Default `GFX_BACKEND` | Allowed                                   |
 |-----------|-----------------------|-------------------------------------------|
 | `zx48`    | `sp1`                 | `sp1`, `jsp`                              |
 | `zx128`   | `sp1`                 | `sp1`, `jsp`                              |
-| `cpc464`  | `cpctel`              | `cpctel` (future: `cpcrs`, other CPC libs)|
-| `cpc6128` | `cpctel`              | `cpctel` (future: `cpcrs`, other CPC libs)|
+| `cpc464`  | `jsp` *(was `cpctel`)*  | `jsp` (`cpctel`/`cpcrs` reserved names only) |
+| `cpc6128` | `jsp` *(was `cpctel`)*  | `jsp` (`cpctel`/`cpcrs` reserved names only) |
 
 **Backend naming rule**: a `GFX_BACKEND` value is the **short name of
 the underlying library**, never a generic platform tag. ZX backends
-follow this today (`sp1`, `jsp`); CPC backends do the same — `cpctel`
-for cpctelera, `cpcrs` reserved for cpcrslib, `cpc<lib>` for any other
-CPC graphics library added later. Engine code gates with
-`#ifdef BUILD_FEATURE_GFX_BACKEND_CPCTEL` (and parallel macros for
-future entrants), matching `gfx.md`'s usage.
+follow this today (`sp1`, `jsp`); the CPC graphics engine is **`jsp`**
+too (same library, selected by `PLATFORM`). `cpctel`/`cpcrs`/`cpc<lib>`
+stay reserved for any future first-class CPC alternative. Engine code
+gates the CPC build on the `PLATFORM` macros
+(`BUILD_FEATURE_PLATFORM_CPC_*`), matching `gfx.md`'s G10 usage; the
+`BUILD_FEATURE_GFX_BACKEND_CPCTEL` macro is retired with the interim
+backend (R10).
 
 `SPRITE_ENGINE` (old name) remains accepted at the `.gdata` level
 **indefinitely** as a silent alias for `GFX_BACKEND` (per README
@@ -518,9 +545,11 @@ Five pragma files, one per platform/sprite-engine combination
 - `zpragma-cpc-banked.inc` — new (CPC6128 with banks; per
   `banking.md`'s decisions on org and stack)
 
-A `zpragma-cpc-flat-cpctelera.inc` variant **only** appears if cpctelera's
-runtime requires specific pragma deltas (firmware-disable, special
-interrupt setup); decision deferred to `cpc-renderer.md`.
+~~A `zpragma-cpc-flat-cpctelera.inc` variant **only** appears if cpctelera's
+runtime requires specific pragma deltas~~ **MOOT 2026-06-05 (README §5.13):**
+cpctelera revoked; no such variant is created. JSP's CPC build needs only
+`-pragma-define:REGISTER_SP=…` and the standard cpc-flat pragma set
+(cpc-renderer.md R6).
 
 Keep `zpragma-48.inc` and `zpragma-128.inc` as one-line forwarding
 includes **indefinitely** per README §5.6, silently (no `#warning`).
@@ -707,6 +736,18 @@ green per the project's "phase-exit green" rule. Each task lists what to
 change, what to test, and what "done" looks like.
 
 ### Phase T0 — Spike: prove z88dk `+cpc` + sdcc_iy with vendored CPC lib
+
+> **MOSTLY MOOT 2026-06-05 (README §5.13).** T0 existed to de-risk
+> cpctelera + z88dk (the SDCC-fork dialect/ABI problem). cpctelera is
+> revoked; the CPC graphics library is **JSP**, which builds natively with
+> `zcc +cpc -compiler=sdcc` — no sdas translation, no bundled-SDCC clash.
+> So T0-1 (cpctelera submodule add) is **dropped** and the T0-2 dialect
+> spike is moot. What **survives** as live CPC-toolchain facts: the
+> finding that `sdcc_iy` is not offered on `+cpc` (applies to JSP too — see
+> T0 outcomes), DSK/CDT via `appmake`/`2cdt`, and the `#pragma bank`
+> check. JSP's required CPC build flags (`-DJSP_TARGET_CPC`, the mode
+> guard, `-pragma-define:REGISTER_SP`, `-Ca-I external/jsp`) are owned by
+> cpc-renderer.md R6.
 
 Establish the chosen toolchain stack works end-to-end with a "hello
 sprite" CPC program before any RAGE1 plumbing changes. No RAGE1 code is
@@ -928,7 +969,8 @@ parity comes in later phases owned by gfx/audio/input subsystems.
   - `make all-test-builds-zx` (ZX subset) green.
   - `make build-cpc464 target_game=games/cpc-hello` produces a
     runnable artifact end-to-end with no manual intervention.
-  - CI image has `2cdt` and any required cpctelera tools.
+  - CI image has `2cdt` and the JSP asset tools (`external/jsp/tools/cpcgfx.pl`,
+    `gfxgen.pl` — Perl, no binary install). *(was: "required cpctelera tools" — README §5.13)*
   - `Makefile-cpc-flat` and `zpragma-cpc-flat.inc` checked in.
 
 ### Phase T3 — CPC6128 bring-up (cpc-banked)
@@ -1027,7 +1069,11 @@ be a separate project.)
 
 ## 7. Risks
 
-- **R-T1 — cpctelera library expects its own SDCC version.** cpctelera
+- **R-T1 — cpctelera library expects its own SDCC version.**
+  **MOOT 2026-06-05 (README §5.13):** cpctelera revoked; the CPC graphics
+  engine is JSP, which builds with z88dk's own SDCC (`zcc +cpc
+  -compiler=sdcc`) — no version clash. This was the plan's largest risk;
+  it no longer applies. Original text kept for history. cpctelera
   pins SDCC 3.5.5 / 3.6.8 (per its setup). z88dk v2.3 ships a newer SDCC.
   If cpctelera's `.asm`/`.c` source uses SDCC-internal idioms that
   changed between versions, the z88dk-driven build of those sources may
@@ -1067,9 +1113,11 @@ be a separate project.)
   if the CPC Makefiles follow suit, the dependency graph changes
   (different per-bank steps) and parallel-build correctness must be
   re-verified per platform.
-- **R-T8 — CI image size.** Adding cpctelera + tools + 2cdt + a CPC
-  emulator (for `testing.md`) could push the image from ~1 GB to several
-  GB. Mitigation: split into `:zx` and `:cpc` tagged variants and let
+- **R-T8 — CI image size.** *(Updated 2026-06-05, README §5.13: no
+  cpctelera + no binary tools to add — JSP tools are vendored Perl
+  scripts.)* The remaining CI additions are `2cdt` + a CPC emulator (for
+  `testing.md`), a smaller delta than the original estimate. Mitigation
+  still available: split into `:zx` and `:cpc` tagged variants and let
   the workflow pick.
 - **R-T9 — CPC664 runtime divergence from CPC464.** Phase 1 treats
   CPC664 as a runtime target of the CPC464 build (memory-identical).
@@ -1098,11 +1146,12 @@ be a separate project.)
   fixes? Trade-off: newer z88dk may also bring SDCC version changes that
   affect ZX code-gen. Verify with a clean `make all-test-builds` on a
   v2.4 spike branch.
-- **OQ-T4** — Which CPC graphics library is vendored? toolchain.md
-  assumes cpctelera (or equivalent) but the decision lives in
-  `cpc-renderer.md`. A non-cpctelera choice (e.g. CPCRSlib, or a
-  minimal hand-rolled `gfx_<libname>` library) changes Phase T0's spike
-  target and Phase T2's CRT pragma but not the build-matrix design.
+- **OQ-T4** ✅ — Which CPC graphics library is vendored? **Resolved
+  2026-06-05 (README §5.13): JSP** (`external/jsp`, already vendored;
+  already a RAGE1 backend). Phase T0's cpctelera spike is moot; Phase T2's
+  CRT pragma uses JSP's flags (`-DJSP_TARGET_CPC`,
+  `-pragma-define:REGISTER_SP`, `-Ca-I external/jsp` — cpc-renderer.md R6).
+  The build-matrix design is unchanged.
 - **OQ-T5** — How are CPC test-game artifacts validated in CI? The
   current ZX path uses FUSE for `make run` and JNEXT for screenshots
   (`tests/00regression/`). The CPC path will need Caprice32 or RVM
@@ -1116,11 +1165,11 @@ be a separate project.)
   AMSDOS DSK + a CDT generated only on-demand sufficient? CDT
   generation is small but adds CI dependency; punting it to "on
   demand" simplifies the standard build to `.cpc` + `.dsk` only.
-- **OQ-T8** — Does the cpctelera (or chosen library) submodule require
-  any of cpctelera's build-system invariants to be honoured (e.g.
-  specific `M4`/`#pragma` setup that its lib sources expect)? Phase T0
-  must surface these so we can either honour them in our Makefile or
-  patch them out.
+- **OQ-T8** ✅ — Does the chosen library's submodule require build-system
+  invariants to be honoured? **MOOT 2026-06-05 (README §5.13):** cpctelera
+  revoked. JSP has no such invariants — no `M4`, no `cpct_mkproject`, no
+  special `#pragma` setup; it is compiled inline like the ZX JSP path plus
+  the flags in cpc-renderer.md R6.
 - **OQ-T9** — Does the `--no-crt` compile of CPC datasets/codesets
   need different firmware-disable pragmas than the main binary?
   z88dk has `CRT_ENABLE_RST_xx` family; verify in Phase T0 spike.
