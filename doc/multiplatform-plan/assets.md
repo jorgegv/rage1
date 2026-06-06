@@ -1273,7 +1273,22 @@ story.
 
 ### Phase A8 — JSP CPC asset pipeline (replaces A5)
 
-> **Added 2026-06-05 (README §5.13 / §5.13a).** The CPC asset pipeline
+> **Approach changed 2026-06-06 (Task 5; README §5.1 REVERSED).** A8 is no
+> longer a *subprocess + PIXELS→PNG bridge*. CPC asset conversion is an
+> **in-process datagen asset backend**: datagen already holds the pixel grid,
+> so it packs CPC mode-1 bytes directly (no PNG round-trip, no subprocess) and
+> emits them **inline** in the same C structs as the ZX path. The packing is
+> **copied/adapted from `external/jsp/tools/cpcgfx.pl`** into a RAGE1 module
+> under `lib/RAGE/` (cpcgfx.pl stays untouched in the JSP submodule), with a
+> **byte-compat regression test** vs cpcgfx.pl. Driven by **Task 5** (datagen
+> asset-backend refactor: a pluggable backend abstraction, ZX as the first
+> backend — byte-identical, then a CPC Mode-1 backend). Consequently the
+> subprocess/bridge tasks below — **A8-1, A8-2, A8-7 — are SUPERSEDED**; the
+> still-valid items are A8-3 (game wiring → R9), A8-4 (`CPC-ASSET-WRAPPER.md`
+> → now "CPC backend" doc), A8-5 (mono-LUT eval), A8-6 (OQ-A9), A8-8 (shared
+> `.gdata` asset reuse). The 2026-06-05 note below is superseded.
+
+> **Superseded 2026-06-05 (README §5.13 / §5.13a).** The CPC asset pipeline
 > uses JSP's vendored converters instead of `cpct_img2tileset`. Pairs with
 > cpc-renderer.md R8.
 

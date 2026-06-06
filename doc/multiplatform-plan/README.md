@@ -251,9 +251,24 @@ the canonical resolution; the per-subsystem docs reflect them.
 Decisions are dated; resolved-during-review decisions land in
 chronological order.
 
-### 5.1 CPC asset conversion: vendored subprocess, not Perl-side encoders
+### 5.1 CPC asset conversion: in-datagen asset backend (REVERSED — was subprocess)
 
-> **Updated 2026-06-05 (§5.13):** the *subprocess* decision stands, but
+> **REVERSED 2026-06-06 (Task 5):** the *subprocess* decision is dropped.
+> CPC asset conversion is an **in-process datagen asset backend** — datagen
+> already holds the pixel grid (from `PIXELS`/`MASK` or PNG via GD), so it
+> packs CPC mode-1 bytes directly (no PNG round-trip, no subprocess) and
+> emits them inline in the same C structs as the ZX path. The packing is
+> **copied/adapted from `external/jsp/tools/cpcgfx.pl`** (`cell_bytes`/
+> `emit_cell`) into a RAGE1 module (`lib/RAGE/`); cpcgfx.pl itself stays in
+> the JSP submodule, untouched. datagen's copy MAY diverge as long as the
+> emitted **bytes stay JSP-compatible** — guarded by a byte-compat regression
+> test (datagen output == cpcgfx.pl output for reference art). The original
+> §5.1 rationale ("no foreign CPC encoder in Perl") no longer applies: the
+> encoder is now JSP's own Perl, copied with a verified format contract.
+> Implemented under **Task 5** (datagen asset-backend refactor) + assets.md A8.
+> The 2026-06-05 subprocess note below is superseded.
+
+> **Superseded 2026-06-05 (§5.13):** the *subprocess* decision stands, but
 > the tool is **JSP's vendored converters** — `external/jsp/tools/cpcgfx.pl
 > --mode 1` (4-pen colour) and `external/jsp/tools/gfxgen.pl` (1bpp /
 > Mode 2 / MONO) — **not** cpctelera's `cpct_img2tileset`. They emit Z80
