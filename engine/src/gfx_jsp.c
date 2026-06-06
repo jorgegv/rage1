@@ -24,7 +24,45 @@
 // Pool storage.  The recompositing JSP model needs no per-sprite drawing
 // buffers — the pool is simply an array of sprite descriptors.
 static struct jsp_sprite_s _sprite_pool[ GFX_JSP_MAX_SPRITES ];
-static const uint8_t _blank_tile[8] = {0,0,0,0,0,0,0,0};
+// Default/background cell: JSP_CELL_BYTES is 8 on ZX (1bpp UDG) and 16 on CPC
+// mode 1 (2bpp); sizing by the macro keeps one blank-cell source on both.
+static const uint8_t _blank_tile[ JSP_CELL_BYTES ] = { 0 };
+
+#ifdef GFX_JSP_CPC
+
+// CPC: JSP leaves screen mode + palette programming to the caller (CPC has no
+// attribute RAM — colour lives in the gate-array palette; see JSP CPC-USAGE
+// §5/§6).  We program mode 1 + a 4-pen palette here, via the hand-translated
+// CPC hardware-I/O primitives in engine/src/cpc/ (origin cpctelera, credit
+// kept — README §5.13).  Pen values are the resolved default until the
+// per-game palette (A8) lands.  hw_ink values are gate-array INKR codes
+// (the 0x40 INKR command is OR'd in by cpct_setPALColour/cpct_setBorder).
+extern void cpct_setVideoMode( uint8_t mode )                __z88dk_fastcall;
+extern void cpct_setPALColour( uint8_t pen, uint8_t hw_ink ) __z88dk_callee;
+extern void cpct_setBorder( uint8_t hw_ink )                 __z88dk_fastcall;
+
+#define HW_BLACK        0x14
+#define HW_WHITE        0x0B    // bright white
+#define HW_YELLOW       0x0A    // bright yellow
+#define HW_RED          0x0C    // bright red
+#define HW_BORDER_BLUE  0x04
+
+void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
+    (void) bg_attr;     // §5.5: attribute layer is ZX-only, inert on CPC
+    (void) bg_char;
+    cpct_setVideoMode( 1 );             // mode 1: 320x200, 4 pens
+    cpct_setPALColour( 0, HW_BLACK );   // pen 0 = background
+    cpct_setPALColour( 1, HW_WHITE );   // pen 1 = foreground (2-colour assets)
+    cpct_setPALColour( 2, HW_YELLOW );
+    cpct_setPALColour( 3, HW_RED );
+    cpct_setBorder( HW_BORDER_BLUE );
+    jsp_init( (uint8_t *)_blank_tile, 0 );
+    jsp_sprite_pool_init( _sprite_pool, GFX_JSP_MAX_SPRITES );
+    gfx_invalidate( &full_screen );
+    gfx_update();
+}
+
+#else // ZX
 
 void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
     (void) bg_char;
@@ -34,6 +72,8 @@ void gfx_init( gfx_attr_t bg_attr, uint8_t bg_char ) {
     gfx_invalidate( &full_screen );
     gfx_update();
 }
+
+#endif // GFX_JSP_CPC
 
 gfx_sprite_t *gfx_sprite_create( uint8_t rows, uint8_t cols ) {
     gfx_sprite_t *s = jsp_sprite_alloc( rows, cols );

@@ -14,6 +14,18 @@
 #include <stdint.h>
 #include <jsp.h>
 
+#include "features.h"
+
+// JSP is the single cross-platform graphics backend (README §5.13): the same
+// `jsp` backend serves ZX and CPC, with the platform chosen by the PLATFORM
+// axis.  GFX_JSP_CPC selects the CPC platform sections (Phase G10) — pixel
+// coordinates, 40x25 mode-1 geometry, mode/palette setup in gfx_init.  ZX is
+// byte-identical to before (no CPC macro defined).
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT ) \
+ || defined( BUILD_FEATURE_PLATFORM_CPC6128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
+#define GFX_JSP_CPC 1
+#endif
+
 //--- Types ---
 typedef struct jsp_sprite_s      gfx_sprite_t;
 typedef struct jsp_rect          gfx_rect_t;
@@ -22,13 +34,19 @@ typedef uint8_t                  gfx_attr_t;
 
 // Pixel coordinate widths (Phase G4 — gfx.md §G4-1).
 // On ZX backends 256x192 fits in a byte, so we stay at uint8_t to avoid the
-// 16-bit codegen cost.  The CPC backend (Phase G7) will redefine these as
-// uint16_t for 320x200 and future ZX Next Layer-2 backends likewise for
-// 320x256 / 640x256.  Engine code must use these typedefs at every site that
+// 16-bit codegen cost.  On CPC mode 1 the screen is 320 px wide, so X needs 16
+// bits; both are widened (matching the interim cpctel backend and the engine's
+// G4-widened position handling) so engine arithmetic that mixes the two stays
+// width-consistent.  Engine code must use these typedefs at every site that
 // holds an integer screen pixel coordinate so the same source compiles on
 // both byte- and word-coordinate backends.
+#ifdef GFX_JSP_CPC
+typedef uint16_t                 gfx_xpos_t;
+typedef uint16_t                 gfx_ypos_t;
+#else
 typedef uint8_t                  gfx_xpos_t;
 typedef uint8_t                  gfx_ypos_t;
+#endif
 
 // Tile / glyph identifier (Phase G6 — gfx.md §G6-1).
 // On JSP a tile id is the polysemic uint16_t passed to jsp_tile_put(): values
@@ -45,13 +63,18 @@ typedef uint16_t                 gfx_tile_id_t;
 #define GFX_PRINT_CTX_INIT(a,at)    JSP_PRINT_CTX_INIT((a),(at))
 
 // Screen geometry in cells (Phase G5 — gfx.md §G5-1).
-// JSP renders the standard ZX Spectrum 32x24 character grid.  The CPC backend
-// (Phase G7) will redefine these (mode-1: 40x25), and ZX Next Layer-2 likewise.
+// JSP renders the standard ZX Spectrum 32x24 character grid; on CPC mode 1 the
+// grid is 40x25 (JSP_GRID_COLS/ROWS from jsp_config.h, already mode-correct).
 // Engine code must use these constants at every site that holds a screen-grid
 // dimension so the same source compiles unchanged on backends with a different
 // character-cell geometry.
+#ifdef GFX_JSP_CPC
+#define GFX_SCREEN_COLS             JSP_GRID_COLS
+#define GFX_SCREEN_ROWS             JSP_GRID_ROWS
+#else
 #define GFX_SCREEN_COLS             32
 #define GFX_SCREEN_ROWS             24
+#endif
 
 //--- Attribute layer (ZX-only — inert on CPC, see gfx.md §2.1) ---
 // ZX colour indices 0..7 (match arch/spectrum.h INK_*/PAPER_* numeric values)
@@ -74,8 +97,15 @@ typedef uint16_t                 gfx_tile_id_t;
 #define gfx_invalidate(rect)                jsp_invalidate_rect(rect)
 #define gfx_update()                        jsp_redraw()
 // gfx_set_border() — border colour is consumed on every backend (CPC too).
-// On ZX it is a Spectrum colour 0..7; the backend wraps zx_border().
+// On ZX it is a Spectrum colour 0..7; the backend wraps zx_border().  On CPC
+// the border is programmed in gfx_init via the gate array (cpct_setBorder);
+// runtime border changes are a no-op for now (README §5.5 single exception —
+// to be wired to a pen index when per-game palette lands).
+#ifdef GFX_JSP_CPC
+#define gfx_set_border(color)               ((void)(color))
+#else
 #define gfx_set_border(color)               zx_border((color))
+#endif
 
 //--- Sprite lifecycle ---
 // gfx_sprite_create() is a real function defined in gfx_jsp.c
@@ -94,7 +124,9 @@ typedef uint16_t                 gfx_tile_id_t;
 // grid), column 0.  Engine code never references the parking row directly; it
 // calls gfx_sprite_park() — a single out-of-line __z88dk_fastcall function whose
 // body lives in sprite.c — so each backend can choose its own off-screen slot.
-#define GFX_PARK_ROW                        24
+// Parking row = one below the visible grid (= GFX_SCREEN_ROWS): 24 on ZX,
+// 25 on CPC mode 1.
+#define GFX_PARK_ROW                        GFX_SCREEN_ROWS
 #define GFX_PARK_COL                        0
 
 //--- Sprite query ---

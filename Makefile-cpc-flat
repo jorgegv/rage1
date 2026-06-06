@@ -119,10 +119,16 @@ CPC_BANKED_COMMON_CSRC	= $(filter-out %/audio_zx_beeper.c %/bullet.c, \
 CPC_BANKED_COMMON_ASMSRC = $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm)
 
 ifeq ($(CPC_LINK_ENGINE_FULL),1)
-CSRC			= $(CPC_ENGINE_FULL_CSRC) $(CPC_BANKED_COMMON_CSRC) \
+# CSRC/ASMSRC are REASSIGNED (=) here, which drops the JSP library sources that
+# Makefile.common added to CSRC/ASMSRC for GFX_BACKEND=jsp — so pull them back
+# in via $(JSP_CSRC)/$(JSP_ASMSRC) (empty unless the backend is jsp). With the
+# jsp backend the active gfx body is gfx_jsp.c (gfx_cpctel.c compiles to an
+# empty TU); the engine/src/cpc/*.asm HW-I/O primitives (mode/palette/keyboard)
+# are still linked via $(CPC_ENGINE_GFX_ASMSRC). README §5.13 / cpc-renderer R6.
+CSRC			= $(CPC_ENGINE_FULL_CSRC) $(CPC_BANKED_COMMON_CSRC) $(JSP_CSRC) \
 			  $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC			= $(CPC_ENGINE_FULL_ASMSRC) $(CPC_BANKED_COMMON_ASMSRC) \
-			  $(CPC_ENGINE_GFX_ASMSRC) \
+			  $(CPC_ENGINE_GFX_ASMSRC) $(JSP_ASMSRC) \
 			  $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
 CPC_EXTRA_INC		= -I$(GAME_SRC_DIR)
 endif
@@ -135,7 +141,10 @@ OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 # Phase T2 it deliberately does NOT set __MMAP=-1 — see the long note in
 # zpragma-cpc-flat.inc (the +cpc CRT pre-defines __MMAP=0 and rejects the
 # override). The +cpc CRT's built-in section layout is used.
-CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(DEBUG_FLAGS)
+# $(JSP_CPC_CFLAGS) (from Makefile.common) carries the JSP CPC build flags
+# (JSP_TARGET_CPC + CPC_MODE1 + JSP_CELL_MODEL_PIXEL to C and asm, the asm
+# include root, and REGISTER_SP); empty unless GFX_BACKEND=jsp on +cpc.
+CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(JSP_CPC_CFLAGS) $(DEBUG_FLAGS)
 
 # The custom mmap file for section-check
 CPC_MMAP_INC		= mmap-cpc-flat.inc
