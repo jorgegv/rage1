@@ -1051,11 +1051,13 @@ sub read_input_data {
                 if ( $line =~ /^(GFX_BACKEND|SPRITE_ENGINE)\s+(\w+)$/ ) {
                     my $keyword = $1;
                     my $engine = lc($2);
-                    # G7-3: 'cpctel' is the Amstrad CPC backend short-name
-                    # (README §5.4 -> files gfx_cpctel.{h,c},
-                    # BUILD_FEATURE_GFX_BACKEND_CPCTEL).
-                    die "$keyword: $file, line $current_line: must be 'SP1', 'JSP' or 'CPCTEL'\n"
-                        if $engine ne 'sp1' and $engine ne 'jsp' and $engine ne 'cpctel';
+                    # Valid backends: 'sp1' (ZX SP1) and 'jsp' (the realtime-shift
+                    # sprite engine, used for both ZX and CPC). The interim CPC
+                    # 'cpctel' backend was retired in Phase 4J R10 — byte-aligned
+                    # CPC sprite libs cannot do 1-px horizontal movement, so JSP
+                    # is the CPC sprite engine (see cpc-renderer.md).
+                    die "$keyword: $file, line $current_line: must be 'SP1' or 'JSP'\n"
+                        if $engine ne 'sp1' and $engine ne 'jsp';
                     $game_config->{'gfx_backend'} = $engine;
                     next;
                 }
@@ -5498,10 +5500,11 @@ if ( $is_cpc_platform and not $has_screens ) {
     derive_cpc_audio_backend_features;
     # R4: emit the GFX_BACKEND macro on the screen-less CPC fast path too.
     # In the full pipeline this is done by generate_game_config (line ~3700),
-    # which the fast path bypasses — so a screen-less CPC game that selects
-    # GFX_BACKEND cpctel would otherwise never get BUILD_FEATURE_GFX_BACKEND_CPCTEL
-    # and the real CPC backend would self-#ifdef out. Mirror that emission here
-    # (canonical + legacy SPRITE_ENGINE alias, per README §5.6).
+    # which the fast path bypasses — so a screen-less CPC game that selects a
+    # GFX_BACKEND (e.g. JSP) would otherwise never get the
+    # BUILD_FEATURE_GFX_BACKEND_<X> macro and the gfx backend would self-#ifdef
+    # out. Mirror that emission here (canonical + legacy SPRITE_ENGINE alias,
+    # per README §5.6).
     my $r4_engine_upper = uc( get_gfx_backend() );
     add_build_feature( 'GFX_BACKEND_'   . $r4_engine_upper );
     add_build_feature( 'SPRITE_ENGINE_' . $r4_engine_upper );

@@ -173,13 +173,12 @@ ALL_TEST_GAMES		= $(shell cd $(TEST_GAMES_DIR)/ && ls -1 )
 # first in `ls`; it must land in the CPC subset, NOT the ZX one).
 # R4-4: also match the '*_cpc' suffix (e.g. minimal_cpc) — a CPC game named
 # after its ZX sibling (minimal -> minimal_cpc) must land in the CPC subset.
-# A5-3: MANUAL_TEST_GAMES are exercised by hand (e.g. `make data-cpc464`),
-# NOT by the automated all-test-builds matrix. They are excluded from BOTH
-# subsets because they have no end-to-end build rule yet (e.g. the A5
-# full-colour CPC PNG converter test has no CPC full-colour backend to link
-# against — A5 phase-exit: "No CPC binary built end-to-end yet"). They still
-# match the 'cpc-' prefix (so they're never mistaken for a ZX game).
-MANUAL_TEST_GAMES	= cpc-a5-png-test
+# MANUAL_TEST_GAMES are exercised by hand (e.g. `make data-cpc464`), NOT by the
+# automated all-test-builds matrix, and are excluded from BOTH subsets. Empty
+# since R10 retired the only entry (cpc-a5-png-test, the full-colour CPC PNG
+# converter test) along with the converter itself. Kept as a hook for future
+# manual-only games.
+MANUAL_TEST_GAMES	=
 CPC_TEST_GAMES		= $(filter-out $(MANUAL_TEST_GAMES),$(filter cpc-% 00cpc% %_cpc,$(ALL_TEST_GAMES)))
 ZX_TEST_GAMES		= $(filter-out $(MANUAL_TEST_GAMES),$(filter-out cpc-% 00cpc% %_cpc,$(ALL_TEST_GAMES)))
 

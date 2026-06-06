@@ -1,14 +1,14 @@
 // 00cpc-compile-test — SYNTHETIC compile-test target (Phase G7-4).
 //
 // NOT a real game.  Purpose: type-check the WHOLE RAGE1 engine
-// (engine/src/*.c) under the +cpc toolchain against the 'cpctel' stub gfx
+// (engine/src/*.c) under the +cpc toolchain against the live JSP gfx
 // backend (Phase G7).  Compile-only is the bar — linkage MAY fail and that
 // is explicitly acceptable (gfx.md Phase G7 phase-exit).
 //
 // DEVIATION (gfx.md G7-4 vs reality): G7-4 literally specifies
 // `PLATFORM cpc6128`, but the cpc-banked (cpc6128) toolchain does NOT exist
 // yet — it is Phase T3.  We use `PLATFORM cpc464` (cpc-flat, the only CPC
-// toolchain that exists, landed in Phase T2) with `GFX_BACKEND cpctel`.
+// toolchain that exists, landed in Phase T2) with `GFX_BACKEND JSP`.
 // cpc6128 will be wired at T3/G8.
 //
 // The '00' name prefix keeps this first in `ls`; it is built by
@@ -16,7 +16,7 @@
 BEGIN_GAME_CONFIG
 	NAME		CpcCompileTest
 	PLATFORM	cpc464
-	GFX_BACKEND	cpctel
+	GFX_BACKEND	JSP
 	SCREEN		INITIAL=Screen01
 	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK
 	GAME_FUNCTION	TYPE=MENU NAME=my_menu_screen FILE=menu.c
