@@ -130,9 +130,22 @@ typedef uint16_t                 gfx_tile_id_t;
 #define GFX_PARK_COL                        0
 
 //--- Sprite query ---
+// Cross-backend contract: get_width/get_height return the sprite footprint in
+// 8x8 SCREEN CELLS (SP1/cpctel return ->width/->height in cells; engine code —
+// e.g. hero_check_tiles_below — uses these to index the 8x8 tile-type grid).
+// get_row/get_col return the 8-px cell the sprite's top-left sits in (xpos/ypos
+// are pixels; a cell is always 8x8 px in every mode -> /8 is correct).
 #define gfx_sprite_get_row(s)               ((s)->ypos / 8)
 #define gfx_sprite_get_col(s)               ((s)->xpos / 8)
+#ifdef GFX_JSP_CPC
+// On CPC ->cols is sized in mode-N screen BYTE-COLUMNS (JSP_CELL_COLBYTES per
+// 8-px cell: 2 on mode 1, 4 on mode 0 — see gfx_sprite_create), so divide back
+// to 8-px cells to keep the cells-contract above.  ZX (block compiled out) keeps
+// ->cols == cells -> byte-identical.
+#define gfx_sprite_get_width(s)             ((s)->cols / JSP_CELL_COLBYTES)
+#else
 #define gfx_sprite_get_width(s)             ((s)->cols)
+#endif
 #define gfx_sprite_get_height(s)            ((s)->rows)
 
 //--- Tile drawing ---
