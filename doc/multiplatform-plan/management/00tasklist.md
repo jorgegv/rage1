@@ -85,8 +85,8 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] R6 — JSP `+cpc` build integration into RAGE1 (Makefile.common CPC arm; JSP CPC flags; proven: JSP-CPC compiles+links under RAGE1 z88dk flags → bootable .dsk) — replaces R1/R2
   - [x] G10 — JSP CPC backend: `gfx_jsp` CPC platform sections (mode/palette in `gfx_init`; 16-bit coords; 40x25) + cpc-flat link wiring. ZX + cpctel-CPC builds verified green. Full game build pending A8 assets — replaces G7/G8
   - [~] A8 — JSP CPC asset pipeline. **Approach changed (Task 5; README §5.1 reversed):** in-datagen pluggable asset backends (ZX first, byte-identical; CPC Mode-1 backend copied/adapted from cpcgfx.pl into `lib/RAGE/`, byte-compat tested). NOT a subprocess/PNG-bridge. — replaces A5
-  - [ ] R9 — migrate `games/minimal_cpc` to `GFX_BACKEND=jsp`; converge on `games/minimal` + reuse assets (README §5.13b); prove 1 px movement; rebaseline TS3
-  - [x] R10 — retire `gfx_cpctel` backend + remove `external/cpctelera` submodule (keep `engine/src/cpc/` HW-I/O asm with cpctelera credit intact). **DONE 2026-06-06:** deleted `gfx_cpctel.{c,h}` + `BUILD_FEATURE_GFX_BACKEND_CPCTEL`; migrated `minimal_audio_cpc` / `00cpc-compile-test` to `GFX_BACKEND=jsp`; retired `games/cpc-a5-png-test`; removed the `cpct_img2tileset` full-colour converter wiring from `datagen.pl` (+ `cpc_asset_convert.pl` / `install-cpctelera-converters.sh` / CI + Dockerfile steps); `git rm external/cpctelera` + `.gitmodules` stanza. ZX byte-identical; `minimal_cpc` renders unchanged. `engine/src/cpc/` translations + cpctelera credit retained.
+  - [x] R9 — migrate `games/minimal_cpc` to `GFX_BACKEND=jsp`; converge on `games/minimal` + reuse assets (README §5.13b); prove 1 px movement; rebaseline TS3
+  - [~] R10 — retire `gfx_cpctel` backend + remove `external/cpctelera` submodule (keep `engine/src/cpc/` HW-I/O asm with cpctelera credit intact)
 
 - [ ] **Phase 5 — Hardening + CI matrix expansion**
   - [ ] R5 — ~~cpctelera hardening, upstream feedback~~ **DROPPED (README §5.13: cpctelera revoked)**; superseded by R10 (retirement)
