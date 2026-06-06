@@ -9,6 +9,3 @@ poc_tape*
 shot.png
 screenshot_*.png
 screenshots/
-# R3: generated CPC asset data (regenerated from PNG by cpc_asset_convert.pl)
-assets/test.c
-assets/test.h

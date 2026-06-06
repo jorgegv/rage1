@@ -86,7 +86,7 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] G10 — JSP CPC backend: `gfx_jsp` CPC platform sections (mode/palette in `gfx_init`; 16-bit coords; 40x25) + cpc-flat link wiring. ZX + cpctel-CPC builds verified green. Full game build pending A8 assets — replaces G7/G8
   - [~] A8 — JSP CPC asset pipeline. **Approach changed (Task 5; README §5.1 reversed):** in-datagen pluggable asset backends (ZX first, byte-identical; CPC Mode-1 backend copied/adapted from cpcgfx.pl into `lib/RAGE/`, byte-compat tested). NOT a subprocess/PNG-bridge. — replaces A5
   - [x] R9 — migrate `games/minimal_cpc` to `GFX_BACKEND=jsp`; converge on `games/minimal` + reuse assets (README §5.13b); prove 1 px movement; rebaseline TS3
-  - [~] R10 — retire `gfx_cpctel` backend + remove `external/cpctelera` submodule (keep `engine/src/cpc/` HW-I/O asm with cpctelera credit intact)
+  - [x] R10 — retire `gfx_cpctel` backend + remove `external/cpctelera` submodule (keep `engine/src/cpc/` HW-I/O asm with cpctelera credit intact)
 
 - [ ] **Phase 5 — Hardening + CI matrix expansion**
   - [ ] R5 — ~~cpctelera hardening, upstream feedback~~ **DROPPED (README §5.13: cpctelera revoked)**; superseded by R10 (retirement)

@@ -6,18 +6,20 @@ cpctelera is **all `sdas`-dialect Z80 assembly**, and z88dk ships no
 `sdasz80` (its `z80asm` cannot parse `sdas`). So the CPC primitives RAGE1
 needs are **hand-translated `sdas` → z88dk-`z80asm`** and committed here,
 then built as ordinary engine asm by `zcc +cpc -compiler=sdcc`. cpctelera
-itself (`external/cpctelera/`) is pinned **reference only** and never
-compiled.
+was vendored as the `external/cpctelera/` submodule (reference only, never
+compiled); that submodule was **removed at R10** (see
+`doc/multiplatform-plan/cpc-renderer.md` §0), leaving these hand-translations
+as the engine's only CPC primitives.
 
 Each translation is an LGPL-3.0-derived work (cpctelera © ronaldo /
 Fremos / Cheesetea / ByteRealms); cpctelera's copyright + LGPL notice are
 retained, and the upstream commit SHA each file derives from is recorded
 below.
 
-## Upstream pin
+## Upstream provenance
 
-cpctelera submodule commit: **`662fc885`** (all translations below derive
-from this revision).
+All translations below derive from cpctelera commit **`662fc885`** — the pin
+of the former `external/cpctelera` submodule (removed at R10).
 
 ## Translated shortlist (R2 PoC + R4 renderer + IN6 input)
 
@@ -35,8 +37,10 @@ EXACTLY** (`0x0800` between the 8 pixel lines of a char row, `0xC050` wrap
 to the next char row) but copies each sprite line with a plain `LDIR` loop.
 Visible output is byte-identical; only the inner copy strategy differs.
 This is the cpc-renderer.md R-1 mitigation ("hand-write the equivalent
-z80asm from cpctelera's API docs"). These primitives back the real CPC gfx
-backend `engine/src/gfx_cpctel.c` (Phase R4).
+z80asm from cpctelera's API docs"). These primitives were written for the
+interim CPC gfx backend, which was retired at R10 (the CPC graphics engine is
+now JSP — see `doc/multiplatform-plan/cpc-renderer.md` §0); the video/palette/
+border primitives are still used by the JSP CPC backend (`gfx_jsp.c` `gfx_init`).
 
 **Note on `cpct_keyboard.asm` (IN6):** faithful translations (no behavioural
 change) of cpctelera's keyboard primitives. They back the real CPC input HAL

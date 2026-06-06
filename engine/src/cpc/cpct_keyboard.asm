@@ -12,9 +12,10 @@
 ;; (BUILD_FEATURE_INPUT_BACKEND_CPC) and the macros in rage1/input_cpc.h.
 ;;
 ;; cpctelera is LGPL-3.0 (c) ronaldo / Fremos / Cheesetea / ByteRealms
-;; (@FranGallegoBR). These translations are LGPL-derived works; cpctelera
-;; stays pinned in external/cpctelera as the canonical reference and is
-;; never compiled by RAGE1 (z88dk has no sdasz80). See engine/src/cpc/README.md.
+;; (@FranGallegoBR). These translations are LGPL-derived works, built as
+;; ordinary engine asm.  The external/cpctelera submodule (canonical reference)
+;; was removed at R10; these translations derive from cpctelera commit 662fc885.
+;; See engine/src/cpc/README.md.
 ;;
 ;; Translation conventions (sdas -> z80asm), per engine/src/cpc/README.md:
 ;;   .module X        -> MODULE X
