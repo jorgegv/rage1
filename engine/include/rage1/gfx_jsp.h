@@ -129,6 +129,21 @@ typedef uint16_t                 gfx_tile_id_t;
 #define GFX_PARK_ROW                        GFX_SCREEN_ROWS
 #define GFX_PARK_COL                        0
 
+#ifdef GFX_JSP_CPC
+// Byte-columns a JSP sprite descriptor stores per 8-px source cell.  RAGE1
+// callers count sprite width in 8-px cells (width_px>>3); JSP sizes the
+// descriptor in mode-N byte-columns = width_px / JSP_SPRITE_PPB (PPB = pixels
+// per byte for the ASSET: 4 mode 1, 2 mode 0, 8 mode 2 AND mode-1 MONO whose
+// 1bpp assets are expanded at composite time).  So cells->byte-cols = 8/PPB:
+//   mode 2 / MONO -> 1, mode 1 -> 2, mode 0 -> 4.
+// This is THE single conversion factor: gfx_sprite_create multiplies by it,
+// gfx_sprite_get_width / gfx_jsp_cpc_in_rect divide by it (exact inverse).  Note
+// it is keyed off JSP_SPRITE_PPB (asset ppb), NOT JSP_CELL_COLBYTES (screen ppb)
+// — the two differ only in MONO (asset 8 px/byte onto a 4 px/byte screen), where
+// using COLBYTES would mis-count the footprint by 2x.
+#define GFX_JSP_CELL_BYTECOLS               ( 8 / JSP_SPRITE_PPB )
+#endif
+
 //--- Sprite query ---
 // Cross-backend contract: get_width/get_height return the sprite footprint in
 // 8x8 SCREEN CELLS (SP1/cpctel return ->width/->height in cells; engine code —
@@ -138,11 +153,10 @@ typedef uint16_t                 gfx_tile_id_t;
 #define gfx_sprite_get_row(s)               ((s)->ypos / 8)
 #define gfx_sprite_get_col(s)               ((s)->xpos / 8)
 #ifdef GFX_JSP_CPC
-// On CPC ->cols is sized in mode-N screen BYTE-COLUMNS (JSP_CELL_COLBYTES per
-// 8-px cell: 2 on mode 1, 4 on mode 0 — see gfx_sprite_create), so divide back
-// to 8-px cells to keep the cells-contract above.  ZX (block compiled out) keeps
-// ->cols == cells -> byte-identical.
-#define gfx_sprite_get_width(s)             ((s)->cols / JSP_CELL_COLBYTES)
+// On CPC ->cols is in mode-N byte-columns; divide back to 8-px cells (the inverse
+// of gfx_sprite_create's multiply) to honour the cells-contract above.  ZX (block
+// compiled out) keeps ->cols == cells -> byte-identical.
+#define gfx_sprite_get_width(s)             ((s)->cols / GFX_JSP_CELL_BYTECOLS)
 #else
 #define gfx_sprite_get_width(s)             ((s)->cols)
 #endif
