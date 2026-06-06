@@ -32,8 +32,36 @@ sub new {
     return bless { mode => 1, %opt }, $class;
 }
 
-# Mode-1 pixel cell = 16 bytes (2 byte-columns x 8 lines).
-sub bytes_per_cell { return 16; }
+# Mode-1 pixel cell = 16 bytes (2 byte-columns x 8 lines); Mode-0 = 32.
+sub bytes_per_cell {
+    my $self = shift;
+    return ( ( $self->{'mode'} == 1 ) ? 2 : 4 ) * 8;
+}
+
+# Compile a BTile's ASCII PIXELS into per-cell CPC mode-1 byte arrays
+# (16 bytes/cell, graph-only, column-major pixel-cell), row-major per frame —
+# the JSP_CELL_BYTES layout jsp_draw_background_tile expects.  Returns an
+# arrayref of per-cell byte arrays.  2-colour (pen 0 = bg, pen 1 = fg); btiles
+# carry no mask.
+sub btile_cell_bytes {
+    my ( $self, $tile ) = @_;
+    my $rows   = $tile->{'rows'};
+    my $cols   = $tile->{'cols'};
+    my $frames = $tile->{'frames'} || 1;
+    my $mode   = $self->{'mode'};
+    my $cellbytes = $self->bytes_per_cell();
+    my @pixel_bytes;
+    foreach my $frm ( 0 .. ( $frames - 1 ) ) {
+        my @pix = map { _collapse( $_ ) }
+            @{ $tile->{'pixels'} }[ ( $frm * $rows * 8 ) .. ( ( $frm + 1 ) * $rows * 8 - 1 ) ];
+        my ( $pen, $transp ) = RAGE::CPCGfx::grids_from_ascii( \@pix, undef );
+        my $bytes = RAGE::CPCGfx::tile_bytes( $pen, $transp, $cols, $rows, $mode );
+        foreach my $c ( 0 .. ( $rows * $cols - 1 ) ) {
+            push @pixel_bytes, [ @{ $bytes }[ ( $c * $cellbytes ) .. ( ( $c + 1 ) * $cellbytes - 1 ) ] ];
+        }
+    }
+    return \@pixel_bytes;
+}
 
 # Collapse datagen's 2-char-per-pixel ASCII row ('..'=off, else=on) to a
 # 1-char-per-pixel row ('.'/'#') that RAGE::CPCGfx::grids_from_ascii expects.

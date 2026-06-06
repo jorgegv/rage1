@@ -3812,25 +3812,43 @@ EOF_TILES
             "#include \"cpc/$base.h\"\n\n";
     }
 
-    # generate the offsets and byte arena for INLINE btiles only
-    # the whole dedupe schema works also for animated btiles, since
-    # everything is stored as 8-byte tiles
+    # Task 5: the platform asset backend owns the per-cell byte format and size.
+    # Recompute pixel_bytes here (generation time, when PLATFORM is fully known)
+    # so the cell bytes are the platform's: ZX = 8-byte 1bpp (byte-identical to
+    # the parse-time compile); CPC mode 1 = 16-byte mode-1 pixel-cells (CPCGfx).
+    my $bpc = asset_backend()->bytes_per_cell();
+    foreach my $tile ( @inline_btiles ) {
+        $tile->{'pixel_bytes'} = asset_backend()->btile_cell_bytes( $tile );
+    }
+
+    # generate the offsets and byte arena for INLINE btiles only.  Cells are
+    # $bpc bytes (8 on ZX, 16 on CPC mode 1).  The dedupe schema works on the
+    # cell granularity it was built for (8-byte cells); for other cell sizes we
+    # emit the arena without dedup (a CPC memory optimisation can revisit this).
     my @orig_cell_offsets;
     my @orig_byte_arena;
     foreach my $tile ( @inline_btiles ) {
         my $initial_offset = scalar( @orig_byte_arena );
         push @orig_byte_arena, map { @$_ } @{ $tile->{'pixel_bytes'} };
         my $offset = 0;
-        while ( $offset < 8 * scalar( @{ $tile->{'pixel_bytes'} } ) ) {
+        while ( $offset < $bpc * scalar( @{ $tile->{'pixel_bytes'} } ) ) {
             push @orig_cell_offsets, $initial_offset + $offset;
-            $offset += 8;
+            $offset += $bpc;
         }
     }
 
     # deduplication and arena output — only needed when there are inline tiles
     my @cell_offsets;
     if ( @inline_btiles ) {
-        my ( $new_cell_offsets, $new_arena ) = btile_deduplicate_arena_best( \@orig_cell_offsets, \@orig_byte_arena );
+        my ( $new_cell_offsets, $new_arena );
+        if ( $bpc == 8 ) {
+            # ZX: 8-byte-cell deduplication (byte-identical to historical output)
+            ( $new_cell_offsets, $new_arena ) = btile_deduplicate_arena_best( \@orig_cell_offsets, \@orig_byte_arena );
+        } else {
+            # CPC (non-8-byte cells): no dedup — emit cells as-is
+            $new_cell_offsets = \@orig_cell_offsets;
+            $new_arena        = \@orig_byte_arena;
+        }
         @cell_offsets = @$new_cell_offsets;
         my @byte_arena = @$new_arena;
 
