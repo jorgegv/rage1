@@ -32,6 +32,7 @@ use RAGE::Datagen::BuildFeatures qw(
     input_backend_for_platform get_gfx_backend
 );
 use RAGE::Datagen::Validate qw( check_game_config_is_valid run_consistency_checks );
+use RAGE::Datagen::Sprites qw( validate_and_compile_sprite generate_sprites );
 
 use Data::Dumper;
 use List::MoreUtils qw( zip uniq );
@@ -162,8 +163,10 @@ my $datagen_ctx = RAGE::Datagen::Context->new(
     conditional_build_features => \%conditional_build_features,  # BuildFeatures (Step 4)
     all_btiles                => \@all_btiles,                   # Validate (Step 5)
     all_screens               => \@all_screens,                  # Validate (Step 5)
-    all_sprites               => \@all_sprites,                  # Validate (Step 5)
+    all_sprites               => \@all_sprites,                  # Validate (Step 5), Sprites (Step 6)
     all_items                 => \@all_items,                    # Validate (Step 5)
+    c_dataset_lines           => \$c_dataset_lines,              # Sprites (Step 6) — emit accumulator
+    dataset_dependency        => \%dataset_dependency,           # Sprites (Step 6)
 );
 $datagen_ctx->install_main_aliases;
 
@@ -1504,153 +1507,12 @@ sub validate_and_compile_btile {
 ## Sprite functions
 #####################################
 
-sub validate_and_compile_sprite {
-    my $sprite = shift;
-    defined( $sprite->{'name'} ) or
-        die "Sprite has no NAME\n";
-    defined( $sprite->{'rows'} ) or
-        die "Sprite '$sprite->{name}' has no ROWS\n";
-    defined( $sprite->{'cols'} ) or
-        die "Sprite '$sprite->{name}' has no COLS\n";
-
-    defined( $sprite->{'pixels'} ) or
-        die "Sprite '$sprite->{name}' has no PIXELS\n";
-#    defined( $sprite->{'attr'} ) or
-#        die "Sprite '$sprite->{name}' has no ATTR\n";
-    defined( $sprite->{'frames'} ) or
-        die "Sprite '$sprite->{name}' has no FRAMES\n";
-    defined( $sprite->{'mask'} ) or
-        die "Sprite '$sprite->{name}' has no MASK\n";
-    my $num_attrs = $sprite->{'rows'} * $sprite->{'cols'};
-#    ( scalar( @{$sprite->{'attr'}} ) == $num_attrs ) or
-#        die "Sprite should have $num_attrs ATTR elements\n";
-    ( scalar( @{$sprite->{'pixels'}} ) == $sprite->{'rows'} * 8 * $sprite->{'frames'} ) or
-        die "Sprite should have ".( $sprite->{'rows'} * 8 * $sprite->{'frames'} )." PIXELS elements\n";
-    ( scalar( @{$sprite->{'mask'}} ) == $sprite->{'rows'} * 8 * $sprite->{'frames'} ) or
-        die "Sprite should have ".( $sprite->{'rows'} * 8 * $sprite->{'frames'} )." MASK elements\n";
-    foreach my $p ( @{$sprite->{'pixels'}} ) {
-        ( length( $p ) == $sprite->{'cols'} * 2 * 8 ) or
-            die "Sprite '$sprite->{name}': PIXELS line should be of length ".( $sprite->{'rows'} * 2 * 8 );
-    }
-    foreach my $p ( @{$sprite->{'mask'}} ) {
-        ( length( $p ) == $sprite->{'cols'} * 2 * 8 ) or
-            die "Sprite '$sprite->{name}': MASK line should be of length ".( $sprite->{'rows'} * 2 * 8 );
-    }
-
-    # compile PIXELS string data to numeric data for output
-    my $cur_row = 0;
-    my $byte_count = 0;
-    foreach my $p ( @{$sprite->{'pixels'}} ) {
-        my @parts = unpack("(A16)*", $p );
-        my $cur_col = 0;
-        foreach my $b ( @parts ) {
-            push @{$sprite->{'pixel_bytes'}[ $cur_row * $sprite->{'cols'} + $cur_col++ ] },
-                pixels_to_byte( $b );
-            if ( not ( ++$byte_count % ( 8 * $sprite->{'cols'} ) ) ) { $cur_row++; }
-        }
-    }
-
-    # compile MASK string data to numeric data for output
-    $cur_row = 0;
-    $byte_count = 0;
-    foreach my $p ( @{$sprite->{'mask'}} ) {
-        my @parts = unpack("(A16)*", $p );
-        my $cur_col = 0;
-        foreach my $b ( @parts ) {
-            push @{$sprite->{'mask_bytes'}[ $cur_row * $sprite->{'cols'} + $cur_col++ ] },
-                pixels_to_byte( $b );
-            if ( not ( ++$byte_count % ( 8 * $sprite->{'cols'} ) ) ) { $cur_row++; }
-        }
-    }
-
-    # Always define the sequence 'Main', with all frames in order, first to last
-    my $index = ( defined( $sprite->{'sequences'} ) ? scalar( @{ $sprite->{'sequences'} } ) : 0 );
-    push @{ $sprite->{'sequences'} },
-        { 'name' => 'Main', 'frames' => join( ',', 0 .. ( $sprite->{'frames'} - 1 ) ) };
-    if ( scalar( grep { $_->{'name'} eq 'Main' } @{ $sprite->{'sequences'} } ) != 1 ) {
-        die "Sprite '$sprite->{name}': SEQUENCE name 'Main' is reserved and should not be used\n";
-    }
-    $sprite->{'sequence_name_to_index'}{'Main'} = $index;
-
-    # if the sprite has no 'sequence_delay' parameter, define as 1 (minimum;
-    # 0 means 256, which is 5 seconds!)
-    if ( not defined( $sprite->{'sequence_delay'} ) ) {
-        $sprite->{'sequence_delay'} = 1;
-    }
-
-    # compile animation sequences
-    foreach my $seq ( @{ $sprite->{'sequences'} } ) {
-        $seq->{'frame_list'} = [ split( /,/, $seq->{'frames'} ) ];
-    }
-}
-
-# SP1 pixel format for a masked sprite:
-#  * Column oriented
-#  * Each column:
-#    * 8 x (0xff,0x00) pairs (blank first row)
-#    * 8 x (mask,byte) pairs x M chars of the column
-#    * 8 x (0xff,0x00) pairs (blank last row)
-#  * Repeat for N columns
-sub generate_sprite {
-    my ( $sprite, $dataset ) = @_;
-    my $sprite_rows = $sprite->{'rows'};
-    my $sprite_cols = $sprite->{'cols'};
-    my $sprite_frames = $sprite->{'frames'};
-    my $sprite_name = $sprite->{'name'};
-
-    my $using_jsp = ( get_gfx_backend() eq 'jsp' );
-
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// Sprite '%s'\n// Pixel and mask data ordered by column (%s format)\n\n",
-        $sprite->{'name'}, $using_jsp ? 'JSP' : 'SP1' );
-
-    # Task 5: the platform asset backend owns the sprite frame byte layout.
-    # ZX (SP1/JSP): column-major, leading/trailing blank rows, mask,pixel
-    # interleaved, stride 16*(rows+1)*cols from offset 16 — byte-identical to the
-    # historical output.  CPC mode 1: JSP-CPC packed bytes (RAGE::CPCGfx).
-    my ( $data_bytes, $frame_offsets ) = asset_backend()->sprite_frame_data( $sprite );
-
-    # group data bytes by 16-byte lines for easier reading
-    my @groups_of_2m;
-    my $group_cnt = 0;
-    my $byte_cnt = 0;
-    foreach my $b ( @$data_bytes ) {
-        push @{$groups_of_2m[ $group_cnt ]}, $b;
-        $byte_cnt++;
-        if ( not $byte_cnt % 16 ) {
-            $group_cnt++;
-        }
-    }
-
-    # output mask/pixel lines
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t sprite_%s_data[] = {\n%s\n};\n",
-        $sprite->{'name'},
-        join( ",\n", map { join( ", ", map { sprintf( "0x%02x", $_ ) } @{$_} ) } @groups_of_2m ) );
-
-    # output list of pointers to frames (offsets owned by the backend)
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *sprite_%s_frames[] = {\n%s\n};\n",
-        $sprite_name,
-        join( ",\n",
-            map { sprintf( "\t&sprite_%s_data[%d]", $sprite_name, $_ ) }
-            @$frame_offsets
-        ) );
-
-    # output list of animation sequences
-    if ( scalar( @{ $sprite->{'sequences'} } ) ) {
-        push @{ $c_dataset_lines->{ $dataset } }, join( "", map {
-            sprintf( "uint8_t sprite_%s_sequence_%s[%d] = { %s };\n",
-                $sprite_name, $_->{'name'}, scalar( @{ $_->{'frame_list'} } ), join( ',', @{ $_->{'frame_list'} } ) );
-        } @{ $sprite->{'sequences'} } );
-        push @{ $c_dataset_lines->{ $dataset } }, sprintf( "struct animation_sequence_s sprite_%s_sequences[%d] = {\n\t",
-            $sprite_name, scalar( @{ $sprite->{'sequences'} } ) );
-        push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\t", map {
-            sprintf( "{ %d, &sprite_%s_sequence_%s[0] }", scalar( @{ $_->{'frame_list'} } ), $sprite_name, $_->{'name'} );
-        } @{ $sprite->{'sequences'} } );
-        push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
-
-    }
-
-    push @{ $c_dataset_lines->{ $dataset } }, sprintf( "// End of Sprite '%s'\n\n", $sprite_name );
-}
+# validate_and_compile_sprite + generate_sprite (and the dataset-level
+# generate_sprites) moved to RAGE::Datagen::Sprites (Task 6 Stage 2 extraction);
+# validate_and_compile_sprite + generate_sprites are imported at the top of this
+# file. The model arrays / emit accumulators they use stay datagen.pl globals
+# (reached there via the scaffold aliases); asset_backend() stays here (shared
+# with the BTile emitter) and is called as main::asset_backend() from the module.
 
 ######################################
 ## Map Screen functions
@@ -3228,39 +3090,8 @@ EOF_TILES
 
 }
 
-sub generate_sprites {
-    my $dataset = shift;
-
-    # generate the list of dataset sprites, return immediately if empty
-    my @dataset_sprites = map { $all_sprites[ $_ ] } @{ $dataset_dependency{ $dataset }{'sprites'} };
-    return if not scalar( @dataset_sprites );
-
-    push @{ $c_dataset_lines->{ $dataset } }, <<EOF_SPRITES
-
-////////////////////////////
-// Sprite definitions
-////////////////////////////
-
-EOF_SPRITES
-;
-
-    # generate the sprites
-    foreach my $sprite ( @dataset_sprites ) { generate_sprite( $sprite, $dataset ); }
-
-    # output global sprite graphics table
-    my $num_sprites = scalar( @dataset_sprites );
-    push @{ $c_dataset_lines->{ $dataset } }, "// Dataset sprite graphics table\n";
-    push @{ $c_dataset_lines->{ $dataset } }, "struct sprite_graphic_data_s all_sprite_graphics[ $num_sprites ] = {\n\t";
-    push @{ $c_dataset_lines->{ $dataset } }, join( ",\n\n\t", map {
-        my $sprite = $_;
-        sprintf( "{ .width = %d, .height = %d,\n\t.frame_data.num_frames = %d,\n\t.frame_data.frames = &sprite_%s_frames[0],\n\t.sequence_data.num_sequences = %d,\n\t.sequence_data.sequences = %s }",
-            $_->{'cols'} * 8, $_->{'rows'} * 8,
-            $_->{'frames'}, $_->{'name'},
-            scalar( @{ $sprite->{'sequences'} } ),	# number of animation sequences
-            ( scalar( @{ $sprite->{'sequences'} } ) ? sprintf( "&sprite_%s_sequences[0]", $_->{'name'}) : 'NULL' ) ),
-    } @dataset_sprites );
-    push @{ $c_dataset_lines->{ $dataset } }, "\n};\n\n";
-}
+# generate_sprites moved to RAGE::Datagen::Sprites (Task 6 Stage 2 extraction);
+# imported at the top of this file.
 
 sub generate_screens {
     my $dataset = shift;
