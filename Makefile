@@ -34,6 +34,11 @@ help:
 	echo "    build128       legacy silent alias for build-zx128 (permanent, README §5.6)"
 	echo "    build-cpc464   force CPC464/664 (cpc-flat) build"
 	echo ""
+	echo "Parallel test-build options (all-test-builds*):"
+	echo "    MAX_PARALLEL_JOBS=N  games built concurrently, each in build/_tests/<game>/ (default 4)"
+	echo "    BUILD_JOBS=N         inner -j per game on the parallel path        (default 4)"
+	echo "    (serial run: make all-test-builds MAX_PARALLEL_JOBS=1)"
+	echo ""
 	echo "* Use 'make new-game' for creating a new template game using the library"
 	echo ""
 
@@ -182,6 +187,57 @@ MANUAL_TEST_GAMES	=
 CPC_TEST_GAMES		= $(filter-out $(MANUAL_TEST_GAMES),$(filter cpc-% 00cpc% %_cpc,$(ALL_TEST_GAMES)))
 ZX_TEST_GAMES		= $(filter-out $(MANUAL_TEST_GAMES),$(filter-out cpc-% 00cpc% %_cpc,$(ALL_TEST_GAMES)))
 
+# ---------------------------------------------------------------------------
+# Task 7: PARALLEL SPLIT-DIR TEST BUILDS
+#
+# The all-test-builds* targets build each game in its OWN isolated copy of the
+# source tree under build/_tests/<game>/, so several games build in parallel
+# without sharing object files (engine/**/*.o, external/jsp/**/*.o) or repo-root
+# artifacts (main.bin/.map, game.tap, CPC images). The tree is copied with
+# `cp -a` (modern coreutils default --reflink=auto: a near-instant, near-zero
+# disk CoW snapshot on btrfs; a plain copy elsewhere). Each game's artifacts
+# stay intact in build/_tests/<game>/ for later visual testing.
+#
+# The default `make build` path is UNCHANGED — only these targets use split
+# dirs. Two CLI-overridable knobs:
+#   MAX_PARALLEL_JOBS  games built concurrently            (default 4)
+#   BUILD_JOBS         inner -j per game on this path       (default 4)
+# Serial run (single code path, degenerate case): MAX_PARALLEL_JOBS=1
+#
+# Adding a new test game needs NO change here: the ALL_TEST_GAMES glob + the
+# ZX/CPC subset filters auto-discover it; it only needs its own build-<game>
+# target (the existing convention).
+# ---------------------------------------------------------------------------
+MAX_PARALLEL_JOBS	?= 4
+BUILD_JOBS		?= 4
+
+SPLIT_TESTS_DIR		= $(BUILD_DIR)/_tests
+
+# Top-level entries copied into each per-game snapshot: everything a build
+# touches. Excludes .git, build/, docs/tests and stale repo-root artifacts.
+SPLIT_COPY_ITEMS	= engine external tools lib etc games \
+			  Makefile Makefile.common Makefile-48 Makefile-128 \
+			  Makefile-zx48 Makefile-zx128 Makefile-cpc-flat Makefile.game \
+			  $(wildcard *.inc)
+
+ZX_SPLIT_TARGETS	= $(addprefix test-build-split-,$(ZX_TEST_GAMES))
+CPC_SPLIT_TARGETS	= $(addprefix test-build-split-,$(CPC_TEST_GAMES))
+
+# Build one game in its own isolated tree copy and record OK/ERR in a RESULT
+# file (scraped by the aggregate verdict). The recipe itself always succeeds so
+# one game's failure does not abort the parallel batch (mirrors test-build-%).
+test-build-split-%:
+	rm -rf $(SPLIT_TESTS_DIR)/$* 2>/dev/null; mkdir -p $(SPLIT_TESTS_DIR)/$*
+	cp -a $(SPLIT_COPY_ITEMS) $(SPLIT_TESTS_DIR)/$*/
+	if $(MAKE) -s -C $(SPLIT_TESTS_DIR)/$* BUILD_JOBS=$(BUILD_JOBS) build-$* \
+			>$(SPLIT_TESTS_DIR)/$*/build.log 2>&1 ; then \
+		echo OK > $(SPLIT_TESTS_DIR)/$*/RESULT ; \
+		printf '  %-26s Build OK\n' "$*" ; \
+	else \
+		echo ERR > $(SPLIT_TESTS_DIR)/$*/RESULT ; \
+		printf '  %-26s ERRORS - see %s/build.log\n' "$*" "$(SPLIT_TESTS_DIR)/$*" ; \
+	fi
+
 # T2-10: CPC hello-world test game build target
 build-cpc-hello:
 	$(MYMAKE) build-cpc464 target_game=$(TEST_GAMES_DIR)/cpc-hello
@@ -281,19 +337,23 @@ test-build-%:
 	printf 'Building test game %.15s...' "'$*'..............."
 	if ( ! $(MYMAKE) build-$* >/tmp/build-$*.log 2>&1 ) then echo " Errors - see /tmp/build-$*.log"; else echo " Build OK"; fi
 
-# T2: ZX-only test build (toolchain.md T2 phase-exit: "make all-test-builds-zx
-# (ZX subset) green"). Builds ONLY the ZX games; CPC games are excluded so
-# their binary output cannot pollute the pass/fail scrape. Verdict uses
-# `grep -a` (binary-safe) on a dedicated log.
+# T2/Task 7: ZX-only test build. Builds ONLY the ZX games, each in its own
+# isolated tree copy (test-build-split-%), MAX_PARALLEL_JOBS at a time. Verdict
+# is scraped from the per-game RESULT files (a missing RESULT counts as a
+# failure), so it is binary-safe and parallel-safe. -Otarget groups each game's
+# progress line atomically under -j.
 all-test-builds-zx:
 	echo -n "START (zx): "
 	date
 	$(MYMAKE) check-input-includes
 	$(MYMAKE) check-input-hal
-	for i in $(ZX_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds-zx.log
+	$(MAKE) -s -Otarget -j$(MAX_PARALLEL_JOBS) $(ZX_SPLIT_TARGETS)
 	echo -n "END (zx): "
 	date
-	if ( grep -a -i Errors /tmp/all-test-builds-zx.log ) then \
+	fail=0; for g in $(ZX_TEST_GAMES); do \
+		if [ "$$(cat $(SPLIT_TESTS_DIR)/$$g/RESULT 2>/dev/null)" != "OK" ]; then fail=1; fi; \
+	done; \
+	if [ $$fail -ne 0 ]; then \
 		echo "*** Some ZX tests failed ***"; \
 		exit 1; \
 	else \
@@ -301,15 +361,19 @@ all-test-builds-zx:
 		exit 0; \
 	fi
 
-# T2: CPC-only test build. Builds the CPC games (cpc-flat/...). Kept separate
-# from the ZX target per toolchain.md's per-platform matrix.
+# T2/Task 7: CPC-only test build. Builds the CPC games (cpc-flat/...), each in
+# its own isolated tree copy. Kept separate from the ZX target per toolchain.md's
+# per-platform matrix.
 all-test-builds-cpc:
 	echo -n "START (cpc): "
 	date
-	for i in $(CPC_TEST_GAMES); do $(MYMAKE) test-build-$$i; done | tee /tmp/all-test-builds-cpc.log
+	$(MAKE) -s -Otarget -j$(MAX_PARALLEL_JOBS) $(CPC_SPLIT_TARGETS)
 	echo -n "END (cpc): "
 	date
-	if ( grep -a -i Errors /tmp/all-test-builds-cpc.log ) then \
+	fail=0; for g in $(CPC_TEST_GAMES); do \
+		if [ "$$(cat $(SPLIT_TESTS_DIR)/$$g/RESULT 2>/dev/null)" != "OK" ]; then fail=1; fi; \
+	done; \
+	if [ $$fail -ne 0 ]; then \
 		echo "*** Some CPC tests failed ***"; \
 		exit 1; \
 	else \
@@ -317,9 +381,9 @@ all-test-builds-cpc:
 		exit 0; \
 	fi
 
-# Combined matrix: ZX subset then CPC subset. Each subset is scraped on its
-# own dedicated log (binary-safe) so a CPC binary cannot corrupt the ZX
-# verdict; the combined target fails if either subset fails.
+# Combined matrix: ZX subset then CPC subset. Each game builds in its own
+# isolated dir so artifacts stay intact for visual testing; the combined target
+# fails if either subset fails.
 all-test-builds:
 	$(MYMAKE) all-test-builds-zx
 	$(MYMAKE) all-test-builds-cpc

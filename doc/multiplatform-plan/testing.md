@@ -104,13 +104,24 @@ adds the **orchestration** to actually drive multiple builds per game in
 CI (§4) and the **per-platform regression baselines** to verify
 correctness (§3).
 
-A small ZX-specific subtlety: `make all-test-builds` rebuilds everything
-serially (`Makefile:148`) — `for i in ...; do $(MYMAKE) test-build-$$i;
-done`. The build artefacts overlap (each leaves `game.tap` in the project
-root) so it is **not** parallel-safe. Any matrix expansion that builds
-several platforms of the same game must respect this; the existing
-regression script (`tests/00regression/regression.sh:133`) does the same
-`make clean; make build` dance per test for the same reason.
+A small ZX-specific subtlety (historical): builds used to overlap — each
+game compiled object files in-tree (`engine/**/*.o`, `external/jsp/**/*.o`)
+and left `main.bin`/`game.tap`/`main.map` in the project root — so the
+old serial `for i in ...; do test-build-$$i; done` was **not**
+parallel-safe.
+
+**Task 7 fixed this.** `make all-test-builds` now builds each game in its
+OWN isolated copy of the source tree under `build/_tests/<game>/` (`cp -a`,
+auto-reflinked on btrfs), running the unmodified build confined there via
+`make -C build/_tests/<game> build-<game>`. Games run `MAX_PARALLEL_JOBS`
+at a time (default 4) with inner `-j BUILD_JOBS` (default 4); the verdict
+is scraped from per-game `RESULT` files. The default `make build` path is
+unchanged. Each game's artefacts persist in `build/_tests/<game>/` for
+later visual testing. Serial fallback: `MAX_PARALLEL_JOBS=1`. Adding a new
+game opts in automatically (the `ALL_TEST_GAMES` glob + the ZX/CPC split
+filters discover it; it only needs its own `build-<name>` target). The
+standalone regression script (`tests/00regression/regression.sh`) still
+does its own `make clean; make build` dance per test and is unaffected.
 
 ### 1.2 `tests/00regression/` framework — how it runs
 

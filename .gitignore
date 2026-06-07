@@ -19,6 +19,8 @@ gen_*.h
 build/generated
 build/game_data
 build/game_src
+# Task 7: per-game isolated build trees for the parallel test-build matrix
+build/_tests
 debug_script.cfg
 
 # T2: CPC build artifacts (produced by Makefile-cpc-flat at repo root)

@@ -35,11 +35,11 @@ OBJS			+= $(BANKED_CODE_OBJS_COMMON)
 
 build:
 	cp $(ENGINE_DIR)/loader-zx48/$(BAS_LOADER_SRC) $(BAS_LOADER)
-	$(MYMAKE) -j8 main
-	$(MYMAKE) -j8 subs
+	$(MYMAKE) -j$(or $(BUILD_JOBS),8) main
+	$(MYMAKE) -j$(or $(BUILD_JOBS),8) subs
 	$(MYMAKE) loader
 	$(MYMAKE) asmloader
-	$(MYMAKE) -j8 taps
+	$(MYMAKE) -j$(or $(BUILD_JOBS),8) taps
 	$(MYMAKE) final
 	$(MYMAKE) section-check
 
