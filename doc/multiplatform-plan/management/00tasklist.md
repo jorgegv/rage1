@@ -106,11 +106,12 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [ ] B9 — banking cleanup + docs
   - [ ] TS6 — retire CPC-only stub games (merge `minimal_cpc` into `minimal`)
 
-- [ ] **Phase 7 — CPC video modes (Mode 0 / Mode 2) + palette** *(PROPOSED plan, awaiting user review — see [cpc-modes.md](../cpc-modes.md))*
+- [ ] **Phase 7 — CPC video modes (Mode 0 / Mode 2 + MONO/FAST) + palette** *(plan APPROVED 2026-06-07 — full scope, nothing deferred — see [cpc-modes.md](../cpc-modes.md))*
   - [ ] CM1 — `CPC_MODE` parametric build (per-game `.gdata`, default 1) + datagen mode dispatch; prove **Mode 2** (2-colour, 640×200) on `minimal_cpc`. ZX byte-identical
   - [ ] CM2 — **Mode 0** (160×200) rendering 2-colour `minimal_cpc` (pens 0/1 of 16)
-  - [ ] CM3 — per-game static palette: `CPC_PALETTE` → emitted game-data constant → dynamic `gfx_init` (per-mode defaults; omitted = today's bytes)
-  - [ ] CM4 — multi-pen colour art: port `cpcgfx.pl --multicolor` encoder into `RAGE::CPCGfx` (+ extend byte-compat test); PNG authoring; Mode-0 multicolour demo asset
-  - [ ] CM5 — runtime change-palette: `gfx_cpc_set_palette`/`gfx_cpc_set_pen` (ZX no-op) + `SET_CPC_PALETTE` flow action; per-screen palette demo
+  - [ ] CM3 — per-game static palette: `CPC_PALETTE` (colour names OR firmware numbers dec/hex) → emitted game-data constant → dynamic `gfx_init` (per-mode defaults; omitted = today's bytes)
+  - [ ] CM4 — multi-pen colour art (PNG-only): port `cpcgfx.pl --multicolor` encoder into `RAGE::CPCGfx` (+ extend byte-compat test); PNG authoring; Mode-0 multicolour demo asset
+  - [ ] CM5 — runtime change-palette: `gfx_cpc_set_palette`/`gfx_cpc_set_pen` (ZX no-op) + `SET_CPC_PALETTE` flow action (flow-action only, not per-screen map data); palette-change demo
   - [ ] CM6 — per-mode demo games + RAGE1-level CPC regression baselines (Mode 0/1/2 + palette-change shots)
-  - [ ] CM7 — docs: `gfx.md` / `assets.md` / `cpc-renderer.md` §0 / `README` §5.13a + `.gdata` keyword reference (`CPC_MODE` / `CPC_PALETTE` / `CPC_COLOR_MAP` / `SET_CPC_PALETTE`)
+  - [ ] CM8 — MONO + FAST variants (`CPC_MODE1_MONO`, `CPC_MODE0/1/2_FAST`) wired into the `CPC_MODE` selector + dispatch; demo + regression shot each
+  - [ ] CM7 — docs (last): `gfx.md` / `assets.md` / `cpc-renderer.md` §0 / `README` §5.13a + `.gdata` keyword reference (`CPC_MODE` / `CPC_PALETTE` / `CPC_COLOR_MAP` / `SET_CPC_PALETTE`)

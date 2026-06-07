@@ -1,9 +1,10 @@
 # Phase 7 — CPC video modes (Mode 0 / Mode 2) + palette
 
-> **Status: PROPOSED PLAN — for user review (2026-06-07). No code written yet.**
-> Every "Decision" below is a *proposal* with rationale; the user confirms or
-> adjusts on review. Sub-phases CM1–CM7 and the §6 open questions are the parts
-> most worth a second opinion before any code starts.
+> **Status: APPROVED (2026-06-07). No code written yet (plan only).**
+> The user reviewed this plan and **accepted all decisions D1–D7** and resolved
+> every open question (§6). **Phase 7 must be completed in full — no work is
+> deferred to a later phase** (the MONO/FAST variants are included as the final
+> sub-phase CM8). Sub-phases CM1–CM8 are now the agreed scope.
 >
 > Cross-refs: builds on `cpc-renderer.md` §0 (CPC gfx = JSP), `gfx.md` (the two-
 > layer colour model §5.5), `assets.md` (CPC byte format), and Task 5's
@@ -39,9 +40,10 @@ horizontal movement) with a **hardcoded 4-pen palette** and **2-colour assets**
 - datagen: `RAGE::AssetBackend::create` always returns `CPCMode1`; `CPCMode1.pm` hardcodes `mode=>1`.
 - Colour depth: `RAGE::CPCGfx` only emits 2-colour (pen 0/1) bytes.
 
-## 3. Proposed decisions (one per fork — confirm/adjust on review)
+## 3. Decisions (**all ACCEPTED by the user 2026-06-07**; open questions resolved in §6)
 
-**D1 — Mode selection axis = PER-GAME, via `.gdata`, default Mode 1.**
+**D1 — Mode selection axis = PER-GAME, via `.gdata`, default Mode 1.** *(ACCEPTED;
+the per-game axis is wanted now — see §6 Q-C — not a per-build flag.)*
 A game declares `CPC_MODE 0|1|2` in `game_config` (default `1` if absent). The
 `Makefile` greps it from the game config to set `-DCPC_MODE$(N)` (exactly as it
 already greps `GFX_BACKEND` and `ZX_TARGET`), and `datagen` reads it to pick the
@@ -56,23 +58,28 @@ selectable, existing 2-colour art) lands first and stays green; per-game palette
 then multi-pen colour, then runtime palette changes layer on top. Matches the
 project's incremental/gated/"no big-bang" rule. (Sub-phases in §4.)
 
-**D3 — Palette schema = `CPC_PALETTE` firmware-ink list, emitted to game data.**
-`CPC_PALETTE 0x14,0x0B,0x0A,0x0C` (one CPC hardware-ink per pen; length 2/4/16 by
-mode; a `BORDER` ink too). datagen emits it as a `home_assets` / `game_data.h`
-constant (`game_cpc_palette[]`) consumed by `gfx_init` instead of today's
-hardcoded pens. A **default per-mode palette** is used when the game omits it
-(today's black/white/yellow/red for Mode 1). `CPC_COLOR_MAP` (already parsed)
-maps symbolic colour tokens → pen indices for multi-pen art authoring (D4).
+**D3 — Palette schema = `CPC_PALETTE` ink list, emitted to game data.** *(ACCEPTED,
+with Q-B refinement on spelling.)* `CPC_PALETTE <ink>,<ink>,...` (one CPC ink per
+pen; length 2/4/16 by mode; a `BORDER` ink too). **Each ink accepts both forms,
+freely mixed: a colour NAME (`BLACK`, `BRIGHT_RED`, …) or a firmware-colour NUMBER
+in decimal (`13`) or hex (`0x0D`)** — datagen normalises all three to the gate-
+array hardware ink (the name→ink table already lives in `cpcgfx.pl`). datagen emits
+the resolved inks as a `game_data.h` constant (`game_cpc_palette[]`) consumed by
+`gfx_init` instead of today's hardcoded pens. A **default per-mode palette** is
+used when the game omits it (today's black/white/yellow/red for Mode 1).
+`CPC_COLOR_MAP` (already parsed) maps symbolic colour tokens → pen indices for
+multi-pen art authoring (D4).
 
-**D4 — Multi-pen art authored as PNG; port cpcgfx.pl's multicolour encoder into
-`RAGE::CPCGfx`.** 2-colour ASCII art stays for simple/shared assets (pens 0/1).
-For >2-colour assets, the game provides a colour **PNG**; datagen maps each pixel
-to the nearest CPC ink and to a pen (the logic already in
+**D4 — Multi-pen art authored as PNG ONLY; port cpcgfx.pl's multicolour encoder
+into `RAGE::CPCGfx`.** *(ACCEPTED — Q-A resolved: PNG-only for multicolour; no
+ASCII+colour-map path.)* 2-colour ASCII art stays for simple/shared assets
+(pens 0/1). For >2-colour assets the game provides a colour **PNG**; datagen maps
+each pixel to the nearest CPC ink and to a pen (the logic already in
 `external/jsp/tools/cpcgfx.pl --multicolor` + its 27-colour table), emitting
 mode-N multi-pen bytes + the palette. *Rationale:* 16 colours aren't expressible
 in readable ASCII; PNG is how real CPC art is drawn; the byte-compat test
 (`tests/datagen/cpcgfx_sprite_compat.t`) extends to guard the multicolour bytes
-too. (This is the one genuinely new datagen capability; see §6 Q-A.)
+too. (This is the one genuinely new datagen capability.)
 
 **D5 — One mode-parametric CPC backend, not three classes.** Since `RAGE::CPCGfx`
 is already mode-generic, make `RAGE::AssetBackend::CPC` take `mode => 0|1|2`
@@ -80,11 +87,13 @@ is already mode-generic, make `RAGE::AssetBackend::CPC` take `mode => 0|1|2`
 have `AssetBackend::create` read the game's `CPC_MODE`. *Rationale:* avoids
 ~3× duplicated geometry; the per-mode differences are already parameters.
 
-**D6 — Runtime change-palette = CPC-only gfx API + a flow-rule action.** Add
-`gfx_cpc_set_palette(pens, n)` / `gfx_cpc_set_pen(i, ink)` (ZX: no-op) and a flow
-**action** (e.g. `SET_CPC_PALETTE`) so games swap pens per screen/event — the
-"change-palette rules". Palette stays static (set in `gfx_init`) unless a rule
-fires. *Rationale:* matches RAGE1's flow-rule model; keeps ZX untouched.
+**D6 — Runtime change-palette = CPC-only gfx API + a flow-rule action.** *(ACCEPTED;
+Q-E resolved: a **flow action only** for now — NOT a per-screen palette baked into
+the map data.)* Add `gfx_cpc_set_palette(pens, n)` / `gfx_cpc_set_pen(i, ink)`
+(ZX: no-op) and a flow **action** (e.g. `SET_CPC_PALETTE`) so games swap pens per
+screen/event — the "change-palette rules". Palette stays static (set in
+`gfx_init`) unless a rule fires. *Rationale:* matches RAGE1's flow-rule model;
+keeps ZX untouched.
 
 **D7 — Demos = per-mode minimal games + a multicolour Mode-0 demo; add RAGE1-level
 CPC regression baselines.** Reuse `games/minimal`'s assets where 2-colour; add a
@@ -112,10 +121,19 @@ screenshot; **ZX output byte-identical** throughout; `external/jsp` stays read-o
   (byte-identical); demo shows the swap.
 - **CM6 — Demos + regression baselines.** Per-mode demo games + committed RAGE1
   CPC reference shots (Mode 0/1/2 + a palette-change shot).
+- **CM8 — MONO + FAST mode variants** *(Q-F resolved: included in Phase 7 as the
+  final sub-phase, NOT deferred).* Wire the remaining JSP CPC configs —
+  `CPC_MODE1_MONO` (1bpp assets on a Mode-1 screen) and the byte-aligned `*_FAST`
+  variants (`CPC_MODE0/1/2_FAST`, no shift table → coarser X step, smaller/faster)
+  — into the same per-game `CPC_MODE` selector and the asset-backend dispatch.
+  Add a demo + regression shot for each. *Gate:* each variant builds + renders;
+  ZX byte-identical. *(MONO reuses the existing 2-colour asset path; FAST is a
+  pure runtime/JSP-flag change — both are small once CM1–CM5 exist.)*
 - **CM7 — Documentation.** Update `gfx.md` (mode/palette HAL), `assets.md` (multi-
   pen byte format + PNG authoring), `cpc-renderer.md` §0 (mode matrix now active),
-  `README` (§5.13a: Mode 0/2 no longer deferred), and a `.gdata` keyword reference
-  for `CPC_MODE` / `CPC_PALETTE` / `CPC_COLOR_MAP` / `SET_CPC_PALETTE`.
+  `README` (§5.13a: Mode 0/2 + MONO/FAST now implemented, not deferred), and a
+  `.gdata` keyword reference for `CPC_MODE` / `CPC_PALETTE` / `CPC_COLOR_MAP` /
+  `SET_CPC_PALETTE`. *(Do CM7 last, after CM8, so the docs describe the full set.)*
 
 ## 5. Invariants & constraints
 
@@ -128,29 +146,30 @@ screenshot; **ZX output byte-identical** throughout; `external/jsp` stays read-o
 - **Backwards compatible** — a game with no `CPC_MODE` / `CPC_PALETTE` builds
   exactly as today (Mode 1, default palette), byte-for-byte.
 
-## 6. Open questions for review
+## 6. Open questions — RESOLVED (user, 2026-06-07)
 
-- **Q-A (biggest):** multi-pen art authoring — PNG-only (D4), or also an
-  ASCII + `CPC_COLOR_MAP` path for ≤4-colour Mode-1 art? PNG is simplest; ASCII
-  keeps the text-art workflow for small assets. (Drives CM4 scope.)
-- **Q-B:** palette ink spelling in `.gdata` — raw CPC hardware inks
-  (`0x14`), firmware numbers (`0..26`), or colour names (`BLACK`, `BRIGHT_RED`)?
-  Names are friendliest; a name→ink table already exists in `cpcgfx.pl`.
-- **Q-C:** is per-game mode selection (D1) wanted now, or is a per-build
-  `CPC_MODE=` flag enough for Phase 7 (per-game deferred)?
-- **Q-D:** Mode-2 vs Mode-0 priority — which lands first after CM1? (Plan does
-  Mode 2 first as it's closest to the working 2-colour Mode 1; Mode 0 needs the
-  most new colour work.)
-- **Q-E:** scope of "change-palette rules" (D6) — full per-screen palette in the
-  map data, or just a flow action? (Affects datagen map emission.)
-- **Q-F:** do MONO / FAST variants enter Phase 7 at all, or stay deferred?
-  (Recommend: stay deferred; not needed for the stated goals.)
+- **Q-A — multi-pen art authoring → PNG ONLY** for multicolour assets (no
+  ASCII+`CPC_COLOR_MAP` path). Drives CM4.
+- **Q-B — palette ink spelling → accept BOTH colour NAMES and firmware NUMBERS,
+  the numbers in either decimal OR hex**, freely mixed in `CPC_PALETTE`. datagen
+  normalises all to the hardware ink. Drives CM3.
+- **Q-C — per-game mode selection (D1) is wanted NOW.** And **Phase 7 must be
+  completed in full — nothing deferred** (this removed all "defer to Phase 8"
+  framing from this plan).
+- **Q-D — Mode 2 first, then Mode 0** (CM1 = Mode 2, CM2 = Mode 0).
+- **Q-E — change-palette = a flow action only** for now (no per-screen palette in
+  the map data). Drives CM5.
+- **Q-F — MONO + FAST variants ARE in Phase 7**, added as the final sub-phase CM8
+  (not deferred).
 
 ## 7. Sequencing & risk
 
-CM1→CM2 are low-risk (compile-flag + dispatch; JSP already renders those modes).
-CM3 is low-risk (data plumbing). **CM4 is the real new work** (a multicolour
-encoder + PNG authoring + palette emission) and the main schedule risk; it is
-isolated so CM1–CM3 ship value (Mode 0/2 with 2-colour art + custom palettes)
-even if CM4 slips. CM5 is small. CM6/CM7 are verification + docs. Estimated as a
-multi-session phase; CM1–CM3 are a natural first milestone.
+All sub-phases CM1–CM8 are **in scope for Phase 7 — none deferred** (Q-C). CM1→CM2
+are low-risk (compile-flag + dispatch; JSP already renders those modes). CM3 is
+low-risk (data plumbing). **CM4 is the real new work** (the multicolour PNG
+encoder + palette emission) and the main schedule risk — it is isolated so a
+problem there doesn't block CM1–CM3, but it must still land for the phase to be
+complete. CM5 (flow action) and CM8 (MONO/FAST flags) are small. CM6 (demos +
+baselines) and CM7 (docs, done last) are verification. Natural milestones:
+CM1–CM3 (modes + palette), then CM4–CM5 (colour + runtime), then CM6–CM8 (demos,
+variants, docs). Multi-session phase.
