@@ -413,13 +413,13 @@ sub output_game_data {
     my $output_fh;
 
     # output .c file for home bank and dataset
-    open( $output_fh, ">", $c_file_game_data ) or
+    open( $output_fh, ">:encoding(UTF-8)", $c_file_game_data ) or
         die "Could not open $c_file_game_data for writing\n";
     print $output_fh join( "", @{ $ctx->{c_game_data_lines} }, @{ $ctx->{c_dataset_lines}->{'home'} } );
     close $output_fh;
 
     # output .asm file for home bank and dataset
-    open( $output_fh, ">", $asm_file_game_data ) or
+    open( $output_fh, ">:encoding(UTF-8)", $asm_file_game_data ) or
         die "Could not open $asm_file_game_data for writing\n";
     print $output_fh join( "", @{ $ctx->{asm_dataset_lines}->{'home'} } );
     close $output_fh;
@@ -436,14 +436,14 @@ sub output_game_data {
 
         # output .c file for banked datasets
         my $c_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_dataset_format, $dataset );
-        open( $output_fh, ">", $c_file_dataset ) or
+        open( $output_fh, ">:encoding(UTF-8)", $c_file_dataset ) or
             die "Could not open $c_file_dataset for writing\n";
         print $output_fh join( "", @{ $ctx->{c_dataset_lines}->{ $dataset } } );
         close $output_fh;
 
         # output .asm file for banked datasets
         my $asm_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_dataset_format, $dataset );
-        open( $output_fh, ">", $asm_file_dataset ) or
+        open( $output_fh, ">:encoding(UTF-8)", $asm_file_dataset ) or
             die "Could not open $asm_file_dataset for writing\n";
         print $output_fh join( "", @{ $ctx->{asm_dataset_lines}->{ $dataset } } );
         close $output_fh;
@@ -481,14 +481,14 @@ sub output_game_data {
 
         # output .c file for the codeset
         my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $codeset );
-        open( $output_fh, ">", $c_file_codeset ) or
+        open( $output_fh, ">:encoding(UTF-8)", $c_file_codeset ) or
             die "Could not open $c_file_codeset for writing\n";
         print $output_fh join( "", @{ $ctx->{c_codeset_lines}->{ $codeset } } );
         close $output_fh;
 
         # output .asm file for banked codesets
         my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $codeset );
-        open( $output_fh, ">", $asm_file_codeset ) or
+        open( $output_fh, ">:encoding(UTF-8)", $asm_file_codeset ) or
             die "Could not open $asm_file_codeset for writing\n";
         print $output_fh join( "", @{ $ctx->{asm_codeset_lines}->{ $codeset } } );
         close $output_fh;
@@ -507,7 +507,7 @@ sub output_game_data {
 
     # output generated banked data for 128 mode
     if ( $ctx->{game_config}->{'zx_target'} eq '128' ) {
-        open( $output_fh, ">", $c_file_banked_data_128 ) or
+        open( $output_fh, ">:encoding(UTF-8)", $c_file_banked_data_128 ) or
             die "Could not open $c_file_banked_data_128 for writing\n";
         print $output_fh join( "", @{ $ctx->{c_banked_data_128_lines} } );
         close $output_fh;
@@ -518,7 +518,7 @@ sub output_game_data {
     if ( defined( $ctx->{game_config}->{'platform'} ) and
          $ctx->{game_config}->{'platform'} =~ /^cpc/ and
          scalar( @{ $ctx->{c_tracker_cpc_lines} } ) ) {
-        open( $output_fh, ">", $c_file_tracker_cpc ) or
+        open( $output_fh, ">:encoding(UTF-8)", $c_file_tracker_cpc ) or
             die "Could not open $c_file_tracker_cpc for writing\n";
         print $output_fh join( "", @{ $ctx->{c_tracker_cpc_lines} } );
         close $output_fh;
@@ -526,13 +526,13 @@ sub output_game_data {
 
 
     # output game_data.h file
-    open( $output_fh, ">", $h_file_game_data ) or
+    open( $output_fh, ">:encoding(UTF-8)", $h_file_game_data ) or
         die "Could not open $h_file_game_data for writing\n";
     print $output_fh join( "", @{ $ctx->{h_game_data_lines} } );
     close $output_fh;
 
     # output features.h file
-    open( $output_fh, ">", $h_file_build_features ) or
+    open( $output_fh, ">:encoding(UTF-8)", $h_file_build_features ) or
         die "Could not open $h_file_build_features for writing\n";
     print $output_fh join( "", @{ $ctx->{h_build_features_lines} } );
     close $output_fh;
