@@ -239,6 +239,23 @@ AU/IN/B/TS). The high-level sequence across all subsystems:
 - `B9` — banking cleanup (legacy macros stay as aliases)
 - `TS6` — retire CPC-only stub games once shared games cover them
 
+**Phase 7 — CPC video modes (Mode 0 / Mode 2 + MONO/FAST) + palette.**
+
+- `CM1–CM8` — per-game `CPC_MODE`, palette, multi-pen colour, runtime
+  palette changes, demos + baselines, docs. Plan APPROVED 2026-06-07 —
+  see [cpc-modes.md](cpc-modes.md).
+
+**Phase 8 — Engine performance optimization (first AI pass).**
+
+- `PO1–PO7` — speed-measurement harness + baselines (PO1, gating
+  prerequisite); loop-invariant/redundant-deref micro-opts (PO2);
+  measured local→static (PO3); compiler flag/pragma tuning (PO4);
+  targeted C→asm kernels for the hottest loops (PO5); hot-path
+  hand-asm (PO6); docs + optimization log (PO7). Gate is *behavioral*
+  (regression suite) + *measured* deltas, **not** byte-identity (this
+  phase changes output by design). Plan PROPOSED 2026-06-08 — see
+  [performance.md](performance.md).
+
 This ordering is intentionally serialised across subsystems because
 many phases depend on others (e.g. `G7` needs `R1`; `A5` needs `R3`;
 `G8` needs `R4`; `TS3` needs `R4` and `G8`). The per-subsystem docs

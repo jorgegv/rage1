@@ -115,3 +115,13 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [ ] CM6 — per-mode demo games + RAGE1-level CPC regression baselines (Mode 0/1/2 + palette-change shots)
   - [ ] CM8 — MONO + FAST variants (`CPC_MODE1_MONO`, `CPC_MODE0/1/2_FAST`) wired into the `CPC_MODE` selector + dispatch; demo + regression shot each
   - [ ] CM7 — docs (last): `gfx.md` / `assets.md` / `cpc-renderer.md` §0 / `README` §5.13a + `.gdata` keyword reference (`CPC_MODE` / `CPC_PALETTE` / `CPC_COLOR_MAP` / `SET_CPC_PALETTE`)
+
+- [ ] **Phase 8 — Engine performance optimization (first AI pass)** *(plan PROPOSED 2026-06-08 — design only, awaiting user review — see [performance.md](../performance.md))*
+  - [ ] PO1 — speed-measurement harness (cycles/frame over the deterministic regression scenario) + committed per-game baselines (blobs / default / get_weapon / mapgen). Gating prerequisite
+  - [ ] PO2 — loop-invariant & redundant-deref micro-opts in per-frame hot paths (enemy/bullet/btile loops); each measured
+  - [ ] PO3 — measured local→static conversion on hottest leaf functions (per-function, kept only on a win)
+  - [ ] PO4 — compiler flag / `#pragma` exploration (`-SO3` vs `--opt-code-size`, `--max-allocs`) per hot TU; reversible, keep only measured wins
+  - [ ] PO5 — targeted C→asm kernels for the hottest PO1-confirmed tight loops (`collision_check`, `animation_sequence_tick`, tile-type/pixel-to-cell helper); C fallback retained; independent review each
+  - [ ] PO6 — optimize existing hot-path hand-asm (likely small; engine asm is mostly audio/CPC-IO)
+  - [ ] PO7 — docs + optimization log (per-game cycle/size deltas); keep/retire `make perf`
+
