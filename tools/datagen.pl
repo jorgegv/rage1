@@ -58,6 +58,10 @@ use RAGE::Datagen::Codesets qw(
     generate_custom_function_tables generate_binary_data_items
     generate_tracker_data
 );
+use RAGE::Datagen::Dependencies qw(
+    create_dataset_dependencies fix_feature_dependencies
+    derive_cpc_audio_backend_features
+);
 
 use Data::Dumper;
 use List::MoreUtils qw( zip uniq );
@@ -1864,127 +1868,7 @@ sub output_game_data {
 # All values in the above listrefs are indexes into the global tables for
 # each asset type (the all_<something> variables).
 
-sub create_dataset_dependencies {
-
-    # first, we add all assets to the dataset lists
-    foreach my $screen ( @all_screens ) {
-
-        # get the screen dataset, override it and use 'home' if compiling for 48K target
-        my $dataset = ( $game_config->{'zx_target'} eq '48' ? 'home' : $screen->{'dataset'} );
-
-        # add screen to the dataset
-        push @{ $dataset_dependency{ $dataset }{'screens'} },
-            $screen_name_to_index{ $screen->{'name'} };
-
-        # add btiles
-        push @{ $dataset_dependency{ $dataset }{'btiles'} },
-            map { $btile_name_to_index{ $_->{'btile'} } } @{ $screen->{'btiles'} };
-
-        # the background btile is a special case, add it to the btile list
-        if ( defined( $screen->{'background'} ) ) {
-            push @{ $dataset_dependency{ $dataset }{'btiles'} },
-                $btile_name_to_index{ $screen->{'background'}{'btile'} };
-        }
-
-        # add sprites
-        push @{ $dataset_dependency{ $dataset }{'sprites'} },
-            map { $sprite_name_to_index{ $_->{'sprite'} } } @{ $screen->{'enemies'} };
-
-        # add rules
-        push @{ $dataset_dependency{ $dataset }{'rules'} },
-            map { @{ $screen->{'rules'}{ $_ } } } keys %{ $screen->{'rules'} };
-    }
-
-    # we then add the home dataset dependencies:
-    # ...special btiles with a 'home' dataset
-    foreach my $btile ( @all_btiles ) {
-        # get the btile dataset, override it and use 'home' if compiling for 48K target
-        my $dataset = ( $game_config->{'zx_target'} eq '48' ? 'home' : $btile->{'dataset'} );
-        if ( defined( $btile->{'dataset'} ) ) {
-            push @{ $dataset_dependency{ $dataset }{'btiles'} },
-                $btile_name_to_index{ $btile->{'name'} };
-        }
-    }
-
-    # ...hero sprite
-    push @{ $dataset_dependency{'home'}{'sprites'} },
-        $sprite_name_to_index{ $hero->{'sprite'} };
-
-    # ...bullet sprite
-    if ( defined( $hero->{'bullet'} ) ) {
-        push @{ $dataset_dependency{'home'}{'sprites'} },
-            $sprite_name_to_index{ $hero->{'bullet'}{'sprite'} };
-    }
-
-    # item btiles are always added to the home dataset, since the item table
-    # is global
-    foreach my $item ( @all_items ) {
-        push @{ $dataset_dependency{'home'}{'btiles'} },
-            $btile_name_to_index{ $item->{'btile'} };
-    }
-
-    # crumb btiles are always added to the home dataset, since the crumb type table
-    # is global
-    foreach my $crumb_type ( @all_crumb_types ) {
-        push @{ $dataset_dependency{'home'}{'btiles'} },
-            $btile_name_to_index{ $crumb_type->{'btile'} };
-    }
-
-    # the same for the Lives btile
-    push @{ $dataset_dependency{'home'}{'btiles'} },
-        $btile_name_to_index{ $hero->{'lives'}{'btile'} };
-
-    # add rules in the game events rule table to the home dataset
-    push @{ $dataset_dependency{ 'home' }{'rules'} },
-        @game_events_rule_table;
-
-    # we must then remove duplicates from the lists
-    # we take the oportunity to precalculate some tables
-    foreach my $dataset ( keys %dataset_dependency ) {
-
-        my %seen = ();
-        $dataset_dependency{ $dataset }{'screens'} =
-            [ sort { $a <=> $b } grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'screens'} } ];
-
-        %seen = ();	# reset
-        $dataset_dependency{ $dataset }{'btiles'} =
-            [ sort { $a <=> $b } grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'btiles'} } ];
-
-        %seen = ();	# reset
-        $dataset_dependency{ $dataset }{'sprites'} =
-            [ sort { $a <=> $b } grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'sprites'} } ];
-
-        %seen = ();	# reset
-        $dataset_dependency{ $dataset }{'rules'} =
-            [ sort { $a <=> $b } grep { !$seen{$_}++ } @{ $dataset_dependency{ $dataset }{'rules'} } ];
-
-        # we now precalculate the global->local asset index tables for all asset types
-
-        # generate the global->local index btile mapping table
-        my @local_btile = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'btiles'} } ) - 1 );
-        my @global_btile = map { $dataset_dependency{ $dataset }{'btiles'}[ $_ ] } @local_btile;
-        my %btile_global_to_dataset_index = ( zip @global_btile, @local_btile );
-        $dataset_dependency{ $dataset }{'btile_global_to_dataset_index'} = \%btile_global_to_dataset_index;
-
-        # generate the global->local index sprite mapping table
-        my @local_sprite = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'sprites'} } ) - 1 );
-        my @global_sprite = map { $dataset_dependency{ $dataset }{'sprites'}[ $_ ] } @local_sprite;
-        my %sprite_global_to_dataset_index = ( zip @global_sprite, @local_sprite );
-        $dataset_dependency{ $dataset }{'sprite_global_to_dataset_index'} = \%sprite_global_to_dataset_index;
-
-        # generate the global->local index rule mapping table
-        my @local_rule = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'rules'} } ) - 1 );
-        my @global_rule = map { $dataset_dependency{ $dataset }{'rules'}[ $_ ] } @local_rule;
-        my %rule_global_to_dataset_index = ( zip @global_rule, @local_rule );
-        $dataset_dependency{ $dataset }{'rule_global_to_dataset_index'} = \%rule_global_to_dataset_index;
-
-        # generate the global->local index screen mapping table
-        my @local_screen = ( 0 .. scalar( @{ $dataset_dependency{ $dataset }{'screens'} } ) - 1 );
-        my @global_screen = map { $dataset_dependency{ $dataset }{'screens'}[ $_ ] } @local_screen;
-        my %screen_global_to_dataset_index = ( zip @global_screen, @local_screen );
-        $dataset_dependency{ $dataset }{'screen_global_to_dataset_index'} = \%screen_global_to_dataset_index;
-    }
-}
+# create_dataset_dependencies moved to RAGE::Datagen::Dependencies (Task 6 Stage 2 extraction); imported at the top of this file.
 
 # fixes dependencies between build features.  put here all exceptions and
 # mangling needed for build features that need/exclude others, etc.
@@ -2004,91 +1888,9 @@ sub create_dataset_dependencies {
 # This is its own sub (not inlined in fix_feature_dependencies) because the
 # screen-less CPC fast path in main() bypasses fix_feature_dependencies; it
 # calls this directly so the AU4-3 macros are emitted on minimal CPC games too.
-sub derive_cpc_audio_backend_features {
-    if ( defined( $conditional_build_features{ 'PLATFORM_CPC464' } ) and
-         defined( $conditional_build_features{ 'TRACKER' } ) ) {
-        # Music backend: AY music on CPC whenever a TRACKER is configured.
-        add_build_feature( 'AUDIO_MUSIC_BACKEND_CPC_AY' );
-        # SFX backend: AY SFX channel, only when FX_CHANNEL is set.
-        if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
-            add_build_feature( 'AUDIO_SFX_BACKEND_CPC_AY' );
-        }
-    }
-}
+# derive_cpc_audio_backend_features moved to RAGE::Datagen::Dependencies (Task 6 Stage 2 extraction); imported at the top of this file.
 
-sub fix_feature_dependencies {
-
-    # currently, the CRUMBS feature needs to have byte-size tile types, so
-    # if CRUMBS are used, disable the default packed tile map
-    if ( defined( $conditional_build_features{ 'CRUMBS' } ) and
-        defined( $conditional_build_features{ 'BTILE_2BIT_TYPE_MAP' }) ) {
-        delete $conditional_build_features{ 'BTILE_2BIT_TYPE_MAP' };
-    }
-
-    # if ZX_TARGET is 48, CODESETs make no sense
-    if ( defined( $conditional_build_features{ 'ZX_TARGET_48' } ) and
-        defined( $conditional_build_features{ 'CODESETS' }) ) {
-        delete $conditional_build_features{ 'CODESETS' };
-    }
-
-    # AU2-3: derive BUILD_FEATURE_AUDIO_*_BACKEND_* macros (Phase AU2 of
-    # doc/multiplatform-plan/audio.md). These are emitted *alongside*
-    # the legacy BUILD_FEATURE_TRACKER* macros — they do not replace
-    # anything yet. Per §3.2 backend-split table:
-    #
-    #   PLATFORM zx48                       -> SFX: ZX_BEEPER
-    #   PLATFORM zx128 (no TRACKER)         -> SFX: ZX_BEEPER
-    #   PLATFORM zx128 + TRACKER            -> MUSIC: ZX_AY
-    #                                          SFX:   ZX_BEEPER
-    #                                          (+ ZX_AY if FX_CHANNEL set)
-    #
-    # CPC backends are not derived here; they enter the picture in
-    # Phase AU4 once the PLATFORM_CPC* macros land.
-    if ( defined( $conditional_build_features{ 'ZX_TARGET_48' } ) or
-         defined( $conditional_build_features{ 'ZX_TARGET_128' } ) ) {
-        # SFX backend: beeper is always available on ZX (48 or 128).
-        add_build_feature( 'AUDIO_SFX_BACKEND_ZX_BEEPER' );
-    }
-    if ( defined( $conditional_build_features{ 'ZX_TARGET_128' } ) and
-         defined( $conditional_build_features{ 'TRACKER' } ) ) {
-        # Music backend: AY music on ZX128 whenever a TRACKER is configured.
-        add_build_feature( 'AUDIO_MUSIC_BACKEND_ZX_AY' );
-        # Second SFX backend: AY SFX channel, only when FX_CHANNEL is set
-        # (today's TRACKER_SOUNDFX gate; vortex2 forbids it at parse time).
-        if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
-            add_build_feature( 'AUDIO_SFX_BACKEND_ZX_AY' );
-        }
-    }
-
-    # AU4-3: derive CPC audio backend macros. Factored into its own sub so
-    # the screen-less CPC fast path (which bypasses fix_feature_dependencies)
-    # can derive them too — see derive_cpc_audio_backend_features.
-    derive_cpc_audio_backend_features;
-
-    # AU3-5: rename the legacy BUILD_FEATURE_TRACKER* capability macros to
-    # the BUILD_FEATURE_AUDIO_* family (doc/multiplatform-plan/audio.md
-    # §3.2). The old names are emitted *in parallel indefinitely* as
-    # permanent silent aliases per README §5.6 — external games that
-    # #ifdef on the old macros keep building forever. Mapping:
-    #   BUILD_FEATURE_TRACKER          -> BUILD_FEATURE_AUDIO_MUSIC
-    #   BUILD_FEATURE_TRACKER_ARKOS2   -> BUILD_FEATURE_AUDIO_MUSIC_ARKOS2
-    #   BUILD_FEATURE_TRACKER_VORTEX2  -> BUILD_FEATURE_AUDIO_MUSIC_VORTEX2
-    #   BUILD_FEATURE_TRACKER_SOUNDFX  -> BUILD_FEATURE_AUDIO_SFX_TRACKER
-    if ( defined( $conditional_build_features{ 'TRACKER' } ) ) {
-        add_build_feature( 'AUDIO_MUSIC' );
-    }
-    if ( defined( $conditional_build_features{ 'TRACKER_ARKOS2' } ) ) {
-        add_build_feature( 'AUDIO_MUSIC_ARKOS2' );
-    }
-    if ( defined( $conditional_build_features{ 'TRACKER_VORTEX2' } ) ) {
-        add_build_feature( 'AUDIO_MUSIC_VORTEX2' );
-    }
-    if ( defined( $conditional_build_features{ 'TRACKER_SOUNDFX' } ) ) {
-        add_build_feature( 'AUDIO_SFX_TRACKER' );
-    }
-
-    # additional fixes here...
-}
+# fix_feature_dependencies moved to RAGE::Datagen::Dependencies (Task 6 Stage 2 extraction); imported at the top of this file.
 
 # creates a dump of internal data so that other tools (e.g.  FLOWGEN) can
 # load it and use the parsed data. Use "-c" option to dump the internal data
