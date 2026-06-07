@@ -75,55 +75,15 @@ use GD;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
-# configuration read from etc/rage1-config.yaml file
-my $cfg;
-
-# final destination address for compilation of datasets and codesets
-my $dataset_base_address = 0x5B00;
-my $codeset_base_address = 0xC000;
-
-# banks reserved for codesets. Bank 4 is reserved for engine code
-my @codeset_valid_banks = ( 6, );	# non-contended
-
-# global program state
-# if you add any global variable here, don't forget to add a reference to it
-# also in $all_state variable in dump_internal_data function at the end of
-# the script
-my @all_btiles;
-my %btile_name_to_index;
-
-my @all_screens;
-my %screen_name_to_index = ( '__NO_SCREEN__', 0 );
-
-my @all_sprites;
-my %sprite_name_to_index;
-
-my @all_items;
-my %item_name_to_index;
-
-my @all_rules;
-my $max_flow_var_id = undef;
-
-my @game_events_rule_table;
-
-my @all_crumb_types;
-my %crumb_type_name_to_index;
-
-# lists of custom function checks and actions
-my %check_custom_function_id;
-my @check_custom_functions;
-my %action_custom_function_id;
-my @action_custom_functions;
-
-my @all_codeset_functions;
+# NOTE (Task 6 Phase 1): the ~41 shared globals that used to be declared here
+# (model arrays, name->index hashes, $game_config, $cfg, the base addresses,
+# the emit accumulators, etc.) now live inside the $ctx object below as the
+# canonical storage.  datagen.pl's own code reads/writes them as $ctx->{field};
+# the 13 not-yet-threaded RAGE::Datagen::* modules still reach them by the
+# main:: aliases installed by $ctx->install_main_aliases (the transitional
+# bridge).  %codeset_function_name_to_index stays a plain datagen.pl lexical
+# (used only here, in dump_internal_data).
 my %codeset_function_name_to_index;
-my %codeset_functions_by_codeset;
-
-my $hero;
-my $game_config;
-
-# dataset dependency: stores which assets go into each dataset
-my %dataset_dependency;
 
 # file names
 my $c_file_game_data		= 'game_data.c';
@@ -136,10 +96,9 @@ my $c_file_banked_data_128	= 'banked/128/game_data_128.c';
 # glob) instead of banked/128/game_data_128.c.
 my $c_file_tracker_cpc		= 'game_data_tracker_cpc.c';
 
-# global directories
+# global directories ($build_dir is a $ctx field; see the context block below)
 my $output_dest_dir;
 my $game_src_dir;
-my $build_dir;
 
 # codesets and datasets have their source files in their own directory for each one
 my $codeset_src_dir_format	= 'codesets/codeset_%s.src';
@@ -153,96 +112,34 @@ my $asm_file_dataset_format	= 'datasets/dataset_%s.src/dataset_data.asm';
 # dump file for internal state
 my $dump_file = 'internal_state.dmp';
 
-# valid values for Tracker type
-my @valid_trackers = qw( arkos2 vortex2 );
-
-# output lines for each of the files
-my @c_game_data_lines;
-my $c_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
-my $asm_dataset_lines;	# hashref: dataset_id => [ C dataset lines ]
-my $c_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
-my $asm_codeset_lines;	# hashref: codeset_id => [ C codeset lines ]
-my @h_game_data_lines;
-my @h_build_features_lines;
-my @c_banked_data_128_lines;
-# AU5: CPC-flat tracker data lines (songs/FX byte-array externs + tables),
-# written to a top-level generated C file. On CPC the @c_banked_data_128_lines
-# accumulator is redirected here (see generate_tracker_data).
-my @c_tracker_cpc_lines;
-
-# misc vars
-my $forced_build_target;
-my %conditional_build_features;
-
-# config syntax vocabulary (valid WHEN names for flow-rule tables).  Declared
-# here (ahead of the Task 6 Stage 2 scaffold below) so it can be aliased into
-# main:: for the extracted Screens/FlowRules modules.
-my $syntax = {
-    valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ],
-};
-
-# valid game-function slots (valid GAME_FUNCTION names).  Declared here (ahead
-# of the Task 6 Stage 2 scaffold below) so it can be aliased into main:: for the
-# extracted GameConfig module; see the GameConfig extraction.
-my @valid_game_functions = qw( menu intro game_end game_over user_init user_game_init user_game_loop crumb_action custom );
-
 ######################################################
-## Task 6 Stage 2: shared-state context + extraction scaffold
+## Task 6 Phase 1: shared-state context (canonical storage) + transitional bridge
 ######################################################
-# RAGE::Datagen::Context holds references to the datagen.pl globals that subs
-# extracted into RAGE::Datagen::* modules need to reach.  install_main_aliases()
-# is a TEMPORARY scaffold: it aliases each held ref into main:: under the same
-# name so an extracted sub can read/write the global by fully-qualified name
-# (e.g. $main::game_config), keeping every extraction a mechanical, byte-
-# preserving code move.  The context grows one entry per extraction step (only
-# the state that step's module touches); see lib/RAGE/Datagen/Context.pm.
-# $datagen_ctx is scaffolding, not game state: intentionally NOT added to the
-# $all_state dump in dump_internal_data (it only holds refs to globals already
-# dumped there).
-my $datagen_ctx = RAGE::Datagen::Context->new(
-    game_config               => \$game_config,                 # PngDispatch (Step 3), BuildFeatures (Step 4), Validate (Step 5)
-    conditional_build_features => \%conditional_build_features,  # BuildFeatures (Step 4)
-    all_btiles                => \@all_btiles,                   # Validate (Step 5)
-    all_screens               => \@all_screens,                  # Validate (Step 5)
-    all_sprites               => \@all_sprites,                  # Validate (Step 5), Sprites (Step 6)
-    all_items                 => \@all_items,                    # Validate (Step 5)
-    c_dataset_lines           => \$c_dataset_lines,              # Sprites (Step 6) — emit accumulator
-    dataset_dependency        => \%dataset_dependency,           # Sprites (Step 6)
-    h_game_data_lines         => \@h_game_data_lines,            # Btiles (Step 7) — header emit accumulator
-    btile_name_to_index       => \%btile_name_to_index,         # Btiles (Step 7)
-    sprite_name_to_index      => \%sprite_name_to_index,         # Screens (Step 8)
-    screen_name_to_index      => \%screen_name_to_index,         # Screens (Step 8)
-    all_crumb_types           => \@all_crumb_types,              # Screens (Step 8)
-    syntax                    => \$syntax,                       # Screens (Step 8) — flow-rule WHEN vocabulary
-    all_rules                 => \@all_rules,                    # FlowRules (Step 9)
-    max_flow_var_id           => \$max_flow_var_id,              # FlowRules (Step 9) — shared with feature emitter
-    check_custom_function_id  => \%check_custom_function_id,     # FlowRules (Step 9)
-    check_custom_functions    => \@check_custom_functions,       # FlowRules (Step 9)
-    action_custom_function_id => \%action_custom_function_id,    # FlowRules (Step 9)
-    action_custom_functions   => \@action_custom_functions,      # FlowRules (Step 9)
-    game_events_rule_table    => \@game_events_rule_table,       # FlowRules (Step 9)
-    hero                      => \$hero,                         # Entities (Step 10)
-    c_game_data_lines         => \@c_game_data_lines,            # Entities (Step 10) — main C emit accumulator
-    cfg                       => \$cfg,                          # GameConfig (Step 11) — engine config (interrupts_128)
-    build_dir                 => \$build_dir,                    # GameConfig (Step 11) — custom-charset file path
-    h_build_features_lines    => \@h_build_features_lines,       # GameConfig (Step 11) — features.h emit accumulator
-    valid_game_functions      => \@valid_game_functions,         # GameConfig (Step 11) — valid GAME_FUNCTION slots
-    asm_dataset_lines         => \$asm_dataset_lines,            # Codesets (Step 11b) — ASM dataset emit accumulator
-    c_codeset_lines           => \$c_codeset_lines,              # Codesets (Step 11b) — C codeset emit accumulator
-    asm_codeset_lines         => \$asm_codeset_lines,            # Codesets (Step 11b) — ASM codeset emit accumulator
-    c_banked_data_128_lines   => \@c_banked_data_128_lines,      # Codesets (Step 11b) — banked-128 C emit accumulator
-    c_tracker_cpc_lines       => \@c_tracker_cpc_lines,          # Codesets (Step 11b) — CPC tracker C emit accumulator
-    all_codeset_functions     => \@all_codeset_functions,        # Codesets (Step 11b)
-    codeset_functions_by_codeset => \%codeset_functions_by_codeset, # Codesets (Step 11b)
-    codeset_valid_banks       => \@codeset_valid_banks,          # Codesets (Step 11b) — codeset bank assignment
-    dataset_base_address      => \$dataset_base_address,         # Codesets (Step 11b) — dataset org address
-    codeset_base_address      => \$codeset_base_address,         # Codesets (Step 11b) — codeset org address
-    item_name_to_index        => \%item_name_to_index,          # Parser (Step 13)
-    crumb_type_name_to_index  => \%crumb_type_name_to_index,    # Parser (Step 13)
-    valid_trackers            => \@valid_trackers,               # Parser (Step 13) — valid TRACKER type vocabulary
-    forced_build_target       => \$forced_build_target,         # Parser (Step 13) — CLI -t target override
+# RAGE::Datagen::Context now OWNS the ~41 shared globals (model arrays, name->
+# index hashes, $game_config, emit accumulators, base addresses, etc.) as the
+# canonical storage.  datagen.pl's own code reads/writes them as $ctx->{field}.
+# The 7 seeded fields below preserve the non-empty initial values those globals
+# used to have; every other field defaults to []/{}/undef inside new().
+#
+# install_main_aliases is the (now-shrinking) TRANSITIONAL bridge: it aliases
+# each field into main:: under the same name so the 13 not-yet-threaded
+# RAGE::Datagen::* modules can keep reaching the globals by fully-qualified name
+# ($main::game_config, @main::all_btiles, ...).  Phase 2 will thread $ctx into
+# the modules and delete the aliasing.  $ctx must be constructed and aliased
+# BEFORE any code that uses the fields runs (it is — this block precedes the
+# subs and main()).  $ctx is scaffolding, not game state: intentionally NOT
+# added to the $all_state dump in dump_internal_data (it only holds the globals
+# already dumped there individually).
+my $ctx = RAGE::Datagen::Context->new(
+    screen_name_to_index => { '__NO_SCREEN__' => 0 },
+    syntax               => { valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ] },
+    valid_game_functions => [ qw( menu intro game_end game_over user_init user_game_init user_game_loop crumb_action custom ) ],
+    valid_trackers       => [ qw( arkos2 vortex2 ) ],
+    dataset_base_address => 0x5B00,
+    codeset_base_address => 0xC000,
+    codeset_valid_banks  => [ 6 ],
 );
-$datagen_ctx->install_main_aliases;
+$ctx->install_main_aliases;
 
 ######################################################
 ## Configuration syntax definitions and lists
@@ -468,7 +365,7 @@ sub generate_game_data {
 
     # dataset items. All dataset are generated, including 'home'
     # 'home' dataset will be treated specially at output
-    for my $dataset ( keys %dataset_dependency ) {
+    for my $dataset ( keys %{ $ctx->{dataset_dependency} } ) {
         generate_c_banked_header( $dataset );
         generate_btiles( $dataset );
         generate_sprites( $dataset );
@@ -523,17 +420,17 @@ sub output_game_data {
     # output .c file for home bank and dataset
     open( $output_fh, ">", $c_file_game_data ) or
         die "Could not open $c_file_game_data for writing\n";
-    print $output_fh join( "", @c_game_data_lines, @{ $c_dataset_lines->{'home'} } );
+    print $output_fh join( "", @{ $ctx->{c_game_data_lines} }, @{ $ctx->{c_dataset_lines}->{'home'} } );
     close $output_fh;
 
     # output .asm file for home bank and dataset
     open( $output_fh, ">", $asm_file_game_data ) or
         die "Could not open $asm_file_game_data for writing\n";
-    print $output_fh join( "", @{ $asm_dataset_lines->{'home'} } );
+    print $output_fh join( "", @{ $ctx->{asm_dataset_lines}->{'home'} } );
     close $output_fh;
 
     # output banked datasets
-    foreach my $dataset ( sort grep { /\d+/ } keys %$c_dataset_lines ) {
+    foreach my $dataset ( sort grep { /\d+/ } keys %{ $ctx->{c_dataset_lines} } ) {
 
         # create the destination directory
         my $dst_dir = sprintf( $output_dest_dir . '/' . $dataset_src_dir_format, $dataset );
@@ -546,20 +443,20 @@ sub output_game_data {
         my $c_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_dataset_format, $dataset );
         open( $output_fh, ">", $c_file_dataset ) or
             die "Could not open $c_file_dataset for writing\n";
-        print $output_fh join( "", @{ $c_dataset_lines->{ $dataset } } );
+        print $output_fh join( "", @{ $ctx->{c_dataset_lines}->{ $dataset } } );
         close $output_fh;
 
         # output .asm file for banked datasets
         my $asm_file_dataset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_dataset_format, $dataset );
         open( $output_fh, ">", $asm_file_dataset ) or
             die "Could not open $asm_file_dataset for writing\n";
-        print $output_fh join( "", @{ $asm_dataset_lines->{ $dataset } } );
+        print $output_fh join( "", @{ $ctx->{asm_dataset_lines}->{ $dataset } } );
         close $output_fh;
     }
 
     # output banked codesets
     my @files_to_copy;
-    foreach my $codeset ( sort grep { /\d+/ } keys %$c_codeset_lines ) {
+    foreach my $codeset ( sort grep { /\d+/ } keys %{ $ctx->{c_codeset_lines} } ) {
 
         # create the destination directory
         my $dst_dir = sprintf( $output_dest_dir . '/' . $codeset_src_dir_format, $codeset );
@@ -591,20 +488,20 @@ sub output_game_data {
         my $c_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $c_file_codeset_format, $codeset );
         open( $output_fh, ">", $c_file_codeset ) or
             die "Could not open $c_file_codeset for writing\n";
-        print $output_fh join( "", @{ $c_codeset_lines->{ $codeset } } );
+        print $output_fh join( "", @{ $ctx->{c_codeset_lines}->{ $codeset } } );
         close $output_fh;
 
         # output .asm file for banked codesets
         my $asm_file_codeset = ( defined( $output_dest_dir ) ? $output_dest_dir . '/' : '' ) . sprintf( $asm_file_codeset_format, $codeset );
         open( $output_fh, ">", $asm_file_codeset ) or
             die "Could not open $asm_file_codeset for writing\n";
-        print $output_fh join( "", @{ $asm_codeset_lines->{ $codeset } } );
+        print $output_fh join( "", @{ $ctx->{asm_codeset_lines}->{ $codeset } } );
         close $output_fh;
     }
 
     # move the source files for functions associated to this codeset to the dest dir
     # only if compiling for 128K
-    if ( $game_config->{'zx_target'} eq '128' ) {
+    if ( $ctx->{game_config}->{'zx_target'} eq '128' ) {
         foreach my $file ( @files_to_copy ) {
             my $src_file = $file->{'src'};
             my $dst_file = $file->{'dst'};
@@ -614,21 +511,21 @@ sub output_game_data {
     }
 
     # output generated banked data for 128 mode
-    if ( $game_config->{'zx_target'} eq '128' ) {
+    if ( $ctx->{game_config}->{'zx_target'} eq '128' ) {
         open( $output_fh, ">", $c_file_banked_data_128 ) or
             die "Could not open $c_file_banked_data_128 for writing\n";
-        print $output_fh join( "", @c_banked_data_128_lines );
+        print $output_fh join( "", @{ $ctx->{c_banked_data_128_lines} } );
         close $output_fh;
     }
 
     # AU5: output generated tracker data for CPC-flat into a top-level C file
     # (no banking). Only written when there is actual tracker data to emit.
-    if ( defined( $game_config->{'platform'} ) and
-         $game_config->{'platform'} =~ /^cpc/ and
-         scalar( @c_tracker_cpc_lines ) ) {
+    if ( defined( $ctx->{game_config}->{'platform'} ) and
+         $ctx->{game_config}->{'platform'} =~ /^cpc/ and
+         scalar( @{ $ctx->{c_tracker_cpc_lines} } ) ) {
         open( $output_fh, ">", $c_file_tracker_cpc ) or
             die "Could not open $c_file_tracker_cpc for writing\n";
-        print $output_fh join( "", @c_tracker_cpc_lines );
+        print $output_fh join( "", @{ $ctx->{c_tracker_cpc_lines} } );
         close $output_fh;
     }
 
@@ -636,13 +533,13 @@ sub output_game_data {
     # output game_data.h file
     open( $output_fh, ">", $h_file_game_data ) or
         die "Could not open $h_file_game_data for writing\n";
-    print $output_fh join( "", @h_game_data_lines );
+    print $output_fh join( "", @{ $ctx->{h_game_data_lines} } );
     close $output_fh;
 
     # output features.h file
     open( $output_fh, ">", $h_file_build_features ) or
         die "Could not open $h_file_build_features for writing\n";
-    print $output_fh join( "", @h_build_features_lines );
+    print $output_fh join( "", @{ $ctx->{h_build_features_lines} } );
     close $output_fh;
 
 }
@@ -689,27 +586,27 @@ sub dump_internal_data {
         die "Could not open $dump_file for writing\n";
 
     my $all_state = {
-        btiles				=> \@all_btiles,
-        btile_name_to_index		=> \%btile_name_to_index,
-        screens				=> \@all_screens,
-        screen_name_to_index		=> \%screen_name_to_index,
-        sprites				=> \@all_sprites,
-        sprite_name_to_index		=> \%sprite_name_to_index,
-        all_items			=> \@all_items,
-        item_name_to_index		=> \%item_name_to_index,
-        all_crumb_types			=> \@all_crumb_types,
-        crumb_type_name_to_index	=> \%crumb_type_name_to_index,
-        all_rules			=> \@all_rules,
-        hero				=> $hero,
-        game_config			=> $game_config,
-        dataset_dependency		=> \%dataset_dependency,
-        all_codeset_functions		=> \@all_codeset_functions,
+        btiles				=> $ctx->{all_btiles},
+        btile_name_to_index		=> $ctx->{btile_name_to_index},
+        screens				=> $ctx->{all_screens},
+        screen_name_to_index		=> $ctx->{screen_name_to_index},
+        sprites				=> $ctx->{all_sprites},
+        sprite_name_to_index		=> $ctx->{sprite_name_to_index},
+        all_items			=> $ctx->{all_items},
+        item_name_to_index		=> $ctx->{item_name_to_index},
+        all_crumb_types			=> $ctx->{all_crumb_types},
+        crumb_type_name_to_index	=> $ctx->{crumb_type_name_to_index},
+        all_rules			=> $ctx->{all_rules},
+        hero				=> $ctx->{hero},
+        game_config			=> $ctx->{game_config},
+        dataset_dependency		=> $ctx->{dataset_dependency},
+        all_codeset_functions		=> $ctx->{all_codeset_functions},
         codeset_function_name_to_index	=> \%codeset_function_name_to_index,
-        codeset_functions_by_codeset	=> \%codeset_functions_by_codeset,
-        check_custom_functions		=> \@check_custom_functions,
-        action_custom_functions		=> \@action_custom_functions,
-        conditional_build_features	=> \%conditional_build_features,
-        game_events_rule_table		=> \@game_events_rule_table,
+        codeset_functions_by_codeset	=> $ctx->{codeset_functions_by_codeset},
+        check_custom_functions		=> $ctx->{check_custom_functions},
+        action_custom_functions		=> $ctx->{action_custom_functions},
+        conditional_build_features	=> $ctx->{conditional_build_features},
+        game_events_rule_table		=> $ctx->{game_events_rule_table},
     };
 
     print DUMP Data::Dumper->Dump( [ $all_state ], [ 'all_state' ] );
@@ -722,7 +619,7 @@ sub dump_internal_data {
 
 # get tool configuration
 print "Reading configuration...\n";
-$cfg = rage1_get_config();
+$ctx->{cfg} = rage1_get_config();
 
 our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s, $opt_p );
 getopts("b:d:ct:s:p:");
@@ -736,7 +633,7 @@ if ( defined( $opt_d ) ) {
     $dump_file = "$opt_d/$dump_file";
     $output_dest_dir = $opt_d;
 }
-$build_dir = $opt_b || 'build';
+$ctx->{build_dir} = $opt_b || 'build';
 $game_src_dir = $opt_s || 'build/game_src';
 
 # T1-8: -p <platform> is the canonical CLI flag (zx48 | zx128 | cpc464);
@@ -748,12 +645,12 @@ $game_src_dir = $opt_s || 'build/game_src';
 # concept); the PLATFORM directive in the .gdata handles feature emission.
 if ( defined( $opt_p ) ) {
     my $p = lc( $opt_p );
-    if    ( $p eq 'zx48'  ) { $forced_build_target = 48;  }
-    elsif ( $p eq 'zx128' ) { $forced_build_target = 128; }
+    if    ( $p eq 'zx48'  ) { $ctx->{forced_build_target} = 48;  }
+    elsif ( $p eq 'zx128' ) { $ctx->{forced_build_target} = 128; }
     elsif ( $p eq 'cpc464' ) {
         # T2-6: CPC464 — no ZX_TARGET; features are emitted from the PLATFORM
         # directive in the game's .gdata.  $forced_build_target remains 0.
-        $forced_build_target = 0;
+        $ctx->{forced_build_target} = 0;
     }
     elsif ( $p =~ /^cpc/  ) {
         die "** Error: datagen.pl -p $opt_p: accepted CPC platform is 'cpc464' (Phase T3 adds cpc6128).\n";
@@ -762,7 +659,7 @@ if ( defined( $opt_p ) ) {
         die "** Error: datagen.pl -p $opt_p: accepted values are zx48 | zx128 | cpc464.\n";
     }
 } else {
-    $forced_build_target = $opt_t || 0;
+    $ctx->{forced_build_target} = $opt_t || 0;
 }
 
 # add default build features - these will be updated/modified later
@@ -780,9 +677,9 @@ read_input_data;
 # skip straight to output_game_data (which only outputs features.h and the
 # minimal game_data.h stub).  The full engine integration — and a real
 # RAGE1-style gdata set for CPC — is deferred to Phase G7/IN5/AU4.
-my $is_cpc_platform = ( defined( $game_config->{'platform'} ) and
-                        $game_config->{'platform'} =~ /^cpc/ );
-my $has_screens     = scalar( @all_screens ) > 0;
+my $is_cpc_platform = ( defined( $ctx->{game_config}->{'platform'} ) and
+                        $ctx->{game_config}->{'platform'} =~ /^cpc/ );
+my $has_screens     = scalar( @{ $ctx->{all_screens} } ) > 0;
 
 if ( $is_cpc_platform and not $has_screens ) {
     print "CPC platform with no screens: using minimal features-only output pipeline.\n";
@@ -825,19 +722,19 @@ if ( $is_cpc_platform and not $has_screens ) {
     # a CPC game that LINKS the real gfx HAL (minimal_cpc, R4) would otherwise
     # fail to compile.  Inert on CPC (two-layer colour model) but must be
     # defined.  Default to 0 when the game declared no DEFAULT_BG_ATTR.
-    my $r4_bg_attr = defined( $game_config->{'default_bg_attr'} )
-                     ? $game_config->{'default_bg_attr'} : '0';
-    push @h_game_data_lines, "// CPC minimal stub — no full RAGE1 engine integration\n";
-    push @h_game_data_lines, "#ifndef _GAME_DATA_H\n#define _GAME_DATA_H\n";
-    push @h_game_data_lines, sprintf( "#define DEFAULT_BG_ATTR ( %s )\n", $r4_bg_attr );
-    push @h_game_data_lines, "#endif // _GAME_DATA_H\n";
+    my $r4_bg_attr = defined( $ctx->{game_config}->{'default_bg_attr'} )
+                     ? $ctx->{game_config}->{'default_bg_attr'} : '0';
+    push @{ $ctx->{h_game_data_lines} }, "// CPC minimal stub — no full RAGE1 engine integration\n";
+    push @{ $ctx->{h_game_data_lines} }, "#ifndef _GAME_DATA_H\n#define _GAME_DATA_H\n";
+    push @{ $ctx->{h_game_data_lines} }, sprintf( "#define DEFAULT_BG_ATTR ( %s )\n", $r4_bg_attr );
+    push @{ $ctx->{h_game_data_lines} }, "#endif // _GAME_DATA_H\n";
     # Emit minimal stub .c file (empty translation unit)
-    push @c_game_data_lines, "// CPC minimal stub — no RAGE1 engine integration at Phase T2\n";
+    push @{ $ctx->{c_game_data_lines} }, "// CPC minimal stub — no RAGE1 engine integration at Phase T2\n";
     # Initialise dataset/codeset hashrefs so output_game_data does not crash
-    $c_dataset_lines   = { 'home' => [] };
-    $asm_dataset_lines = { 'home' => [] };
-    $c_codeset_lines   = {};
-    $asm_codeset_lines = {};
+    $ctx->{c_dataset_lines}   = { 'home' => [] };
+    $ctx->{asm_dataset_lines} = { 'home' => [] };
+    $ctx->{c_codeset_lines}   = {};
+    $ctx->{asm_codeset_lines} = {};
     print "Writing output files...\n";
     output_game_data;
 } else {
