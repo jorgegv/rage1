@@ -24,6 +24,7 @@ require RAGE::Arkos2;
 require RAGE::BTileUtils;
 require RAGE::AssetBackend;
 use RAGE::Datagen::ColorTokens qw( resolve_color_tokens );
+use RAGE::Datagen::Util qw( optional_hex_decode pixels_to_byte integer_in_range );
 
 use Data::Dumper;
 use List::MoreUtils qw( zip uniq );
@@ -216,16 +217,7 @@ sub add_default_build_features {
 ## Input data parsing and state machine
 ##########################################
 
-sub optional_hex_decode {
-    my $value = shift;
-    if ( $value =~ m/^0x[0-9a-f]+$/i ) {
-        return hex( $value );
-    }
-    if ( $value =~ m/^\$([0-9a-f]+)$/i ) {
-        return hex( $1 );
-    }
-    return $value;
-}
+# optional_hex_decode moved to RAGE::Datagen::Util (Task 6 Stage 2 leaf extraction)
 
 sub read_input_data {
     # possible states: NONE, BTILE, SCREEN, SPRITE, HERO, GAME_CONFIG, RULE
@@ -2993,14 +2985,7 @@ FLOW_DATA_C_1
 ## Utility functions
 ###################################
 
-# converts a 16-char long string of ## and .. into its 8 bit number
-# MSB first
-sub pixels_to_byte {
-    my $pixels = shift;
-    return -1 if ( length( $pixels ) != 16 );
-    # yes 'oct' function in perl converts _binary_ strings to number
-    return oct( '0b' . join( '', map { ( $_ eq '..' ? '0' : '1' ) } unpack("(A2)*", $pixels ) ) );
-}
+# pixels_to_byte moved to RAGE::Datagen::Util (Task 6 Stage 2 leaf extraction)
 
 #################################
 ## Consistency Checks Functions
@@ -3058,11 +3043,7 @@ sub check_screen_items_are_valid {
     return $errors;
 }
 
-sub integer_in_range {
-    my ( $value, $min, $max ) = @_;
-    return ( ( $value >= $min ) and ( $value <= $max ) );
-}
-
+# integer_in_range moved to RAGE::Datagen::Util (Task 6 Stage 2 leaf extraction)
 
 sub check_game_config_is_valid {
     my $errors = 0;
