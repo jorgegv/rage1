@@ -27,6 +27,10 @@ use RAGE::Datagen::ColorTokens qw( resolve_color_tokens );
 use RAGE::Datagen::Util qw( optional_hex_decode pixels_to_byte integer_in_range );
 use RAGE::Datagen::Context;
 use RAGE::Datagen::PngDispatch qw( dispatch_png_asset_handling );
+use RAGE::Datagen::BuildFeatures qw(
+    add_build_feature is_build_feature_enabled add_default_build_features
+    input_backend_for_platform get_gfx_backend
+);
 
 use Data::Dumper;
 use List::MoreUtils qw( zip uniq );
@@ -153,7 +157,8 @@ my %conditional_build_features;
 # $all_state dump in dump_internal_data (it only holds refs to globals already
 # dumped there).
 my $datagen_ctx = RAGE::Datagen::Context->new(
-    game_config => \$game_config,    # used by RAGE::Datagen::PngDispatch (Step 3)
+    game_config               => \$game_config,                 # PngDispatch (Step 3), BuildFeatures (Step 4)
+    conditional_build_features => \%conditional_build_features,  # BuildFeatures (Step 4)
 );
 $datagen_ctx->install_main_aliases;
 
@@ -179,39 +184,11 @@ my @valid_game_functions = qw( menu intro game_end game_over user_init user_game
 ## Build Feature functions
 ######################################
 
-# build features that always selected no matter what
-# GFX_BACKEND_* / SPRITE_ENGINE_* are NOT here - they are added in
-# generate_game_config based on game data
-my @default_build_features = qw(
-    BTILE_2BIT_TYPE_MAP
-    GAME_TIME
-);
-
-sub add_build_feature {
-    my $f = shift;
-    $conditional_build_features{ $f }++;
-}
-
-sub is_build_feature_enabled {
-    my $f = shift;
-    return defined( $conditional_build_features{ $f } );
-}
-
-# IN5-3: the input backend is forced by PLATFORM (no user choice — see
-# input.md §3.2). zx48/zx128 -> ZX backend; cpc464/cpc6128 -> CPC backend.
-# cpc6128 is recognised here even though it is not yet an accepted PLATFORM
-# value (Phase T3 enables it) so the mapping is ready ahead of time.
-sub input_backend_for_platform {
-    my $platform = shift;
-    return ( $platform eq 'cpc464' or $platform eq 'cpc6128' )
-        ? 'INPUT_BACKEND_CPC'
-        : 'INPUT_BACKEND_ZX';
-}
-
-sub get_gfx_backend {
-    return ( defined( $game_config ) && defined( $game_config->{'gfx_backend'} ) )
-        ? $game_config->{'gfx_backend'} : 'sp1';
-}
+# @default_build_features + add_build_feature / is_build_feature_enabled /
+# input_backend_for_platform / get_gfx_backend / add_default_build_features moved
+# to RAGE::Datagen::BuildFeatures (Task 6 Stage 2 extraction); imported at the
+# top of this file.  %conditional_build_features stays a datagen.pl global
+# (reached there via the scaffold alias).
 
 # Task 5: per-platform asset-generation backend (memoised). ZX is the default /
 # first backend (byte-identical to the pre-refactor output); CPC platforms get
@@ -227,11 +204,8 @@ sub asset_backend {
     return $_asset_backend;
 }
 
-sub add_default_build_features {
-    foreach my $f ( @default_build_features ) {
-        add_build_feature( $f );
-    }
-}
+# add_default_build_features moved to RAGE::Datagen::BuildFeatures (Task 6
+# Stage 2 extraction); imported at the top of this file.
 
 ##########################################
 ## Input data parsing and state machine
