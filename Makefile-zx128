@@ -10,7 +10,7 @@
 
 .SILENT:
 
-MYMAKE			= $(MAKE) -s -f Makefile-zx128 -j8
+MYMAKE			= $(MAKE) -s -f Makefile-zx128 -j$(or $(BUILD_JOBS),8)
 ZPRAGMA_INC             = zpragma-zx128.inc
 
 # T1-6: z88dk target lives in the per-platform Makefile (Makefile.common

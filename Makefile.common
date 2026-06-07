@@ -279,15 +279,19 @@ $(FINAL_TAP): $(TAPS)
 	cat $(TAPS) > $(FINAL_TAP)
 	echo "Build completed SUCCESSFULLY"
 
+# Task 7: the intermediate SCR lives under $(BUILD_DIR) (per-game-isolated on the
+# parallel test path), NOT a shared /tmp file — otherwise concurrent builds race
+# on it and, since every loading screen is exactly 6912 bytes, a collision could
+# silently pack the wrong screen and still pass the size check.
 screen.tap:
 	echo "Adding loading SCREEN$$..."
-	-rm -f /tmp/screen.scr 2>/dev/null
+	-rm -f $(BUILD_DIR)/screen.scr 2>/dev/null
 #	echo "PNG:" '"$(LOADING_SCREEN_PNG)"'
 #	echo "SCR:" '"$(LOADING_SCREEN_SCR)"'
 	if [ ! -z "$(LOADING_SCREEN_SCR)" ] && [ ! -z "$(LOADING_SCREEN_PNG)" ]; then echo "** Error: LOADING_SCREEN: PNG and SCR cannot de used at the same time"; exit 1; fi
-	if [ ! -z "$(LOADING_SCREEN_SCR)" ]; then cp "$(BUILD_DIR)/$(LOADING_SCREEN_SCR)" /tmp/screen.scr; else ./tools/png2scr.pl "$(BUILD_DIR)/$(LOADING_SCREEN_PNG)" /tmp/screen.scr; fi
-	if [ "$$(wc -c /tmp/screen.scr | awk '{print $$1}')" -ne 6912 ]; then echo "** Error: LOADING_SCREEN must be exactly 6912 bytes long"; exit 1 ; fi
-	$(APPMAKE) --noloader --org 16384 -b /tmp/screen.scr -o screen.tap
+	if [ ! -z "$(LOADING_SCREEN_SCR)" ]; then cp "$(BUILD_DIR)/$(LOADING_SCREEN_SCR)" $(BUILD_DIR)/screen.scr; else ./tools/png2scr.pl "$(BUILD_DIR)/$(LOADING_SCREEN_PNG)" $(BUILD_DIR)/screen.scr; fi
+	if [ "$$(wc -c $(BUILD_DIR)/screen.scr | awk '{print $$1}')" -ne 6912 ]; then echo "** Error: LOADING_SCREEN must be exactly 6912 bytes long"; exit 1 ; fi
+	$(APPMAKE) --noloader --org 16384 -b $(BUILD_DIR)/screen.scr -o screen.tap
 
 ## Main game
 
