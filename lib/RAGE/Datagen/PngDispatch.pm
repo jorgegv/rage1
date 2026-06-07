@@ -16,8 +16,8 @@ package RAGE::Datagen::PngDispatch;
 ##   * the shared PNG-pipeline subs (provided by RAGE::PNGFileUtils, which
 ##     declares no package of its own and so installs into main::) are called
 ##     fully-qualified as `main::<sub>`;
-##   * the `$game_config` global is read via its scaffold alias
-##     `$main::game_config` (see RAGE::Datagen::Context).
+##   * the `$game_config` global is read from the RAGE::Datagen::Context object
+##     ($ctx) threaded in as the first positional arg, as $ctx->{game_config}.
 ## These bind to the same subs/state as the in-line version, so emitted bytes
 ## are byte-identical.
 ##
@@ -26,11 +26,6 @@ package RAGE::Datagen::PngDispatch;
 use strict;
 use warnings;
 use utf8;
-
-# $main::game_config is a scaffold alias (RAGE::Datagen::Context) populated at
-# runtime by datagen.pl; referenced once here, so silence the benign
-# "used only once" check for these main:: scaffold globals.
-no warnings 'once';
 
 use Exporter 'import';
 our @EXPORT_OK = qw( dispatch_png_asset_handling );
@@ -45,8 +40,8 @@ our @EXPORT_OK = qw( dispatch_png_asset_handling );
 # submodule) was retired; only MONO CPC assets are supported here.
 #
 # Usage:
-#   my $png  = dispatch_png_asset_handling($platform, 'load_png_file', $path);
-#   my $data = dispatch_png_asset_handling($platform, 'png_to_pixels_and_attrs',
+#   my $png  = dispatch_png_asset_handling($ctx, $platform, 'load_png_file', $path);
+#   my $data = dispatch_png_asset_handling($ctx, $platform, 'png_to_pixels_and_attrs',
 #                                          $png, $x, $y, $w, $h);
 #
 # Dispatch keys:
@@ -55,7 +50,7 @@ our @EXPORT_OK = qw( dispatch_png_asset_handling );
 #             FULL-COLOR: unsupported (die) since R10.
 #   default — die: "Unknown platform '<name>'".
 sub dispatch_png_asset_handling {
-    my ( $platform, $fn, @args ) = @_;
+    my ( $ctx, $platform, $fn, @args ) = @_;
 
     defined( $platform ) or
         die "dispatch_png_asset_handling: platform is undefined\n";
@@ -88,9 +83,9 @@ sub dispatch_png_asset_handling {
         # cpctelera submodule) was retired.  No live game uses full-colour CPC
         # PNG assets; full-colour support, if revived, will go through the
         # RAGE::AssetBackend, not an external converter.
-        my $color_mode = lc( $main::game_config->{'color'}{'mode'} // 'full' );
+        my $color_mode = lc( $ctx->{game_config}->{'color'}{'mode'} // 'full' );
         if ( $color_mode eq 'mono' ) {
-            return _cpc_mono_dispatch( $fn, @args );
+            return _cpc_mono_dispatch( $ctx, $fn, @args );
         }
         die "dispatch_png_asset_handling: full-colour CPC PNG assets are not " .
             "supported (the cpctelera converter was retired in R10); use MONO " .
@@ -122,7 +117,7 @@ sub dispatch_png_asset_handling {
 #                                          extract), returning ZX 1bpp data.
 #   - pick_pixel_data_by_color_from_png → Sprite → die (PNG sprites unsupported).
 sub _cpc_mono_dispatch {
-    my ( $fn, @args ) = @_;
+    my ( $ctx, $fn, @args ) = @_;
 
     if ( $fn eq 'load_png_file' ) {
         my $path = $args[0];

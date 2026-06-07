@@ -12,16 +12,16 @@ package RAGE::Datagen::Btiles;
 ##
 ## RAGE::Datagen::Btiles — BTile validation/compilation and C emission for
 ## datagen (Task 6, Stage 2 extraction).  Moved verbatim from tools/datagen.pl;
-## the only edits are the mechanical scaffold bindings: the shared globals are
-## reached via their RAGE::Datagen::Context aliases (@main::all_btiles,
-## %main::dataset_dependency, %main::btile_name_to_index,
-## %main::conditional_build_features, @main::h_game_data_lines and the
-## per-dataset C emit accumulator $main::c_dataset_lines), the sibling helper is
+## the shared globals live in the RAGE::Datagen::Context object ($ctx), threaded
+## in as the first positional arg of each sub and reached as $ctx->{all_btiles},
+## $ctx->{dataset_dependency}, $ctx->{btile_name_to_index},
+## $ctx->{conditional_build_features}, $ctx->{h_game_data_lines} and the
+## per-dataset C emit accumulator $ctx->{c_dataset_lines}; the sibling helper is
 ## imported (pixels_to_byte from Util), and the two callbacks that stay in
-## datagen.pl — asset_backend() (shared with the Sprite emitter) and
-## btile_deduplicate_arena_best() (loaded into main:: by RAGE::BTileUtils, which
-## has no package declaration) — are called as main::asset_backend() and
-## main::btile_deduplicate_arena_best().  Behaviour (and emitted bytes) is
+## datagen.pl — asset_backend() (shared with the Sprite emitter, threaded $ctx)
+## and btile_deduplicate_arena_best() (loaded into main:: by RAGE::BTileUtils,
+## which has no package declaration) — are called as main::asset_backend($ctx)
+## and main::btile_deduplicate_arena_best().  Behaviour (and emitted bytes) is
 ## unchanged.
 ##
 ################################################################################
@@ -30,16 +30,13 @@ use strict;
 use warnings;
 use utf8;
 
-# scaffold aliases (RAGE::Datagen::Context) populated at runtime by datagen.pl;
-# silence the benign "used only once" check for these main:: globals.
-no warnings 'once';
-
 use RAGE::Datagen::Util qw( pixels_to_byte );
 
 use Exporter 'import';
 our @EXPORT_OK = qw( validate_and_compile_btile generate_btiles );
 
 sub validate_and_compile_btile {
+    my $ctx = shift;
     my $tile = shift;
 
     # FRAMES is not mandatory for BTILEs
@@ -93,13 +90,14 @@ sub validate_and_compile_btile {
 }
 
 sub generate_btiles {
+    my $ctx = shift;
     my $dataset = shift;
 
     # generate the list of dataset btiles, return immediately if empty
-    my @dataset_btiles = map { $main::all_btiles[ $_ ] } @{ $main::dataset_dependency{ $dataset }{'btiles'} };
+    my @dataset_btiles = map { $ctx->{all_btiles}[ $_ ] } @{ $ctx->{dataset_dependency}{ $dataset }{'btiles'} };
     return if not scalar( @dataset_btiles );
 
-    push @main::h_game_data_lines, <<EOF_TILES_H
+    push @{ $ctx->{h_game_data_lines} }, <<EOF_TILES_H
 
 ////////////////////////////
 // Big Tile definitions
@@ -108,7 +106,7 @@ sub generate_btiles {
 EOF_TILES_H
 ;
 
-    push @{ $main::c_dataset_lines->{ $dataset } }, <<EOF_TILES
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, <<EOF_TILES
 
 ////////////////////////////
 // Big Tile definitions
@@ -120,9 +118,9 @@ EOF_TILES
 
     # generate the tiles
 
-    my $animated_btiles = $main::conditional_build_features{'ANIMATED_BTILES'} || 0;
+    my $animated_btiles = $ctx->{conditional_build_features}{'ANIMATED_BTILES'} || 0;
 
-    my $gamearea_color_full = $main::conditional_build_features{'GAMEAREA_COLOR_FULL'} || 0;
+    my $gamearea_color_full = $ctx->{conditional_build_features}{'GAMEAREA_COLOR_FULL'} || 0;
 
     # All btiles carry inline pixel_bytes.  (R10 retired the CPC full-colour
     # extern path, where pixel bytes lived in a cpctelera-generated .c/.h.)
@@ -132,9 +130,9 @@ EOF_TILES
     # Recompute pixel_bytes here (generation time, when PLATFORM is fully known)
     # so the cell bytes are the platform's: ZX = 8-byte 1bpp (byte-identical to
     # the parse-time compile); CPC mode 1 = 16-byte mode-1 pixel-cells (CPCGfx).
-    my $bpc = main::asset_backend()->bytes_per_cell();
+    my $bpc = main::asset_backend( $ctx )->bytes_per_cell();
     foreach my $tile ( @inline_btiles ) {
-        $tile->{'pixel_bytes'} = main::asset_backend()->btile_cell_bytes( $tile );
+        $tile->{'pixel_bytes'} = main::asset_backend( $ctx )->btile_cell_bytes( $tile );
     }
 
     # generate the offsets and byte arena for INLINE btiles only.  Cells are
@@ -169,13 +167,13 @@ EOF_TILES
         my @byte_arena = @$new_arena;
 
         # generate the code for the arena (offsets will be used later)
-        push @{ $main::c_dataset_lines->{ $dataset } }, "// Dataset BTILE byte arena\n";
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "uint8_t all_dataset_btile_data[ %d ] = {\n", scalar( @byte_arena ) );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "// Dataset BTILE byte arena\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "uint8_t all_dataset_btile_data[ %d ] = {\n", scalar( @byte_arena ) );
         my @bytes = @byte_arena;	# splice (below) is destructive!
         while ( @bytes ) {		# output the arena in 16-byte chunks
-            push @{ $main::c_dataset_lines->{ $dataset } }, "\t" . join('', map { sprintf( '0x%02x,', $_ ) } splice( @bytes, 0, 16 ) ) . "\n";
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\t" . join('', map { sprintf( '0x%02x,', $_ ) } splice( @bytes, 0, 16 ) ) . "\n";
         }
-        push @{ $main::c_dataset_lines->{ $dataset } }, "};\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "};\n";
     }
 
     # generate btile data structs (frame arrays, attr arrays, sequence arrays)
@@ -183,13 +181,13 @@ EOF_TILES
     my $cell_index = 0;
     foreach my $tile ( @dataset_btiles ) {
 
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "\n// Start of Big tile '%s'\n\n", $tile->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "\n// Start of Big tile '%s'\n\n", $tile->{'name'} );
 
         # Inline BTile — frame tiles reference the shared arena.
         foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
             my $num_cells = scalar( @{ $tile->{'pixel_bytes'} } ) / $tile->{'frames'};
             my @btile_cell_offsets = @cell_offsets[ $cell_index .. ( $cell_index + $num_cells - 1 ) ];
-            push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "uint8_t *btile_%s_frame_%d_tiles[ %d ] = {\n\t%s\n};\n",
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "uint8_t *btile_%s_frame_%d_tiles[ %d ] = {\n\t%s\n};\n",
                 $tile->{'name'},
                 $frame,
                 $num_cells,
@@ -207,7 +205,7 @@ EOF_TILES
             my @attrs = @{ $tile->{'attr'} || $tile->{'png_attr'} };
             foreach my $frame ( 0 .. ( $tile->{'frames'} - 1 ) ) {
                 my @frame_attrs = splice( @attrs, 0, $tile->{'rows'} * $tile->{'cols'} );
-                push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "uint8_t btile_%s_frame_%d_attrs[ %d ] = {\n\t%s\n};\n",
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "uint8_t btile_%s_frame_%d_attrs[ %d ] = {\n\t%s\n};\n",
                     $tile->{'name'},
                     $frame,
                     scalar( @frame_attrs ),
@@ -221,7 +219,7 @@ EOF_TILES
             # output frame table
             # attrs are not output when in monochrome mode
             if ( $gamearea_color_full ) {
-                push @{ $main::c_dataset_lines->{ $dataset } },
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                     sprintf( "struct btile_frame_s btile_%s_frames[ %d ] = {\n\t%s\n};\n\n",
                         $tile->{'name'},
                         $tile->{'frames'},
@@ -233,7 +231,7 @@ EOF_TILES
                             } ( 0 .. ( $tile->{'frames'} - 1 ) ) ),
                     );
             } else {
-                push @{ $main::c_dataset_lines->{ $dataset } },
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                     sprintf( "struct btile_frame_s btile_%s_frames[ %d ] = {\n\t%s\n};\n\n",
                         $tile->{'name'},
                         $tile->{'frames'},
@@ -248,7 +246,7 @@ EOF_TILES
             # output sequence table
             # first output each sequence
             foreach my $seq ( @{ $tile->{'sequences' } } ) {
-                push @{ $main::c_dataset_lines->{ $dataset } },
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                     sprintf( "uint8_t btile_%s_sequence_%s_frame_numbers[ %d ] = { %s };\n",
                         $tile->{'name'},
                         $seq->{'name'},
@@ -259,7 +257,7 @@ EOF_TILES
 
             # now the table of sequences itself
             if ( scalar( @{ $tile->{'sequences'} } ) ) {
-                push @{ $main::c_dataset_lines->{ $dataset } },
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                     sprintf( "struct animation_sequence_s btile_%s_sequences[ %d ] = {\n\t%s\n};\n\n",
                         $tile->{'name'},
                         scalar( @{ $tile->{'sequences'} } ),
@@ -277,46 +275,46 @@ EOF_TILES
 
         # output auxiliary definitions
         if ( $dataset eq 'home' ) {
-            push @main::h_game_data_lines, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+            push @{ $ctx->{h_game_data_lines} }, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
                 uc( $tile->{'name'} ),
-                $main::dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $main::btile_name_to_index{ $tile->{'name'} } },
+                $ctx->{dataset_dependency}{ $dataset }{'btile_global_to_dataset_index'}{ $ctx->{btile_name_to_index}{ $tile->{'name'} } },
             );
-            push @main::h_game_data_lines, sprintf( "#define BTILE_ID_%s\t%d\n",
+            push @{ $ctx->{h_game_data_lines} }, sprintf( "#define BTILE_ID_%s\t%d\n",
                 uc( $tile->{'name'} ),
-                $main::dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $main::btile_name_to_index{ $tile->{'name'} } },
+                $ctx->{dataset_dependency}{ $dataset }{'btile_global_to_dataset_index'}{ $ctx->{btile_name_to_index}{ $tile->{'name'} } },
             );
         } else {
-            push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "#define BTILE_%s\t( &home_assets->all_btiles[ %d ] )\n",
                 uc( $tile->{'name'} ),
-                $main::dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $main::btile_name_to_index{ $tile->{'name'} } },
+                $ctx->{dataset_dependency}{ $dataset }{'btile_global_to_dataset_index'}{ $ctx->{btile_name_to_index}{ $tile->{'name'} } },
             );
-            push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "#define BTILE_ID_%s\t%d\n",
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "#define BTILE_ID_%s\t%d\n",
                 uc( $tile->{'name'} ),
-                $main::dataset_dependency{ $dataset }{'btile_global_to_dataset_index'}{ $main::btile_name_to_index{ $tile->{'name'} } },
+                $ctx->{dataset_dependency}{ $dataset }{'btile_global_to_dataset_index'}{ $ctx->{btile_name_to_index}{ $tile->{'name'} } },
             );
         }
 
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "\n// End of Big tile '%s'\n\n", $tile->{'name'} );
     }
 
     # generate the global btile table for this dataset
 
     # the btile_s structures differ when using (or not) ANIMATED_BTILES
-    push @{ $main::c_dataset_lines->{ $dataset } }, "// Dataset BTile table\n";
-    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @dataset_btiles ) );
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "// Dataset BTile table\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct btile_s all_btiles[ %d ] = {\n", scalar( @dataset_btiles ) );
     foreach my $tile ( @dataset_btiles ) {
         if ( $animated_btiles ) {
-            push @{ $main::c_dataset_lines->{ $dataset } },
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                 sprintf( "\t{ .num_rows = %d, .num_cols = %d, ",
                     $tile->{'rows'},
                     $tile->{'cols'}
                 );
-            push @{ $main::c_dataset_lines->{ $dataset } },
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                 sprintf( ".num_frames = %d, .frames = &btile_%s_frames[0], ",
                     $tile->{'frames'},
                     $tile->{'name'}
                 );
-            push @{ $main::c_dataset_lines->{ $dataset } },
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                 sprintf( ".num_sequences = %d, .sequences = %s },\n",
                     scalar( @{ $tile->{'sequences'} } ),
                     ( scalar( @{ $tile->{'sequences'} } ) ?
@@ -330,14 +328,14 @@ EOF_TILES
 
             # attrs are not output when in monochrome mode
             if ( $gamearea_color_full ) {
-                push @{ $main::c_dataset_lines->{ $dataset } },
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                     sprintf( "\t{ %d, %d, &btile_%s_frame_0_tiles[0], &btile_%s_frame_0_attrs[0] },\n",
                         $tile->{'rows'},
                         $tile->{'cols'},
                         $tile->{'name'},
                         $tile->{'name'} );
             } else {
-                push @{ $main::c_dataset_lines->{ $dataset } },
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } },
                     sprintf( "\t{ %d, %d, &btile_%s_frame_0_tiles[0] },\n",
                         $tile->{'rows'},
                         $tile->{'cols'},
@@ -345,8 +343,8 @@ EOF_TILES
             }
         }
     }
-    push @{ $main::c_dataset_lines->{ $dataset } }, "};\n";
-    push @{ $main::c_dataset_lines->{ $dataset } }, "// End of Dataset BTile table\n\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "};\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "// End of Dataset BTile table\n\n";
 
 
 }

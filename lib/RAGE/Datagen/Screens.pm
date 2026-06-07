@@ -12,13 +12,13 @@ package RAGE::Datagen::Screens;
 ##
 ## RAGE::Datagen::Screens — screen validation/compilation and C emission for
 ## datagen (Task 6, Stage 2 extraction).  Moved verbatim from tools/datagen.pl;
-## the only edits are the mechanical scaffold bindings: the shared globals are
-## reached via their RAGE::Datagen::Context aliases (@main::all_screens,
-## @main::all_btiles, @main::all_sprites, @main::all_items,
-## @main::all_crumb_types, %main::screen_name_to_index,
-## %main::sprite_name_to_index, %main::btile_name_to_index,
-## %main::dataset_dependency, $main::game_config, $main::syntax and the
-## per-dataset C emit accumulator $main::c_dataset_lines), and the sibling
+## the shared globals live in the RAGE::Datagen::Context object ($ctx), threaded
+## in as the first positional arg of each sub and reached as $ctx->{all_screens},
+## $ctx->{all_btiles}, $ctx->{all_sprites}, $ctx->{all_items},
+## $ctx->{all_crumb_types}, $ctx->{screen_name_to_index},
+## $ctx->{sprite_name_to_index}, $ctx->{btile_name_to_index},
+## $ctx->{dataset_dependency}, $ctx->{game_config}, $ctx->{syntax} and the
+## per-dataset C emit accumulator $ctx->{c_dataset_lines}; the sibling
 ## helpers add_build_feature / is_build_feature_enabled are imported from
 ## RAGE::Datagen::BuildFeatures.
 ## Behaviour (and emitted bytes) is unchanged.
@@ -33,10 +33,6 @@ use strict;
 use warnings;
 use utf8;
 
-# scaffold aliases (RAGE::Datagen::Context) populated at runtime by datagen.pl;
-# silence the benign "used only once" check for these main:: globals.
-no warnings 'once';
-
 use RAGE::Datagen::BuildFeatures qw( add_build_feature is_build_feature_enabled );
 
 use Exporter 'import';
@@ -46,6 +42,7 @@ our @EXPORT_OK = qw(
 );
 
 sub validate_screen {
+    my $ctx = shift;
     my $screen = shift;
     defined( $screen->{'name'} ) or
         die "Screen has no NAME\n";
@@ -86,7 +83,7 @@ sub validate_screen {
         # check that defined sequences exist for the given sprite
         foreach my $seq_param ( qw( sequence_a sequence_b initial_sequence ) ) {
             if ( defined( $s->{ $seq_param } ) and
-                not defined( $main::all_sprites[ $main::sprite_name_to_index{ $s->{'sprite'} } ]{'sequence_name_to_index'}{ $s->{ $seq_param } } ) ) {
+                not defined( $ctx->{all_sprites}[ $ctx->{sprite_name_to_index}{ $s->{'sprite'} } ]{'sequence_name_to_index'}{ $s->{ $seq_param } } ) ) {
                     die "SCREEN $screen->{name}: ENEMY $s->{name}: sequence specified with ".uc($seq_param)." is not defined\n";
             }
         }
@@ -94,9 +91,10 @@ sub validate_screen {
 }
 
 sub compile_screen {
+    my $ctx = shift;
     my $screen = shift;
     # compile SCREEN_DATA lines
-    compile_screen_data( $screen );
+    compile_screen_data( $ctx, $screen );
 
     ( scalar( @{$screen->{'btiles'}} ) > 0 ) or
         die "SCREEN: Screen '$screen->{name}' has no Btiles\n";
@@ -104,8 +102,8 @@ sub compile_screen {
     # check if HARMFUL btiles are used and enable the BUILD_FEATURE
     foreach my $btile ( @{$screen->{'btiles'} } ) {
         if ( $btile->{'type'} eq 'HARMFUL' ) {
-            add_build_feature( 'HARMFUL_BTILES' );
-            add_build_feature( 'HERO_CHECK_TILES_BELOW' );
+            add_build_feature( $ctx, 'HARMFUL_BTILES' );
+            add_build_feature( $ctx, 'HERO_CHECK_TILES_BELOW' );
         }
     }
 
@@ -120,7 +118,7 @@ sub compile_screen {
             if ( defined( $btile->{'animation_delay'} ) and
                 defined( $btile->{'sequence_delay'} ) and
                 defined( $btile->{'sequence'} ) ) {
-                add_build_feature( 'ANIMATED_BTILES' );
+                add_build_feature( $ctx, 'ANIMATED_BTILES' );
                 $btile->{'is_animated'} = 1;
             } else {
                 die "SCREEN: Animated BTILES must define SEQUENCE, ANIMATION_DELAY and SEQUENCE_DELAY\n";
@@ -134,6 +132,7 @@ sub compile_screen {
 
 # SCREEN_DATA and DEFINE compilation
 sub compile_screen_data {
+    my $ctx = shift;
     my $screen = shift;
 
     # map: digraph -> btile, type, row, col
@@ -151,10 +150,10 @@ sub compile_screen_data {
     return if not defined( $screen->{'screen_data'} );
 
     # check that there are the right number of rows and columns according to GAME_AREA
-    my $game_area_width = $main::game_config->{'game_area'}{'right'} - $main::game_config->{'game_area'}{'left'} + 1;
-    my $game_area_height = $main::game_config->{'game_area'}{'bottom'} - $main::game_config->{'game_area'}{'top'} + 1;
-    my $game_area_top = $main::game_config->{'game_area'}{'top'};
-    my $game_area_left = $main::game_config->{'game_area'}{'left'};
+    my $game_area_width = $ctx->{game_config}->{'game_area'}{'right'} - $ctx->{game_config}->{'game_area'}{'left'} + 1;
+    my $game_area_height = $ctx->{game_config}->{'game_area'}{'bottom'} - $ctx->{game_config}->{'game_area'}{'top'} + 1;
+    my $game_area_top = $ctx->{game_config}->{'game_area'}{'top'};
+    my $game_area_left = $ctx->{game_config}->{'game_area'}{'left'};
     ( scalar( @{ $screen->{'screen_data'} } ) == $game_area_height ) or
         die "Screen '$screen->{name}': there must be exactly $game_area_height SCREEN_DATA lines\n";
     foreach my $sd ( @{ $screen->{'screen_data'} } ) {
@@ -194,7 +193,7 @@ sub compile_screen_data {
                     die "Screen '$screen->{name}': digraph '$data_dg' is undefined\n";
 
                 # "paint" the tile in the DEST array
-                my $btile = $main::all_btiles[ $main::btile_name_to_index{ $screen_digraphs->{ $data_dg }{'btile'} } ];
+                my $btile = $ctx->{all_btiles}[ $ctx->{btile_name_to_index}{ $screen_digraphs->{ $data_dg }{'btile'} } ];
                 foreach my $i ( 0 .. ( $btile->{'rows'} - 1 ) ) {
                     foreach my $j ( 0 .. ( $btile->{'cols'} - 1 ) ) {
                         $screen_dest->[ $r + $i ][ $c + $j ] = $data_dg;
@@ -243,36 +242,36 @@ sub compile_screen_data {
 
 
 sub generate_screen {
-    my ( $screen, $dataset ) = @_;
+    my ( $ctx, $screen, $dataset ) = @_;
 
     # generate the lists of dataset screens, sprites
-    my @dataset_screens = map { $main::all_screens[ $_ ] } @{ $main::dataset_dependency{ $dataset }{'screens'} };
+    my @dataset_screens = map { $ctx->{all_screens}[ $_ ] } @{ $ctx->{dataset_dependency}{ $dataset }{'screens'} };
 
-    my $btile_global_to_dataset_index = $main::dataset_dependency{ $dataset }{'btile_global_to_dataset_index'};
-    my $sprite_global_to_dataset_index = $main::dataset_dependency{ $dataset }{'sprite_global_to_dataset_index'};
-    my $rule_global_to_dataset_index = $main::dataset_dependency{ $dataset }{'rule_global_to_dataset_index'};
+    my $btile_global_to_dataset_index = $ctx->{dataset_dependency}{ $dataset }{'btile_global_to_dataset_index'};
+    my $sprite_global_to_dataset_index = $ctx->{dataset_dependency}{ $dataset }{'sprite_global_to_dataset_index'};
+    my $rule_global_to_dataset_index = $ctx->{dataset_dependency}{ $dataset }{'rule_global_to_dataset_index'};
 
     # screen tiles
     if ( scalar( @{ $screen->{'btiles'} } ) ) {
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' btile data\n", $screen->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct btile_pos_s screen_%s_btile_pos[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'btiles'}} ) );
 
-        push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n", map {
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n", map {
                 sprintf("\t{ .type = TT_%s, .row = %d, .col = %d, .btile_id = %d, .state_index = %s }",
                     uc($_->{'type'}), $_->{'row'}, $_->{'col'},
-                    $btile_global_to_dataset_index->{ $main::btile_name_to_index{ $_->{'btile'} } },
+                    $btile_global_to_dataset_index->{ $ctx->{btile_name_to_index}{ $_->{'btile'} } },
                     ( "$_->{'asset_state_index'}" eq 'ASSET_NO_STATE' ? 'ASSET_NO_STATE' : $_->{'asset_state_index'} ) )
             } @{$screen->{'btiles'}} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
 
         # generate animated_btile_s records, they have been previously
         # classified with 'is_animated' = 1
         my $num_animated_btiles = scalar( grep { $_->{'is_animated'} } @{ $screen->{'btiles'} } );
         if ( $num_animated_btiles ) {
-            push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' animated btile records\n", $screen->{'name'} );
-            push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct animated_btile_s screen_%s_animated_btiles[ %d ] = {\n",
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' animated btile records\n", $screen->{'name'} );
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct animated_btile_s screen_%s_animated_btiles[ %d ] = {\n",
                 $screen->{'name'},
                 $num_animated_btiles
             );
@@ -280,33 +279,33 @@ sub generate_screen {
             my $btile_pos_index = 0;
             foreach my $btile ( @{ $screen->{'btiles'} } ) {
                 if ( $btile->{'is_animated'} ) {
-                    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "\t{ .btile_id = %d, .btile_pos_id = %d, ",
-                        $btile_global_to_dataset_index->{ $main::btile_name_to_index{ $btile->{'btile'} } },
+                    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "\t{ .btile_id = %d, .btile_pos_id = %d, ",
+                        $btile_global_to_dataset_index->{ $ctx->{btile_name_to_index}{ $btile->{'btile'} } },
                         $btile_pos_index,
                     );
-                    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( ".anim.delay_data.frame_delay = %d, ",
+                    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( ".anim.delay_data.frame_delay = %d, ",
                         $btile->{'animation_delay'}
                     );
-                    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( ".anim.delay_data.sequence_delay = %d, ",
+                    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( ".anim.delay_data.sequence_delay = %d, ",
                         $btile->{'sequence_delay'}
                     );
-                    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( ".anim.current.sequence = %d },\n",
-                        $main::all_btiles[ $main::btile_name_to_index{ $btile->{'btile'} } ]{'sequence_name_to_index'}{ $btile->{'sequence'} }
+                    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( ".anim.current.sequence = %d },\n",
+                        $ctx->{all_btiles}[ $ctx->{btile_name_to_index}{ $btile->{'btile'} } ]{'sequence_name_to_index'}{ $btile->{'sequence'} }
                     );
                 }
                 $btile_pos_index++;
             }
-            push @{ $main::c_dataset_lines->{ $dataset } }, "};\n\n";
+            push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "};\n\n";
         }
     }
 
     # screen enemies
     if ( scalar( @{ $screen->{'enemies'} } ) ) {
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' enemy data\n", $screen->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct enemy_info_s screen_%s_enemies[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'enemies'}} ) );
-        push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n", map {
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n", map {
                 sprintf( "\t{ .sprite = %s, .num_graphic = %d, .color = %s,\n" .
                         "\t\t.animation = {\n" .
                         "\t\t\t.delay_data = { .frame_delay = %d, .sequence_delay = %d },\n" .
@@ -320,14 +319,14 @@ sub generate_screen {
                     # SP1 sprite pointer, will be initialized later
                     'NULL',
                     # index into global sprite graphics table
-                    $sprite_global_to_dataset_index->{ $main::sprite_name_to_index{ $_->{'sprite'} } },
+                    $sprite_global_to_dataset_index->{ $ctx->{sprite_name_to_index}{ $_->{'sprite'} } },
                     # color for the sprite
                     $_->{'color'},
 
                     # animation_data: delay_data values
                     $_->{'animation_delay'}, ( $_->{'sequence_delay'} || 0 ),
                     # animation_data: sequence_data values
-                    $main::all_sprites[ $main::sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'initial_sequence'} },
+                    $ctx->{all_sprites}[ $ctx->{sprite_name_to_index}{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'initial_sequence'} },
                     # animation_data: current values
                     0,0,0,0, # sequence number, sequence_counter, frame_delay_counter, sequence_delay_counter: will be initialized later
 
@@ -344,8 +343,8 @@ sub generate_screen {
                     $_->{'dx'}, $_->{'dy'},
                     $_->{'initx'}, $_->{'inity'},
                     $_->{'dx'}, $_->{'dy'},
-                    $main::all_sprites[ $main::sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
-                    $main::all_sprites[ $main::sprite_name_to_index{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_b'} },
+                    $ctx->{all_sprites}[ $ctx->{sprite_name_to_index}{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_a'} },
+                    $ctx->{all_sprites}[ $ctx->{sprite_name_to_index}{ $_->{'sprite'} } ]{'sequence_name_to_index'}{ $_->{'sequence_b'} },
                     # movement flags
                     $_->{'movement_flags'},
 
@@ -353,28 +352,28 @@ sub generate_screen {
                     $_->{'asset_state_index'},
                  )
             } @{$screen->{'enemies'}} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
     }
 
     # screen items
     if ( scalar( @{ $screen->{'items'} } ) ) {
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' item data\n", $screen->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct item_location_s screen_%s_items[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'items'}} ) );
-        push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n", map {
-                sprintf( "\t{ %d, %d, %d }", $_, $main::all_items[ $_ ]->{'row'}, $main::all_items[ $_ ]->{'col'} )
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n", map {
+                sprintf( "\t{ %d, %d, %d }", $_, $ctx->{all_items}[ $_ ]->{'row'}, $ctx->{all_items}[ $_ ]->{'col'} )
             } @{ $screen->{'items'} } );
-        push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
     }
 
     # screen crumbs
     if ( defined( $screen->{'crumbs'} ) ) {
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' crumb data\n", $screen->{'name'} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct crumb_location_s screen_%s_crumbs[ %d ] = {\n",
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' crumb data\n", $screen->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct crumb_location_s screen_%s_crumbs[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'crumbs'}} ) );
-        push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n", map {
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n", map {
                 sprintf( "\t{ CRUMB_TYPE_%s, %d, %d, %d }",
                     uc( $_->{'type'} ),
                     $_->{'row'},
@@ -382,16 +381,16 @@ sub generate_screen {
                     $_->{'asset_state_index'}
                 )
             } @{ $screen->{'crumbs'} } );
-        push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
     }
 
     # hot zones
     if ( scalar( @{ $screen->{'hotzones'} } ) ) {
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' hot zone data\n", $screen->{'name'} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' hot zone data\n", $screen->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct hotzone_info_s screen_%s_hotzones[ %d ] = {\n",
             $screen->{'name'},
             scalar( @{$screen->{'hotzones'}} ) );
-        push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n", map {
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n", map {
                 my $x    = ( defined( $_->{'x'} ) ? $_->{'x'} : $_->{'col'} * 8 );
                 my $y    = ( defined( $_->{'y'} ) ? $_->{'y'} : $_->{'row'} * 8 );
                 my $xmax = $x + ( defined( $_->{'pix_width'} ) ? $_->{'pix_width'} : $_->{'width'} * 8 ) - 1;
@@ -401,23 +400,23 @@ sub generate_screen {
                     $_->{'asset_state_index'},
                 )
             } @{ $screen->{'hotzones'} } );
-        push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
     }
 
     # flow rules
-    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
-    foreach my $table ( @{ $main::syntax->{'valid_whens'} } ) {
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' flow rules\n", $screen->{'name'} );
+    foreach my $table ( @{ $ctx->{syntax}->{'valid_whens'} } ) {
         if ( defined( $screen->{'rules'} ) and defined( $screen->{'rules'}{ $table } ) ) {
             my $num_rules = scalar( @{ $screen->{'rules'}{ $table } } );
             if ( $num_rules ) {
-                push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct flow_rule_s *screen_%s_%s_rules[ %d ] = {\n\t",
                     $screen->{'name'}, $table, $num_rules );
-                push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n\t",
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n\t",
                     map {
                         sprintf( "&all_flow_rules[ %d ]", $rule_global_to_dataset_index->{ $_ } )
                     } @{ $screen->{'rules'}{ $table } }
                 );
-                push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n";
+                push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n";
             }
         }
     }
@@ -425,13 +424,14 @@ sub generate_screen {
 }
 
 sub generate_screens {
+    my $ctx = shift;
     my $dataset = shift;
 
     # generate the list of dataset screens,  return immediately if empty
-    my @dataset_screens = map { $main::all_screens[ $_ ] } @{ $main::dataset_dependency{ $dataset }{'screens'} };
+    my @dataset_screens = map { $ctx->{all_screens}[ $_ ] } @{ $ctx->{dataset_dependency}{ $dataset }{'screens'} };
     return if not scalar( @dataset_screens );
 
-    push @{ $main::c_dataset_lines->{ $dataset } }, <<EOF_SCREENS
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, <<EOF_SCREENS
 
 ////////////////////////////
 // Screen definitions
@@ -442,21 +442,22 @@ EOF_SCREENS
 
     # generate screen data
     foreach my $screen ( @dataset_screens ) {
-        generate_screen( $screen, $dataset );
+        generate_screen( $ctx, $screen, $dataset );
     }
 }
 
 sub generate_map {
+    my $ctx = shift;
     my $dataset = shift;
 
     # generate the list of dataset screens, return immediately if empty
-    my @dataset_screens = map { $main::all_screens[ $_ ] } @{ $main::dataset_dependency{ $dataset }{'screens'} };
+    my @dataset_screens = map { $ctx->{all_screens}[ $_ ] } @{ $ctx->{dataset_dependency}{ $dataset }{'screens'} };
     return if not scalar( @dataset_screens );
 
     my $num_screens = scalar( @dataset_screens );
 
     # output global map data structure
-    push @{ $main::c_dataset_lines->{ $dataset } }, <<EOF_MAP
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, <<EOF_MAP
 
 ////////////////////////////
 // Map definition
@@ -466,15 +467,15 @@ sub generate_map {
 
 EOF_MAP
 ;
-    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct map_screen_s all_screens[ %d ] = {\n", $num_screens );
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct map_screen_s all_screens[ %d ] = {\n", $num_screens );
 
-    push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n", map {
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n", map {
             my $screen_name = $_->{'name'};
             my $screen = $_;
             my $num_animated_btiles = scalar( grep { $_->{'is_animated'} } @{ $_->{'btiles'} } );
             sprintf( "\t// Screen '%s'\n\t{\n", $_->{'name'} ) .
 
-            sprintf( "\t\t.global_screen_num = %d,\n", $main::screen_name_to_index{ $_->{'name'} } ) .
+            sprintf( "\t\t.global_screen_num = %d,\n", $ctx->{screen_name_to_index}{ $_->{'name'} } ) .
 
             sprintf( "\t\t.title = %s,\n", ( defined( $screen->{'title'} ) ? '"'.$screen->{'title'}.'"' : 'NULL' ) ) .
 
@@ -482,7 +483,7 @@ EOF_MAP
                 scalar( @{$_->{'btiles'}} ), ( scalar( @{$_->{'btiles'}} ) ? sprintf( 'screen_%s_btile_pos', $_->{'name'} ) : 'NULL' ) ) .
 
             # onlye output if ANIMATED_BTILES are used
-            ( is_build_feature_enabled( 'ANIMATED_BTILES' ) ?
+            ( is_build_feature_enabled( $ctx, 'ANIMATED_BTILES' ) ?
                 sprintf( "\t\t.animated_btile_data = { %d, %s },\t// btile_data\n",
                 $num_animated_btiles, ( $num_animated_btiles ? sprintf( 'screen_%s_animated_btiles', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
@@ -494,12 +495,12 @@ EOF_MAP
                 $_->{'hero'}{'startup_xpos'}, $_->{'hero'}{'startup_ypos'} ) .
 
             # only output if INVENTORY is used
-            ( scalar( @main::all_items) ? sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
+            ( scalar( @{ $ctx->{all_items} }) ? sprintf( "\t\t.item_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'items'}} ), ( scalar( @{$_->{'items'}} ) ? sprintf( 'screen_%s_items', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
 
             # only output if CRUMBS are used
-            ( scalar( @main::all_crumb_types) ? sprintf( "\t\t.crumb_data = { %d, %s },\t// item_data\n",
+            ( scalar( @{ $ctx->{all_crumb_types} }) ? sprintf( "\t\t.crumb_data = { %d, %s },\t// item_data\n",
                 scalar( @{$_->{'crumbs'}} ), ( scalar( @{$_->{'crumbs'}} ) ? sprintf( 'screen_%s_crumbs', $_->{'name'} ) : 'NULL' ) )
                 : '' ) .
 
@@ -518,7 +519,7 @@ EOF_MAP
                         'NULL'
                     )
                 )
-                } @{ $main::syntax->{'valid_whens'} } ) . "\n" .
+                } @{ $ctx->{syntax}->{'valid_whens'} } ) . "\n" .
 
             ( defined( $_->{'background'} ) ?
                 sprintf( "\t\t.background_data = { %s, %d, { %d, %d, %d, %d } }\t// background_data\n",
@@ -532,56 +533,57 @@ EOF_MAP
             "\t}"
         } @dataset_screens );
 
-    push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
 
 }
 
 sub generate_global_screen_data {
+    my $ctx = shift;
 
     my $dataset = 'home';
 
     # generate global screen_dataset_map variable with screen->dataset mapping
-    push @{ $main::c_dataset_lines->{ $dataset } }, "\n// Global screen->dataset mapping table\n";
-    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct screen_dataset_map_s screen_dataset_map[ %d ] = {\n", scalar( @main::all_screens) );
-    foreach my $global_screen_index ( 0 .. ( scalar( @main::all_screens) - 1 ) ) {
-        my $screen = $main::all_screens[ $global_screen_index ];
-        my $screen_dataset = ( $main::game_config->{'zx_target'} eq '48' ? 'home' : $screen->{'dataset'} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "\t{ .dataset_num = %d, .dataset_local_screen_num = %d },\t// Screen '%s'\n",
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n// Global screen->dataset mapping table\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct screen_dataset_map_s screen_dataset_map[ %d ] = {\n", scalar( @{ $ctx->{all_screens} }) );
+    foreach my $global_screen_index ( 0 .. ( scalar( @{ $ctx->{all_screens} }) - 1 ) ) {
+        my $screen = $ctx->{all_screens}[ $global_screen_index ];
+        my $screen_dataset = ( $ctx->{game_config}->{'zx_target'} eq '48' ? 'home' : $screen->{'dataset'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "\t{ .dataset_num = %d, .dataset_local_screen_num = %d },\t// Screen '%s'\n",
             $screen->{'dataset'},
-            $main::dataset_dependency{ $screen_dataset }{'screen_global_to_dataset_index'}{ $global_screen_index },
+            $ctx->{dataset_dependency}{ $screen_dataset }{'screen_global_to_dataset_index'}{ $global_screen_index },
             $screen->{'name'}
         );
     }
-    push @{ $main::c_dataset_lines->{ $dataset } }, "};\n\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "};\n\n";
 
     # screen asset state tables
-    foreach my $screen ( @main::all_screens ) {
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "// Screen '%s' asset state table\n", $screen->{'name'} );
-        push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_s screen_%s_asset_state[ %d ] = {\n\t",
+    foreach my $screen ( @{ $ctx->{all_screens} } ) {
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "// Screen '%s' asset state table\n", $screen->{'name'} );
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct asset_state_s screen_%s_asset_state[ %d ] = {\n\t",
             $screen->{'name'}, scalar( @{ $screen->{'asset_states'} } )
         );
-        push @{ $main::c_dataset_lines->{ $dataset } }, join( "\n\t",
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( "\n\t",
             map {
                 sprintf( "{ .asset_state = %s, .asset_initial_state = %s },\t// %s",
                     $_->{'value'}, $_->{'value'}, $_->{'comment'},
                 )
             } @{ $screen->{'asset_states'} }
         );
-        push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+        push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
     }
 
     # global table of asset state tables for all screens
-    push @{ $main::c_dataset_lines->{ $dataset } }, "// Global table of asset state tables for all screens\n";
-    push @{ $main::c_dataset_lines->{ $dataset } }, sprintf( "struct asset_state_table_s all_screen_asset_state_tables[ %d ] = {\n\t",
-        scalar( @main::all_screens ) );
-    push @{ $main::c_dataset_lines->{ $dataset } }, join( ",\n\t",
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "// Global table of asset state tables for all screens\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, sprintf( "struct asset_state_table_s all_screen_asset_state_tables[ %d ] = {\n\t",
+        scalar( @{ $ctx->{all_screens} } ) );
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, join( ",\n\t",
         map {
             sprintf( "{ .num_states = %d, .states = &screen_%s_asset_state[0] }",
                 scalar( @{$_->{ 'asset_states' } } ), $_->{'name'}
             )
-        } @main::all_screens
+        } @{ $ctx->{all_screens} }
     );
-    push @{ $main::c_dataset_lines->{ $dataset } }, "\n};\n\n";
+    push @{ $ctx->{c_dataset_lines}->{ $dataset } }, "\n};\n\n";
 
 }
 

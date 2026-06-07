@@ -12,26 +12,20 @@ package RAGE::Datagen::BuildFeatures;
 ##
 ## RAGE::Datagen::BuildFeatures — conditional build-feature bookkeeping for
 ## datagen (Task 6, Stage 2 extraction).  Moved verbatim from tools/datagen.pl;
-## the only edits are the mechanical scaffold bindings: the shared
-## %conditional_build_features and $game_config globals are reached via their
-## RAGE::Datagen::Context aliases (%main::conditional_build_features and
-## $main::game_config), so behaviour (and emitted features.h) is unchanged.
+## the shared %conditional_build_features and $game_config state lives in the
+## RAGE::Datagen::Context object ($ctx), threaded in as the first positional
+## arg of each non-pure sub and reached as $ctx->{conditional_build_features} /
+## $ctx->{game_config}, so behaviour (and emitted features.h) is unchanged.
 ##
-## NOTE: %conditional_build_features is shared mutable state — datagen.pl still
-## reads it and `delete`s entries directly (its lexical and this module's
-## %main:: alias are the same hash), so add_build_feature() writes here are seen
-## there and vice-versa.
+## NOTE: $ctx->{conditional_build_features} is shared mutable state — datagen.pl
+## and the other modules read it and `delete` entries directly (it is the same
+## hash), so add_build_feature() writes here are seen there and vice-versa.
 ##
 ################################################################################
 
 use strict;
 use warnings;
 use utf8;
-
-# %main::conditional_build_features and $main::game_config are scaffold aliases
-# (RAGE::Datagen::Context) populated at runtime by datagen.pl; silence the
-# benign "used only once" check for these main:: scaffold globals.
-no warnings 'once';
 
 use Exporter 'import';
 our @EXPORT_OK = qw(
@@ -51,13 +45,15 @@ my @default_build_features = qw(
 );
 
 sub add_build_feature {
+    my $ctx = shift;
     my $f = shift;
-    $main::conditional_build_features{ $f }++;
+    $ctx->{conditional_build_features}{ $f }++;
 }
 
 sub is_build_feature_enabled {
+    my $ctx = shift;
     my $f = shift;
-    return defined( $main::conditional_build_features{ $f } );
+    return defined( $ctx->{conditional_build_features}{ $f } );
 }
 
 # IN5-3: the input backend is forced by PLATFORM (no user choice — see
@@ -72,13 +68,15 @@ sub input_backend_for_platform {
 }
 
 sub get_gfx_backend {
-    return ( defined( $main::game_config ) && defined( $main::game_config->{'gfx_backend'} ) )
-        ? $main::game_config->{'gfx_backend'} : 'sp1';
+    my $ctx = shift;
+    return ( defined( $ctx->{game_config} ) && defined( $ctx->{game_config}->{'gfx_backend'} ) )
+        ? $ctx->{game_config}->{'gfx_backend'} : 'sp1';
 }
 
 sub add_default_build_features {
+    my $ctx = shift;
     foreach my $f ( @default_build_features ) {
-        add_build_feature( $f );
+        add_build_feature( $ctx, $f );
     }
 }
 

@@ -75,14 +75,14 @@ use GD;
 STDOUT->autoflush(1);
 STDERR->autoflush(1);
 
-# NOTE (Task 6 Phase 1): the ~41 shared globals that used to be declared here
+# NOTE (Task 6 Phase 2): the ~41 shared globals that used to be declared here
 # (model arrays, name->index hashes, $game_config, $cfg, the base addresses,
 # the emit accumulators, etc.) now live inside the $ctx object below as the
 # canonical storage.  datagen.pl's own code reads/writes them as $ctx->{field};
-# the 13 not-yet-threaded RAGE::Datagen::* modules still reach them by the
-# main:: aliases installed by $ctx->install_main_aliases (the transitional
-# bridge).  %codeset_function_name_to_index stays a plain datagen.pl lexical
-# (used only here, in dump_internal_data).
+# the RAGE::Datagen::* modules take $ctx as their first positional arg and
+# reach the same fields as $ctx->{field} (the transitional main:: aliasing
+# bridge has been removed).  %codeset_function_name_to_index stays a plain
+# datagen.pl lexical (used only here, in dump_internal_data).
 my %codeset_function_name_to_index;
 
 # file names
@@ -113,23 +113,20 @@ my $asm_file_dataset_format	= 'datasets/dataset_%s.src/dataset_data.asm';
 my $dump_file = 'internal_state.dmp';
 
 ######################################################
-## Task 6 Phase 1: shared-state context (canonical storage) + transitional bridge
+## Task 6 Phase 2: shared-state context (canonical storage)
 ######################################################
 # RAGE::Datagen::Context now OWNS the ~41 shared globals (model arrays, name->
 # index hashes, $game_config, emit accumulators, base addresses, etc.) as the
-# canonical storage.  datagen.pl's own code reads/writes them as $ctx->{field}.
-# The 7 seeded fields below preserve the non-empty initial values those globals
-# used to have; every other field defaults to []/{}/undef inside new().
-#
-# install_main_aliases is the (now-shrinking) TRANSITIONAL bridge: it aliases
-# each field into main:: under the same name so the 13 not-yet-threaded
-# RAGE::Datagen::* modules can keep reaching the globals by fully-qualified name
-# ($main::game_config, @main::all_btiles, ...).  Phase 2 will thread $ctx into
-# the modules and delete the aliasing.  $ctx must be constructed and aliased
-# BEFORE any code that uses the fields runs (it is — this block precedes the
-# subs and main()).  $ctx is scaffolding, not game state: intentionally NOT
-# added to the $all_state dump in dump_internal_data (it only holds the globals
-# already dumped there individually).
+# canonical storage.  datagen.pl's own code reads/writes them as $ctx->{field};
+# the RAGE::Datagen::* modules take $ctx as their first positional arg and reach
+# the same fields as $ctx->{field} (Phase 2: the transitional main:: aliasing
+# bridge has been removed — $ctx is now threaded explicitly through every
+# module sub).  The 7 seeded fields below preserve the non-empty initial values
+# those globals used to have; every other field defaults to []/{}/undef inside
+# new().  $ctx must be constructed BEFORE any code that uses the fields runs (it
+# is — this block precedes the subs and main()).  $ctx is scaffolding, not game
+# state: intentionally NOT added to the $all_state dump in dump_internal_data
+# (it only holds the globals already dumped there individually).
 my $ctx = RAGE::Datagen::Context->new(
     screen_name_to_index => { '__NO_SCREEN__' => 0 },
     syntax               => { valid_whens => [ 'enter_screen', 'exit_screen', 'game_loop' ] },
@@ -139,7 +136,6 @@ my $ctx = RAGE::Datagen::Context->new(
     codeset_base_address => 0xC000,
     codeset_valid_banks  => [ 6 ],
 );
-$ctx->install_main_aliases;
 
 ######################################################
 ## Configuration syntax definitions and lists
@@ -176,11 +172,12 @@ $ctx->install_main_aliases;
 # the CPC mode-1 backend. Selected from the PLATFORM build features.
 my $_asset_backend;
 sub asset_backend {
+    my $ctx = shift;
     return $_asset_backend if defined $_asset_backend;
-    my $is_cpc = is_build_feature_enabled( 'PLATFORM_CPC_FLAT' )
-              || is_build_feature_enabled( 'PLATFORM_CPC464' )
-              || is_build_feature_enabled( 'PLATFORM_CPC_BANKED' )
-              || is_build_feature_enabled( 'PLATFORM_CPC6128' );
+    my $is_cpc = is_build_feature_enabled( $ctx, 'PLATFORM_CPC_FLAT' )
+              || is_build_feature_enabled( $ctx, 'PLATFORM_CPC464' )
+              || is_build_feature_enabled( $ctx, 'PLATFORM_CPC_BANKED' )
+              || is_build_feature_enabled( $ctx, 'PLATFORM_CPC6128' );
     $_asset_backend = RAGE::AssetBackend->create( platform => $is_cpc ? 'cpc' : 'zx' );
     return $_asset_backend;
 }
@@ -210,13 +207,11 @@ sub asset_backend {
 
 # validate_and_compile_btile + generate_btiles moved to RAGE::Datagen::Btiles
 # (Task 6 Stage 2 extraction); both are imported at the top of this file. The
-# model arrays / emit accumulators they use stay datagen.pl globals (reached
-# there via the scaffold aliases: @main::all_btiles, %main::dataset_dependency,
-# %main::btile_name_to_index, %main::conditional_build_features,
-# @main::h_game_data_lines, $main::c_dataset_lines); asset_backend() stays here
-# (shared with the Sprite emitter) and btile_deduplicate_arena_best() lives in
-# main:: (loaded by RAGE::BTileUtils) — both are called as main::... from the
-# module.
+# model arrays / emit accumulators they use live in the $ctx object (threaded
+# in as their first arg). asset_backend() stays here (shared with the Sprite
+# emitter) and btile_deduplicate_arena_best() lives in main:: (loaded by
+# RAGE::BTileUtils) — both are called as main::... from the module
+# (asset_backend with $ctx threaded in).
 
 #####################################
 ## Sprite functions
@@ -225,9 +220,9 @@ sub asset_backend {
 # validate_and_compile_sprite + generate_sprite (and the dataset-level
 # generate_sprites) moved to RAGE::Datagen::Sprites (Task 6 Stage 2 extraction);
 # validate_and_compile_sprite + generate_sprites are imported at the top of this
-# file. The model arrays / emit accumulators they use stay datagen.pl globals
-# (reached there via the scaffold aliases); asset_backend() stays here (shared
-# with the BTile emitter) and is called as main::asset_backend() from the module.
+# file. The model arrays / emit accumulators they use live in the $ctx object
+# (threaded in as their first arg); asset_backend() stays here (shared with the
+# BTile emitter) and is called as main::asset_backend( $ctx ) from the module.
 
 ######################################
 ## Map Screen functions
@@ -356,9 +351,9 @@ sub asset_backend {
 sub generate_game_data {
 
     # generate header lines for all output files
-    generate_c_home_header and print ".";
-    generate_c_banked_data_128_header and print ".";
-    generate_h_header and print ".";
+    generate_c_home_header( $ctx ) and print ".";
+    generate_c_banked_data_128_header( $ctx ) and print ".";
+    generate_h_header( $ctx ) and print ".";
 
     # generate data - each function is free to add lines to the .c or .h
     # files
@@ -366,51 +361,51 @@ sub generate_game_data {
     # dataset items. All dataset are generated, including 'home'
     # 'home' dataset will be treated specially at output
     for my $dataset ( keys %{ $ctx->{dataset_dependency} } ) {
-        generate_c_banked_header( $dataset );
-        generate_btiles( $dataset );
-        generate_sprites( $dataset );
-        generate_flow_rules( $dataset );
-        generate_screens( $dataset );
-        generate_map( $dataset );
+        generate_c_banked_header( $ctx, $dataset );
+        generate_btiles( $ctx, $dataset );
+        generate_sprites( $ctx, $dataset );
+        generate_flow_rules( $ctx, $dataset );
+        generate_screens( $ctx, $dataset );
+        generate_map( $ctx, $dataset );
         print ".";
     }
 
     # home bank items
-    generate_hero and print ".";
-    generate_bullets and print ".";
-    generate_items and print ".";
-    generate_crumb_types and print ".";
-    generate_global_screen_data and print ".";
-    generate_game_areas and print ".";
-    generate_game_config and print ".";
-    generate_misc_data and print ".";
-    generate_game_events_rule_table and print ".";
+    generate_hero( $ctx ) and print ".";
+    generate_bullets( $ctx ) and print ".";
+    generate_items( $ctx ) and print ".";
+    generate_crumb_types( $ctx ) and print ".";
+    generate_global_screen_data( $ctx ) and print ".";
+    generate_game_areas( $ctx ) and print ".";
+    generate_game_config( $ctx ) and print ".";
+    generate_misc_data( $ctx ) and print ".";
+    generate_game_events_rule_table( $ctx ) and print ".";
 
     # tracker items
-    generate_tracker_data and print ".";
+    generate_tracker_data( $ctx ) and print ".";
 
     # codeset items
-    generate_codeset_headers and print ".";
-    generate_codeset_functions and print ".";
-    generate_global_codeset_data and print ".";
+    generate_codeset_headers( $ctx ) and print ".";
+    generate_codeset_functions( $ctx ) and print ".";
+    generate_global_codeset_data( $ctx ) and print ".";
     # binary data items, may be stored in codesets
-    generate_binary_data_items and print ".";
+    generate_binary_data_items( $ctx ) and print ".";
 
     # this must be generated after codesets, it needs the codeset function
     # call macros
-    generate_game_functions and print ".";
+    generate_game_functions( $ctx ) and print ".";
 
     # generate custom function tables
-    generate_custom_function_tables and print ".";
+    generate_custom_function_tables( $ctx ) and print ".";
 
     # generate conditional build features
-    generate_conditional_build_features and print ".";
+    generate_conditional_build_features( $ctx ) and print ".";
 
     # generate configuration values that need to be carried over to the game_data.h file
-    generate_configuration_values and print ".";
+    generate_configuration_values( $ctx ) and print ".";
 
     # generate ending lines if needed
-    generate_h_ending and print ".";
+    generate_h_ending( $ctx ) and print ".";
     print "\n";
 }
 
@@ -664,11 +659,11 @@ if ( defined( $opt_p ) ) {
 
 # add default build features - these will be updated/modified later
 print "Adding default build features...\n";
-add_default_build_features;
+add_default_build_features( $ctx );
 
 # read, validate and compile input
 print "Reading input data files...\n";
-read_input_data;
+read_input_data( $ctx );
 
 # T2-6: CPC platforms may have a minimal .gdata set (NAME + PLATFORM only,
 # no screens/hero/btiles). The full ZX-specific pipeline (dataset deps,
@@ -698,12 +693,12 @@ if ( $is_cpc_platform and not $has_screens ) {
     #     hero/btiles), so it runs cleanly on a bare skeleton. The screen-
     #     dependent checks in run_consistency_checks are deliberately NOT run.
     #   - derive_cpc_audio_backend_features: emits AUDIO_*_BACKEND_CPC_AY.
-    my $cfg_errors = check_game_config_is_valid;
+    my $cfg_errors = check_game_config_is_valid( $ctx );
     die sprintf( "*** %d errors were found in configuration\n", $cfg_errors )
         if ( $cfg_errors );
     # Derive the CPC-AY macros BEFORE generate_conditional_build_features, which
     # snapshots %conditional_build_features into the features.h output lines.
-    derive_cpc_audio_backend_features;
+    derive_cpc_audio_backend_features( $ctx );
     # R4: emit the GFX_BACKEND macro on the screen-less CPC fast path too.
     # In the full pipeline this is done by generate_game_config (line ~3700),
     # which the fast path bypasses — so a screen-less CPC game that selects a
@@ -711,10 +706,10 @@ if ( $is_cpc_platform and not $has_screens ) {
     # BUILD_FEATURE_GFX_BACKEND_<X> macro and the gfx backend would self-#ifdef
     # out. Mirror that emission here (canonical + legacy SPRITE_ENGINE alias,
     # per README §5.6).
-    my $r4_engine_upper = uc( get_gfx_backend() );
-    add_build_feature( 'GFX_BACKEND_'   . $r4_engine_upper );
-    add_build_feature( 'SPRITE_ENGINE_' . $r4_engine_upper );
-    generate_conditional_build_features;
+    my $r4_engine_upper = uc( get_gfx_backend( $ctx ) );
+    add_build_feature( $ctx, 'GFX_BACKEND_'   . $r4_engine_upper );
+    add_build_feature( $ctx, 'SPRITE_ENGINE_' . $r4_engine_upper );
+    generate_conditional_build_features( $ctx );
     # Emit minimal stub game_data.h.
     # R4: also emit DEFAULT_BG_ATTR — engine/src/gfx.c's init_gfx() references
     # GFX_DEFAULT_BG_ATTR (= DEFAULT_BG_ATTR).  In the full pipeline this comes
@@ -740,12 +735,12 @@ if ( $is_cpc_platform and not $has_screens ) {
 } else {
     # run consistency checks
     print "Running consistency checks...\n";
-    run_consistency_checks;
+    run_consistency_checks( $ctx );
 
     # process data dependencies
     print "Computing dataset dependencies...\n";
-    create_dataset_dependencies;
-    fix_feature_dependencies;
+    create_dataset_dependencies( $ctx );
+    fix_feature_dependencies( $ctx );
 
     # generate output
     print "Generating game data...";
