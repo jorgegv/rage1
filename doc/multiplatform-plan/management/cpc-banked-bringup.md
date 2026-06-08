@@ -215,3 +215,25 @@ where runnable + independent review for non-trivial/asm; commit per step)
 - R2 — dataset buffer placement/size dilemma (DC4).
 - R3 — CPC asset bytes 2–4× ZX ⇒ tighter dataset budget (mode-1 default).
 - R-T3 — no headless Locomotive BASIC tokeniser ⇒ DC6 pure-asmloader entry.
+
+## Follow-ups surfaced (durable record — do not rely on session memory)
+
+- **Memory-report scripts need a CPC extension.** `tools/mem-summary-*.sh`,
+  `tools/dsinfo.sh`, `tools/r1size.sh` currently hardcode the literal `build/` path
+  AND the ZX memory layout. When extended to cover CPC (and especially cpc-banked),
+  they MUST account for: (a) the per-target JSP fixed buffer regions (DC7 — ZX
+  `JSPDATA_SLOT3` `0xE840–0xFFFF`, cpc-flat `JSP_TARGET_CPC` `0x9800–0xBFFF`,
+  cpc-banked top-of-`0x4000` in RAM 1); and (b) the cpc-banked page map for the
+  CHOSEN shape (DC3-D) — Shape A (dataset buffer in page C `0x8000`, code in page A,
+  `CRT_ORG_CODE≈0x1200`) vs Shape B (buffer fills page A `0x0040`, all resident
+  code+data+stack in page C, `CRT_ORG_CODE=0x8000`). The buffer page and code page
+  differ between the shapes. `banking.md` §7 R1 also calls for a CPC `make mem`
+  equivalent to track the resident RAM budget. (Recorded here so the repo, not just
+  session memory, carries it; matches the auto-memory `cpc-jsp-buffer-memmap`.)
+- **JSP cpc-banked placement refactor** (DC7): add a CPC+banked `#ifdef` arm in
+  `external/jsp/lib/jsp_data.c` pinning BAT/FTT/DTT/BTT/ROTTBL to the top of the
+  `0x4000` window (≈`0x5800–0x7FFF`); land it alongside B6 (the JSP-in-RAM1 decision).
+- **z88dk `+cpc` org checks** (DC3-D / DC3): verify `+cpc` accepts `CRT_ORG_CODE=0x8000`
+  (Shape B) and that AMSDOS `RUN"` loads at that org; and confirm `cpc_crt0.asm`'s
+  reason for the `0x1200` default before lowering it (lower-ROM overlay / AMSDOS
+  workspace / firmware-off).
