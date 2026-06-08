@@ -75,7 +75,11 @@ banking:
     swap_window:             0x4000
     bank_size:               16384
     dataset_valid_banks:     [ 5, 6, 7, 4 ]
-    codeset_valid_banks:     [ 5, 6, 7, 4 ]
+    ## engine bank 4 excluded per the "Must NOT appear in codeset_valid_banks"
+    ## invariant above (mirrors zx128, whose codeset list also omits bank 4);
+    ## bank 4 is reserved for engine banked code so a codeset can never start
+    ## there anyway (banktool skips banks already occupied by the reserved code).
+    codeset_valid_banks:     [ 5, 6, 7 ]
     engine_code_memory_bank: 4
 
 ##

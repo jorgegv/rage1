@@ -33,9 +33,11 @@ require RAGE::Config;
 # fallback values (used if the YAML banking section is missing)
 my @fallback_codeset_valid_banks = ( 6, 1, 3, 7 );
 my @fallback_dataset_valid_banks = ( 1, 3, 7, 6, 4 );
+my $fallback_engine_code_memory_bank = 4;
 
 # the actual lists, populated from YAML in the main block below
 my ( @codeset_valid_banks, @dataset_valid_banks );
+my $engine_code_memory_bank;
 
 my $max_bank_size = 16384;
 
@@ -86,10 +88,15 @@ if ( $platform eq 'cpc-flat' ) {
             and defined( $bank_cfg->{'codeset_valid_banks'} ) ) {
         @dataset_valid_banks = @{ $bank_cfg->{'dataset_valid_banks'} };
         @codeset_valid_banks = @{ $bank_cfg->{'codeset_valid_banks'} };
+        # B7-1/T3-5: the reserved engine-code bank is per-platform too
+        # (zx128 and cpc-banked both use bank 4 by hardware convention).
+        $engine_code_memory_bank = $bank_cfg->{'engine_code_memory_bank'}
+            // $fallback_engine_code_memory_bank;
     } else {
         warn "** banktool.pl: banking.$platform missing from rage1-config.yml; using deprecated hard-coded fallback (will be removed in a future release)\n";
         @dataset_valid_banks = @fallback_dataset_valid_banks;
         @codeset_valid_banks = @fallback_codeset_valid_banks;
+        $engine_code_memory_bank = $fallback_engine_code_memory_bank;
     }
 }
 
@@ -126,36 +133,39 @@ foreach my $bin ( grep { /^codeset_.*\.bin$/ } readdir BINDIR ) {
 close BINDIR;
 
 # setup the initial bank layout structure
-# Bank 4 is preconfigured, it is used for RAGE1 banked code
-my $bank_layout = {
-    1	=> {
-                binaries => [],
-                size => 0,
-            },
-    3	=> {
-                binaries => [],
-                size => 0,
-            },
-    4	=> {
-                binaries => [ 
-                    {
-                        'name'	=> 'banked_code.bin',
-                        'size'	=> ( stat( 'engine/banked_code/banked_code.bin' ) )[7],
-                        'dir'	=> 'engine/banked_code',
-                        'type'	=> 'reserved',
-                        'bank'	=> 4,
-                    },
-                ],
-                size => ( stat( 'engine/banked_code/banked_code.bin' ) )[7],
-            },
-    6	=> {
-                binaries => [],
-                size => 0,
-            },
-    7	=> {
-                binaries => [],
-                size => 0,
-            },
+#
+# B7-1/T3-5: the usable bank set is derived from the per-platform YAML
+# valid-bank lists (banking.<platform>.{dataset,codeset}_valid_banks) plus the
+# reserved engine-code bank (engine_code_memory_bank); previously this was
+# hard-coded to the ZX 128 set { 1, 3, 4, 6, 7 } with bank 4 reserved.  The
+# engine-code bank is preconfigured with the RAGE1 banked code binary.  For
+# zx128 this reproduces the historical set { 1, 3, 4, 6, 7 } byte-identically
+# (union of [1,3,7,6,4] + [6,1,3,7] + {4}); for cpc-banked it yields { 4, 5, 6, 7 }.
+my $banked_code_bin = 'engine/banked_code/banked_code.bin';
+my $banked_code_size = ( stat( $banked_code_bin ) )[7];
+
+my $bank_layout = {};
+my %seen_bank;
+foreach my $bank ( @dataset_valid_banks, @codeset_valid_banks, $engine_code_memory_bank ) {
+    next if $seen_bank{ $bank }++;
+    $bank_layout->{ $bank } = {
+        binaries => [],
+        size => 0,
+    };
+}
+
+# preconfigure the reserved engine-code bank with the banked code binary
+$bank_layout->{ $engine_code_memory_bank } = {
+    binaries => [
+        {
+            'name'	=> 'banked_code.bin',
+            'size'	=> $banked_code_size,
+            'dir'	=> 'engine/banked_code',
+            'type'	=> 'reserved',
+            'bank'	=> $engine_code_memory_bank,
+        },
+    ],
+    size => $banked_code_size,
 };
 
 # layout codeset binaries
