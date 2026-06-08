@@ -92,6 +92,7 @@ uint8_t memory_current_memory_bank;
 //dusable "unreferenced function argument" warning
 #pragma disable_warning 85
 
+#ifdef BUILD_FEATURE_PLATFORM_ZX128
 uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall {
     __asm
     ;; bank comes in L register
@@ -116,5 +117,54 @@ memory_switch_bank_no_ei:
     ld      l, e
     __endasm;
 }
+#endif // BUILD_FEATURE_PLATFORM_ZX128
+
+#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+// B6-1/B6-2 (DC1/DC2): CPC 6128 bank-switch primitive.  Same atomic
+// DI / out / EI structure and interrupt_nesting_level interlock as the ZX 128
+// version above; only the hardware write differs.
+//
+// CPC RAM banking is a direct Amstrad Gate-Array RAMR write (no firmware / no
+// cpctelera link dependency on the banked path), mirroring the hand-translated
+// GA convention already used for mode/palette in engine/src/cpc/cpct_video.asm
+// (`ld b,0x7F ; out (c),a`, command in the top bits of A):
+//   - GA port      = 0x7F   (A15=0, A14=1 selects the Gate Array / RAM latch)
+//   - RAMR command = 0xC0   (top two data bits 0b11 select a RAM configuration)
+//   - config       = bank   (bits 0-2): Config N maps RAM N into the 0x4000
+//                            swap window while keeping RAM0@0x0000, RAM2@0x8000,
+//                            RAM3@0xC000 fixed.  Our valid banks {0,4,5,6,7} map
+//                            1:1 to Configs {0,4,5,6,7} (DC1 — Config 3 is
+//                            excluded by the YAML bank lists as it would remap
+//                            0xC000/screen), so the bank->Config map is the
+//                            identity `or 0xC0` (no lookup table needed, DC2).
+// bank 0 -> Config 0 = the default/home mapping (RAM0..RAM3), restoring page B
+// (RAM1, the JSP buffers + home data) before any code that needs it runs;
+// honour the §3.5.1 Config-0/ISR interlock at the call sites (the ISR itself
+// runs from the always-mapped page A / RAM0).
+uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall {
+    __asm
+    ;; bank comes in L register
+    ld d,l
+    di
+    ld hl,_interrupt_nesting_level
+    inc (hl)
+    ld hl,_memory_current_memory_bank
+    ld e, (hl)
+    ld a, d
+    and a,0x07
+    or a,0xC0           ;; GA RAMR command (0b11) | config bits
+    ld bc,0x7F00        ;; B = 0x7F = Gate-Array port (C ignored by GA)
+    out (c),a           ;; GA: select RAM configuration = bank
+    ld (hl), d
+    ld hl,_interrupt_nesting_level
+    dec (hl)
+    jr NZ,memory_switch_bank_no_ei
+    ei
+memory_switch_bank_no_ei:
+    ;; return value in L
+    ld      l, e
+    __endasm;
+}
+#endif // BUILD_FEATURE_PLATFORM_CPC_BANKED
 
 #endif // BUILD_FEATURE_PLATFORM_ZX128 || BUILD_FEATURE_PLATFORM_CPC_BANKED
