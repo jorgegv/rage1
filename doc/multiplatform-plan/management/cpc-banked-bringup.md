@@ -46,8 +46,8 @@ unblocks the steps in the next section.
   ```
   RAM0  page A  0x0000–0x3FFF  resident code: vectors/ISR@0x0038; asm bswitch+ISR+
                                dispatcher @0x0040–0x11FF; engine C @0x1200–0x3FFF (~11.5K)
-  RAM1  page B  0x4000–0x7FFF  Config-0 home: 0x4000–~0x683F secondary/free;
-                               ~0x6840–0x7FFF JSP data block (~6K) [DC7]
+  RAM1  page B  0x4000–0x7FFF  Config-0 home: 0x4000–~0x57FF secondary/free;
+                               ~0x5800–0x7FFF JSP data block (~10K, CPC tables) [DC7]
                 Config 4–7    RAM4–7 paged over the whole window = compressed
                                dataset/codeset/banked-code source (RAM1 hidden during
                                swap, restored on return to Config 0; §3.5.1 interlock)
@@ -89,10 +89,15 @@ unblocks the steps in the next section.
 - **DC7 — JSP sprite-buffer placement on cpc-banked.** ✅ **RESOLVED (user,
   2026-06-08): JSP data block at the TOP of the `0x4000` window, in the page-B home
   bank RAM 1** (mirrors ZX's default `JSPDATA_SLOT3` = `0xE840–0xFFFF`, top of the
-  `0xC000` window). *Verified:* JSP placement is compile-time via `JSPDATA_SLOT2/3`
-  (ZX addresses); cpc-flat currently linker-places JSP data in flat RAM, so a **small
-  JSP refactor is needed** to pin the block at the top of the `0x4000` window for
-  cpc-banked (a CPC analogue of the `JSPDATA_SLOT*` macros / a configurable base).
+  `0xC000` window). *Verified (jsp_data.c):* the JSP block is placed at FIXED `__at`
+  addresses via a per-target `#ifdef` — ZX `JSPDATA_SLOT3` (default) `0xE840–0xFFFF`,
+  ZX `JSPDATA_SLOT2` `0xA840–0xBFFF`, and **`JSP_TARGET_CPC` (cpc-flat) `0x9800–0xBFFF`
+  (~10 KB, packed just below the `0xC000` screen)**: BAT `0x9800`, FTT `0xA000`, DTT
+  `0xA100`, BTT `0xA200`, ROTTBL `0xB200`. So the **small JSP refactor** is just a NEW
+  `#ifdef` arm (CPC + banked) shifting those five addresses to the top of the `0x4000`
+  window → block ≈ `0x5800–0x7FFF` in RAM 1. Leaving it at `0x9800–0xBFFF` on
+  cpc-banked would eat ~10 KB of the squeezed page C — moving it to RAM 1 is what
+  makes the page-C budget viable.
   *Benefits:* reclaims RAM 1 (otherwise the unused Config-0 page-B bank) and relieves
   the page-C squeeze. *Implication:* the block is hidden during swaps (same as ZX
   SLOT3) → honour the §3.5.1 Config-0-restore/ISR interlock before any JSP access;
