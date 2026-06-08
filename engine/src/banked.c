@@ -9,7 +9,11 @@
 
 #include "rage1/banked.h"
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+// B7 step 9.2: widen from BUILD_FEATURE_ZX_TARGET_128 to the canonical
+// banked-platform predicate so cpc-banked links init_banked_code() too. ZX 128
+// defines both macros, so this is byte-identical on ZX; ZX 48 / cpc-flat (no
+// banking) still compile it out.
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 void init_banked_code( void ) {
     struct main_shared_data_s data = {
         .game_state			= &game_state,

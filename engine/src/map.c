@@ -168,7 +168,10 @@ void map_enter_screen( uint8_t screen_num ) __z88dk_fastcall {
     // screen resides.  If in 48 mode, this is not needed since everything
     // is in home dataset
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+// B7 step 9.2: widen to the canonical banked-platform predicate so cpc-banked
+// activates the screen's dataset on entry too (byte-identical on ZX, compiled
+// out on ZX48/cpc-flat).
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
     // We can just call dataset_activate with the screen dataset number.
     // The function returns immediately if the current dataset is already
     // loaded and does not need to be changed

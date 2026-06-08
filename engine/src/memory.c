@@ -77,7 +77,10 @@ void init_memory(void) {
     heap_init( MALLOC_HEAP_START, MALLOC_HEAP_SIZE );
 #endif
 
-#ifdef BUILD_FEATURE_ZX_TARGET_128
+// B7 step 9.2: widen to the canonical banked-platform predicate so cpc-banked
+// also initialises the current-bank state (matches memory_switch_bank()'s guard
+// in 00bswitch.c). Byte-identical on ZX; compiled out on ZX48/cpc-flat.
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
     // initial memory bank
     memory_current_memory_bank = 0;
 #endif
