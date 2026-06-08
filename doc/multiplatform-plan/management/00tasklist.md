@@ -77,8 +77,8 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] IN6 — real CPC input via hand-translated CPC keyboard scan (`engine/src/cpc/cpct_keyboard.asm`; no cpctelera library dep — README §5.13)
   - [x] AU5 — real CPC audio via AT2 AKG generic player
   - [x] TS3 — first CPC regression baseline *(cpctel; rebaselined for JSP at R9/G10)*
-  - [ ] B6 — cpc-banked banking infrastructure
-  - [ ] B7 — cpc-banked banking tooling
+  - [x] B6 — cpc-banked banking infrastructure (banking macros, bank-switch primitive + IM1 ISR both empirically validated on cap32, banked_code/cpc-banked/ dir; exit gate met, 22/22 matrix — see cpc-banked-bringup.md)
+  - [~] B7 — cpc-banked banking tooling
   - [ ] T3 — cpc-banked Makefile; first banked `.dsk` build
 
 - [x] **Phase 4J — CPC graphics engine: switch to JSP (cpctelera revoked; README §5.13)**

@@ -181,8 +181,18 @@ where runnable + independent review for non-trivial/asm; commit per step)
    and runs PASS on cap32; ZX byte-identical (22/22 all-test-builds; 14 ZX + 8 CPC).*
 
 **Stage B7 — tooling + real bank binaries + asmloader:**
-8. B7-1/T3-5 — `banktool.pl --platform` + `banking.cpc-banked` bank lists from
-   YAML; reserve RAM 4 for engine code; dataset ORG `0x8000` (DC3/§3.2).
+8. ✅ B7-1/T3-5 — `banktool.pl --platform` now derives the usable bank set from
+   the per-platform YAML `banking.<platform>.{dataset,codeset}_valid_banks` +
+   `engine_code_memory_bank` (was hard-coded ZX `{1,3,4,6,7}`): zx128 reproduces
+   `{1,3,4,6,7}` (bank 4 reserved) byte-identically, cpc-banked yields `{4,5,6,7}`
+   (RAM 4 reserved for engine code). Fixed config nit: cpc-banked
+   `codeset_valid_banks` dropped bank 4 (`[5,6,7]`) per the "engine bank not in
+   codeset list" invariant (mirrors zx128). banktool emits bank#+relative-offset
+   only — the `0x8000` dataset decompress base is the loader/engine concern (B6
+   step 4 set `BANKED_DATASET_BASE_ADDRESS=0x8000`; asmloader = step 9). ZX
+   byte-identity proven via fixed-seed controlled run; all-test-builds 22/22.
+   Review APPROVE-WITH-NITS (no blockers). NOT yet wired into a cpc-banked build
+   (no cpc-banked banked-code compile target / game-with-banks yet → step 9/10).
 9. B7-2/B7-3/T3-4/T3-6 — `engine/loader-cpc-banked/asmloader.asm.in` template
    (load bank→swap window after MMR config, ZX0-decompress datasets, reset to
    Config 0, `jp MAIN`) + `loadertool.pl --platform=cpc-banked` template substitution;
