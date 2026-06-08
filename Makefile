@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc6128 build-cpc data-cpc6128 build-cpc-hello build-cpc-hello-banked build-00cpc-compile-test build-00cpc-banked-compile-test build-minimal_cpc build-minimal_audio_cpc all-test-builds all-test-builds-zx all-test-builds-cpc
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc6128 build-cpc data-cpc6128 build-cpc-hello build-cpc-hello-banked build-cpc-bswitch-test build-00cpc-compile-test build-00cpc-banked-compile-test build-minimal_cpc build-minimal_audio_cpc all-test-builds all-test-builds-zx all-test-builds-cpc
 
 help:
 	echo "============================================================"
@@ -271,6 +271,16 @@ build-cpc-hello:
 # toolchain end-to-end (datagen -p cpc6128 -> Makefile-cpc-banked -> .dsk).
 build-cpc-hello-banked:
 	$(MYMAKE) build-cpc6128 target_game=$(TEST_GAMES_DIR)/cpc-hello-banked
+
+# B6-1/B6-2: cpc-banked bank-switch primitive validation game.  Same cpc6128
+# pipeline as build-cpc6128 but links the bank-switch primitive (00bswitch.c)
+# via CPC_LINK_BSWITCH=1 so games/cpc-bswitch-test can call memory_switch_bank()
+# and prove the Gate-Array RAM-config select on cap32 (128K 6128).
+build-cpc-bswitch-test:
+	$(MYMAKE) clean
+	$(MYMAKE) PLATFORM=cpc6128 config target_game=$(TEST_GAMES_DIR)/cpc-bswitch-test
+	$(MYMAKE) PLATFORM=cpc6128 data-cpc6128 target_game=$(TEST_GAMES_DIR)/cpc-bswitch-test
+	$(MYMAKE) -f Makefile-cpc-banked CPC_LINK_BSWITCH=1 build
 
 # G8: minimal_cpc — the first CPC game that runs the REAL RAGE1 ENGINE GAME
 # LOOP (gfx.md Phase G8).  It links the WHOLE engine (CPC_LINK_ENGINE_FULL=1):

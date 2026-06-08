@@ -1,0 +1,9 @@
+// cpc-bswitch-test — cpc-banked bank-switch primitive validation game (B6).
+//
+// Minimal cpc6128 game (own main(), no engine loop) that exercises the
+// cpc-banked bank-switch PRIMITIVE on real 128K hardware / cap32.  Listed in
+// the tracker as a B6 validation game ("toggles MMR configs, exits").
+BEGIN_GAME_CONFIG
+	NAME		CpcBswitchTest
+	PLATFORM	cpc6128
+END_GAME_CONFIG

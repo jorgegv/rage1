@@ -67,6 +67,16 @@ SUB_TAPS		=
 CSRC			= $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
 ASMSRC			= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
 
+# ---- B6-1/B6-2: bank-switch primitive validation link set -----------------
+# A game that opts in (CPC_LINK_BSWITCH=1, set by `make build-cpc-bswitch-test`)
+# links ONLY the bank-switch primitive engine/src/00bswitch.c on top of its own
+# game_src.  This is the minimal link that exercises the real cpc-banked
+# memory_switch_bank() (the games/cpc-bswitch-test probe) without pulling the
+# rest of the engine.  The game supplies interrupt_nesting_level itself.
+ifeq ($(CPC_LINK_BSWITCH),1)
+CSRC			+= $(ENGINE_DIR)/src/00bswitch.c
+endif
+
 # ---- Phase R4: real CPC gfx HAL link set -------------------------------
 # A CPC game that opts in (CPC_LINK_ENGINE_GFX=1, set by `make build-minimal_cpc`)
 # links the REAL RAGE1 gfx HAL: the generic gfx.c/screen.c, the active CPC

@@ -204,8 +204,14 @@ where runnable + independent review for non-trivial/asm; commit per step)
 
 ## Test games to add (regression matrix auto-discovers them; cpc6128 platform)
 
-- `games/cpc-hello-banked/` — links, boots, prints (T3-9).
-- `games/cpc-bswitch-test/` — toggles MMR configs, exits (B6 validation).
+- `games/cpc-hello-banked/` — links, boots, prints (T3-9). ✅ ADDED (T3a).
+- `games/cpc-bswitch-test/` — toggles MMR configs, exits (B6 validation). ✅ ADDED
+  (B6 step 5): stamps a marker into each expansion bank {4,5,6,7} via the 0x4000
+  window and reads them back; links only 00bswitch.c (CPC_LINK_BSWITCH=1). Ran
+  **PASS on cap32** (128K 6128) — empirical proof of the GA RAM-config select;
+  evidence at `games/cpc-bswitch-test/cap32-pass.png`. Also a build-only matrix game.
+- `games/00cpc-banked-compile-test/` — whole-engine cpc-banked compile-test. ✅ ADDED
+  (B6 step 4); auto-joins the matrix via the `00cpc%` filter.
 - `games/cpc-banked-test/` — 1 dataset + 1 codeset, observe swap (B7 validation).
 
 ## Risk register (from banking.md §7, live)
