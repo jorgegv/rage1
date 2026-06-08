@@ -228,11 +228,22 @@ where runnable + independent review for non-trivial/asm; commit per step)
      Verified: emitted loader for a synthetic {4,5,6,7} set assembles under `zcc +cpc`;
      zx128 loader BYTE-IDENTICAL (reviewer-confirmed). Review APPROVE-WITH-NITS (3 nits
      fixed). LOADER_ORG=0x0100 / MAIN_CODE_START=0x1200 are literals pending DC6 YAML-lift (9.2).
-   - **9.2 NEXT — Makefile-cpc-banked banking build.** Engine link (CPC_LINK_ENGINE_FULL
-     analog) + `banks` (banktool -p cpc-banked) + the cpc-banked banked-code compile/link
-     target (BIN_BANKED_CODE analog so banktool has a banked_code.bin) + widen the
-     `ZX_TARGET_128` runtime guards (Follow-up) + asmloader cold-boot entry integration +
-     DSK packaging (`appmake +fat --add-file BANK<n>.BIN`); lift LOADER_ORG/MAIN to YAML (DC6).
+   - **9.2 IN PROGRESS — sub-gated 9.2a / 9.2b / 9.2c.**
+     - **9.2a ✅ DONE (commit ef84e31): widen the `ZX_TARGET_128` banking-RUNTIME guards**
+       (the recorded Follow-up) to `PLATFORM_ZX128 || PLATFORM_CPC_BANKED`: banked.c (init_banked_code
+       body), main.c (init_banked_code + audio_sfx_beeper_init calls), map.c (dataset_activate on
+       screen entry), memory.c (memory_current_memory_bank=0 init). Byte-identical on ZX; cpc-banked
+       compile-test + all-test-builds 22/22; independent review APPROVE.
+     - **9.2b ✅ DONE (commit d3e38dd): lift LOADER_ORG/MAIN_CODE_START/MAIN_FILE to YAML (DC6).**
+       banking.cpc-banked.loader block in rage1-config.yml; loadertool reads it (literals as
+       fallback) → byte-identical loader. all-test-builds 22/22; review APPROVE-WITH-NITS (both
+       addressed; NIT2 = enforce main_code_start==CRT_ORG_CODE → deferred to 9.2c).
+     - **9.2c NEXT: Makefile-cpc-banked banking build.** Engine link (CPC_LINK_ENGINE_FULL
+       analog) + `banks` (banktool -p cpc-banked) + the cpc-banked banked-code compile/link
+       target (BIN_BANKED_CODE analog so banktool has a banked_code.bin) + asmloader cold-boot
+       entry integration emitting headerless GAME.BIN / standalone LOADER.BIN / per-bank
+       BANK<n>.BIN + DSK packaging (`appmake +fat --add-file BANK<n>.BIN`) + CAS-buffer
+       (0x8000-0x87FF) invariant + 9.2b NIT2 cross-check. Co-developed with the 9.3 test game.
    - **9.3 = step 10 — `games/cpc-banked-test` end-to-end cap32 visual gate.**
 10. B7-5/T3-9 — `games/cpc-banked-test/` (1 dataset, 1 codeset, no SUBs) +
     `games/cpc-hello-banked/`. *Stage gate (B7/T3 exit):
