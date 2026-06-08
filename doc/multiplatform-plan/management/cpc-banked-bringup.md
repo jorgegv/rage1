@@ -1,9 +1,9 @@
 # Phase 4 remaining — cpc-banked bring-up (B6 / B7 / T3) — execution tracker
 
-> **Status (2026-06-08): DC1/DC2/DC4/DC5/DC6/DC7 RESOLVED; DC3 (memory map) IN
-> DISCUSSION — shape + constants + JSP placement settled; page-C layout/stack
-> (DC3-C) and the page-A code-banking strategy (DC3-A) still to confirm. DC3 is the
-> sole blocker for T3a/B6 code.** This is an
+> **Status (2026-06-08): ALL decisions DC1–DC7 RESOLVED — bring-up is UNBLOCKED;
+> ready to implement Stage T3a (Makefile-cpc-banked / zpragma / mmap).** Page-A fit,
+> CRT_ORG_CODE floor, and exact code-banking split are measure-and-iterate items
+> during implementation, not pre-decisions. This is an
 > *execution* tracker that turns the approved design in
 > [../banking.md §6 (B6/B7)](../banking.md) and
 > [../toolchain.md §Phase T3](../toolchain.md) into a gated step sequence, and
@@ -39,8 +39,8 @@ unblocks the steps in the next section.
 - **DC2 — One API vs split.** ✅ **RESOLVED (user, 2026-06-08): single
   `memory_switch_bank(bank)`** with an internal per-platform mapping table
   (banking.md B6-2 (a)).
-- **DC3 — cpc-banked memory map (the big one).** 🔶 **IN DISCUSSION (user,
-  2026-06-08). CENTRAL BLOCKER for all T3a/B6 code.** Shape A confirmed in shape
+- **DC3 — cpc-banked memory map (the big one).** ✅ **RESOLVED (user, 2026-06-08)
+  — all sub-parts settled below; bring-up is now UNBLOCKED.** Shape A confirmed in shape
   (swap window forced to `0x4000` because `0xC000`=screen). Concrete proposed map
   (all 8 banks used):
   ```
@@ -57,12 +57,33 @@ unblocks the steps in the next section.
   RAM4 = engine banked code | RAM5/6/7 = datasets/codesets
   ```
   Constants: `swap_window=0x4000`, `BANKED_FUNCTION_TABLE_BASE=0x4000`,
-  `CODESET_ASSETS_BASE=0x4000`, `BANKED_DATASET_BASE_ADDRESS=0x8000`,
-  `CRT_ORG_CODE=0x1200`, banks `{4,5,6,7}` via Configs 4–7.
-  **Still to settle:** (a) page-C layout order + stack top (DC3-C); (b) code-banking
-  strategy for the page-A fit — mirror ZX128 lowmem/banked split, measure, offload to
-  codesets (DC3-A, measure-and-iterate). **Embedded TBD:** does resident engine C fit
-  ~11.5 KB page A? (only knowable after first build; fallback = push more to codesets).
+  `CODESET_ASSETS_BASE=0x4000`, `BANKED_DATASET_BASE_ADDRESS=0x8000`, banks `{4,5,6,7}`
+  via Configs 4–7. `CRT_ORG_CODE` = **tunable** (see below), start at `0x1200`.
+
+  ✅ **DC3-C RESOLVED (user, 2026-06-08):** page-C layout as above (buffer@0x8000 forced
+  by §3.2; home data/bss above; stack `≈0xBF00` down per cpc-flat; hard-fail if >16 KB).
+
+  ✅ **DC3-A RESOLVED (user, 2026-06-08): measure-and-iterate.** Mirror the ZX128
+  lowmem/banked split into `engine/banked_code/cpc-banked/` as the START, build, measure
+  page-A usage, offload more `lowmem→banked/codeset` if over budget. Plus two refinements:
+  - **JSP render/composite code lives in the page-B HOME bank (RAM 1)**, co-located with
+    the JSP buffers, called via plain `CALL` from page-A (NOT via the RAM-4 dispatcher).
+    HARD CONSTRAINT: JSP code must never be in the banked RAM-4 set (else its buffers in
+    RAM 1 are paged out when RAM4/5-7 map into page B). Valid homes = page A (RAM0) or
+    page-B home (RAM1); RAM1 chosen to spare the scarce page-A budget. Fit: JSP code
+    (~6 KB budget, measure) + ~10 KB buffers ≤ 16 KB RAM1; fallback = JSP code resident
+    in page A, buffers stay RAM1.
+  - **`CRT_ORG_CODE` is a TUNABLE, not fixed.** Verified (cpc-hello map): nothing but CRT
+    *constants* live below `0x1200`; our code section starts at `0x1200`, so the
+    `0x0040–0x11FF` gap (~4 KB) is z88dk `cpc_crt0`'s conservative default and is
+    reclaimable. Start at `0x1200` for a working build, then lower `CRT_ORG_CODE` toward
+    just above the resident asm and VALIDATE each drop on cap32 (still `RUN"`-loads + runs)
+    — reclaims up to ~4 KB of page-A budget. (Confirm z88dk's reason for 0x1200 in
+    `cpc_crt0.asm`: lower-ROM overlay / AMSDOS load workspace / firmware-off.)
+
+  **Embedded TBD (now an implementation measure-item, NOT a blocker):** does resident
+  engine C fit page A after the above? Only knowable post-first-build; valves = lower
+  CRT_ORG_CODE + push more code to codesets + JSP in RAM1.
 - **DC4 — Dataset decompression buffer placement/size.** ✅ **RESOLVED (user,
   2026-06-08): as designed** — buffer in page C (`0x8000` region), sized from
   datagen's `BUILD_MAX_DATASET_SIZE_CPC6128`; hard-fail at build if oversized.
