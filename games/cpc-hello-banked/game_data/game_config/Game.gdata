@@ -1,0 +1,4 @@
+BEGIN_GAME_CONFIG
+    NAME        CpcHelloBanked
+    PLATFORM    cpc6128
+END_GAME_CONFIG

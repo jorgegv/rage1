@@ -1,0 +1,297 @@
+################################################################################
+##
+## RAGE1 - Retro Adventure Game Engine, release 1
+## (c) Copyright 2020 Jorge Gonzalez Villalonga <jorgegv@daikon.es>
+##
+## This code is published under a GNU GPL license version 3 or later.  See
+## LICENSE file in the distribution for details.
+##
+################################################################################
+##
+## Makefile-cpc-banked — CPC 6128 banked build
+##
+## Phase T3a bring-up: this file is currently a copy of Makefile-cpc-flat — it
+## builds a NO-BANKING CPC programme (the cpc-hello-banked smoke game) through
+## the +cpc toolchain to a bootable .dsk, proving the cpc6128 plumbing. The
+## banking machinery (bank-switch primitive, datasets, codesets, banks, the
+## bank-aware asmloader — modelled on Makefile-zx128) lands in Phase B6/B7; see
+## doc/multiplatform-plan/management/cpc-banked-bringup.md.
+##
+## Key differences from the ZX builds:
+##   - ZCC_TARGET=+cpc  (not +zx)
+##   - No ZX BASIC loader (AMSDOS header embedded by zcc -create-app)
+##   - No TAP packaging: produces .cpc, .dsk, .cdt instead
+##   - Section check uses mmap-cpc-banked.inc
+##
+## IMPORTANT — the bootable .dsk is built with the single-step
+## `zcc -create-app -subtype=dsk` path, NOT a separate `appmake +cpc --disk`
+## call. `appmake +cpc --disk` emits a malformed ~2.7 KB stub that Caprice32
+## reports as "disc missing"; only the integrated `zcc -create-app` driver
+## produces a valid ~194 KB Extended-CPC-DSK that boots. The raw .cpc AMSDOS
+## single-file image (~2.7 KB: AMSDOS header + payload — small by design) is
+## produced with `appmake +cpc -b <linked-bin>` (no --disk).
+##
+## Phase T3a: this file builds a NO-BANKING CPC programme (the
+## games/cpc-hello-banked smoke game) to prove the cpc6128 plumbing; the
+## RAGE1 engine is NOT linked yet, and the banking machinery (bank-switch
+## primitive, datasets, codesets, banks) lands in Phase B6/B7.
+##
+################################################################################
+
+.SILENT:
+
+MYMAKE			= $(MAKE) -s -f Makefile-cpc-banked
+ZPRAGMA_INC		= zpragma-cpc-banked.inc
+
+# T2-1: CPC z88dk target
+ZCC_TARGET		= +cpc
+
+# T3a: no-banking image, no TAP/bank list (banking machinery is Phase B6/B7).
+CPC_NAME		= game
+CPC_FILE		= $(CPC_NAME).cpc
+DSK_FILE		= $(CPC_NAME).dsk
+CDT_FILE		= $(CPC_NAME).cdt
+
+-include Makefile.common
+
+# ---- Override Makefile.common vars not used at Phase T3a (no banking yet) ----
+# Banking, datasets, codesets and SUBs arrive in Phase B6/B7.
+BANK_BINS		=
+BANK_TAPS		=
+SUB_DIRS		=
+SUB_BINS		=
+SUB_TAPS		=
+
+# T3a base source set: game_src + build/generated only.  (For cpc-hello-banked
+# the RAGE1 engine is NOT linked.)  Override CSRC/ASMSRC/OBJS accordingly.
+CSRC			= $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
+ASMSRC			= $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
+
+# ---- Phase R4: real CPC gfx HAL link set -------------------------------
+# A CPC game that opts in (CPC_LINK_ENGINE_GFX=1, set by `make build-minimal_cpc`)
+# links the REAL RAGE1 gfx HAL: the generic gfx.c/screen.c, the active CPC
+# backend gfx_jsp.c (gfx_sp1.c compiles to an EMPTY TU under jsp), and the
+# translated CPC HW-I/O asm primitives under engine/src/cpc/.  This is the
+# minimal engine subset needed to RENDER statically (R4); the full engine
+# main loop / datasets / banking stay OUT (deferred to G8/B6).  The game then
+# supplies its OWN main() in game_src (so engine/src/main.c is NOT pulled).
+CPC_ENGINE_GFX_CSRC	= $(ENGINE_DIR)/src/gfx.c \
+			  $(ENGINE_DIR)/src/gfx_sp1.c \
+			  $(ENGINE_DIR)/src/gfx_jsp.c \
+			  $(ENGINE_DIR)/src/screen.c
+CPC_ENGINE_GFX_ASMSRC	= $(wildcard $(ENGINE_DIR)/src/cpc/*.asm)
+# Pre-baked CPC asset sources live in a game_src/assets/ subdir (not matched by
+# the top-level $(GAME_SRC_DIR)/*.c wildcard) — pull them in explicitly.
+CPC_ASSET_CSRC		= $(wildcard $(GAME_SRC_DIR)/assets/*.c)
+
+ifeq ($(CPC_LINK_ENGINE_GFX),1)
+CSRC			+= $(CPC_ENGINE_GFX_CSRC) $(CPC_ASSET_CSRC)
+ASMSRC			+= $(CPC_ENGINE_GFX_ASMSRC)
+# -I game_src so a game's own "assets/sprite.h" resolves; -I the assets dir for
+# any game-supplied pre-baked asset headers.
+CPC_EXTRA_INC		= -I$(GAME_SRC_DIR) -I$(GAME_SRC_DIR)/assets
+endif
+
+# ---- Phase G8: full RAGE1 ENGINE LOOP link set (cpc-flat) --------------
+# A CPC game that opts in (CPC_LINK_ENGINE_FULL=1, set by `make build-minimal_cpc`)
+# links the WHOLE RAGE1 engine so the interrupt-driven game loop runs on real
+# CPC hardware (gfx.md Phase G8).  This is the cpc-flat analogue of the zx48
+# link set (Makefile-zx48 adds BANKED_CODE_SRC_COMMON to a flat, no-banking
+# build): engine/src/*.{c,asm} + the platform-neutral banked_code/common game
+# loop sources + generated + game_src.  The game supplies NO main() — the
+# engine's engine/src/main.c entry is pulled.
+#
+# One banked_code/common source is ZX-only and EXCLUDED on cpc-flat:
+#   - audio_zx_beeper.c : ZX beeper (bit_beepfx); the CPC has no beeper backend.
+#       The engine's audio_sfx_beeper_*() calls resolve to AU4's inline CPC
+#       shims in rage1/audio_cpc_ay.h, so no .c body is needed.
+# bullet.c (weapon/bullet logic) IS included: it is fully guarded by
+# #ifdef BUILD_FEATURE_HERO_HAS_WEAPON, so it compiles to an empty TU for
+# no-weapon games (minimal_audio_cpc) and provides bullet_add /
+# bullet_animate_and_move_all for games with a weapon (minimal_cpc clone of
+# minimal_jsp — R9).
+# (cpc6128 / cpc-banked relocates these into real banks — Phase T3/B6.)
+# engine/src/*.c, MINUS nothing (the ZX-only bodies self-#ifdef out under +cpc).
+# engine/src/*.asm MINUS 00asmdata.asm: that file hand-places the timekeeping /
+# asset / interrupt globals in the ZX-only `code_crt_common` low-memory section,
+# which the +cpc CRT does not map (the linker would silently drop it at $0000,
+# colliding with the CPC restart + 0x0038 IM1 vectors).  On cpc-flat those
+# globals have no low-memory constraint and are defined as plain C BSS in
+# engine/src/cpc/asmdata_cpc.c instead (pulled in via engine/src/cpc/*.c below).
+CPC_ENGINE_FULL_CSRC	= $(wildcard $(ENGINE_DIR)/src/*.c) \
+			  $(wildcard $(ENGINE_DIR)/src/cpc/*.c)
+CPC_ENGINE_FULL_ASMSRC	= $(filter-out %/00asmdata.asm, \
+			    $(wildcard $(ENGINE_DIR)/src/*.asm))
+CPC_BANKED_COMMON_CSRC	= $(filter-out %/audio_zx_beeper.c, \
+			    $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c))
+CPC_BANKED_COMMON_ASMSRC = $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm)
+
+ifeq ($(CPC_LINK_ENGINE_FULL),1)
+# CSRC/ASMSRC are REASSIGNED (=) here, which drops the JSP library sources that
+# Makefile.common added to CSRC/ASMSRC for GFX_BACKEND=jsp — so pull them back
+# in via $(JSP_CSRC)/$(JSP_ASMSRC) (empty unless the backend is jsp). With the
+# jsp backend the active gfx body is gfx_jsp.c (gfx_sp1.c compiles to an empty
+# TU); the engine/src/cpc/*.asm HW-I/O primitives (mode/palette/keyboard) are
+# still linked via $(CPC_ENGINE_GFX_ASMSRC). README §5.13 / cpc-renderer R6.
+CSRC			= $(CPC_ENGINE_FULL_CSRC) $(CPC_BANKED_COMMON_CSRC) $(JSP_CSRC) \
+			  $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)
+ASMSRC			= $(CPC_ENGINE_FULL_ASMSRC) $(CPC_BANKED_COMMON_ASMSRC) \
+			  $(CPC_ENGINE_GFX_ASMSRC) $(JSP_ASMSRC) \
+			  $(wildcard $(GAME_SRC_DIR)/*.asm) $(wildcard $(GENERATED_DIR)/*.asm)
+CPC_EXTRA_INC		= -I$(GAME_SRC_DIR)
+endif
+
+OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
+
+# Override CFLAGS: +cpc uses the default clib (NOT -clib=sdcc_iy, which is
+# ZX-specific). -SO2 instead of -SO3 for CPC (R2 PoC value). The pragma
+# include points to zpragma-cpc-banked.inc (CRT_ORG_CODE/stack/EIDI). At
+# Phase T3a it deliberately does NOT set __MMAP=-1 — see the long note in
+# zpragma-cpc-banked.inc (the +cpc CRT pre-defines __MMAP=0 and rejects the
+# override). The +cpc CRT's built-in section layout is used.
+# $(JSP_CPC_CFLAGS) (from Makefile.common) carries the JSP CPC build flags
+# (JSP_TARGET_CPC + CPC_MODE1 + JSP_CELL_MODEL_PIXEL to C and asm, the asm
+# include root, and REGISTER_SP); empty unless GFX_BACKEND=jsp on +cpc.
+CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(JSP_CPC_CFLAGS) $(DEBUG_FLAGS)
+
+# The custom mmap file for section-check
+CPC_MMAP_INC		= mmap-cpc-banked.inc
+
+# ---- Phase G7: engine compile-test path --------------------------------
+# G7-4: type-check the WHOLE RAGE1 engine (engine/src/*.c) under +cpc against
+# the live JSP gfx backend.  This is COMPILE-ONLY — we drive each .c to a
+# .o (via Makefile.common's generic `%.o: %.c` rule) and deliberately do NOT
+# link.  Linkage may fail at G7 and that is explicitly acceptable (gfx.md
+# Phase G7 phase-exit); the goal is C-level type-checking of the engine
+# sources against the active backend.  Used by `make build-00cpc-compile-test`.
+#
+# The gfx_sp1.c backend body self-#ifdef out under jsp (it compiles to an
+# empty translation unit), so only gfx_jsp.c carries a body — exactly one
+# gfx backend is active, matching the ZX selection model.
+ENGINE_COMPILE_TEST_CSRC	= $(wildcard $(ENGINE_DIR)/src/*.c) \
+				  $(wildcard $(GENERATED_DIR)/*.c) \
+				  $(wildcard $(GAME_SRC_DIR)/*.c)
+ENGINE_COMPILE_TEST_OBJS	= $(ENGINE_COMPILE_TEST_CSRC:.c=.o)
+
+# NOTE: section-check-cpc / final-cpc carry the '-cpc' suffix so they do NOT
+# override the same-named targets already defined in Makefile.common (which is
+# -included above). Reusing the bare names produced 7x "overriding recipe for
+# target" GNU Make warnings on every build.
+.PHONY: build main loader asmloader cpc dsk cdt final-cpc section-check-cpc compile-test
+
+build:
+	$(MYMAKE) loader
+	$(MYMAKE) asmloader
+	$(MYMAKE) dsk
+	$(MYMAKE) cpc
+	$(MYMAKE) cdt
+	$(MYMAKE) section-check-cpc
+	echo "Build completed SUCCESSFULLY (cpc-banked)"
+
+# G7-4: compile-only engine type-check (no link).  Compiles every engine/src/*.c
+# (plus generated + game_src) to .o under +cpc with the live JSP backend.
+# Exits 0 if all sources type-check; linkage is intentionally NOT attempted.
+compile-test: $(ENGINE_COMPILE_TEST_OBJS)
+	echo "Engine compile-test (cpc-banked / JSP backend) SUCCESSFUL — all engine/src/*.c type-checked under +cpc (no link)."
+
+##
+## CPC artifacts — built single-step with `zcc -create-app`.
+##
+## We do NOT pre-link a separate main.bin and then run `appmake --disk`:
+## that two-step path emits a ~2.7 KB malformed DSK stub. The integrated
+## `zcc -create-app -subtype=dsk` driver links AND packages in one pass,
+## producing a valid bootable Extended-CPC-DSK (~194 KB). It also writes
+## a main.map alongside the binary, consumed by section-check.
+##
+## zcc -create-app -subtype=dsk -> $(DSK_FILE) (disc image, Caprice32-loadable)
+## appmake +cpc -b $(CPC_NAME)    -> $(CPC_FILE) (raw AMSDOS .cpc image)
+##
+
+# Source list passed to zcc in one shot (CSRC/ASMSRC overridden above to
+# exclude the ZX-specific engine/src/*).
+CPC_SRC			= $(CSRC) $(ASMSRC)
+
+dsk: $(DSK_FILE)
+
+# Single-step build+link+package. zcc writes the linked binary as
+# $(CPC_NAME) (no extension) plus $(CPC_NAME).dsk and a $(CPC_NAME).map.
+$(DSK_FILE): $(CPC_SRC)
+	echo "Building + packaging $(DSK_FILE) (cpc-banked disc image)..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) \
+		-create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
+	cp $(CPC_NAME) $(MAIN_BIN)
+	cp $(CPC_NAME).map main.map
+
+# The raw .cpc AMSDOS image is built from the already-linked $(CPC_NAME)
+# binary via appmake (no --disk). Depends on the .dsk step having produced
+# the linked binary.
+cpc: $(CPC_FILE)
+
+$(CPC_FILE): $(DSK_FILE)
+	echo "Packaging $(CPC_FILE) (cpc-banked AMSDOS image)..."
+	$(APPMAKE) --org $(CRT_ORG_CODE) -b $(CPC_NAME) -o $(CPC_FILE)
+
+main: $(DSK_FILE)
+
+##
+## ASM loader (T2-4/T2-5): loadertool.pl emits asmloader.asm from the
+## engine/loader-cpc-flat/ template; we then assemble it with zcc +cpc.
+## On cpc-flat this is a trivial stub (no banks/SUBs); it is emitted for
+## toolchain symmetry and as a hook for the future pre-main boot sequence.
+##
+
+loader:
+	echo "Creating CPC loader stub..."
+	# T3a: trivial cpc-flat stub loader (NOT in the .dsk boot path — the .dsk is
+	# built by zcc -create-app). The real bank-aware cpc-banked asmloader is
+	# Phase B7/T3-6 (loadertool --platform=cpc-banked).
+	./tools/loadertool.pl --platform=cpc-flat -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER)
+
+asmloader: $(ASMLOADER_BIN)
+
+$(ASMLOADER_BIN):
+	echo "Assembling CPC loader stub..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
+
+# .cdt (tape image) via 2cdt (T2-8/T2-9)
+cdt: $(CDT_FILE)
+
+$(CDT_FILE): $(CPC_FILE)
+	echo "Packaging $(CDT_FILE) (cpc-banked)..."
+	if command -v 2cdt >/dev/null 2>&1; then \
+		2cdt -n GAME -X $(CRT_ORG_CODE) -L $(CRT_ORG_CODE) $(CPC_FILE) $(CDT_FILE) 2>/dev/null \
+		  || 2cdt -n GAME $(CPC_FILE) $(CDT_FILE); \
+	else \
+		echo "  [skip] 2cdt not found — $(CDT_FILE) not generated (install via docker/Dockerfile T2-9)"; \
+	fi
+
+# The 'final-cpc' target is a no-op alias for the CPC build shape (the ZX
+# 'final: $(FINAL_TAP)' in Makefile.common does not apply on cpc-flat).
+# On CPC-flat the 'dsk' step is the equivalent of 'final'. Suffixed with
+# '-cpc' to avoid overriding Makefile.common's 'final:' target.
+final-cpc: dsk
+
+##
+## section-check-cpc: validate that all sections land inside expected regions
+## (T2-3).  At Phase T3a, the +cpc CRT uses its own built-in section
+## layout (__MMAP is NOT -1 — see zpragma-cpc-banked.inc comments).
+## The full section-check is deferred to Phase B5/B6 when the custom mmap
+## hook is implemented.  We do a minimal sanity check instead: verify
+## that the .map file was produced and that no sections landed in the
+## screen RAM region (0xC000-0xFFFF).  Suffixed with '-cpc' to avoid
+## overriding Makefile.common's 'section-check:' target.
+##
+
+section-check-cpc:
+	echo "Section check (cpc-banked, Phase T3a minimal)..."
+	if [ ! -f main.map ]; then echo "  ERROR: main.map not produced"; exit 1; fi
+	if grep -E '^\s*[0-9A-Fa-f]{4}\s' main.map | awk '{print $$1}' | grep -qiE '^[Cc][0-9A-Fa-f]{3}'; then \
+		echo "  ERROR: section(s) in screen RAM region (0xC000-0xFFFF)!"; exit 1; \
+	fi
+	echo "  OK: no sections in screen RAM region."
+
+##
+## CRT_ORG_CODE exposed for appmake (read from zpragma-cpc-banked.inc)
+##
+
+CRT_ORG_CODE		= 0x1200

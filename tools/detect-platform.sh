@@ -111,12 +111,17 @@ case "${resolved}" in
         # T2-7: cpc464 is supported; top-level Makefile dispatches to Makefile-cpc-flat.
         echo "${resolved}"
         ;;
-    cpc6128|cpc|cpc-flat|cpc-banked)
-        echo "** Error: platform '${resolved}' is not yet supported (Phase T3 adds cpc6128/cpc-banked)." >&2
+    cpc6128)
+        # T3-8: cpc6128 is supported; built via the forced build-cpc6128 target
+        # (Makefile-cpc-banked). Emitted here for completeness / the generic path.
+        echo "${resolved}"
+        ;;
+    cpc|cpc-flat|cpc-banked)
+        echo "** Error: platform '${resolved}' is a memory-model token, not a build platform; use 'cpc464' or 'cpc6128'." >&2
         exit 1
         ;;
     *)
-        echo "** Error: unknown platform '${resolved}' (accepted: zx48, zx128, cpc464)" >&2
+        echo "** Error: unknown platform '${resolved}' (accepted: zx48, zx128, cpc464, cpc6128)" >&2
         exit 1
         ;;
 esac

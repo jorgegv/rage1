@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc-hello build-00cpc-compile-test build-minimal_cpc build-minimal_audio_cpc all-test-builds all-test-builds-zx all-test-builds-cpc
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc6128 build-cpc data-cpc6128 build-cpc-hello build-cpc-hello-banked build-00cpc-compile-test build-minimal_cpc build-minimal_audio_cpc all-test-builds all-test-builds-zx all-test-builds-cpc
 
 help:
 	echo "============================================================"
@@ -33,6 +33,7 @@ help:
 	echo "    build48        legacy silent alias for build-zx48 (permanent, README §5.6)"
 	echo "    build128       legacy silent alias for build-zx128 (permanent, README §5.6)"
 	echo "    build-cpc464   force CPC464/664 (cpc-flat) build"
+	echo "    build-cpc6128  force CPC 6128 (cpc-banked) build   (alias: build-cpc)"
 	echo ""
 	echo "Parallel test-build options (all-test-builds*):"
 	echo "    MAX_PARALLEL_JOBS=N  games built concurrently, each in build/_tests/<game>/ (default 4)"
@@ -158,6 +159,23 @@ build-cpc464:
 data-cpc464:
 	$(DATAGEN) -p cpc464 -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
 
+# T3a: CPC6128 (cpc-banked) forced build target, symmetric with build-cpc464.
+# Phase T3a bring-up — Makefile-cpc-banked currently builds a no-banking CPC
+# programme (proves the cpc6128 plumbing); banking machinery is Phase B6/B7.
+# 'build-cpc' is the alias for the most-capable CPC target (toolchain.md §T3).
+build-cpc6128:
+	$(MYMAKE) clean
+	$(MYMAKE) PLATFORM=cpc6128 config
+	$(MYMAKE) PLATFORM=cpc6128 data-cpc6128
+	$(MYMAKE) -f Makefile-cpc-banked build
+
+build-cpc: build-cpc6128
+
+# T3-7: datagen invocation for CPC6128 — -p cpc6128 (emits PLATFORM_CPC6128 +
+# PLATFORM_CPC_BANKED). Same shape as data-cpc464.
+data-cpc6128:
+	$(DATAGEN) -p cpc6128 -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
+
 ###############################################
 ##
 ## TARGETS FOR TEST GAME BUILDS
@@ -217,7 +235,7 @@ SPLIT_TESTS_DIR		= $(BUILD_DIR)/_tests
 # touches. Excludes .git, build/, docs/tests and stale repo-root artifacts.
 SPLIT_COPY_ITEMS	= engine external tools lib etc games \
 			  Makefile Makefile.common Makefile-48 Makefile-128 \
-			  Makefile-zx48 Makefile-zx128 Makefile-cpc-flat Makefile.game \
+			  Makefile-zx48 Makefile-zx128 Makefile-cpc-flat Makefile-cpc-banked Makefile.game \
 			  $(wildcard *.inc)
 
 ZX_SPLIT_TARGETS	= $(addprefix test-build-split-,$(ZX_TEST_GAMES))
@@ -241,6 +259,11 @@ test-build-split-%:
 # T2-10: CPC hello-world test game build target
 build-cpc-hello:
 	$(MYMAKE) build-cpc464 target_game=$(TEST_GAMES_DIR)/cpc-hello
+
+# T3-9: CPC6128 (cpc-banked) hello-world smoke test game. Proves the cpc6128
+# toolchain end-to-end (datagen -p cpc6128 -> Makefile-cpc-banked -> .dsk).
+build-cpc-hello-banked:
+	$(MYMAKE) build-cpc6128 target_game=$(TEST_GAMES_DIR)/cpc-hello-banked
 
 # G8: minimal_cpc — the first CPC game that runs the REAL RAGE1 ENGINE GAME
 # LOOP (gfx.md Phase G8).  It links the WHOLE engine (CPC_LINK_ENGINE_FULL=1):
