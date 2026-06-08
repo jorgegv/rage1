@@ -81,6 +81,20 @@ banking:
     ## there anyway (banktool skips banks already occupied by the reserved code).
     codeset_valid_banks:     [ 5, 6, 7 ]
     engine_code_memory_bank: 4
+    ## DC6 (B7 step 9.2b): cold-boot LOADER.BIN constants, read by
+    ## tools/loadertool.pl --platform=cpc-banked (lifted out of the hard-coded
+    ## literals it used at step 9.1).  Packaging Model 2 (design note
+    ## doc/multiplatform-plan/cpc-banked-disk-loader.md §8.5): a standalone
+    ## LOADER.BIN firmware-loads the headerless engine image (main_file) to
+    ## main_code_start, then each per-bank file, then `jp main_code_start`.
+    ##   loader_org      LOADER.BIN org (low-RAM gap below the engine image)
+    ##   main_code_start engine entry / ORG; MUST equal CRT_ORG_CODE in
+    ##                   Makefile-cpc-banked (Shape A = 0x1200)
+    ##   main_file       filename of the headerless resident engine image
+    loader:
+      loader_org:            0x0100
+      main_code_start:       0x1200
+      main_file:             GAME.BIN
 
 ##
 ## build configuration

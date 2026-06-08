@@ -423,6 +423,18 @@ sub _decompress_function_block {
     return _slurp( _template_path( $zx_target, 'asmloader.dzx0.snippet.asm.in' ) ) . "\n";
 }
 
+# DC6 helper: normalise a config address value to a 0xXXXX string.  The YAML
+# value may be an int or a '0x...'-prefixed string (the rage1-config.yml banking
+# addresses are written as 0x...); $default (a '0x...' string) is used when the
+# value is absent.  Mirrors the hex-or-int handling already used for the ZX 128
+# interrupts.base_code_address read below.
+sub _normalize_addr {
+    my ( $val, $default ) = @_;
+    $val = $default unless defined $val;
+    my $num = ( $val =~ /^0x/ ) ? hex( $val ) : $val;
+    return sprintf( '0x%04x', $num );
+}
+
 sub generate_assembler_loader {
     my ( $bank_bins, $sub_bins, $outdir ) = @_;
     my $asm_loader = $outdir . '/' . $asm_loader_name;
@@ -460,16 +472,18 @@ sub generate_assembler_loader {
     # smoke game has none; SUBs on cpc-banked are Phase B8 — so the cpc-banked
     # template carries no @@SUB_*@@ placeholders).
     #
-    # LOADER_ORG / MAIN_CODE_START are literals here for now; DC6 lifts them
-    # into YAML when the cpc-banked banking build integration lands (step-9
-    # increment 2 — Makefile-cpc-banked + asmloader cold-boot entry).
+    # DC6 (B7 step 9.2b): LOADER_ORG / MAIN_CODE_START / MAIN_FILE are lifted
+    # into etc/rage1-config.yml (banking.cpc-banked.loader); the historic step-9.1
+    # literals (0x0100 / 0x1200 / GAME.BIN) are kept as fallbacks so a config
+    # lacking the loader block still emits a working, byte-identical loader.
     if ( $zx_target eq 'cpc-banked' ) {
-        my $loader_org      = '0x0100';   # standalone LOADER.BIN, low-RAM gap
-        my $main_code_start = '0x1200';   # engine entry/ORG (CRT_ORG_CODE, Shape A)
+        my $loader_cfg      = $cfg->{'banking'}{'cpc-banked'}{'loader'} // {};
+        my $loader_org      = _normalize_addr( $loader_cfg->{'loader_org'},      '0x0100' );   # standalone LOADER.BIN, low-RAM gap
+        my $main_code_start = _normalize_addr( $loader_cfg->{'main_code_start'}, '0x1200' );   # engine entry/ORG (CRT_ORG_CODE, Shape A)
         # Model 2 (design note §8.5): the loader is a SEPARATE LOADER.BIN that
         # also firmware-loads the headerless engine image (GAME.BIN) -> engine
         # ORG, in addition to the bank files.
-        my $main_file       = 'GAME.BIN';
+        my $main_file       = $loader_cfg->{'main_file'} // 'GAME.BIN';
 
         my $bank_load_block = _build_bank_load_block( $zx_target, $bank_bins );
 
