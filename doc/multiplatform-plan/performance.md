@@ -1,8 +1,8 @@
 # Phase 8 — Engine performance optimization (first AI pass)
 
-> **Status: PROPOSED (2026-06-08). Plan only — NO code written.** Awaiting user
-> review. Sub-phases PO1–PO7 below are a *draft* scope; decisions in §3 and the
-> open questions in §6 need the user's sign-off before any implementation.
+> **Status: APPROVED (2026-06-08). Plan only — NO code written yet.** User signed off
+> the §3 decisions D1–D5 and resolved the §6 questions Q1–Q5 (recorded below). Phase 8
+> is queued AFTER Phase 4 (cpc-banked) and Phases 5–7; PO1 starts when the phase begins.
 >
 > Cross-refs: hot-path map in this doc §2 is grounded in the engine survey of
 > `engine/src/*.c` + `engine/banked_code/common/*.c`. Safety gate builds on
@@ -50,7 +50,7 @@ so the phase's hard prerequisite (PO1) is a cycle/frame-time harness.
 5. `btile_animate_all()` — `src/btile.c:107,111` double `dataset_get_banked_btile_ptr()` call; repeated `current_screen_ptr->…` derefs.
 6. `bullet_animate_and_move_all()` — `banked_code/common/bullet.c:50` repeated `bi->movement.delay` load in inner loop.
 
-## 3. Decisions (DRAFT — for user sign-off)
+## 3. Decisions (✅ ALL ACCEPTED by user, 2026-06-08 — D1–D5)
 
 **D1 — Retire the byte-identity gate for Phase 8; replace with behavioral +
 measured gates.** Every Phase-8 change must (a) keep `tests/00regression/` green
@@ -81,8 +81,11 @@ platforms + a measured PO1 delta + independent review for non-trivial/asm work)
 
 - **PO1 — Speed measurement harness + baselines.** Add a repeatable
   cycles-per-frame (or frame-time) metric over a deterministic scenario, reusing
-  the regression harness's fixed-frame runs. Likely an emulator T-state read
-  (FUSE/`cap32`) bracketing N frames, exposed as `make perf` / `tools/perf-*.sh`.
+  the regression harness's fixed-frame runs. **Primary target = ZX via JNEXT**
+  (Q1: JNEXT has the better profiling support, and ZX/CPC share the same Z80 so
+  platform-neutral-code gains validate on both); an emulator T-state/cycle read
+  brackets N frames, exposed as `make perf` / `tools/perf-*.sh`. **CPC/`cap32` used
+  occasionally to double-check that the wins carry over.**
   Commit per-game baselines for the hot games (**blobs** = many enemies,
   **default** = full features, **get_weapon** = bullets, **mapgen** = big map).
   *Exit:* a one-command, low-variance number per game/platform.
@@ -133,32 +136,31 @@ platforms + a measured PO1 delta + independent review for non-trivial/asm work)
   reviewed by an independent agent (never its author), per project rules.
 - **No removals / permanent aliases** policy (README §5.6) still holds.
 
-## 6. Open questions (need user decision before/at PO1)
+## 6. Resolved questions (✅ user, 2026-06-08)
 
-- **Q1 — Measurement mechanism?** (a) Emulator T-state counting over a fixed
-  regression scenario (FUSE for ZX, `cap32` for CPC); (b) an in-engine
-  deterministic frame/cycle counter; (c) both. *Recommendation: (a)* — the
-  regression harness already drives deterministic, headless, fixed-frame runs, so
-  bracketing them with a T-state read is the lowest-effort objective metric and
-  needs no engine code in the shipped binary.
-- **Q2 — Optimization target & size budget?** Speed-only, size-only, or
-  speed-first-with-a-size-cap? *Recommendation: speed-first, hard cap "no total
-  size regression" (per-TU may grow if total holds).*
-- **Q3 — Asm scope ceiling?** How many functions may move to asm (maintainability
-  cost)? *Recommendation: only the top 2–3 PO1-confirmed kernels, each with C
-  fallback retained.*
-- **Q4 — Keep-threshold?** Minimum measured per-frame speedup for a change to be
-  worth its complexity (e.g. ≥2% on a hot game, or ≥X T-states/frame)?
-  *Recommendation: set a threshold at PO1 once baseline variance is known.*
-- **Q5 — Per-game vs whole-suite metric?** Optimize against the worst hot game
-  (blobs) or a weighted average across hot games? *Recommendation: report all hot
-  games; gate on "no regression anywhere + win on the targeted game".*
+- **Q1 — Measurement mechanism. RESOLVED: profile on ZX (JNEXT) as the PRIMARY
+  target; spot-check CPC (`cap32`) occasionally.** Rationale (user): ZX and CPC run
+  the same Z80, so optimizations to platform-neutral code are valid for both, and
+  **JNEXT has much better profiling support** — so the main optimization work runs in
+  ZX mode (emulator cycle/T-state read over the deterministic fixed-frame regression
+  runs), with periodic cap32/CPC builds to confirm the enhancements carry over.
+- **Q2 — Target & size budget. RESOLVED: speed-first, hard cap "no total size
+  regression"** (a per-TU may grow if the total holds).
+- **Q3 — Asm scope ceiling. RESOLVED: NO fixed limit.** Keep moving C→asm for as long
+  as we find strong optimization candidates (each still gated: regression green +
+  measured delta + C fallback retained per D5 + independent review). Expectation
+  (user): we likely won't find many, so in practice this lands near ~2–3 kernels — but
+  the cap is "strong candidates exhausted," not an arbitrary number.
+- **Q4 — Keep-threshold. RESOLVED: set the exact threshold at PO1** once baseline
+  variance is known (e.g. ≥2 % on a hot game, or ≥X T-states/frame).
+- **Q5 — Per-game vs whole-suite metric. RESOLVED: report all hot games; gate on
+  "no regression anywhere + a win on the targeted game".**
 
 ## 7. Sequencing & risk
 
 - **PO1 is the gating prerequisite** — the entire phase is guesswork without it;
-  it is also the only sub-phase with an unknown (does FUSE/`cap32` give a stable
-  enough T-state read over the headless harness?). De-risk it first with a spike.
+  it is also the only sub-phase with an unknown (does JNEXT give a stable enough
+  cycle/T-state read over the headless harness?). De-risk it first with a spike.
 - **Expected value distribution:** PO2 (safe C hoists) and PO5 (asm kernels) carry
   most of the win; PO3/PO4 are smaller, opportunistic. PO6 is likely near-empty.
 - **Highest risk:** PO5 asm — behavioral bugs that pass a coarse screenshot but
