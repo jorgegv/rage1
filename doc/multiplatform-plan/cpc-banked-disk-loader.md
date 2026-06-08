@@ -280,6 +280,30 @@ the zx128 loader/templates/tooling are untouched.
 4. **Firmware-disable — `init_interrupts()` keeps it.** The asmloader does NOT
    disable firmware; it restores Config 0 and `jp main`, and the existing CRT +
    `init_interrupts()` path disables firmware / sets the IM1 ISR as it does today.
+5. **Loader packaging — SEPARATE `LOADER.BIN` (Model 2; user, 2026-06-08, B7
+   step 9.2).** Rather than the §3 single-integrated-`GAME.BIN` sketch (which
+   would need the asmloader linked as a *pre-CRT* entry so its direct firmware
+   calls run before the z88dk `+cpc` CRT seizes the firmware register state —
+   §6), the loader ships as its **own AMSDOS binary** `LOADER.BIN`, the
+   `RUN"LOADER` target. As a standalone `--no-crt` asm binary it runs in
+   **native firmware state by construction** (no CRT takeover), so the direct
+   `CAS IN *` calls are guaranteed valid — this sidesteps the §6 timing risk
+   entirely and mirrors the proven ZX 128 structure (a separate `asmloader.bin`
+   that pulls in the rest). Consequently the loader **also firmware-loads the
+   resident engine image** `GAME.BIN` (headerless raw, placed by `CAS IN DIRECT`
+   HL at the engine ORG) in addition to each `BANK<n>.BIN`, then `jp` the engine
+   entry. (`CAS IN DIRECT` reads a whole file to EOF, so no size needs to be
+   carried.) NOTE for step 9.2: this assumes the cpc-banked engine is a SINGLE
+   contiguous image from its ORG — true while the `+cpc` default mmap is used
+   (as cpc-flat is today); if the Shape-A custom mmap later splits home data to
+   page C `0x8000`, the packaging emits/loads that segment separately. Verify
+   against the link map when the banking build lands.
+   INVARIANT (step 9.2): the 2 KB `CAS IN OPEN` buffer at `0x8000–0x87FF` is
+   reused for every file load (engine + each bank), so the engine image's
+   home-data floor must stay **above** `0x87FF` (Shape A keeps `0x8000–0x9FFF`
+   as the uninitialised dataset-decompress scratch, with home data at
+   `≈0xA000+`, so the buffer lands harmlessly in scratch — confirm the loaded
+   engine places no bytes into `0x8000–0x87FF` when the banking build lands).
 
 Still to confirm **empirically in the PoC** (not design risks, just unverified
 firmware details): exact `CAS IN OPEN` → `CAS IN DIRECT` headerless-file

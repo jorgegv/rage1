@@ -464,14 +464,20 @@ sub generate_assembler_loader {
     # into YAML when the cpc-banked banking build integration lands (step-9
     # increment 2 — Makefile-cpc-banked + asmloader cold-boot entry).
     if ( $zx_target eq 'cpc-banked' ) {
-        my $loader_org      = '0x0100';   # pre-CRT cold-boot loader, low-RAM gap
-        my $main_code_start = '0x1200';   # engine entry (CRT_ORG_CODE, Shape A)
+        my $loader_org      = '0x0100';   # standalone LOADER.BIN, low-RAM gap
+        my $main_code_start = '0x1200';   # engine entry/ORG (CRT_ORG_CODE, Shape A)
+        # Model 2 (design note §8.5): the loader is a SEPARATE LOADER.BIN that
+        # also firmware-loads the headerless engine image (GAME.BIN) -> engine
+        # ORG, in addition to the bank files.
+        my $main_file       = 'GAME.BIN';
 
         my $bank_load_block = _build_bank_load_block( $zx_target, $bank_bins );
 
         my $tmpl = _apply_substitutions( _load_template( $zx_target ), {
             LOADER_ORG       => $loader_org,
             MAIN_CODE_START  => $main_code_start,
+            MAIN_FILE        => $main_file,
+            MAIN_FILE_LEN    => length( $main_file ),
             BANK_LOAD_BLOCK  => $bank_load_block,
         } );
 

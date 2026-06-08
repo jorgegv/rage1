@@ -2,23 +2,24 @@
 ;; This file has been generated automatically, do not edit!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; RAGE1 cpc-banked (CPC 6128) cold-boot ASM loader.
+;; RAGE1 cpc-banked (CPC 6128) cold-boot ASM loader (LOADER.BIN).
 ;;
-;; Streams each populated expansion-RAM bank from disc into its physical
-;; RAM bank via the AMSDOS firmware, then hands control to the resident
-;; engine.  See doc/multiplatform-plan/cpc-banked-disk-loader.md (§3 load
-;; sequence, §4 firmware mechanism, §6 PoC findings).
+;; Packaging model 2 (design note §8.5): this is a SEPARATE AMSDOS binary,
+;; the RUN"LOADER target.  Being a standalone --no-crt asm binary it runs in
+;; NATIVE firmware state by construction (no z88dk +cpc CRT takeover), so the
+;; firmware jumpblock entries are reached by a DIRECT `call` (the `firmware`
+;; interposer the step-8a PoC needed post-CRT is NOT required here — design
+;; note §6) and the §6 CRT-exx timing risk is sidestepped entirely.  Mirrors
+;; the proven ZX 128 structure (a separate asmloader that pulls in the rest).
 ;;
-;; Per-bank sequence (one BANK<n>.BIN file per populated bank, Option A):
-;;   CAS IN OPEN -> select GA Config N -> CAS IN DIRECT the file VERBATIM
-;;   into the 0x4000 swap window (banks stay ZX0-compressed; there is NO
-;;   decompress-at-load) -> restore GA Config 0 -> CAS IN CLOSE.
-;;
-;; Firmware calling convention: this loader runs at COLD BOOT in NATIVE
-;; firmware state (pure ASM, before the z88dk +cpc CRT seizes the firmware
-;; alternate-register set / 0x0038 ISR), so the firmware jumpblock entries
-;; are reached by a DIRECT `call` — the z88dk `firmware` interposer the
-;; step-8a PoC needed (post-CRT) is NOT required here (design note §6).
+;; It firmware-loads, then hands over to the engine:
+;;   1. the resident engine image GAME.BIN (headerless raw) -> engine ORG, and
+;;   2. each populated expansion-RAM bank BANK<n>.BIN -> its physical RAM bank,
+;;      VERBATIM into the 0x4000 swap window (banks stay ZX0-compressed; there
+;;      is NO decompress-at-load), via select GA Config N / CAS IN DIRECT /
+;;      restore GA Config 0.
+;;   3. jp the engine entry.
+;; (CAS IN DIRECT reads a whole file to EOF, so no file size is carried.)
 ;;
 ;; Interrupts stay ENABLED throughout: the AMSDOS disc routines rely on the
 ;; firmware 300 Hz tick (motor spin-up / timeouts), so the loader does NOT
@@ -34,14 +35,33 @@
     defc CAS_IN_DIRECT = 0xBC83    ;; HL=load address; loads the whole open file
     defc CAS_IN_CLOSE  = 0xBC7A
 
-@@BANK_LOAD_BLOCK@@    ;; all banks streamed; the GA is back in Config 0 (base map).
+    ;; ---- load the resident engine image GAME.BIN -> @@MAIN_CODE_START@@ ----
+    ;; (Config 0 / base map; the 0x4000 window is the home RAM 1 here.)
+    ld   b, @@MAIN_FILE_LEN@@        ;; filename length
+    ld   hl, _mainname              ;; filename "@@MAIN_FILE@@"
+    ld   de, 0x8000                 ;; 2K firmware input buffer (page-C scratch:
+                                    ;; the dataset decompress buffer, unused pre-game)
+    call CAS_IN_OPEN
+    jp   nc, _loader_error
+    ld   hl, @@MAIN_CODE_START@@    ;; destination = engine ORG (headerless raw image)
+    call CAS_IN_DIRECT
+    push af                         ;; preserve the load result across CAS IN CLOSE
+    call CAS_IN_CLOSE
+    pop  af
+    jp   nc, _loader_error
+    jr   _maindone
+_mainname:
+    defm "@@MAIN_FILE@@"
+_maindone:
+
+@@BANK_LOAD_BLOCK@@    ;; engine image + all banks loaded; GA is back in Config 0.
     ;; Hand over to the resident engine entry.  Firmware is still live;
     ;; the engine's init_interrupts() disables it and installs the IM1 ISR.
     jp @@MAIN_CODE_START@@
 
-    ;; A firmware file op failed (disc error / missing bank file).  With a
-    ;; correctly packaged disc this is unreachable; hang with the firmware
-    ;; still alive so the failure is observable rather than silently running
-    ;; the engine against half-loaded banks.
+    ;; A firmware file op failed (disc error / missing file).  With a correctly
+    ;; packaged disc this is unreachable; hang with the firmware still alive so
+    ;; the failure is observable rather than silently running the engine against
+    ;; a half-loaded image.
 _loader_error:
     jr _loader_error
