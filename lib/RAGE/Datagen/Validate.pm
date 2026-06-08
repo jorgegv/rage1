@@ -100,10 +100,18 @@ sub check_game_config_is_valid {
                    $ctx->{game_config}->{'platform'} =~ /^cpc/ );
     if ( $is_cpc ) {
         # For CPC, set a synthetic zx_target so the rest of datagen.pl's
-        # ZX-centric code (dataset layout, 48K fallback paths) degrades
-        # gracefully to the 48K (flat/no-banking) code path.  This is
-        # intentionally the most conservative fallback.
-        $ctx->{game_config}->{'zx_target'} = '48' unless defined( $ctx->{game_config}->{'zx_target'} );
+        # ZX-centric code (dataset layout, codeset/banking paths, 48K
+        # fallback paths) degrades to the MATCHING ZX path:
+        #   - banked CPC (cpc6128 / cpc-banked) -> '128': real banked
+        #     datasets/codesets, exactly like ZX 128 (the dataset-layout and
+        #     codeset code keys on zx_target eq '48' ? home : banked).
+        #   - flat CPC (cpc464 / cpc-flat, no banking) -> '48': everything
+        #     in the home dataset (the conservative no-banking fallback).
+        # B7 step 9.3: before this, ALL CPC forced '48', which collapsed every
+        # cpc-banked screen into the home dataset (no bank ever generated).
+        my $is_banked_cpc = is_build_feature_enabled( $ctx, 'PLATFORM_CPC_BANKED' );
+        $ctx->{game_config}->{'zx_target'} = ( $is_banked_cpc ? '128' : '48' )
+            unless defined( $ctx->{game_config}->{'zx_target'} );
     } elsif ( defined( $ctx->{game_config}->{'zx_target'} ) ) {
         ( $ctx->{game_config}->{'zx_target'} eq '48' ) or
         ( $ctx->{game_config}->{'zx_target'} eq '128' ) or do {
