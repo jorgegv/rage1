@@ -1,6 +1,8 @@
 # Phase 4 remaining — cpc-banked bring-up (B6 / B7 / T3) — execution tracker
 
-> **Status: READY TO START, blocked on user decisions (2026-06-08).** This is an
+> **Status (2026-06-08): DC1/DC2/DC4/DC5 RESOLVED; DC6 recommendation pending a
+> one-word confirm; DC3 (the memory map) DEFERRED for deep discussion and is now
+> the sole blocker for all T3a/B6 code.** This is an
 > *execution* tracker that turns the approved design in
 > [../banking.md §6 (B6/B7)](../banking.md) and
 > [../toolchain.md §Phase T3](../toolchain.md) into a gated step sequence, and
@@ -26,39 +28,45 @@ increments — not in one unsupervised pass.
 These are the points where `banking.md` leaves a choice or a TBD. Resolving them
 unblocks the steps in the next section.
 
-- **DC1 — Bank-switch source of truth.** B6-1: wrap `cpct_pageMemory()` vs. emit a
-  direct ~6-byte Gate-Array MMR write (banking.md ~515 notes the latter). Map
-  `bank ∈ {4,5,6,7}` → MMR Configs 3..7 at the `0x4000` window. *Recommendation:
-  direct MMR write (no cpctelera link dependency on the banked path, mirrors the
-  hand-translated CPC HW-I/O approach already used for keyboard/mode).* **Decide.**
-- **DC2 — One API vs split.** B6-2: single `memory_switch_bank(bank)` with an
-  internal per-platform mapping table (recommended) vs `_zx`/`_cpc` variants.
-  *Recommendation: single API (banking.md B6-2 (a)).* **Confirm.**
-- **DC3 — cpc-banked memory map numbers (the big one).** Adopt Shape A as-is
-  (swap window `0x4000` via Configs 3..7; engine code in page A `0x0000–0x3FFF`;
-  home data page C `0x8000–0xBFFF`; screen `0xC000`; extended banks RAM 4..7)?
-  And fix the concrete constants for `etc/rage1-config.yml`:
-  `BANKED_FUNCTION_TABLE_BASE=0x4000`, `BANKED_DATASET_BASE_ADDRESS=0x8000`
-  (= dataset compile ORG, §3.2 invariant), `CODESET_ASSETS_BASE=0x4000`,
-  swap_window `0x4000`, `CRT_ORG_CODE` (z88dk +cpc default `0x1200`), valid
-  extended banks `{4,5,6,7}`. **The TBD inside DC3:** does the lowmem engine C
-  fit the ~15.5 KB page-A budget? This can only be measured after T3-1/B6-6 give
-  us a build; the fallback (buffer-in-page-A / migrate more code to codesets) is
-  pre-authorised if it doesn't. *Recommendation: adopt Shape A + these constants;
-  treat the fit as a measure-and-iterate item, not a pre-decision.* **Decide
-  Shape A + constants.**
-- **DC4 — Dataset decompression buffer placement/size.** Per R2: buffer lives in
-  page C (`0x8000` region), sized from datagen's
-  `BUILD_MAX_DATASET_SIZE_CPC6128`; hard-fail at build if oversized.
-  *Recommendation: as designed.* **Confirm.**
-- **DC5 — SUB / SP1-equivalent buffer defaults on cpc-banked** (B7-4/B8): JSP has
-  no SP1 DSBUF; where do SUB load slot + scratch live? *Likely page B
-  (`0x4000`, Config 0) per banking.md §3.1.4.* **Confirm or defer SUBs to B8** (B7
-  can ship with "no SUBs" smoke game; SUB support is Phase B8 anyway).
-- **DC6 — Locomotive BASIC loader vs pure-asmloader entry** (T3-4, risk R-T3): no
-  reliable headless BASIC tokeniser. *Recommendation: AMSDOS `RUN"FILE.CPC"` →
-  pure asmloader entry (same single-step `zcc -create-app -subtype=dsk` path that
-  cpc-flat proved), no BASIC tokeniser dependency.* **Decide.**
+- **DC1 — Bank-switch source of truth.** ✅ **RESOLVED (user, 2026-06-08): direct
+  ~6-byte Gate-Array MMR write** (no cpctelera link dependency on the banked path;
+  mirrors the hand-translated CPC HW-I/O already used for keyboard/mode). B6-1 maps
+  `bank ∈ {4,5,6,7}` → MMR Configs 3..7 at the `0x4000` window via a direct `out`.
+- **DC2 — One API vs split.** ✅ **RESOLVED (user, 2026-06-08): single
+  `memory_switch_bank(bank)`** with an internal per-platform mapping table
+  (banking.md B6-2 (a)).
+- **DC3 — cpc-banked memory map numbers (the big one).** ⛔ **OPEN — deferred for
+  deep discussion (user, 2026-06-08). THIS IS THE CENTRAL BLOCKER:** Stage T3a
+  (Makefile/zpragma/mmap) and all of B6 engine infra need these constants. Candidate
+  (Shape A): swap window `0x4000` via Configs 3..7; engine code in page A
+  `0x0000–0x3FFF`; home data page C `0x8000–0xBFFF`; screen `0xC000`; extended banks
+  RAM 4..7; `BANKED_FUNCTION_TABLE_BASE=0x4000`, `BANKED_DATASET_BASE_ADDRESS=0x8000`
+  (= dataset ORG, §3.2 invariant), `CODESET_ASSETS_BASE=0x4000`, `CRT_ORG_CODE=0x1200`.
+  Embedded TBD: does the lowmem engine C fit the ~15.5 KB page-A budget? (measure
+  after first build; fallback = migrate code to codesets). **To be worked through
+  with the user before any T3a/B6 code.**
+- **DC4 — Dataset decompression buffer placement/size.** ✅ **RESOLVED (user,
+  2026-06-08): as designed** — buffer in page C (`0x8000` region), sized from
+  datagen's `BUILD_MAX_DATASET_SIZE_CPC6128`; hard-fail at build if oversized.
+- **DC5 — SUB / SP1-equivalent buffer defaults on cpc-banked.** ✅ **RESOLVED
+  (user, 2026-06-08): use the JSP buffers** (the CPC analogue of ZX's "DSBUF =
+  SP1's buffer"). Caveat: **JSP buffers are MUCH smaller than SP1's**, so the
+  SUB-load / scratch budget on cpc-banked is tight — size SUB targets against the
+  actual JSP buffer size and hard-fail if a SUB overflows it. Detailed sizing lands
+  with B7-4 / Phase B8 (B7 smoke game ships with no SUBs).
+- **DC6 — pure-asmloader entry vs BASIC loader / disc autoboot.** 🔶 **Recommendation
+  confirmed-pending.** User asked: *is there a CPC option to autoload a file on
+  start?* Findings: **stock CPC 464/664/6128 has NO power-on floppy autoboot** for
+  AMSDOS/BASIC data discs (only ROM cartridges / CPC+ auto-run). The universal
+  mechanism is the **AMSDOS binary `RUN"FILE`** — the 128-byte AMSDOS header carries
+  load+entry addresses, so one command loads+executes; emulators auto-issue it
+  (cpc-flat ALREADY does this: `tools/cap32-shot.sh:68` → `cap32 -a 'run"NAME.'`).
+  The ONLY true zero-keystroke autoboot is a **CP/M system-format disc with a boot
+  sector** (`|CPM`), which is heavyweight (CP/M disc format + boot-sector loader) and
+  still not power-on-automatic from cold BASIC. *Recommendation: pure asmloader as
+  the AMSDOS binary entry, launched via `RUN"FILE` (no BASIC tokeniser; reuse the
+  proven cpc-flat `zcc -create-app -subtype=dsk` packaging). Adopt CP/M boot-sector
+  only if end-user zero-keystroke boot becomes a hard requirement.* **Confirm.**
 
 ## Gated step sequence (each step: build green + ZX byte-identical + cap32 check
 where runnable + independent review for non-trivial/asm; commit per step)
