@@ -1,0 +1,29 @@
+// 00cpc-banked-compile-test — SYNTHETIC compile-test target (Phase B6).
+//
+// NOT a real game.  Purpose: type-check the WHOLE RAGE1 engine
+// (engine/src/*.c) under the +cpc toolchain with the cpc-banked memory
+// model (BUILD_FEATURE_PLATFORM_CPC_BANKED) against the live JSP gfx
+// backend.  This is the cpc6128 sibling of 00cpc-compile-test (which uses
+// PLATFORM cpc464 / cpc-flat): it activates the banking codepaths in
+// engine/src/00lowmem.c, dataset.c and codeset.c, which compile OUT under
+// cpc-flat.  Used by `make build-00cpc-banked-compile-test`.
+//
+// Compile-only is the bar — linkage is NOT attempted (the bank-switch
+// primitive memory_switch_bank() is a separate B6 step; until it lands the
+// engine references an unresolved symbol that is a LINK-time, not a
+// compile-time, concern).
+//
+// The '00' name prefix keeps this first in `ls`; it is matched by the
+// '00cpc%' CPC test filter.
+BEGIN_GAME_CONFIG
+	NAME		CpcBankedCompileTest
+	PLATFORM	cpc6128
+	GFX_BACKEND	JSP
+	SCREEN		INITIAL=Screen01
+	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK
+	GAME_FUNCTION	TYPE=MENU NAME=my_menu_screen FILE=menu.c
+	GAME_AREA	TOP=1 LEFT=1 BOTTOM=21 RIGHT=30
+	LIVES_AREA	TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
+	INVENTORY_AREA	TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
+	DEBUG_AREA	TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
+END_GAME_CONFIG

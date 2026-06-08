@@ -44,7 +44,13 @@
 
 #include "features.h"
 
-#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT )
+// B6-3/B6-4: the CPC branch must cover ALL CPC platforms, not just cpc-flat.
+// cpc-banked (cpc6128) is equally a CPC target with no <arch/spectrum.h>; the
+// two memory-model macros (CPC_FLAT, CPC_BANKED) together span every CPC
+// machine (cpc464->flat, cpc6128->banked).  The machine ids are listed too,
+// mirroring the original cpc-flat condition.
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT ) || \
+    defined( BUILD_FEATURE_PLATFORM_CPC6128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 
 // CPC: inert ZX colour-attribute macros (two-layer colour model — discarded
 // on CPC).  Values mirror <arch/zx/spectrum.h> for parity.

@@ -1,0 +1,28 @@
+// Single trivial 1x1 BTile (G7-4).
+//
+// DEVIATION (G7-4 "referencing one PNG"): datagen.pl rejects PNG asset
+// conversion for CPC platforms — `dispatch_png_asset_handling` dies with
+// "CPC asset conversion not yet wired — see Phase A5" (tools/datagen.pl
+// ~line 1509).  PNG->CPC is a later phase (A5), out of scope for the G7
+// stub.  We therefore use an equally-trivial inline PIXELS bitmap, which
+// flows through datagen identically on ZX and CPC and needs no asset
+// pipeline.  Each pixel is two chars ("##"=set, ".."=clear), so an 8x8
+// cell is 16 chars wide x 8 rows (matching e.g. games/minimal Live.gdata).
+// ATTR is ZX-only and inert on CPC (two-layer colour model); kept for
+// source/datagen symmetry.
+BEGIN_BTILE
+	NAME	Tile
+	ROWS	1
+	COLS	1
+
+	PIXELS	################
+	PIXELS	##............##
+	PIXELS	##..########..##
+	PIXELS	##..##....##..##
+	PIXELS	##..##....##..##
+	PIXELS	##..########..##
+	PIXELS	##............##
+	PIXELS	################
+
+	ATTR	INK_WHITE | PAPER_BLACK
+END_BTILE

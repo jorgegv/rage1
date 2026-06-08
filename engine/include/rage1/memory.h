@@ -47,6 +47,18 @@ void init_memory(void);
         #define DATASET_LOAD_BASE		0xC000
     #endif
 
+    // B6-3/B6-4: cpc-banked (CPC 6128) — Shape A.  Mirrors
+    // banking.cpc-banked.engine_code_memory_bank / .swap_window in
+    // etc/rage1-config.yml (DC1/DC3; banking.md §6).  The swap window is
+    // 0x4000 (not 0xC000 as on ZX), because the CPC screen lives at
+    // 0xC000 and that window cannot be paged.  RAM bank 4 holds the
+    // engine banked-function table and banked code.
+    #ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+        #define ENGINE_CODE_MEMORY_BANK		4
+        #define BANKED_FUNCTION_TABLE_BASE	0x4000
+        #define DATASET_LOAD_BASE		0x4000
+    #endif
+
     // function type definitions
     // types for all different function signatures used must be defined here
     typedef void (*banked_function_t)( void );

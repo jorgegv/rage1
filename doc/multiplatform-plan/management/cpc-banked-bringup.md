@@ -237,3 +237,19 @@ where runnable + independent review for non-trivial/asm; commit per step)
   (Shape B) and that AMSDOS `RUN"` loads at that org; and confirm `cpc_crt0.asm`'s
   reason for the `0x1200` default before lowering it (lower-ROM overlay / AMSDOS
   workspace / firmware-off).
+- **Banked-function ASM-table dir is hardcoded `…/banked/128/`** (B6 step-4 review NIT):
+  `build.banked_functions.asm_table_filename` in `etc/rage1-config.yml` is the literal
+  `build/generated/banked/128/00banked_function_table.asm`, so a cpc-banked build writes
+  its table (correct `org 0x4000`) into a ZX-named `128` dir. Harmless until B7 (the ASM
+  is generated but not compiled/linked at B6 step 4); make it platform-aware (per-platform
+  `BANKED_CODE_DIR_<tag>`) when the cpc-banked bank binaries are actually built (B7 / step 8).
+- **Widen the banking-RUNTIME `BUILD_FEATURE_ZX_TARGET_128` guards for cpc-banked**
+  (B6 step-4 review MINOR): step 4 made the banking *consumer* files compile, but several
+  runtime call sites are still gated on the legacy `ZX_TARGET_128` (which cpc-banked does
+  NOT define), so a built cpc-banked game would skip them: `engine/src/banked.c:12`
+  (`init_banked_code()` body), `engine/src/main.c:45/57` (`init_banked_code()` +
+  `audio_sfx_beeper_init()` calls), `engine/src/map.c:171` (`dataset_activate()` on screen
+  entry). Widen these to the canonical banked-platform predicate
+  (`PLATFORM_ZX128 || PLATFORM_CPC_BANKED`, the B5-4 pattern) as part of the B6 step that
+  brings the engine LOOP up on cpc-banked (after the bank-switch primitive lands). Audit for
+  any other `ZX_TARGET_128`-gated banking runtime while doing so.

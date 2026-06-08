@@ -56,6 +56,12 @@ extern struct codeset_assets_s *codeset_assets;
 #ifdef BUILD_FEATURE_PLATFORM_ZX128
     #define CODESET_ASSETS_BASE		0xC000
 #endif
+// B6-3/B6-4: cpc-banked (CPC 6128) — Shape A. Codesets are paged into the
+// 0x4000 swap window. Mirrors banking.cpc-banked.swap_window in
+// etc/rage1-config.yml (DC3; banking.md §6).
+#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+    #define CODESET_ASSETS_BASE		0x4000
+#endif
 
 ///////////////////////////////////////////////////////////
 //

@@ -136,7 +136,10 @@ input_scancode_t input_capture_scancode( void ) __z88dk_fastcall;
 // for the G7 gfx-stub compile-test needs a complete `struct input_udk_s` and
 // the input_* macro surface — provided by this minimal STUB header (no real
 // CPC keyboard reading yet; IN5 wires cpctelera).
-#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT )
+// B6-3/B6-4: cpc-banked (cpc6128) is equally a CPC target and needs the same
+// CPC input HAL header; widen the guard to all CPC platforms.
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC_FLAT ) || \
+    defined( BUILD_FEATURE_PLATFORM_CPC6128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 #include "rage1/input_cpc.h"
 #endif
 

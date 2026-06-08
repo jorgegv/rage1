@@ -15,7 +15,7 @@ MYMAKE	= make -s
 -include Makefile.common
 
 # build targets
-.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc6128 build-cpc data-cpc6128 build-cpc-hello build-cpc-hello-banked build-00cpc-compile-test build-minimal_cpc build-minimal_audio_cpc all-test-builds all-test-builds-zx all-test-builds-cpc
+.PHONY: data all build clean clean-config data_depend build-data help regression check-input-includes check-input-hal build-zx48 build-zx128 build48 build128 build-cpc464 data-cpc464 build-cpc6128 build-cpc data-cpc6128 build-cpc-hello build-cpc-hello-banked build-00cpc-compile-test build-00cpc-banked-compile-test build-minimal_cpc build-minimal_audio_cpc all-test-builds all-test-builds-zx all-test-builds-cpc
 
 help:
 	echo "============================================================"
@@ -173,8 +173,15 @@ build-cpc: build-cpc6128
 
 # T3-7: datagen invocation for CPC6128 — -p cpc6128 (emits PLATFORM_CPC6128 +
 # PLATFORM_CPC_BANKED). Same shape as data-cpc464.
+# B6-3/B6-4: cpc-banked is a BANKED platform, so (unlike cpc-flat) it also
+# needs the generated banked-function definitions header: memory.h includes
+# banked_function_defs.h under the banked-platform guard, and 00lowmem.c's
+# trampolines reference it.  Generate it with -p cpc-banked so the table org
+# comes from banking.cpc-banked.swap_window (0x4000), mirroring the generic
+# ZX `data:` target.
 data-cpc6128:
 	$(DATAGEN) -p cpc6128 -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
+	./tools/generate_banked_function_defs.pl -p cpc-banked
 
 ###############################################
 ##
@@ -299,6 +306,18 @@ build-00cpc-compile-test:
 	$(MYMAKE) PLATFORM=cpc464 config target_game=$(TEST_GAMES_DIR)/00cpc-compile-test
 	$(MYMAKE) PLATFORM=cpc464 data-cpc464 target_game=$(TEST_GAMES_DIR)/00cpc-compile-test
 	$(MYMAKE) -f Makefile-cpc-flat compile-test
+
+# B6-3/B6-4 (step 4): cpc6128 sibling of build-00cpc-compile-test.  Configures +
+# datagens the 00cpc-banked-compile-test game as cpc6128 (PLATFORM_CPC_BANKED),
+# then COMPILE-ONLY type-checks the engine under +cpc with the banking
+# codepaths ACTIVE (00lowmem.c / dataset.c / codeset.c).  The bank-switch
+# primitive 00bswitch.c is filtered out until its CPC arm lands (B6-1/B6-2);
+# see Makefile-cpc-banked. Linkage is intentionally not attempted.
+build-00cpc-banked-compile-test:
+	$(MYMAKE) clean
+	$(MYMAKE) PLATFORM=cpc6128 config target_game=$(TEST_GAMES_DIR)/00cpc-banked-compile-test
+	$(MYMAKE) PLATFORM=cpc6128 data-cpc6128 target_game=$(TEST_GAMES_DIR)/00cpc-banked-compile-test
+	$(MYMAKE) -f Makefile-cpc-banked compile-test
 
 # detailed build rules for each test game
 build-minimal:

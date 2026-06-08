@@ -21,7 +21,16 @@
 #include "rage1/map.h"
 
 // Banking settings
-#define BANKED_DATASET_BASE_ADDRESS     0x5B00
+// Dataset decompression-buffer base: the address a dataset is decompressed
+// TO and where banked_assets is anchored.  Default 0x5B00 = ZX low-memory
+// buffer (zx128).  cpc-banked Shape A places the buffer at 0x8000 (page C);
+// Shape B would use 0x0040 (buffer fills page A) — see banking.md §3.1.4 /
+// DC3-D.  B6-3/B6-4.
+#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+    #define BANKED_DATASET_BASE_ADDRESS     0x8000
+#else
+    #define BANKED_DATASET_BASE_ADDRESS     0x5B00
+#endif
 
 // The following structure contains pointers to asset tables.  It is
 // intended to be generated as the first element in a dataset_N.c file, so
