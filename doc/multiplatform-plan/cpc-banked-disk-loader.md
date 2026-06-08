@@ -76,8 +76,12 @@ AMSDOS  RUN"GAME            ; AMSDOS loads the resident entry binary GAME.BIN
                             ; AMSDOS header, then jumps to the asmloader entry.
                             ; This image is < 64 KB and loads under Config 0.
 
-asmloader:                  ; firmware still enabled
-    DI
+asmloader:                  ; firmware still enabled — and STAYS enabled:
+                            ; the loader does NOT `di` (the AMSDOS disc
+                            ; routines need the firmware 300 Hz tick, and
+                            ; decision Q4 leaves firmware-disable to
+                            ; init_interrupts()). [corrected from an earlier
+                            ; `DI` here — see §8 Q4 and the step-8a PoC.]
     ; --- stream each populated bank from disc into its RAM bank ---
     for each (bank N, disc source) in the bank table:    ; N in {4,5,6,7}
         select Config N                  ; out (0x7Fxx), 0xC0|N  -> RAM N @ 0x4000

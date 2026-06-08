@@ -175,6 +175,7 @@ sub get_zx_target {
         return '48'      if $p eq 'zx48';
         return '128'     if $p eq 'zx128';
         return 'cpc-flat' if $p eq 'cpc-flat';
+        return 'cpc-banked' if $p eq 'cpc-banked';
         # Any other value would have died at option-parse time.
     }
     open GAME_CONFIG, $game_config_name or
@@ -188,6 +189,10 @@ sub get_zx_target {
         # T2-5: cpc464 maps to cpc-flat loader template.
         if ( $line =~ /^PLATFORM\s+cpc464$/ ) {
             return 'cpc-flat';
+        }
+        # T3-6: cpc6128 maps to the cpc-banked loader template.
+        if ( $line =~ /^PLATFORM\s+cpc6128$/ ) {
+            return 'cpc-banked';
         }
         # A1 follow-up: accept the new PLATFORM directive (zx48|zx128) and
         # map it back to the legacy 48|128 internal token. Mirrors the
@@ -264,6 +269,8 @@ my %loader_template_dir = (
     '48'      => 'engine/loader-zx48',
     '128'     => 'engine/loader-zx128',
     'cpc-flat' => 'engine/loader-cpc-flat',
+    # T3-6/B7 step 9: cpc-banked (CPC 6128) bank-streaming cold-boot loader.
+    'cpc-banked' => 'engine/loader-cpc-banked',
 );
 
 sub _slurp {
@@ -306,14 +313,26 @@ sub _apply_substitutions {
 # separator emitted between every block in the legacy output).
 sub _build_bank_load_block {
     my ( $zx_target, $bank_bins ) = @_;
-    return '' unless $zx_target eq '128';
+    return '' unless ( $zx_target eq '128' or $zx_target eq 'cpc-banked' );
     my $snippet = _slurp( _template_path( $zx_target, 'asmloader.bank-load.snippet.asm.in' ) );
     my $out = '';
     foreach my $bank ( sort keys %$bank_bins ) {
-        $out .= _apply_substitutions( $snippet, {
+        my %tokens = (
             BANK      => $bank,
             BANK_SIZE => $bank_bins->{ $bank }{'size'},
-        } );
+        );
+        # cpc-banked: per-bank firmware file load (BANK<n>.BIN) + Gate-Array
+        # Config select.  The bank number maps 1:1 to the GA RAM Config
+        # (DC1: Config N -> RAM N; the GA value is 0xC0 | (bank & 7)),
+        # mirroring the engine's 00bswitch.c CPC arm.  ($bank is a string
+        # hash key; the +0 just keeps it in unambiguous numeric context.)
+        if ( $zx_target eq 'cpc-banked' ) {
+            my $file = sprintf( 'BANK%s.BIN', $bank );
+            $tokens{ 'BANK_FILE' }       = $file;
+            $tokens{ 'BANK_FILE_LEN' }   = length( $file );
+            $tokens{ 'BANK_CONFIG_HEX' } = sprintf( 'C%X', ( $bank + 0 ) & 0x07 );
+        }
+        $out .= _apply_substitutions( $snippet, \%tokens );
         $out .= "\n";
     }
     return $out;
@@ -435,6 +454,38 @@ sub generate_assembler_loader {
         return;
     }
 
+    # B7 step 9 (T3-6): cpc-banked loader.  Like cpc-flat (no @@MAIN_SIZE@@:
+    # the resident engine is loaded by AMSDOS, not by this loader) but WITH
+    # the per-bank firmware streaming block.  No SUBs at this phase (the B7
+    # smoke game has none; SUBs on cpc-banked are Phase B8 — so the cpc-banked
+    # template carries no @@SUB_*@@ placeholders).
+    #
+    # LOADER_ORG / MAIN_CODE_START are literals here for now; DC6 lifts them
+    # into YAML when the cpc-banked banking build integration lands (step-9
+    # increment 2 — Makefile-cpc-banked + asmloader cold-boot entry).
+    if ( $zx_target eq 'cpc-banked' ) {
+        my $loader_org      = '0x0100';   # pre-CRT cold-boot loader, low-RAM gap
+        my $main_code_start = '0x1200';   # engine entry (CRT_ORG_CODE, Shape A)
+
+        my $bank_load_block = _build_bank_load_block( $zx_target, $bank_bins );
+
+        my $tmpl = _apply_substitutions( _load_template( $zx_target ), {
+            LOADER_ORG       => $loader_org,
+            MAIN_CODE_START  => $main_code_start,
+            BANK_LOAD_BLOCK  => $bank_load_block,
+        } );
+
+        if ( $tmpl =~ /\@\@(\w+)\@\@/ ) {
+            die "** Error: loadertool.pl: template $loader_template_dir{$zx_target}/asmloader.asm.in references an unknown placeholder '\@\@$1\@\@'\n";
+        }
+
+        open my $asm, '>', $asm_loader
+            or die "\n** Error: could not open $asm_loader for writing\n";
+        print $asm $tmpl;
+        close $asm;
+        return;
+    }
+
     my $loader_org = sprintf( '0x%04x',
         ( $zx_target eq '48' ? $loader_org_48 : $loader_org_128 ) );
 
@@ -499,23 +550,23 @@ sub generate_assembler_loader {
 # are rejected with 'not yet implemented' (Phase T2 brings them up).
 # ($opt_platform declared file-level near top so subs can read it.)
 GetOptions( 'platform=s' => \$opt_platform ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128|cpc-flat>]\n";
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128|cpc-flat|cpc-banked>]\n";
 
 if ( defined( $opt_platform ) ) {
     my $p = lc( $opt_platform );
-    # T2-5: cpc-flat is now supported.
-    if ( $p ne 'zx48' and $p ne 'zx128' and $p ne 'cpc-flat' ) {
+    # T2-5: cpc-flat supported.  T3-6/B7 step 9: cpc-banked supported.
+    if ( $p ne 'zx48' and $p ne 'zx128' and $p ne 'cpc-flat' and $p ne 'cpc-banked' ) {
         if ( $p =~ /^cpc/ ) {
-            die "** Error: loadertool.pl --platform $opt_platform: accepted CPC platform is 'cpc-flat' (Phase T3 adds cpc-banked).\n";
+            die "** Error: loadertool.pl --platform $opt_platform: accepted CPC platforms are 'cpc-flat' | 'cpc-banked'.\n";
         }
-        die "** Error: loadertool.pl --platform $opt_platform: accepted values are zx48 | zx128 | cpc-flat.\n";
+        die "** Error: loadertool.pl --platform $opt_platform: accepted values are zx48 | zx128 | cpc-flat | cpc-banked.\n";
     }
 }
 
 our( $opt_i, $opt_o, $opt_s );
 getopts("i:o:s");
 ( defined( $opt_i ) and defined( $opt_o ) ) or
-    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128>]\n";
+    die "usage: $0 -i <dataset_bin_dir> -o <output_dir> [-s] [--platform <zx48|zx128|cpc-flat|cpc-banked>]\n";
 
 my $loading_screen = $opt_s;
 

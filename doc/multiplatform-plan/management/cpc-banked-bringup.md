@@ -216,6 +216,24 @@ where runnable + independent review for non-trivial/asm; commit per step)
    into the `0x4000` window, restore Config 0, `jp MAIN`) + `loadertool.pl
    --platform=cpc-banked` template substitution; lift loader-org literals into
    YAML (DC6 = pure asmloader entry). Depends on 8a.
+   **GATED INTO 3 INCREMENTS:**
+   - **9.1 ✅ DONE — loader template + loadertool wiring.** NEW
+     `engine/loader-cpc-banked/{asmloader.asm.in, asmloader.bank-load.snippet.asm.in}`
+     (cold-boot pure-ASM bank streamer: `CAS IN OPEN` 0xBC77 → GA Config N select
+     `0xC0|bank`/port 0x7F00 → `CAS IN DIRECT` 0xBC83 the `BANK<n>.BIN` VERBATIM into
+     0x4000 → restore Config 0 → `CAS IN CLOSE` 0xBC7A → `jp` engine; NO `di` / NO
+     firmware-disable per Q4 — matches the validated 8a PoC). `loadertool.pl`
+     `--platform=cpc-banked` + `PLATFORM cpc6128` → `engine/loader-cpc-banked` template;
+     `_build_bank_load_block` emits the per-bank blocks (BANK_FILE/_LEN/_CONFIG_HEX).
+     Verified: emitted loader for a synthetic {4,5,6,7} set assembles under `zcc +cpc`;
+     zx128 loader BYTE-IDENTICAL (reviewer-confirmed). Review APPROVE-WITH-NITS (3 nits
+     fixed). LOADER_ORG=0x0100 / MAIN_CODE_START=0x1200 are literals pending DC6 YAML-lift (9.2).
+   - **9.2 NEXT — Makefile-cpc-banked banking build.** Engine link (CPC_LINK_ENGINE_FULL
+     analog) + `banks` (banktool -p cpc-banked) + the cpc-banked banked-code compile/link
+     target (BIN_BANKED_CODE analog so banktool has a banked_code.bin) + widen the
+     `ZX_TARGET_128` runtime guards (Follow-up) + asmloader cold-boot entry integration +
+     DSK packaging (`appmake +fat --add-file BANK<n>.BIN`); lift LOADER_ORG/MAIN to YAML (DC6).
+   - **9.3 = step 10 — `games/cpc-banked-test` end-to-end cap32 visual gate.**
 10. B7-5/T3-9 — `games/cpc-banked-test/` (1 dataset, 1 codeset, no SUBs) +
     `games/cpc-hello-banked/`. *Stage gate (B7/T3 exit):
     `make build-cpc6128 target_game=games/cpc-banked-test` → runnable `.dsk`;
