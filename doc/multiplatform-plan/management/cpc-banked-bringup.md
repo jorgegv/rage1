@@ -242,8 +242,28 @@ where runnable + independent review for non-trivial/asm; commit per step)
        analog) + `banks` (banktool -p cpc-banked) + the cpc-banked banked-code compile/link
        target (BIN_BANKED_CODE analog so banktool has a banked_code.bin) + asmloader cold-boot
        entry integration emitting headerless GAME.BIN / standalone LOADER.BIN / per-bank
-       BANK<n>.BIN + DSK packaging (`appmake +fat --add-file BANK<n>.BIN`) + CAS-buffer
-       (0x8000-0x87FF) invariant + 9.2b NIT2 cross-check. Co-developed with the 9.3 test game.
+       BANK<n>.BIN + multi-file DSK packaging + CAS-buffer (0x8000-0x87FF) invariant + 9.2b
+       NIT2 cross-check. Co-developed with the 9.3 test game.
+
+       **⚠ PACKAGING CORRECTION (verified 2026-06-08, supersedes the handover/R-DL2 note):**
+       `appmake +fat` is **MSX-only** (formats: msxdos / msxdos-tak / msxbasic — see
+       z88dk src/appmake/fat.c) and CANNOT make a CPC disc; and a bare `appmake +cpc --disk`
+       emits the malformed stub (per Makefile-cpc-flat header). The working multi-file CPC
+       AMSDOS-disc tool is **`appmake +cpmdisk`** (z88dk src/appmake/cpm2.c), which supports
+       `-f cpcsystem`, `--container dsk`, repeatable `--add-file host:cpmname`, and a `-b`
+       boot binary. Proven recipe (smoke-tested → valid 194816-byte Extended-CPC-DSK):
+       ```
+       # 1. AMSDOS-headered, RUN"-able boot loader (load+entry = loader_org):
+       appmake +cpc --org <loader_org> -b <asmloader.bin> -o LOADER.BIN
+       # 2. GAME.BIN = headerless raw engine image; BANK<n>.BIN = headerless raw
+       #    compressed banks (banktool bank_<n>.bin) — both added verbatim.
+       # 3. one bootable disc:
+       appmake +cpmdisk -f cpcsystem --container dsk -b LOADER.BIN \
+         --add-file GAME.BIN --add-file BANK4.BIN [--add-file BANK5.BIN ...] -o game.dsk
+       ```
+       Open item for 9.2c/9.3 cap32 gate: confirm cap32 `RUN"LOADER` boots LOADER.BIN and
+       its firmware CAS-IN of the headerless GAME.BIN/BANK<n>.BIN files succeeds end-to-end
+       (the step-8a PoC validated the firmware-CAS-IN-into-paged-bank primitive already).
    - **9.3 = step 10 — `games/cpc-banked-test` end-to-end cap32 visual gate.**
 10. B7-5/T3-9 — `games/cpc-banked-test/` (1 dataset, 1 codeset, no SUBs) +
     `games/cpc-hello-banked/`. *Stage gate (B7/T3 exit):
