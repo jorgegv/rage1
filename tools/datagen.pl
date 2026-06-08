@@ -647,11 +647,16 @@ if ( defined( $opt_p ) ) {
         # directive in the game's .gdata.  $forced_build_target remains 0.
         $ctx->{forced_build_target} = 0;
     }
+    elsif ( $p eq 'cpc6128' ) {
+        # T3-7: CPC6128 (cpc-banked) — same as cpc464: no ZX_TARGET; the PLATFORM
+        # directive drives feature emission. $forced_build_target stays 0.
+        $ctx->{forced_build_target} = 0;
+    }
     elsif ( $p =~ /^cpc/  ) {
-        die "** Error: datagen.pl -p $opt_p: accepted CPC platform is 'cpc464' (Phase T3 adds cpc6128).\n";
+        die "** Error: datagen.pl -p $opt_p: accepted CPC platforms are 'cpc464' | 'cpc6128'.\n";
     }
     else {
-        die "** Error: datagen.pl -p $opt_p: accepted values are zx48 | zx128 | cpc464.\n";
+        die "** Error: datagen.pl -p $opt_p: accepted values are zx48 | zx128 | cpc464 | cpc6128.\n";
     }
 } else {
     $ctx->{forced_build_target} = $opt_t || 0;

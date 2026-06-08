@@ -730,8 +730,9 @@ sub read_input_data {
                 # For cpc464 (T2-6) emits PLATFORM_CPC464 + PLATFORM_CPC_FLAT.
                 if ( $line =~ /^PLATFORM\s+(\w+)$/ ) {
                     my $platform = lc( $1 );
-                    if ( $platform ne 'zx48' and $platform ne 'zx128' and $platform ne 'cpc464' ) {
-                        die "PLATFORM: $file, line $current_line: PLATFORM must be one of: zx48, zx128, cpc464\n";
+                    if ( $platform ne 'zx48' and $platform ne 'zx128'
+                         and $platform ne 'cpc464' and $platform ne 'cpc6128' ) {
+                        die "PLATFORM: $file, line $current_line: PLATFORM must be one of: zx48, zx128, cpc464, cpc6128\n";
                     }
                     # T2-6: CPC464 handling — emit machine-identity AND memory-model macros.
                     if ( $platform eq 'cpc464' ) {
@@ -739,6 +740,17 @@ sub read_input_data {
                         # No ZX_TARGET for CPC; skip derived_zx_target.
                         add_build_feature( $ctx, 'PLATFORM_CPC464' );      # machine identity
                         add_build_feature( $ctx, 'PLATFORM_CPC_FLAT' );    # memory model
+                        # IN5-3: input backend is forced by PLATFORM (cpc* -> CPC).
+                        add_build_feature( $ctx, input_backend_for_platform( $platform ) );
+                        next;
+                    }
+                    # T3-7: CPC6128 handling — machine identity CPC6128, memory model
+                    # CPC_BANKED (the banked CPC ext-RAM model; symmetric with cpc464 ->
+                    # cpc-flat). No ZX_TARGET. Banking infra lands in Phase B6/B7.
+                    if ( $platform eq 'cpc6128' ) {
+                        $ctx->{game_config}->{'platform'} = $platform;
+                        add_build_feature( $ctx, 'PLATFORM_CPC6128' );     # machine identity
+                        add_build_feature( $ctx, 'PLATFORM_CPC_BANKED' );  # memory model
                         # IN5-3: input backend is forced by PLATFORM (cpc* -> CPC).
                         add_build_feature( $ctx, input_backend_for_platform( $platform ) );
                         next;
