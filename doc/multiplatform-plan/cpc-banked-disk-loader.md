@@ -217,6 +217,16 @@ needed. The PoC itself sidesteps this with a single-file self-load DSK.
 tool or a custom DSK writer now — the `appmake` EDSK writer is the path; bridge
 RAGE1's banks to it at step 9.*
 
+**R-DL2 bridge identified (2026-06-08): `appmake +fat --add-file`.** Beyond the
+`+cpc --disk` bank-space path (which is tied to z88dk-linker banks), z88dk's
+`+fat` target (`src/appmake/fat.c`) exposes `-a --add-file [hostfile:diskfile]`
+plus `-f --format` and `--container dsk` — it writes *arbitrary* host files
+under chosen 8.3 names into a disc image. So the step-9 packaging is:
+`appmake +fat` the bootable main binary, then `--add-file` each RAGE1
+`bank_*.bin` as `BANK<n>.BIN`. No z88dk-linker bank model, no custom DSK tool.
+*Still to verify empirically at step 9: the exact `-f` CPC format name produces
+a bootable `cpcsystem` EDSK, and the loader can read the added bank files.*
+
 **R-DL3 — RESOLVED (Q3, 2026-06-08).** *AMSDOS workspace vs resident page-C
 data.* The AMSDOS workspace (≈`0xA700–0xBFFF`) coincides with the cpc-banked JSP
 fixed-buffer region (DC7), which is **not populated until the game starts** —
