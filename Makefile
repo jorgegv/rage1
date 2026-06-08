@@ -53,6 +53,7 @@ clean:
 		$(BANKED_CODE_DIR)/*.{map,lis,linked,o,c.asm,,sym,bin} \
 		$(BANKED_CODE_DIR_COMMON)/*.{map,lis,linked,o,c.asm,,sym,bin} \
 		$(BANKED_CODE_DIR_128)/*.{map,lis,linked,o,c.asm,,sym,bin} \
+		$(BANKED_CODE_DIR_CPC_BANKED)/*.{map,lis,linked,o,c.asm,,sym,bin} \
 		2>/dev/null
 config:
 	-rm -rf $(GAME_SRC_DIR)/* $(GAME_DATA_DIR)/* $(GENERATED_DIR)/* 2>/dev/null

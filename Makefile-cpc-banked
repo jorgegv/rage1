@@ -62,6 +62,18 @@ SUB_DIRS		=
 SUB_BINS		=
 SUB_TAPS		=
 
+# ---- B6 step 7: banked-code source dir for this platform ------------------
+# This build's banked-code sources live in engine/banked_code/cpc-banked/ (the
+# CPC-6128 counterpart of the ZX engine/banked_code/128/ split; see DC3-A and
+# that dir's README).  BANKED_CODE_{DIR,SRC,OBJS}_CPC_BANKED are defined in
+# Makefile.common; selected here as the active banked-code set so the Stage-B7
+# banked-code compile/link target can consume it platform-agnostically.  At B6
+# the dir holds no compiled sources yet (only the README placeholder), so the
+# wildcards are empty and this binding is inert until B7.
+BANKED_CODE_DIR_PLATFORM	= $(BANKED_CODE_DIR_CPC_BANKED)
+BANKED_CODE_SRC_PLATFORM	= $(BANKED_CODE_SRC_CPC_BANKED)
+BANKED_CODE_OBJS_PLATFORM	= $(BANKED_CODE_OBJS_CPC_BANKED)
+
 # T3a base source set: game_src + build/generated only.  (For cpc-hello-banked
 # the RAGE1 engine is NOT linked.)  Override CSRC/ASMSRC/OBJS accordingly.
 CSRC			= $(wildcard $(GAME_SRC_DIR)/*.c) $(wildcard $(GENERATED_DIR)/*.c)

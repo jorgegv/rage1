@@ -17,6 +17,7 @@ GENERATED_DIR			= $(BUILD_DIR)/generated
 GENERATED_DIR_DATASETS		= $(GENERATED_DIR)/datasets
 GENERATED_DIR_CODESETS		= $(GENERATED_DIR)/codesets
 GENERATED_DIR_BANKED_128	= $(GENERATED_DIR)/banked/128
+GENERATED_DIR_BANKED_CPC_BANKED	= $(GENERATED_DIR)/banked/cpc-banked
 GENERATED_DIR_BANKED_COMMON	= $(GENERATED_DIR)/banked/common
 GENERATED_DIR_ASMLOADER		= $(GENERATED_DIR)/asmloader
 GENERATED_DIR_SUBS		= $(GENERATED_DIR)/subs
@@ -68,6 +69,16 @@ BANKED_CODE_ASMSRC_COMMON	= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm ) $(wildc
 BANKED_CODE_CSRC_COMMON		= $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c ) $(wildcard $(GENERATED_DIR_BANKED_COMMON)/*.c )
 BANKED_CODE_SRC_COMMON		= $(BANKED_CODE_ASMSRC_COMMON) $(BANKED_CODE_CSRC_COMMON)
 BANKED_CODE_OBJS_COMMON		= $(BANKED_CODE_ASMSRC_COMMON:.asm=.o) $(BANKED_CODE_CSRC_COMMON:.c=.o)
+# cpc-banked banked-code sources (B6 step 7): CPC-6128 counterpart of the _128
+# set above. The dir + wildcards exist now so cpc-banked banked sources are
+# auto-discovered; the banked-code compile/link target consuming these lands in
+# Stage B7. Empty wildcards on the ZX / cpc-flat builds (which never reference
+# these vars) -> inert there. Mirrors engine/banked_code/cpc-banked/README.md.
+BANKED_CODE_DIR_CPC_BANKED	= $(BANKED_CODE_DIR)/cpc-banked
+BANKED_CODE_ASMSRC_CPC_BANKED	= $(wildcard $(GENERATED_DIR_BANKED_CPC_BANKED)/*.asm ) $(wildcard $(BANKED_CODE_DIR_CPC_BANKED)/*.asm )
+BANKED_CODE_CSRC_CPC_BANKED	= $(wildcard $(GENERATED_DIR_BANKED_CPC_BANKED)/*.c )   $(wildcard $(BANKED_CODE_DIR_CPC_BANKED)/*.c )
+BANKED_CODE_SRC_CPC_BANKED	= $(BANKED_CODE_ASMSRC_CPC_BANKED) $(BANKED_CODE_CSRC_CPC_BANKED)
+BANKED_CODE_OBJS_CPC_BANKED	= $(BANKED_CODE_ASMSRC_CPC_BANKED:.asm=.o) $(BANKED_CODE_CSRC_CPC_BANKED:.c=.o)
 BIN_BANKED_CODE			= $(BANKED_CODE_DIR)/banked_code.bin
 BANK_MAXSIZE			= 16384
 BANKED_RESERVED_BANK		= 4
