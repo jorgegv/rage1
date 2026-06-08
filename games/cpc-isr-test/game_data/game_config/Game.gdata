@@ -1,0 +1,15 @@
+// cpc-isr-test — cpc-banked CPC IM1 ISR validation game (B6-8).
+//
+// Minimal cpc6128 game (own main(), no engine loop) that proves the
+// cpc-banked CPC IM1 / 0x0038 interrupt path + 300->50 Hz divide actually
+// ticks on real 128K hardware / cap32.  Listed in the tracker as a B6
+// validation game.
+BEGIN_GAME_CONFIG
+	NAME		CpcIsrTest
+	PLATFORM	cpc6128
+	// interrupts.c pulls debug.h -> gfx.h -> gfx_sp1.h, whose <games/sp1.h>
+	// include is guarded out only under the JSP backend (the SP1 lib header is
+	// ZX-only).  Select JSP so the gfx header chain compiles on CPC; no gfx
+	// code is actually linked (the test only calls init_interrupts()).
+	GFX_BACKEND	JSP
+END_GAME_CONFIG

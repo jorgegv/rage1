@@ -77,6 +77,17 @@ ifeq ($(CPC_LINK_BSWITCH),1)
 CSRC			+= $(ENGINE_DIR)/src/00bswitch.c
 endif
 
+# ---- B6-8: CPC IM1 ISR validation link set --------------------------------
+# A game that opts in (CPC_LINK_ISR=1, set by `make build-cpc-isr-test`) links
+# the CPC interrupt path engine/src/interrupts.c plus engine/src/cpc/asmdata_cpc.c
+# (which defines current_time / periodic_tasks_enabled / interrupt_nesting_level)
+# on top of its own game_src.  Minimal link that exercises init_interrupts() +
+# the 300->50 Hz fast ISR on cpc-banked (the games/cpc-isr-test probe) without
+# pulling the rest of the engine.
+ifeq ($(CPC_LINK_ISR),1)
+CSRC			+= $(ENGINE_DIR)/src/interrupts.c $(ENGINE_DIR)/src/cpc/asmdata_cpc.c
+endif
+
 # ---- Phase R4: real CPC gfx HAL link set -------------------------------
 # A CPC game that opts in (CPC_LINK_ENGINE_GFX=1, set by `make build-minimal_cpc`)
 # links the REAL RAGE1 gfx HAL: the generic gfx.c/screen.c, the active CPC

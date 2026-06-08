@@ -210,6 +210,11 @@ where runnable + independent review for non-trivial/asm; commit per step)
   window and reads them back; links only 00bswitch.c (CPC_LINK_BSWITCH=1). Ran
   **PASS on cap32** (128K 6128) — empirical proof of the GA RAM-config select;
   evidence at `games/cpc-bswitch-test/cap32-pass.png`. Also a build-only matrix game.
+- `games/cpc-isr-test/` — CPC IM1 ISR + 300→50 Hz divide validation. ✅ ADDED
+  (B6 step 6): init_interrupts() then current_time advances (ticks 0→86, secs 0→1).
+  Ran **PASS on cap32** — empirical proof the IM1 path ticks on cpc-banked; links
+  interrupts.c + asmdata_cpc.c (CPC_LINK_ISR=1). Evidence
+  `games/cpc-isr-test/cap32-pass.png`. Also a build-only matrix game.
 - `games/00cpc-banked-compile-test/` — whole-engine cpc-banked compile-test. ✅ ADDED
   (B6 step 4); auto-joins the matrix via the `00cpc%` filter.
 - `games/cpc-banked-test/` — 1 dataset + 1 codeset, observe swap (B7 validation).
@@ -249,6 +254,13 @@ where runnable + independent review for non-trivial/asm; commit per step)
   its table (correct `org 0x4000`) into a ZX-named `128` dir. Harmless until B7 (the ASM
   is generated but not compiled/linked at B6 step 4); make it platform-aware (per-platform
   `BANKED_CODE_DIR_<tag>`) when the cpc-banked bank binaries are actually built (B7 / step 8).
+- **Decouple `interrupts.c` from the gfx/SP1 header chain** (B6 step-6 review NIT):
+  `engine/src/interrupts.c` includes `rage1/debug.h` → `gfx.h` → `gfx_sp1.h`, whose
+  `<games/sp1.h>` include is ZX-only, so compiling the interrupt path on CPC requires
+  selecting a non-SP1 gfx backend (cpc-isr-test sets `GFX_BACKEND JSP` as a workaround).
+  A file that does no graphics should not transitively require a gfx backend choice;
+  decouple `debug.h` from `gfx.h` (or make `gfx_sp1.h` self-guard its SP1-lib include).
+  Low priority / layering hygiene.
 - **Widen the banking-RUNTIME `BUILD_FEATURE_ZX_TARGET_128` guards for cpc-banked**
   (B6 step-4 review MINOR): step 4 made the banking *consumer* files compile, but several
   runtime call sites are still gated on the legacy `ZX_TARGET_128` (which cpc-banked does
