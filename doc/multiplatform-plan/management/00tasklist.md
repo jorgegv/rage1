@@ -80,7 +80,7 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [x] B6 — cpc-banked banking infrastructure (banking macros, bank-switch primitive + IM1 ISR both empirically validated on cap32, banked_code/cpc-banked/ dir; exit gate met, 22/22 matrix — see cpc-banked-bringup.md)
   - [~] B7 — cpc-banked banking tooling
     - [x] B7 step 8 — banktool.pl per-platform bank set from YAML
-    - [~] B7 step 8a — disk-loader design note (doc/multiplatform-plan/cpc-banked-disk-loader.md) + firmware-bankload cap32 PoC (memory-tight streaming load of ~128 KB disc images; banks stay compressed) — NEW, gates step 9
+    - [x] B7 step 8a — disk-loader design note (doc/multiplatform-plan/cpc-banked-disk-loader.md) + firmware-bankload cap32 PoC: R-DL1 VALIDATED (tools/cpc-bankload-poc/, cap32-pass.png + neg control); R-DL2 resolved (appmake EDSK multi-file writer)
     - [ ] B7 step 9 — engine/loader-cpc-banked/ asmloader templates + loadertool.pl --platform=cpc-banked
     - [ ] B7 step 10 — games/cpc-banked-test smoke (1 dataset + 1 codeset), cap32 visual gate
   - [ ] T3 — cpc-banked Makefile; first banked `.dsk` build

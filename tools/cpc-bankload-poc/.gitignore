@@ -1,0 +1,11 @@
+# build artifacts (regenerated)
+poc
+poc.*
+poc_tape*
+*.o
+*.lis
+*.map
+*.bin
+shot.png
+screenshot_*.png
+screenshots/

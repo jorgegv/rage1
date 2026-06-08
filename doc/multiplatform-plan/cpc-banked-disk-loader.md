@@ -1,7 +1,9 @@
 # CPC-banked disk loader — design note
 
-Status: **APPROVED (approach locked, user review 2026-06-08); pending PoC
-validation of R-DL1.** Author: session work for Stage B7 step 8a/9.
+Status: **APPROVED + R-DL1 VALIDATED on cap32 (2026-06-08).** Approach locked
+(user review 2026-06-08); the gating firmware-into-paged-bank assumption is
+empirically proven (PoC `tools/cpc-bankload-poc/`, §6). Author: session work for
+Stage B7 step 8a/9.
 Scope: how a cpc-banked (CPC 6128) RAGE1 game is loaded from disc at cold
 boot. Sits under `banking.md` (§6 cpc-banked memory map, §3.5 ISR) and
 `toolchain.md` Phase T3; supersedes the open "AMSDOS file loader **or** raw
@@ -178,15 +180,42 @@ back and read the marker; assert PASS on cap32 (screenshot evidence).
 custom track loader is NOT built preemptively — R-DL1 is expected to pass; the
 custom reader is held only as the contingency if the PoC fails.*
 
-**R-DL2.** *DSK must hold multiple files.* The current
-`zcc -create-app -subtype=dsk` path produces a single-file bootable DSK only;
-no `iDSK`/multi-file DSK builder exists in the repo or z88dk's `bin/`. Lead to
-investigate first during the PoC: `z88dk-appmake +cpc --bankspace` ("Create
-custom bank spaces") — z88dk has first-class CPC banked-binary support that may
-already package banks onto a bootable DSK.
+**R-DL1 — VALIDATED on cap32 (2026-06-08).** PoC `tools/cpc-bankload-poc/`
+(plain `+cpc`, default org 0x1200 in page A): it zeroes RAM 5, pages RAM 5 into
+0x4000, firmware-loads a disc file into 0x4000, restores Config 0, re-pages
+RAM 5 and finds an embedded 8-byte signature in the bank → **PASS** (solid
+screen; evidence `tools/cpc-bankload-poc/cap32-pass.png`). Negative control
+(skip only the `CAS IN DIRECT` load) → signature absent → FAIL (blank), proving
+the PASS was caused by the firmware writing into the paged bank. So firmware
+file I/O **does** transfer into the 0x4000 window while an expansion bank is
+mapped there — the design's load-bearing assumption holds.
+
+**Firmware calling convention (PoC finding — matters for step 9).** A firmware
+routine must NOT be reached by a direct `call 0xBC77` from a running program:
+the CPC firmware reserves the Z80 **alternate register set** and the `0x0038`
+ISR, and a z88dk `+cpc` C program's CRT takes these over at startup
+(`cpc_crt0.asm` `cpc_enable_process_exx_set`). A direct call therefore runs the
+firmware with the wrong `exx` set and crashes. The PoC routes calls through
+z88dk's `firmware` interposer (`call firmware / defw <addr>`), which restores
+the firmware register environment around the call. **Implication for the real
+asmloader:** it is pure ASM running at **cold boot, before any CRT takeover**,
+so the firmware's native `exx` set + ISR are still in place and a direct
+`call cas_in_*` is expected to work without an interposer — but the asmloader
+must do its firmware I/O *before* `jp main` (where the CRT seizes the firmware
+state), which it does by construction.
+
+**R-DL2 — existing tooling CAN do it (2026-06-08).** `z88dk-appmake +cpc --disk`
+already writes a *multi-file* bootable EDSK: the main AMSDOS file **plus one
+`.bN` file per populated bank** (`appmake`'s "BANK" bank space; src
+`z88dk/src/appmake/cpc.c:766-825` — `cpm_create_with_format("cpcsystem")` +
+`disc_write_file` per bank + `disc_write_edsk`). It is driven by z88dk's
+*banked-linker* `.map` sections, NOT RAGE1's externally-built `bank_*.bin`, so
+step 9 still needs a small bridge to feed RAGE1's bank binaries to that EDSK
+writer (or call the same `disc_*` primitives). No `iDSK`/custom writer is
+needed. The PoC itself sidesteps this with a single-file self-load DSK.
 *Decision (Q2, 2026-06-08): use existing tooling; do NOT add an `iDSK`-class
-tool or a custom DSK writer now — revisit only if the PoC shows the existing
-tools cannot produce a multi-file bootable DSK.*
+tool or a custom DSK writer now — the `appmake` EDSK writer is the path; bridge
+RAGE1's banks to it at step 9.*
 
 **R-DL3 — RESOLVED (Q3, 2026-06-08).** *AMSDOS workspace vs resident page-C
 data.* The AMSDOS workspace (≈`0xA700–0xBFFF`) coincides with the cpc-banked JSP

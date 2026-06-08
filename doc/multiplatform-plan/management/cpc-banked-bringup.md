@@ -193,7 +193,14 @@ where runnable + independent review for non-trivial/asm; commit per step)
    byte-identity proven via fixed-seed controlled run; all-test-builds 22/22.
    Review APPROVE-WITH-NITS (no blockers). NOT yet wired into a cpc-banked build
    (no cpc-banked banked-code compile target / game-with-banks yet → step 9/10).
-8a. **(NEW — added 2026-06-08) Disk-loader design note + firmware-bankload PoC.**
+8a. ✅ **(NEW — added 2026-06-08; DONE) Disk-loader design note + firmware-bankload PoC.**
+   **R-DL1 VALIDATED on cap32** (`tools/cpc-bankload-poc/`, evidence
+   `cap32-pass.png` + negative control): firmware `CAS IN DIRECT` loads a disc
+   file into the 0x4000 window while RAM 5 is paged there. R-DL2 resolved
+   (z88dk `appmake +cpc --disk` writes a multi-file `.bN`-per-bank EDSK; bridge
+   RAGE1 banks to it at step 9). Firmware-call finding: needs the native firmware
+   `exx`/ISR state — fine for the pure-asm cold-boot asmloader (runs before the
+   CRT seizes it).
    Cold-boot loading of memory-tight cpc-banked games (disc image up to ~128 KB)
    must STREAM bank data from disc bank-by-bank into the `0x4000` window — banks
    stay COMPRESSED (no decompress-at-load; C1), and the payload exceeds the 64 KB
