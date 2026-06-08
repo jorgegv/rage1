@@ -1,8 +1,9 @@
 # Phase 4 remaining — cpc-banked bring-up (B6 / B7 / T3) — execution tracker
 
-> **Status (2026-06-08): DC1/DC2/DC4/DC5 RESOLVED; DC6 recommendation pending a
-> one-word confirm; DC3 (the memory map) DEFERRED for deep discussion and is now
-> the sole blocker for all T3a/B6 code.** This is an
+> **Status (2026-06-08): DC1/DC2/DC4/DC5/DC6/DC7 RESOLVED; DC3 (memory map) IN
+> DISCUSSION — shape + constants + JSP placement settled; page-C layout/stack
+> (DC3-C) and the page-A code-banking strategy (DC3-A) still to confirm. DC3 is the
+> sole blocker for T3a/B6 code.** This is an
 > *execution* tracker that turns the approved design in
 > [../banking.md §6 (B6/B7)](../banking.md) and
 > [../toolchain.md §Phase T3](../toolchain.md) into a gated step sequence, and
@@ -31,20 +32,37 @@ unblocks the steps in the next section.
 - **DC1 — Bank-switch source of truth.** ✅ **RESOLVED (user, 2026-06-08): direct
   ~6-byte Gate-Array MMR write** (no cpctelera link dependency on the banked path;
   mirrors the hand-translated CPC HW-I/O already used for keyboard/mode). B6-1 maps
-  `bank ∈ {4,5,6,7}` → MMR Configs 3..7 at the `0x4000` window via a direct `out`.
+  `bank ∈ {4,5,6,7}` → **MMR Configs 4..7** at the `0x4000` window via a direct `out`.
+  **CORRECTION to banking.md** (which says "Configs 3..7"): Config **3** remaps
+  `0xC000` to RAM7 and would corrupt the screen bank — the usable set is Configs
+  **4,5,6,7** → RAM 4,5,6,7, which keep RAM0@0x0000 / RAM2@0x8000 / RAM3@0xC000 fixed.
 - **DC2 — One API vs split.** ✅ **RESOLVED (user, 2026-06-08): single
   `memory_switch_bank(bank)`** with an internal per-platform mapping table
   (banking.md B6-2 (a)).
-- **DC3 — cpc-banked memory map numbers (the big one).** ⛔ **OPEN — deferred for
-  deep discussion (user, 2026-06-08). THIS IS THE CENTRAL BLOCKER:** Stage T3a
-  (Makefile/zpragma/mmap) and all of B6 engine infra need these constants. Candidate
-  (Shape A): swap window `0x4000` via Configs 3..7; engine code in page A
-  `0x0000–0x3FFF`; home data page C `0x8000–0xBFFF`; screen `0xC000`; extended banks
-  RAM 4..7; `BANKED_FUNCTION_TABLE_BASE=0x4000`, `BANKED_DATASET_BASE_ADDRESS=0x8000`
-  (= dataset ORG, §3.2 invariant), `CODESET_ASSETS_BASE=0x4000`, `CRT_ORG_CODE=0x1200`.
-  Embedded TBD: does the lowmem engine C fit the ~15.5 KB page-A budget? (measure
-  after first build; fallback = migrate code to codesets). **To be worked through
-  with the user before any T3a/B6 code.**
+- **DC3 — cpc-banked memory map (the big one).** 🔶 **IN DISCUSSION (user,
+  2026-06-08). CENTRAL BLOCKER for all T3a/B6 code.** Shape A confirmed in shape
+  (swap window forced to `0x4000` because `0xC000`=screen). Concrete proposed map
+  (all 8 banks used):
+  ```
+  RAM0  page A  0x0000–0x3FFF  resident code: vectors/ISR@0x0038; asm bswitch+ISR+
+                               dispatcher @0x0040–0x11FF; engine C @0x1200–0x3FFF (~11.5K)
+  RAM1  page B  0x4000–0x7FFF  Config-0 home: 0x4000–~0x683F secondary/free;
+                               ~0x6840–0x7FFF JSP data block (~6K) [DC7]
+                Config 4–7    RAM4–7 paged over the whole window = compressed
+                               dataset/codeset/banked-code source (RAM1 hidden during
+                               swap, restored on return to Config 0; §3.5.1 interlock)
+  RAM2  page C  0x8000–0xBFFF  resident: 0x8000..+MAXDS dataset decompress buffer
+                               (=dataset ORG §3.2); above it home data+bss; stack top-down
+  RAM3  page D  0xC000–0xFFFF  SCREEN (CRTC) — no code/data
+  RAM4 = engine banked code | RAM5/6/7 = datasets/codesets
+  ```
+  Constants: `swap_window=0x4000`, `BANKED_FUNCTION_TABLE_BASE=0x4000`,
+  `CODESET_ASSETS_BASE=0x4000`, `BANKED_DATASET_BASE_ADDRESS=0x8000`,
+  `CRT_ORG_CODE=0x1200`, banks `{4,5,6,7}` via Configs 4–7.
+  **Still to settle:** (a) page-C layout order + stack top (DC3-C); (b) code-banking
+  strategy for the page-A fit — mirror ZX128 lowmem/banked split, measure, offload to
+  codesets (DC3-A, measure-and-iterate). **Embedded TBD:** does resident engine C fit
+  ~11.5 KB page A? (only knowable after first build; fallback = push more to codesets).
 - **DC4 — Dataset decompression buffer placement/size.** ✅ **RESOLVED (user,
   2026-06-08): as designed** — buffer in page C (`0x8000` region), sized from
   datagen's `BUILD_MAX_DATASET_SIZE_CPC6128`; hard-fail at build if oversized.
@@ -54,8 +72,9 @@ unblocks the steps in the next section.
   SUB-load / scratch budget on cpc-banked is tight — size SUB targets against the
   actual JSP buffer size and hard-fail if a SUB overflows it. Detailed sizing lands
   with B7-4 / Phase B8 (B7 smoke game ships with no SUBs).
-- **DC6 — pure-asmloader entry vs BASIC loader / disc autoboot.** 🔶 **Recommendation
-  confirmed-pending.** User asked: *is there a CPC option to autoload a file on
+- **DC6 — pure-asmloader entry vs BASIC loader / disc autoboot.** ✅ **RESOLVED
+  (user, 2026-06-08): option 1 — AMSDOS `RUN"FILE` entry, pure asmloader, no BASIC
+  tokeniser; reuse the cpc-flat `zcc -create-app -subtype=dsk` packaging.** User asked: *is there a CPC option to autoload a file on
   start?* Findings: **stock CPC 464/664/6128 has NO power-on floppy autoboot** for
   AMSDOS/BASIC data discs (only ROM cartridges / CPC+ auto-run). The universal
   mechanism is the **AMSDOS binary `RUN"FILE`** — the 128-byte AMSDOS header carries
@@ -67,6 +86,18 @@ unblocks the steps in the next section.
   the AMSDOS binary entry, launched via `RUN"FILE` (no BASIC tokeniser; reuse the
   proven cpc-flat `zcc -create-app -subtype=dsk` packaging). Adopt CP/M boot-sector
   only if end-user zero-keystroke boot becomes a hard requirement.* **Confirm.**
+- **DC7 — JSP sprite-buffer placement on cpc-banked.** ✅ **RESOLVED (user,
+  2026-06-08): JSP data block at the TOP of the `0x4000` window, in the page-B home
+  bank RAM 1** (mirrors ZX's default `JSPDATA_SLOT3` = `0xE840–0xFFFF`, top of the
+  `0xC000` window). *Verified:* JSP placement is compile-time via `JSPDATA_SLOT2/3`
+  (ZX addresses); cpc-flat currently linker-places JSP data in flat RAM, so a **small
+  JSP refactor is needed** to pin the block at the top of the `0x4000` window for
+  cpc-banked (a CPC analogue of the `JSPDATA_SLOT*` macros / a configurable base).
+  *Benefits:* reclaims RAM 1 (otherwise the unused Config-0 page-B bank) and relieves
+  the page-C squeeze. *Implication:* the block is hidden during swaps (same as ZX
+  SLOT3) → honour the §3.5.1 Config-0-restore/ISR interlock before any JSP access;
+  no capacity loss (a paged-in bank still exposes its full 16 KB from a different
+  physical bank). New work item in B6: the JSP placement refactor.
 
 ## Gated step sequence (each step: build green + ZX byte-identical + cap32 check
 where runnable + independent review for non-trivial/asm; commit per step)
