@@ -163,18 +163,22 @@ where runnable + independent review for non-trivial/asm; commit per step)
    (+ keep legacy macros). *Gate: `make build-cpc6128 target_game=games/cpc-hello`
    reuses cpc-flat path enough to link a no-banking hello; ZX byte-identical.*
 
-**Stage B6 — engine banking infra (no data flowing yet):**
-4. B6-3/B6-4 — per-platform `BANKED_FUNCTION_TABLE_BASE` / `CODESET_ASSETS_BASE` /
+**Stage B6 — engine banking infra (no data flowing yet): ✅ COMPLETE (exit gate MET).**
+4. ✅ B6-3/B6-4 — per-platform `BANKED_FUNCTION_TABLE_BASE` / `CODESET_ASSETS_BASE` /
    `BANKED_DATASET_BASE_ADDRESS` macros from YAML (DC3); make `00lowmem.c`,
    `codeset.c`, `dataset.c` compile under `BUILD_FEATURE_PLATFORM_CPC_BANKED`.
-5. B6-1/B6-2 — bank-switch primitive (DC1/DC2): `memory_switch_bank()` CPC arm
+5. ✅ B6-1/B6-2 — bank-switch primitive (DC1/DC2): `memory_switch_bank()` CPC arm
    (DI/out/EI atomic), bank→Config table, `memory_current_memory_bank` state.
-6. B6-8 — CPC IM1 + `0x0038` ISR + 300→50 Hz divide-by-six on cpc-banked
+   EMPIRICALLY VALIDATED on cap32 (games/cpc-bswitch-test PASS).
+6. ✅ B6-8 — CPC IM1 + `0x0038` ISR + 300→50 Hz divide-by-six on cpc-banked
    (`interrupts_cpc.c` or `#ifdef`); ISR + bswitch primitive in page A.
-7. B6-5/B6-7 — `engine/banked_code/cpc-banked/` dir mirroring `128/`;
-   `BANKED_CODE_DIR_<tag>` set by `Makefile-cpc-banked`.
-   *Stage gate (B6 exit): engine compiles under cpc-banked with banking on;
-   `games/cpc-bswitch-test` toggles MMR configs and runs on cap32; ZX byte-identical.*
+   VALIDATED on cap32 (games/cpc-isr-test PASS: ticks 0→86, secs 0→1).
+7. ✅ B6-5/B6-7 — `engine/banked_code/cpc-banked/` dir mirroring `128/`;
+   `BANKED_CODE_*_CPC_BANKED` + `_PLATFORM` selectors set by `Makefile-cpc-banked`
+   (commit cfddf12; additive/inert — consumed by the B7 banked-code target only).
+   *Stage gate (B6 exit) ✅ MET: engine compiles under cpc-banked with banking on
+   (00cpc-banked-compile-test EXIT 0); `games/cpc-bswitch-test` toggles MMR configs
+   and runs PASS on cap32; ZX byte-identical (22/22 all-test-builds; 14 ZX + 8 CPC).*
 
 **Stage B7 — tooling + real bank binaries + asmloader:**
 8. B7-1/T3-5 — `banktool.pl --platform` + `banking.cpc-banked` bank lists from
