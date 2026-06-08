@@ -3,7 +3,7 @@
 > **Status (2026-06-08): ALL decisions DC1–DC7 RESOLVED — bring-up is UNBLOCKED;
 > ready to implement Stage T3a (Makefile-cpc-banked / zpragma / mmap), built
 > SHAPE-PARAMETRIC to experiment with the two memory-map partitions (DC3-D: Shape A
-> = buffer in page C; Shape A′ = full-page-A buffer, code in page C).** Page-A/C fit,
+> = buffer in page C; Shape B = full-page-A buffer, code in page C).** Page-A/C fit,
 > CRT_ORG_CODE floor, and the shape choice are measure-and-iterate items during
 > implementation, not pre-decisions. This is an
 > *execution* tracker that turns the approved design in
@@ -44,7 +44,7 @@ unblocks the steps in the next section.
 - **DC3 — cpc-banked memory map (the big one).** ✅ **RESOLVED (user, 2026-06-08)
   — all sub-parts settled below; bring-up is now UNBLOCKED.** Swap window forced to
   `0x4000` (because `0xC000`=screen). **Two candidate partitions of the always-mapped
-  32 KB pool — Shape A (below) and Shape A′ — to be chosen by experiment, see DC3-D.**
+  32 KB pool — Shape A (below) and Shape B — to be chosen by experiment, see DC3-D.**
   Concrete map for **Shape A** (all 8 banks used):
   ```
   RAM0  page A  0x0000–0x3FFF  resident code: vectors/ISR@0x0038; asm bswitch+ISR+
@@ -88,24 +88,24 @@ unblocks the steps in the next section.
   engine C fit page A after the above? Only knowable post-first-build; valves = lower
   CRT_ORG_CODE + push more code to codesets + JSP in RAM1.
 
-  🔬 **DC3-D — buffer-page choice: Shape A vs Shape A′ (user, 2026-06-08): RECORD BOTH,
+  🔬 **DC3-D — buffer-page choice: Shape A vs Shape B (user, 2026-06-08): RECORD BOTH,
   decide by EXPERIMENT.** KEY INSIGHT: pages A (RAM0) and C (RAM2) are BOTH always-mapped
   across Configs 0/4/5/6/7 (only page B swaps), so the always-resident pool is a single
   **32 KB** shared by {resident code, home data, bss, stack, dataset buffer}; a "shape"
   just partitions it, with the dataset buffer as the big movable block.
   - **Shape A** (above): buffer in page C → competes with data+stack → `MAXDS≈10 KB`;
     code fills page A. `BANKED_DATASET_BASE_ADDRESS=0x8000`, `CRT_ORG_CODE≈0x1200`.
-  - **Shape A′**: buffer FILLS page A (`0x0040–0x3FFF`, ~15.9 KB) → `MAXDS≈16 KB`; ALL
+  - **Shape B**: buffer FILLS page A (`0x0040–0x3FFF`, ~15.9 KB) → `MAXDS≈16 KB`; ALL
     resident code + home data + stack move to page C. `BANKED_DATASET_BASE_ADDRESS=0x0040`,
     `CRT_ORG_CODE=0x8000`. Bigger buffer ⇒ bigger datasets ⇒ more ZX0 compression + dedup,
-    which matters because CPC assets are 2–4× ZX. A′ wins whenever resident code < a full
+    which matters because CPC assets are 2–4× ZX. B wins whenever resident code < a full
     page (likely, since much is banked + JSP in RAM1). Vectors `0x0000–0x003F` preserved
     (buffer starts `0x0040`); ISR/bswitch/dispatcher go to page C (RAM2 = always mapped).
     Decompress still works (Configs 4–7 map RAM0 dest + page-B source + RAM2 code at once).
-  - **A′'s risk** (mirror of A's): all resident code+data+stack must fit page C's 16 KB.
+  - **B's risk** (mirror of A's): all resident code+data+stack must fit page C's 16 KB.
   - **Decision = empirical.** Constants are externalised (YAML + mmap/zpragma), so a shape
     is just an address set → Stage T3a is built **shape-parametric**; measure resident-code
-    size, max viable MAXDS, and real asset fit on a CPC game, then choose (A′ is the likely
+    size, max viable MAXDS, and real asset fit on a CPC game, then choose (B is the likely
     default for asset-heavy games). NEEDS: verify z88dk `+cpc` accepts `CRT_ORG_CODE=0x8000`
     + AMSDOS `RUN"` load at that org. NOT a blocker — it's an early implementation experiment.
 - **DC4 — Dataset decompression buffer placement/size.** ✅ **RESOLVED (user,
