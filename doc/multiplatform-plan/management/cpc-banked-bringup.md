@@ -193,10 +193,22 @@ where runnable + independent review for non-trivial/asm; commit per step)
    byte-identity proven via fixed-seed controlled run; all-test-builds 22/22.
    Review APPROVE-WITH-NITS (no blockers). NOT yet wired into a cpc-banked build
    (no cpc-banked banked-code compile target / game-with-banks yet → step 9/10).
+8a. **(NEW — added 2026-06-08) Disk-loader design note + firmware-bankload PoC.**
+   Cold-boot loading of memory-tight cpc-banked games (disc image up to ~128 KB)
+   must STREAM bank data from disc bank-by-bank into the `0x4000` window — banks
+   stay COMPRESSED (no decompress-at-load; C1), and the payload exceeds the 64 KB
+   address space so it cannot be held resident (C2). Design note:
+   `doc/multiplatform-plan/cpc-banked-disk-loader.md` (per-bank files + firmware
+   `CAS IN DIRECT`; PoC-first). *Gate: `games/cpc-disk-bankload-test` validates
+   firmware file-I/O INTO a paged expansion bank on cap32 (risk R-DL1), and
+   settles multi-file DSK packaging (R-DL2, investigate `appmake --bankspace`),
+   BEFORE any loader/template code.* This corrects the obsolete
+   "ZX0-decompress datasets" wording in step 9 below (no load-time decompress).
 9. B7-2/B7-3/T3-4/T3-6 — `engine/loader-cpc-banked/asmloader.asm.in` template
-   (load bank→swap window after MMR config, ZX0-decompress datasets, reset to
-   Config 0, `jp MAIN`) + `loadertool.pl --platform=cpc-banked` template substitution;
-   lift loader-org literals into YAML (DC6 = pure asmloader entry).
+   (per-bank streaming loop: select Config N, firmware-load bank file VERBATIM
+   into the `0x4000` window, restore Config 0, `jp MAIN`) + `loadertool.pl
+   --platform=cpc-banked` template substitution; lift loader-org literals into
+   YAML (DC6 = pure asmloader entry). Depends on 8a.
 10. B7-5/T3-9 — `games/cpc-banked-test/` (1 dataset, 1 codeset, no SUBs) +
     `games/cpc-hello-banked/`. *Stage gate (B7/T3 exit):
     `make build-cpc6128 target_game=games/cpc-banked-test` → runnable `.dsk`;
