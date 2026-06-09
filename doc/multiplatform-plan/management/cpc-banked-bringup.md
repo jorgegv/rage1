@@ -259,14 +259,29 @@ where runnable + independent review for non-trivial/asm; commit per step)
        0x8000 CAS buffer, below the AMSDOS workspace. RESULT on cap32 (CPC6128): RUN"LOADER → loader
        streams banks+GAME.BIN from disc → jp 0x1200 → engine RUNS and renders the hero sprite from
        banked data. all-test-builds 23/23.
-     - **9.3 REMAINING (the only open item): sprite TRAILS.** cap32 shows ~7 hero copies (the hero
-       renders CORRECTLY but is not erased → trails). RULED OUT: JSP buffer placement / stack-vs-ROTTBL
-       overlap / keyboard-firmware — cpc-flat (games/minimal_cpc) renders the SAME hero CLEANLY with
-       IDENTICAL config (JSP block 0x9800-0xBFFF, REGISTER_SP 0xBF00, direct-PPI keyboard scan,
-       CRT_DISABLE_FIRMWARE_ISR=1). It is a cpc-banked BANKING-INTERACTION rendering bug (only banking
-       differs at runtime). Focused next task: diff cpc-banked vs cpc-flat runtime (dataset_activate /
-       0x8000 decompress buffer vs the JSP "recompute background from BTT every frame", or phantom
-       input). Isolation idea: temporarily make cpc-banked-test home-only to see if trails vanish.
+     - **9.3 REMAINING (the only open item) — ROOT CAUSE FOUND (2026-06-09): swap-active code+data
+       sit in the 0x4000 swap window (page B) and are paged out on every bank switch.** cap32 shows the
+       engine boot + run (responds to the fire key) but render GARBLED sprites at ~7 fixed positions
+       (static = stationary hero, not motion-trails). From main.map, the critical swap-active globals are
+       ALL in page B (0x4000–0x7FFF): `memory_current_memory_bank` @0x6321 (the bank-switch state var
+       itself!), `interrupt_nesting_level` @0x687B (DI/EI interlock), `banked_assets`/`home_assets`
+       @0x6875/0x6877 (renderer asset pointers), `game_state` @0x6438; plus `dzx0` @0x58AE (decompressor)
+       and the rest of code/data/bss (0x4000–0x6Cxx). `codeset_call_function` runs EVERY frame and pages
+       a bank into 0x4000–0x7FFF, so `memory_switch_bank` writes the bank-number state INTO the mapped
+       bank (not the real var) → bank-switch state + asset pointers corrupt → garbled render. (Also
+       `code_crt_common` is mis-dropped at 0x0000 over the Z80 vectors — a second placement bug.)
+       The dzx0-only PoC (copy compressed dataset out of the window before decompress) did NOT fix it,
+       confirming the corruption is broader than dzx0 (PoC reverted).
+       **FIX = the cpc-banked LOWMEM discipline (B5/B6 custom-memory-map work):** place ALL swap-active
+       code+data in a page-A (<0x4000) section — the analog of zx128's "everything below the 0xC000 swap
+       window" (on zx128 this is trivially satisfied since the window is at the top; on cpc-banked the
+       window is mid-memory at 0x4000, so the swap-active set must be explicitly pinned below it). Move
+       memory_current_memory_bank / interrupt_nesting_level / the asset pointers (asmdata_cpc.c) + the
+       dispatcher/decompress code into a low section; fix code_crt_common's placement. This needs solving
+       the +cpc section-placement obstacle (custom `__MMAP=-1` is REJECTED by the +cpc CRT —
+       "duplicate definition __MMAP"; an asmdata-style ORG'd low section or another z88dk mechanism is
+       needed). NOTE this reframes Option 2: the engine bulk CAN stay in page B (it's only live in
+       Config 0), but the swap-active subset MUST be page-A-resident. Substantial, focused next task.
 
        **⚠ PACKAGING CORRECTION (verified 2026-06-08; appmake +fat is MSX-only, use +cpmdisk):**
        `appmake +fat` is **MSX-only** (formats: msxdos / msxdos-tak / msxbasic — see
