@@ -29,10 +29,15 @@ extern uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall;
 // z88dk +cpc firmware-backed character output (as used by cpc-hello-banked)
 extern int printk( const char *fmt, ... );
 
-// memory_switch_bank()'s atomic-section nesting counter.  Normally defined in
-// engine/src/cpc/asmdata_cpc.c; provided here so the test links just the
-// primitive TU and nothing else.
+// memory_switch_bank()'s atomic-section nesting counter + bank-state variable.
+// Normally defined in the cpc-banked LOWMEM asm
+// (engine/src/cpc-banked/asmdata_cpc_banked.asm); provided here so the test
+// links just the primitive TU and nothing else.
+// (B7 step 9.4: memory_current_memory_bank is no longer a C BSS global in
+// 00bswitch.c on cpc-banked — it moved to the page-A asm file — so the probe
+// supplies it locally, same as interrupt_nesting_level.)
 uint8_t interrupt_nesting_level;
+uint8_t memory_current_memory_bank;
 
 // any address inside the 0x4000-0x7FFF swap window (page B) works; the window
 // base is clearest.  volatile so the read-back is not optimised away.

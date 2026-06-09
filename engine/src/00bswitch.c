@@ -59,7 +59,15 @@
 // ZX 128 defines both BUILD_FEATURE_ZX_TARGET_128 and
 // BUILD_FEATURE_PLATFORM_ZX128, so the new condition is equivalent on ZX.
 #if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
+// B7 step 9.4: on cpc-banked this swap-active variable is written AFTER the
+// Gate-Array bank `out`, so it MUST stay mapped across the switch (page A,
+// below 0x4000).  It is hand-placed there in
+// engine/src/cpc-banked/asmdata_cpc_banked.asm; define it as C BSS on ZX 128
+// only (where bss_compiler is low by the ZX CRT model) to avoid a duplicate
+// symbol on cpc-banked.
+#if defined( BUILD_FEATURE_PLATFORM_ZX128 )
 uint8_t memory_current_memory_bank;
+#endif
 
 // The following function implemented below in asm to minimize T-states with
 // interrupts disabled
@@ -143,6 +151,13 @@ memory_switch_bank_no_ei:
 // runs from the always-mapped page A / RAM0).
 uint8_t memory_switch_bank( uint8_t bank ) __z88dk_fastcall {
     __asm
+    ;; B7 step 9.4: on cpc-banked memory_current_memory_bank is defined
+    ;; externally (engine/src/cpc-banked/asmdata_cpc_banked.asm, page A), and
+    ;; the C definition is compiled out here.  It is referenced only from this
+    ;; inline asm, so SDCC does not auto-emit an EXTERN for it — declare it
+    ;; explicitly or z80asm reports it undefined at assembly of this TU.  (The
+    ;; ZX 128 arm above needs none: the C definition lives in this same file.)
+    EXTERN _memory_current_memory_bank
     ;; bank comes in L register
     ld d,l
     di

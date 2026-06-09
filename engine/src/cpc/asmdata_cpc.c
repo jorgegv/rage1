@@ -31,7 +31,13 @@
 
 #include "features.h"
 
-#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
+// B7 step 9.4: cpc-banked excludes this C body — those 7 swap-active globals
+// MUST live below 0x4000 (page A), so on cpc-banked they are hand-placed in
+// engine/src/cpc-banked/asmdata_cpc_banked.asm instead.  cpc-flat (CPC464,
+// flat 64K, no swap window) keeps the plain-C-BSS definitions here.  A cpc6128
+// build defines BOTH _CPC6128 and _CPC_BANKED, so exclude on _CPC_BANKED.
+#if ( defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 ) ) \
+    && !defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
 
 #include <stdint.h>
 

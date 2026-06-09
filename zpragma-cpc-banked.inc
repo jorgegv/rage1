@@ -49,9 +49,14 @@
 #pragma output CLIB_FOPEN_MAX         = -1
 #pragma output CLIB_OPEN_MAX          = -1
 
-// NOTE: __MMAP = -1 (custom mmap) is intentionally NOT set yet (same as cpc-flat).
-// The +cpc CRT defines __MMAP=0 before pragmas; overriding it errors. The +cpc
-// CRT's built-in section layout is used; mmap-cpc-banked.inc is a documentation /
-// section-check artefact at this phase. A custom-mmap hook is Phase B5/B6 work.
+// B7 step 9.4: enable the custom linker memory map (mmap-cpc-banked.inc) so the
+// engine's swap-active globals + the dzx0 decompressor land BELOW 0x4000 (page
+// A), out of the 0x4000-0x7FFF Gate-Array swap window.  See that file's header
+// and doc/multiplatform-plan/management/cpc-banked-bringup.md (step 9.4).
 //
-// #pragma output __MMAP = -1   <-- blocked (see above)
+// IMPORTANT: set MMAP (UN-prefixed), NOT __MMAP.  crt/classic/crt_rules.inc
+// (included by cpc_crt0.asm) derives `defc __MMAP = MMAP` when MMAP is defined,
+// so `#pragma output MMAP = -1` yields __MMAP = -1 with no duplicate-symbol
+// error.  Setting `#pragma output __MMAP = -1` directly DOES collide (the +cpc
+// CRT also defc's __MMAP) — that was the previously-recorded blocker.
+#pragma output MMAP                   = -1

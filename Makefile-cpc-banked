@@ -91,13 +91,17 @@ endif
 
 # ---- B6-8: CPC IM1 ISR validation link set --------------------------------
 # A game that opts in (CPC_LINK_ISR=1, set by `make build-cpc-isr-test`) links
-# the CPC interrupt path engine/src/interrupts.c plus engine/src/cpc/asmdata_cpc.c
-# (which defines current_time / periodic_tasks_enabled / interrupt_nesting_level)
-# on top of its own game_src.  Minimal link that exercises init_interrupts() +
-# the 300->50 Hz fast ISR on cpc-banked (the games/cpc-isr-test probe) without
-# pulling the rest of the engine.
+# the CPC interrupt path engine/src/interrupts.c plus the swap-active globals
+# (current_time / periodic_tasks_enabled / interrupt_nesting_level / the asset
+# pointers / memory_current_memory_bank) on top of its own game_src.  Minimal
+# link that exercises init_interrupts() + the 300->50 Hz fast ISR on cpc-banked
+# (the games/cpc-isr-test probe) without pulling the rest of the engine.
+# B7 step 9.4: those globals now come from the cpc-banked LOWMEM asm file
+# (engine/src/cpc-banked/asmdata_cpc_banked.asm); engine/src/cpc/asmdata_cpc.c
+# is an empty TU on cpc-banked (it is the cpc-FLAT definition).
 ifeq ($(CPC_LINK_ISR),1)
-CSRC			+= $(ENGINE_DIR)/src/interrupts.c $(ENGINE_DIR)/src/cpc/asmdata_cpc.c
+CSRC			+= $(ENGINE_DIR)/src/interrupts.c
+ASMSRC			+= $(wildcard $(ENGINE_DIR)/src/cpc-banked/*.asm)
 endif
 
 # ---- Phase R4: real CPC gfx HAL link set -------------------------------
@@ -153,8 +157,15 @@ endif
 # engine/src/cpc/asmdata_cpc.c instead (pulled in via engine/src/cpc/*.c below).
 CPC_ENGINE_FULL_CSRC	= $(wildcard $(ENGINE_DIR)/src/*.c) \
 			  $(wildcard $(ENGINE_DIR)/src/cpc/*.c)
+# B7 step 9.4: engine/src/*.asm MINUS 00asmdata.asm (its code_crt_common
+# globals are re-homed below 0x4000 by asmdata_cpc_banked.asm, added below),
+# PLUS the cpc-banked-only low-section file engine/src/cpc-banked/*.asm that
+# hand-places the 7 swap-active globals in page A.  That file lives OUTSIDE the
+# engine/src/cpc/*.asm wildcard (which Makefile-cpc-flat also globs), so it
+# never leaks into the cpc-flat build.
 CPC_ENGINE_FULL_ASMSRC	= $(filter-out %/00asmdata.asm, \
-			    $(wildcard $(ENGINE_DIR)/src/*.asm))
+			    $(wildcard $(ENGINE_DIR)/src/*.asm)) \
+			  $(wildcard $(ENGINE_DIR)/src/cpc-banked/*.asm)
 CPC_BANKED_COMMON_CSRC	= $(filter-out %/audio_zx_beeper.c, \
 			    $(wildcard $(BANKED_CODE_DIR_COMMON)/*.c))
 CPC_BANKED_COMMON_ASMSRC = $(wildcard $(BANKED_CODE_DIR_COMMON)/*.asm)
@@ -187,8 +198,22 @@ OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 # include root, and REGISTER_SP); empty unless GFX_BACKEND=jsp on +cpc.
 CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(JSP_CPC_CFLAGS) $(DEBUG_FLAGS)
 
-# The custom mmap file for section-check
+# The custom mmap file for section-check AND, since B7 step 9.4, the REAL
+# linker memory map (zpragma sets MMAP=-1).
 CPC_MMAP_INC		= mmap-cpc-banked.inc
+
+# B7 step 9.4: crt/classic/crt_section.inc hard-codes `INCLUDE "./mmap.inc"`
+# (cwd-relative) when __MMAP == -1, so the +cpc link MUST find the cpc-banked
+# map AS ./mmap.inc in the link cwd.  But the repo root already ships the ZX
+# mmap.inc (used by the ZX `make build` link), and the per-game test trees copy
+# it in too — overwriting it would break a concurrent/subsequent ZX link.  So
+# stage $(CPC_MMAP_INC) -> mmap.inc just for the +cpc link, restoring any prior
+# mmap.inc afterwards (trap fires on link success OR failure).  $$ escapes the
+# make $ so the shell sees a real subshell/trap.
+STAGE_MMAP		= _bk=mmap.inc.cpcbanked-bak; \
+			  if [ -e mmap.inc ]; then cp -p mmap.inc $$_bk; fi; \
+			  trap 'if [ -e '"$$_bk"' ]; then mv -f '"$$_bk"' mmap.inc; else rm -f mmap.inc; fi' EXIT; \
+			  cp -f $(CPC_MMAP_INC) mmap.inc
 
 # ---- Phase G7: engine compile-test path --------------------------------
 # G7-4: type-check the WHOLE RAGE1 engine (engine/src/*.c) under +cpc against
@@ -340,6 +365,7 @@ game_image: $(GAME_IMAGE)
 
 $(GAME_IMAGE): $(CPC_SRC)
 	echo "Linking headerless engine image $(GAME_IMAGE) (full engine, org $(CRT_ORG_CODE))..."
+	$(STAGE_MMAP); \
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
 	cp $(CPC_NAME) $(GAME_IMAGE)
 	cp $(CPC_NAME).map main.map
@@ -447,6 +473,7 @@ dsk: $(DSK_FILE)
 # $(CPC_NAME) (no extension) plus $(CPC_NAME).dsk and a $(CPC_NAME).map.
 $(DSK_FILE): $(CPC_SRC)
 	echo "Building + packaging $(DSK_FILE) (cpc-banked disc image)..."
+	$(STAGE_MMAP); \
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) \
 		-create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
 	cp $(CPC_NAME) $(MAIN_BIN)
