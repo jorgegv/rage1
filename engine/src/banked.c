@@ -9,11 +9,14 @@
 
 #include "rage1/banked.h"
 
-// B7 step 9.2: widen from BUILD_FEATURE_ZX_TARGET_128 to the canonical
-// banked-platform predicate so cpc-banked links init_banked_code() too. ZX 128
-// defines both macros, so this is byte-identical on ZX; ZX 48 / cpc-flat (no
-// banking) still compile it out.
-#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
+// B7 step 9.3: init_banked_code() sets up main_shared_data, which is ONLY read
+// by engine code compiled as BANKED (-D_BANKED_CODE_BUILD, in a separate bank).
+// The cpc-banked first-runnable build keeps the engine RESIDENT (no banked
+// engine code; bank 4 reserved-but-empty), so it does NOT call this and would
+// otherwise pull in the unlinked init_main_shared_data(). Guard stays ZX-128
+// until the banked-engine-code increment lands (DC3-A, measure-driven). ZX128
+// byte-identical. (The dataset/codeset banking widenings live in map.c/memory.c.)
+#ifdef BUILD_FEATURE_ZX_TARGET_128
 void init_banked_code( void ) {
     struct main_shared_data_s data = {
         .game_state			= &game_state,

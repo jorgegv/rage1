@@ -42,9 +42,10 @@ void init_program(void) {
    init_codesets();
 #endif
 
-// B7 step 9.2: widen to the canonical banked-platform predicate (cpc-banked
-// needs banked-code init too; byte-identical on ZX, compiled out on ZX48/cpc-flat)
-#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
+// B7 step 9.3: init_banked_code() only matters when engine code runs BANKED.
+// The cpc-banked first-runnable build keeps the engine resident, so this stays
+// ZX-128-only (re-widened when banked engine code lands; DC3-A). ZX128 byte-id.
+#ifdef BUILD_FEATURE_ZX_TARGET_128
    // this must be called after datasets have been initialized
    init_banked_code();
 #endif
@@ -56,10 +57,10 @@ void init_program(void) {
    init_bullets();
 #endif
 
-// B7 step 9.2: widen to the canonical banked-platform predicate. On cpc-banked
-// audio_sfx_beeper_init() is the inline CPC no-op stub (audio_cpc_ay.h), so this
-// call is harmless; byte-identical on ZX, compiled out on ZX48/cpc-flat.
-#if defined( BUILD_FEATURE_PLATFORM_ZX128 ) || defined( BUILD_FEATURE_PLATFORM_CPC_BANKED )
+// B7 step 9.3: this ZX-128 beeper init is ZX-specific; on CPC the beeper SFX is
+// the inline no-op stub and cpc-flat never calls it, so keep cpc-banked aligned
+// with cpc-flat (no call). Stays ZX-128-only. ZX128 byte-identical.
+#ifdef BUILD_FEATURE_ZX_TARGET_128
    // this one is only needed when compiling for 128
    // for 48 mode the beepr gets initialized by regular BSS init code
    audio_sfx_beeper_init();

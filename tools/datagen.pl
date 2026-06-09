@@ -747,6 +747,19 @@ if ( $is_cpc_platform and not $has_screens ) {
     create_dataset_dependencies( $ctx );
     fix_feature_dependencies( $ctx );
 
+    # B7 step 9.3: per-platform banked-asset ORG addresses.  The context
+    # defaults (dataset 0x5B00 / codeset 0xC000) are the ZX 128 values; on
+    # cpc-banked the engine decompresses each dataset to BANKED_DATASET_BASE_ADDRESS
+    # (0x8000, page C) and runs codesets from CODESET_ASSETS_BASE (0x4000, the
+    # swap window) — so the emitted dataset/codeset .asm `org` must match those
+    # engine macros (engine/include/rage1/dataset.h + memory.h) or the banked
+    # binaries' internal pointers resolve to the wrong runtime addresses.  ZX /
+    # cpc-flat keep the defaults (byte-identical).
+    if ( is_build_feature_enabled( $ctx, 'PLATFORM_CPC_BANKED' ) ) {
+        $ctx->{dataset_base_address} = 0x8000;
+        $ctx->{codeset_base_address} = 0x4000;
+    }
+
     # generate output
     print "Generating game data...";
     generate_game_data;
