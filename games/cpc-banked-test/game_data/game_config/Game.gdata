@@ -1,0 +1,26 @@
+// cpc-banked-test — minimal RAGE1 banking smoke game for the Amstrad CPC 6128
+// banked target (PLATFORM cpc6128 -> Makefile-cpc-banked, B7 step 9.3 / step 10).
+//
+// Goal: exercise the cpc-banked banking BUILD + cold-boot disc loader end to end
+// with the smallest data that forces ONE banked dataset (Screen02 -> DATASET 1;
+// Screen01 stays in the home dataset 0) and ONE banked codeset (the USER_*
+// game functions -> CODESET=0).  NO SUBs (SUBs on cpc-banked are Phase B8).
+//
+// Assets are minimal_cpc's CPC mode-1 JSP set (8-frame hero, Live btile, Bullet),
+// reused verbatim — already validated on cap32 (R9).  GFX_BACKEND=jsp gives the
+// pixel-smooth CPC renderer.  No ZX beeper SOUND lines (CPC has no beeper).
+BEGIN_GAME_CONFIG
+	NAME		CpcBankedTest
+	PLATFORM	cpc6128
+	GFX_BACKEND	JSP
+	SCREEN		INITIAL=Screen01
+	DEFAULT_BG_ATTR	INK_CYAN | PAPER_BLACK
+	GAME_FUNCTION	TYPE=MENU		NAME=my_menu_screen	FILE=menu.c
+	GAME_FUNCTION	TYPE=USER_INIT		NAME=my_user_init	FILE=user_functions.c	CODESET=0
+	GAME_FUNCTION	TYPE=USER_GAME_INIT	NAME=my_user_game_init	FILE=user_functions.c	CODESET=0
+	GAME_FUNCTION	TYPE=USER_GAME_LOOP	NAME=my_user_game_loop	FILE=user_functions.c	CODESET=0
+	GAME_AREA	TOP=1 LEFT=1 BOTTOM=21 RIGHT=30
+	LIVES_AREA	TOP=23 LEFT=1 BOTTOM=23 RIGHT=10
+	INVENTORY_AREA	TOP=23 LEFT=21 BOTTOM=23 RIGHT=30
+	DEBUG_AREA	TOP=0 LEFT=1 BOTTOM=0 RIGHT=15
+END_GAME_CONFIG

@@ -1,0 +1,12 @@
+// Banked screen — DATASET 1.  Its mere existence forces datagen + banktool to
+// emit a non-home dataset that the cold-boot loader streams into an expansion
+// bank, which is the whole point of this smoke game.  Minimal content (hero
+// start + one Live decoration, reusing the home assets).
+BEGIN_SCREEN
+	NAME		Screen02
+	DATASET		1
+
+	HERO		STARTUP_XPOS=40 STARTUP_YPOS=40
+	DECORATION	NAME=Test2   BTILE=Live ROW=8 COL=8 ACTIVE=1
+
+END_SCREEN

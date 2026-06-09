@@ -214,8 +214,15 @@ ENGINE_COMPILE_TEST_OBJS	= $(ENGINE_COMPILE_TEST_CSRC:.c=.o)
 # override the same-named targets already defined in Makefile.common (which is
 # -included above). Reusing the bare names produced 7x "overriding recipe for
 # target" GNU Make warnings on every build.
-.PHONY: build main loader asmloader cpc dsk cdt final-cpc section-check-cpc compile-test
+.PHONY: build main loader asmloader cpc dsk cdt final-cpc section-check-cpc compile-test \
+	banking-build datasets codesets banked_code_empty banks game_image \
+	banked_loader bank_files banked_dsk cas-buffer-check org-crosscheck
 
+ifeq ($(CPC_BANKED_BANKING),1)
+# B7 step 9.2c/9.3: REAL banking build (set by top-level build-cpc-banked-test).
+build: banking-build
+else
+# Phase T3a no-banking build (cpc-hello-banked etc.): single-step CPC programme.
 build:
 	$(MYMAKE) loader
 	$(MYMAKE) asmloader
@@ -224,6 +231,180 @@ build:
 	$(MYMAKE) cdt
 	$(MYMAKE) section-check-cpc
 	echo "Build completed SUCCESSFULLY (cpc-banked)"
+endif
+
+################################################################################
+##
+## B7 step 9.2c/9.3 — cpc-banked REAL banking pipeline
+##
+## Engine RESIDENT (CPC_LINK_ENGINE_FULL=1, like minimal_cpc) + datasets and the
+## user codeset compiled to expansion banks (banktool -p cpc-banked).  Produces a
+## multi-file cold-boot disc: a standalone AMSDOS-headered LOADER.BIN (RUN"-able)
+## that firmware-loads the headerless full-engine GAME.BIN to the engine ORG plus
+## the per-bank BANK<n>.BIN files, then jp's the engine.  No banked ENGINE code
+## yet (bank 4 reserved/empty; DC3-A offload is a later increment).  DSK packaged
+## with appmake +cpmdisk -f cpcsystem (appmake +fat is MSX-only; +cpc --disk emits
+## a malformed stub — see cpc-banked-disk-loader.md / cpc-banked-bringup.md).
+##
+################################################################################
+
+# headerless engine image / AMSDOS loader / disc
+GAME_IMAGE		= GAME.BIN
+LOADER_BIN_CPC		= LOADER.BIN
+BANKED_DSK		= $(CPC_NAME).dsk
+APPMAKE_CPMDISK		= z88dk-appmake +cpmdisk
+
+# loader org / engine entry — single-sourced from etc/rage1-config.yml
+# banking.cpc-banked.loader (DC6, the same block loadertool reads).
+LOADER_ORG_CPC		= $(shell awk '/^    loader:/{f=1} f&&/loader_org:/{print $$2; exit}' etc/rage1-config.yml)
+MAIN_CODE_START_CPC	= $(shell awk '/^    loader:/{f=1} f&&/main_code_start:/{print $$2; exit}' etc/rage1-config.yml)
+
+banking-build:
+	$(MYMAKE) datasets
+	$(MYMAKE) codesets
+	$(MYMAKE) banked_code_empty
+	$(MYMAKE) banks
+	$(MYMAKE) game_image
+	$(MYMAKE) bank_files
+	$(MYMAKE) banked_loader
+	$(MYMAKE) banked_dsk
+	$(MYMAKE) section-check-cpc
+	$(MYMAKE) org-crosscheck
+	$(MYMAKE) cas-buffer-check
+	echo "Build completed SUCCESSFULLY (cpc-banked, banking)"
+
+##
+## Datasets: compile each dataset_N.src to a standalone binary org'ed at
+## BANKED_DATASET_BASE_ADDRESS (0x8000, set by datagen), then ZX0-compress.
+## banktool consumes the .zx0 files; the cold-boot loader streams them verbatim
+## (compressed) into a bank, and dataset_activate() dzx0-decompresses to 0x8000.
+##
+datasets: $(ZX0_DATASETS)
+
+dataset_%.bin:
+	echo "Compiling cpc-banked DATASET $@ ..."
+	# asm files MUST precede C files
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt -o $@ $(GENERATED_DIR_DATASETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	echo "-- $$( basename $@ ) uncompressed: $$( stat -c%s $@ ) bytes (max $(DATASET_MAXSIZE))"
+	if [ $$( stat -c%s $@ ) -gt $(DATASET_MAXSIZE) ]; then \
+		echo "** ERROR: $$( basename $@ ) ($$( stat -c%s $@ )b) > DATASET_MAXSIZE ($(DATASET_MAXSIZE)b)"; exit 1; fi
+
+dataset_%.zx0: dataset_%.bin
+	echo "Compressing cpc-banked DATASET $< ..."
+	$(ZX0) $< $@ >/dev/null 2>&1
+	echo "-- $$( basename $@ ) compressed: $$( stat -c%s $@ ) bytes"
+
+##
+## Codesets: compile each codeset_N.src to a standalone binary org'ed at
+## CODESET_ASSETS_BASE (0x4000, set by datagen).  Stored uncompressed in a bank;
+## codeset_call_function() pages the bank into the 0x4000 window and calls in.
+##
+codesets: $(BIN_CODESETS)
+
+codeset_%.bin:
+	echo "Compiling cpc-banked CODESET $@ ..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -I$(GAME_SRC_DIR) --no-crt -o $@ $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin).src/*.{asm,c}
+	mv $(GENERATED_DIR_CODESETS)/$(shell basename $@ .bin)_code_compiler.bin $@
+	if [ $$( stat -c%s $@ ) -gt $(CODESET_MAXSIZE) ]; then echo "** ERROR: $$( basename $@ ) > $(CODESET_MAXSIZE)b"; exit 1; fi
+
+##
+## No banked ENGINE code yet (option 2: engine resident).  banktool still expects
+## engine/banked_code/banked_code.bin to exist and reserves bank 4 for it; an
+## EMPTY file makes bank 4 reserved-but-zero-size (no BANK4.BIN emitted).
+##
+banked_code_empty:
+	echo "cpc-banked: engine code RESIDENT (bank 4 reserved/empty) — empty banked_code.bin"
+	: > engine/banked_code/banked_code.bin
+
+##
+## Banks: banktool -p cpc-banked lays datasets (.zx0) + codesets (.bin) into the
+## per-platform bank set {4,5,6,7} (bank 4 reserved) and writes bank_<n>.bin +
+## the dataset/codeset bank maps into build/generated/.
+##
+banks:
+	echo "Building cpc-banked bank binaries + dataset/codeset maps..."
+	./tools/banktool.pl -p cpc-banked -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR)
+
+##
+## Headerless full-engine image GAME.BIN.  Reuses the proven single-step
+## -create-app link (CPC_SRC = full engine via CPC_LINK_ENGINE_FULL); the
+## linked binary $(CPC_NAME) is the raw headerless image (org = CRT_ORG_CODE).
+## The .map drives section-check / cas-buffer-check.  zcc also writes a
+## single-file $(CPC_NAME).dsk which we then OVERWRITE with the multi-file disc.
+##
+game_image: $(GAME_IMAGE)
+
+$(GAME_IMAGE): $(CPC_SRC)
+	echo "Linking headerless engine image $(GAME_IMAGE) (full engine, org $(CRT_ORG_CODE))..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
+	cp $(CPC_NAME) $(GAME_IMAGE)
+	cp $(CPC_NAME).map main.map
+
+##
+## Per-bank BANK<n>.BIN (headerless, raw, from banktool's bank_<n>.bin).
+##
+bank_files:
+	echo "Materialising per-bank BANK<n>.BIN files..."
+	rm -f BANK*.BIN
+	for b in $(GENERATED_DIR)/bank_*.bin; do \
+		[ -e "$$b" ] || continue; \
+		n=$$( basename $$b .bin | sed 's/^bank_//' ); \
+		cp $$b BANK$$n.BIN ; \
+		echo "  BANK$$n.BIN ($$( stat -c%s $$b ) bytes)"; \
+	done
+
+##
+## Cold-boot LOADER.BIN: loadertool emits the per-bank streaming asmloader (it
+## reads the bank_<n>.bin set), we assemble it to a raw binary at LOADER_ORG,
+## then wrap it with an AMSDOS header (load+entry = LOADER_ORG) so RUN"LOADER
+## boots it.
+##
+banked_loader: $(LOADER_BIN_CPC)
+
+$(LOADER_BIN_CPC):
+	echo "Generating cpc-banked cold-boot loader (loadertool)..."
+	./tools/loadertool.pl --platform=cpc-banked -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER)
+	echo "Assembling loader -> raw bin (org $(LOADER_ORG_CPC))..."
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
+	echo "Wrapping loader with AMSDOS header (RUN\"LOADER)..."
+	$(APPMAKE) --org $(LOADER_ORG_CPC) -b $(ASMLOADER_BIN) -o $(LOADER_BIN_CPC)
+
+##
+## Multi-file bootable disc: appmake +cpmdisk -f cpcsystem.  -b = the bootable
+## AMSDOS LOADER.BIN; --add-file = the headerless GAME.BIN + each BANK<n>.BIN.
+##
+# PHONY (not a game.dsk file target) so it never collides with the no-banking
+# $(DSK_FILE) recipe.  The BANK*.BIN list is globbed at RECIPE time (a parse-time
+# $(wildcard) would be empty on a clean build, before bank_files runs).
+banked_dsk:
+	echo "Packaging cold-boot disc $(BANKED_DSK) (+cpmdisk cpcsystem)..."
+	addbanks=""; for bf in BANK*.BIN; do [ -e "$$bf" ] && addbanks="$$addbanks --add-file $$bf"; done; \
+	$(APPMAKE_CPMDISK) -f cpcsystem --container dsk -b $(LOADER_BIN_CPC) \
+		--add-file $(GAME_IMAGE) $$addbanks -o $(BANKED_DSK)
+	echo "  $(BANKED_DSK): $$( stat -c%s $(BANKED_DSK) ) bytes; files:"
+	for f in $(LOADER_BIN_CPC) $(GAME_IMAGE) BANK*.BIN; do echo "    $$f"; done
+
+##
+## 9.2b NIT2 cross-check: the loader's engine-entry (main_code_start, from YAML)
+## MUST equal the engine CRT_ORG_CODE, or the loader jp's to the wrong address.
+##
+org-crosscheck:
+	if [ "$(MAIN_CODE_START_CPC)" != "$(CRT_ORG_CODE)" ]; then \
+		echo "** ERROR: loader main_code_start ($(MAIN_CODE_START_CPC)) != CRT_ORG_CODE ($(CRT_ORG_CODE))"; exit 1; fi
+	echo "  OK: loader main_code_start == CRT_ORG_CODE ($(CRT_ORG_CODE))"
+
+##
+## CAS-buffer invariant (design note §8.5): the cold-boot loader reuses a 2 KB
+## firmware CAS input buffer at 0x8000-0x87FF while streaming the banks AFTER
+## GAME.BIN is in place, so the GAME.BIN image (loaded at CRT_ORG_CODE) must not
+## extend into 0x8000.  Check the linked image top-of-code from main.map.
+##
+cas-buffer-check:
+	echo "CAS-buffer invariant: GAME.BIN image must end below 0x8000..."
+	img_end=$$(( $$(printf '%d' $(CRT_ORG_CODE)) + $$( stat -c%s $(GAME_IMAGE) ) )); \
+	if [ $$img_end -gt $$(( 0x8000 )) ]; then \
+		echo "** ERROR: GAME.BIN ends at $$( printf '0x%04X' $$img_end ) — past the 0x8000 CAS buffer"; exit 1; fi; \
+	echo "  OK: GAME.BIN ends at $$( printf '0x%04X' $$img_end ) (< 0x8000)"
 
 # G7-4: compile-only engine type-check (no link).  Compiles every engine/src/*.c
 # (plus generated + game_src) to .o under +cpc with the live JSP backend.

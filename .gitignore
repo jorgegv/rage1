@@ -29,9 +29,15 @@ debug_script.cfg
 *.cdt
 # the root-level linked CPC binary written by `zcc -create-app -o game`
 /game
+# B7 step 9.2c: cpc-banked banking-build artifacts at repo root
+/GAME.BIN
+/LOADER.BIN
+/BANK*.BIN
+/game.com
 # scratch screenshots from tools/cap32-shot.sh / emulator dumps
 /shot.png
 screenshot_*.png
+cbt-*.png
 
 .claude/worktrees
 

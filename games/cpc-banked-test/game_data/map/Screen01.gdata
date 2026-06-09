@@ -1,0 +1,9 @@
+// Home screen (dataset 0) — the INITIAL screen the engine boots into.
+BEGIN_SCREEN
+	NAME		Screen01
+	DATASET		0
+
+	HERO		STARTUP_XPOS=20 STARTUP_YPOS=20
+	DECORATION	NAME=Test    BTILE=Live ROW=16 COL=18 ACTIVE=1
+
+END_SCREEN
