@@ -238,14 +238,37 @@ where runnable + independent review for non-trivial/asm; commit per step)
        banking.cpc-banked.loader block in rage1-config.yml; loadertool reads it (literals as
        fallback) → byte-identical loader. all-test-builds 22/22; review APPROVE-WITH-NITS (both
        addressed; NIT2 = enforce main_code_start==CRT_ORG_CODE → deferred to 9.2c).
-     - **9.2c NEXT: Makefile-cpc-banked banking build.** Engine link (CPC_LINK_ENGINE_FULL
-       analog) + `banks` (banktool -p cpc-banked) + the cpc-banked banked-code compile/link
-       target (BIN_BANKED_CODE analog so banktool has a banked_code.bin) + asmloader cold-boot
-       entry integration emitting headerless GAME.BIN / standalone LOADER.BIN / per-bank
-       BANK<n>.BIN + multi-file DSK packaging + CAS-buffer (0x8000-0x87FF) invariant + 9.2b
-       NIT2 cross-check. Co-developed with the 9.3 test game.
+     - **9.2c ✅ DONE (commit 951543e): Makefile-cpc-banked banking build + games/cpc-banked-test.**
+       Architecture = OPTION 2 (user, 2026-06-09): engine RESIDENT (CPC_LINK_ENGINE_FULL, the proven
+       cpc-flat full-engine link → headerless GAME.BIN); bank ONLY the datasets + the user codeset;
+       bank 4 reserved/EMPTY (no banked engine code — empty banked_code.bin; banking engine code is
+       a later DC3-A measure-driven increment). datagen prerequisites: a4b0707 (banked CPC →
+       synthetic zx_target=128 so real banked datasets are generated, not collapsed to home) +
+       020e2c0 (per-platform banked-asset ORG: dataset .asm org 0x8000 = BANKED_DATASET_BASE_ADDRESS,
+       codeset .asm org 0x4000 = CODESET_ASSETS_BASE; + narrowed 9.2a init_banked_code/beeper back to
+       ZX_TARGET_128 since the engine is resident). Pipeline (build-cpc-banked-test, CPC_BANKED_BANKING=1):
+       datasets (ZX0) + codeset → banktool -p cpc-banked → GAME.BIN + AMSDOS LOADER.BIN + BANK<n>.BIN →
+       `appmake +cpmdisk -f cpcsystem` multi-file disc; org-crosscheck (main_code_start==CRT_ORG_CODE,
+       9.2b NIT2) + CAS-buffer (GAME.BIN <0x8000) invariant. all-test-builds 23/23.
+     - **9.3 LOADER FIX ✅ DONE (commit 5051ba1): engine BOOTS from the banked disc on cap32.** The
+       cold-boot loader's direct firmware CAS_IN routed to TAPE (the §6 standalone-`--no-crt`-direct-call
+       premise was WRONG). Fix: the loader is now a +cpc CRT program (asm `_main`) reaching CAS via
+       z88dk's `firmware` interposer (restores the firmware exx env; proven step-8a path), at
+       CRT_ORG_CODE=0x8800 (zpragma-cpc-banked-loader.inc) — page C, ALWAYS-MAPPED so it survives bank
+       streaming (page B / the JSP buffer 0x5800-0x7FFF pages out under GA Config 4-7), just above the
+       0x8000 CAS buffer, below the AMSDOS workspace. RESULT on cap32 (CPC6128): RUN"LOADER → loader
+       streams banks+GAME.BIN from disc → jp 0x1200 → engine RUNS and renders the hero sprite from
+       banked data. all-test-builds 23/23.
+     - **9.3 REMAINING (the only open item): sprite TRAILS.** cap32 shows ~7 hero copies (the hero
+       renders CORRECTLY but is not erased → trails). RULED OUT: JSP buffer placement / stack-vs-ROTTBL
+       overlap / keyboard-firmware — cpc-flat (games/minimal_cpc) renders the SAME hero CLEANLY with
+       IDENTICAL config (JSP block 0x9800-0xBFFF, REGISTER_SP 0xBF00, direct-PPI keyboard scan,
+       CRT_DISABLE_FIRMWARE_ISR=1). It is a cpc-banked BANKING-INTERACTION rendering bug (only banking
+       differs at runtime). Focused next task: diff cpc-banked vs cpc-flat runtime (dataset_activate /
+       0x8000 decompress buffer vs the JSP "recompute background from BTT every frame", or phantom
+       input). Isolation idea: temporarily make cpc-banked-test home-only to see if trails vanish.
 
-       **⚠ PACKAGING CORRECTION (verified 2026-06-08, supersedes the handover/R-DL2 note):**
+       **⚠ PACKAGING CORRECTION (verified 2026-06-08; appmake +fat is MSX-only, use +cpmdisk):**
        `appmake +fat` is **MSX-only** (formats: msxdos / msxdos-tak / msxbasic — see
        z88dk src/appmake/fat.c) and CANNOT make a CPC disc; and a bare `appmake +cpc --disk`
        emits the malformed stub (per Makefile-cpc-flat header). The working multi-file CPC
