@@ -34,6 +34,8 @@ debug_script.cfg
 /LOADER.BIN
 /BANK*.BIN
 /game.com
+/loader_cpc
+/loader_cpc.*
 # scratch screenshots from tools/cap32-shot.sh / emulator dumps
 /shot.png
 screenshot_*.png

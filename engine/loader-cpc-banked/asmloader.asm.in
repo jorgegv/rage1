@@ -4,49 +4,59 @@
 ;;
 ;; RAGE1 cpc-banked (CPC 6128) cold-boot ASM loader (LOADER.BIN).
 ;;
-;; Packaging model 2 (design note §8.5): this is a SEPARATE AMSDOS binary,
-;; the RUN"LOADER target.  Being a standalone --no-crt asm binary it runs in
-;; NATIVE firmware state by construction (no z88dk +cpc CRT takeover), so the
-;; firmware jumpblock entries are reached by a DIRECT `call` (the `firmware`
-;; interposer the step-8a PoC needed post-CRT is NOT required here — design
-;; note §6) and the §6 CRT-exx timing risk is sidestepped entirely.  Mirrors
-;; the proven ZX 128 structure (a separate asmloader that pulls in the rest).
+;; Packaging model 2 (design note §8.5): a SEPARATE AMSDOS binary, the
+;; RUN"LOADER target.  It is a normal +cpc CRT program (this `_main` is the
+;; CRT entry), built at CRT_ORG_CODE from zpragma-cpc-banked-loader.inc (page C,
+;; ~0x8800) — an ALWAYS-MAPPED page that survives bank streaming (page B is paged
+;; out when GA Config 4-7 is selected; page A holds the engine image).
+;;
+;; CRITICAL — firmware calling convention: the AMSDOS CAS routines are reached
+;; through z88dk's `firmware` interposer (call firmware / defw <addr>), which
+;; restores the firmware alt-register/exx environment around the call.  A DIRECT
+;; `call 0xBCxx` routes CAS_IN to TAPE ("Press PLAY then any key"), NOT disc —
+;; empirically validated; the standalone-direct-call premise of design-note §6
+;; was wrong.  The step-8a PoC (a +cpc CRT program using the interposer) loaded
+;; from disc successfully; this loader mirrors that.
 ;;
 ;; It firmware-loads, then hands over to the engine:
 ;;   1. the resident engine image GAME.BIN (headerless raw) -> engine ORG, and
 ;;   2. each populated expansion-RAM bank BANK<n>.BIN -> its physical RAM bank,
-;;      VERBATIM into the 0x4000 swap window (banks stay ZX0-compressed; there
-;;      is NO decompress-at-load), via select GA Config N / CAS IN DIRECT /
-;;      restore GA Config 0.
+;;      VERBATIM into the 0x4000 swap window (banks stay ZX0-compressed; there is
+;;      NO decompress-at-load), via select GA Config N / CAS IN DIRECT / restore
+;;      GA Config 0.
 ;;   3. jp the engine entry.
 ;; (CAS IN DIRECT reads a whole file to EOF, so no file size is carried.)
 ;;
-;; Interrupts stay ENABLED throughout: the AMSDOS disc routines rely on the
-;; firmware 300 Hz tick (motor spin-up / timeouts), so the loader does NOT
-;; `di` (the step-8a PoC ran the firmware loads with interrupts enabled;
-;; matches design decision Q4 — firmware-disable is owned by the engine's
-;; init_interrupts(), not the loader).
+;; Interrupts stay ENABLED throughout (firmware 300 Hz tick drives disc motor /
+;; timeouts); firmware-disable is the engine's init_interrupts() job, not the
+;; loader's (design decision Q4).
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    org @@LOADER_ORG@@
+    SECTION code_compiler
+    PUBLIC _main
+    EXTERN firmware
 
     ;; AMSDOS firmware input jumpblock (|DISC is the 6128-with-drive default)
     defc CAS_IN_OPEN   = 0xBC77    ;; B=name len, HL=name addr, DE=2K buffer addr
     defc CAS_IN_DIRECT = 0xBC83    ;; HL=load address; loads the whole open file
     defc CAS_IN_CLOSE  = 0xBC7A
 
+_main:
     ;; ---- load the resident engine image GAME.BIN -> @@MAIN_CODE_START@@ ----
-    ;; (Config 0 / base map; the 0x4000 window is the home RAM 1 here.)
+    ;; (Config 0 / base map.)  All CAS calls go through the firmware interposer.
     ld   b, @@MAIN_FILE_LEN@@        ;; filename length
     ld   hl, _mainname              ;; filename "@@MAIN_FILE@@"
-    ld   de, 0x8000                 ;; 2K firmware input buffer (page-C scratch:
-                                    ;; the dataset decompress buffer, unused pre-game)
-    call CAS_IN_OPEN
+    ld   de, 0x8000                 ;; 2K firmware CAS buffer (page C, just below
+                                    ;; this loader's 0x8800 origin; free pre-game)
+    call firmware
+    defw CAS_IN_OPEN
     jp   nc, _loader_error
     ld   hl, @@MAIN_CODE_START@@    ;; destination = engine ORG (headerless raw image)
-    call CAS_IN_DIRECT
+    call firmware
+    defw CAS_IN_DIRECT
     push af                         ;; preserve the load result across CAS IN CLOSE
-    call CAS_IN_CLOSE
+    call firmware
+    defw CAS_IN_CLOSE
     pop  af
     jp   nc, _loader_error
     jr   _maindone
@@ -55,8 +65,9 @@ _mainname:
 _maindone:
 
 @@BANK_LOAD_BLOCK@@    ;; engine image + all banks loaded; GA is back in Config 0.
-    ;; Hand over to the resident engine entry.  Firmware is still live;
-    ;; the engine's init_interrupts() disables it and installs the IM1 ISR.
+    ;; Hand over to the resident engine entry.  Firmware is still live; the
+    ;; engine's CRT re-inits and init_interrupts() disables it / installs the
+    ;; IM1 ISR.
     jp @@MAIN_CODE_START@@
 
     ;; A firmware file op failed (disc error / missing file).  With a correctly

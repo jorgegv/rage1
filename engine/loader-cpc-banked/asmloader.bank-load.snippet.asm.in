@@ -1,20 +1,23 @@
     ;; ---- stream BANK@@BANK@@.BIN -> RAM bank @@BANK@@ (GA Config @@BANK@@) ----
+    ;; CAS calls via the firmware interposer; GA select is a direct port write.
     ld   b, @@BANK_FILE_LEN@@        ;; filename length
     ld   hl, _bankname_@@BANK@@      ;; filename "@@BANK_FILE@@"
-    ld   de, 0x8000                 ;; 2K firmware input buffer (page-C scratch:
-                                    ;; the dataset decompress buffer, unused pre-game)
-    call CAS_IN_OPEN
+    ld   de, 0x8000                 ;; 2K firmware CAS buffer (page C, stays mapped)
+    call firmware
+    defw CAS_IN_OPEN
     jp   nc, _loader_error
     ld   a, 0x@@BANK_CONFIG_HEX@@    ;; GA RAMR (0xC0 | config @@BANK@@) -> RAM@@BANK@@ @ 0x4000
     ld   bc, 0x7F00                 ;; B=0x7F = Gate-Array port (mirrors 00bswitch.c)
     out  (c), a
     ld   hl, 0x4000                 ;; destination = swap window (VERBATIM, stays compressed)
-    call CAS_IN_DIRECT
+    call firmware
+    defw CAS_IN_DIRECT
     push af                         ;; preserve the load result across the Config-0 restore
     ld   a, 0xC0                    ;; restore GA Config 0 (base map: RAM0/1/2/3)
     ld   bc, 0x7F00
     out  (c), a
-    call CAS_IN_CLOSE
+    call firmware
+    defw CAS_IN_CLOSE
     pop  af
     jp   nc, _loader_error
     jr   _bankdone_@@BANK@@

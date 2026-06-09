@@ -87,12 +87,15 @@ banking:
     ## doc/multiplatform-plan/cpc-banked-disk-loader.md §8.5): a standalone
     ## LOADER.BIN firmware-loads the headerless engine image (main_file) to
     ## main_code_start, then each per-bank file, then `jp main_code_start`.
-    ##   loader_org      LOADER.BIN org (low-RAM gap below the engine image)
+    ##   loader_org      LOADER.BIN origin = the loader's CRT_ORG_CODE; B7 step
+    ##                   9.3 placed the loader in page C (always-mapped, survives
+    ##                   bank streaming), just above the 0x8000 CAS buffer. MUST
+    ##                   match CRT_ORG_CODE in zpragma-cpc-banked-loader.inc.
     ##   main_code_start engine entry / ORG; MUST equal CRT_ORG_CODE in
     ##                   Makefile-cpc-banked (Shape A = 0x1200)
     ##   main_file       filename of the headerless resident engine image
     loader:
-      loader_org:            0x0100
+      loader_org:            0x8800
       main_code_start:       0x1200
       main_file:             GAME.BIN
 

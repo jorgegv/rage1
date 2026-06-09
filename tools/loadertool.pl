@@ -472,13 +472,14 @@ sub generate_assembler_loader {
     # smoke game has none; SUBs on cpc-banked are Phase B8 — so the cpc-banked
     # template carries no @@SUB_*@@ placeholders).
     #
-    # DC6 (B7 step 9.2b): LOADER_ORG / MAIN_CODE_START / MAIN_FILE are lifted
-    # into etc/rage1-config.yml (banking.cpc-banked.loader); the historic step-9.1
-    # literals (0x0100 / 0x1200 / GAME.BIN) are kept as fallbacks so a config
-    # lacking the loader block still emits a working, byte-identical loader.
+    # DC6 (B7 step 9.2b/9.3): MAIN_CODE_START / MAIN_FILE come from
+    # etc/rage1-config.yml (banking.cpc-banked.loader), literals as fallbacks.
+    # The loader's OWN origin (loader_org) is NOT substituted here: B7 step 9.3
+    # made the loader a +cpc CRT program, so its origin is set by CRT_ORG_CODE in
+    # zpragma-cpc-banked-loader.inc (the Makefile reads loader_org from YAML only
+    # for the AMSDOS RUN" wrap, which must match that zpragma).
     if ( $zx_target eq 'cpc-banked' ) {
         my $loader_cfg      = $cfg->{'banking'}{'cpc-banked'}{'loader'} // {};
-        my $loader_org      = _normalize_addr( $loader_cfg->{'loader_org'},      '0x0100' );   # standalone LOADER.BIN, low-RAM gap
         my $main_code_start = _normalize_addr( $loader_cfg->{'main_code_start'}, '0x1200' );   # engine entry/ORG (CRT_ORG_CODE, Shape A)
         # Model 2 (design note §8.5): the loader is a SEPARATE LOADER.BIN that
         # also firmware-loads the headerless engine image (GAME.BIN) -> engine
@@ -488,7 +489,6 @@ sub generate_assembler_loader {
         my $bank_load_block = _build_bank_load_block( $zx_target, $bank_bins );
 
         my $tmpl = _apply_substitutions( _load_template( $zx_target ), {
-            LOADER_ORG       => $loader_org,
             MAIN_CODE_START  => $main_code_start,
             MAIN_FILE        => $main_file,
             MAIN_FILE_LEN    => length( $main_file ),

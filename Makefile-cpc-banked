@@ -260,6 +260,10 @@ LOADER_ORG_CPC		= $(shell awk '/^    loader:/{f=1} f&&/loader_org:/{print $$2; e
 MAIN_CODE_START_CPC	= $(shell awk '/^    loader:/{f=1} f&&/main_code_start:/{print $$2; exit}' etc/rage1-config.yml)
 
 banking-build:
+	# remove stale repo-root artifacts: these targets have no prerequisites, so
+	# make would skip rebuilding them if a previous build left them in place
+	# (top-level `make clean` only clears build/).
+	rm -f $(GAME_IMAGE) $(LOADER_BIN_CPC) loader_cpc loader_cpc.* BANK*.BIN main.map $(BANKED_DSK) $(CPC_NAME) $(CPC_NAME).*
 	$(MYMAKE) datasets
 	$(MYMAKE) codesets
 	$(MYMAKE) banked_code_empty
@@ -359,15 +363,23 @@ bank_files:
 ## then wrap it with an AMSDOS header (load+entry = LOADER_ORG) so RUN"LOADER
 ## boots it.
 ##
+# The loader is a +cpc CRT program (NOT --no-crt) so it can reach the AMSDOS
+# firmware CAS routines through z88dk's `firmware` interposer (routes CAS_IN to
+# disc, not tape).  Its own CRT config (origin in page C @ LOADER_ORG_CPC, firmware
+# ISR kept alive) is in zpragma-cpc-banked-loader.inc — distinct from the engine's
+# zpragma.  Built with a minimal flag set (no JSP/engine includes needed).
+ZPRAGMA_LOADER_INC	= zpragma-cpc-banked-loader.inc
+LOADER_CFLAGS		= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_LOADER_INC)
+
 banked_loader: $(LOADER_BIN_CPC)
 
 $(LOADER_BIN_CPC):
 	echo "Generating cpc-banked cold-boot loader (loadertool)..."
 	./tools/loadertool.pl --platform=cpc-banked -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER)
-	echo "Assembling loader -> raw bin (org $(LOADER_ORG_CPC))..."
-	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) --no-crt $(ASMLOADER_SRC) -o $(ASMLOADER_BIN)
-	echo "Wrapping loader with AMSDOS header (RUN\"LOADER)..."
-	$(APPMAKE) --org $(LOADER_ORG_CPC) -b $(ASMLOADER_BIN) -o $(LOADER_BIN_CPC)
+	echo "Building loader as a +cpc CRT program (org $(LOADER_ORG_CPC), firmware interposer)..."
+	$(ZCC) $(ZCC_TARGET) $(LOADER_CFLAGS) $(CFLAGS_LIST) -o loader_cpc $(ASMLOADER_SRC)
+	echo "Wrapping loader -> AMSDOS LOADER.BIN (RUN\"LOADER, load+entry $(LOADER_ORG_CPC))..."
+	$(APPMAKE) --org $(LOADER_ORG_CPC) -b loader_cpc -o $(LOADER_BIN_CPC)
 
 ##
 ## Multi-file bootable disc: appmake +cpmdisk -f cpcsystem.  -b = the bootable
