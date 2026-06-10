@@ -224,7 +224,19 @@ sub do_dataset_layout {
     my @list = @{$list};
 
     # setup buckets with initial sizes
-    my @buckets = ( map { { size => $bank_layout->{ $_ }{'size'} } } @sorted_banks );
+    #
+    # cpc-banked: datasets must NOT share the reserved engine-code bank
+    # (engine_code_memory_bank).  On ZX 128 that bank is full of real banked code
+    # so datasets naturally avoid it, but on cpc-banked the smoke game has EMPTY
+    # banked code, leaving the bank empty — and the numeric bank sort below would
+    # then fill it with datasets first.  The engine pages this bank in to CALL
+    # banked code, so dataset bytes there are fatal.  Mark its dataset bucket FULL
+    # so datasets skip it (the reserved banked-code binary is laid out separately).
+    my @buckets = ( map {
+        { size => ( ( $platform eq 'cpc-banked' and $_ == $engine_code_memory_bank )
+                        ? $max_bank_size
+                        : $bank_layout->{ $_ }{'size'} ) }
+    } @sorted_banks );
 
     # now process all the datasets
     my $current_bucket = 0;

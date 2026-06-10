@@ -1,25 +1,37 @@
-    ;; ---- stream BANK@@BANK@@.BIN -> RAM bank @@BANK@@ (GA Config @@BANK@@) ----
-    ;; CAS calls via the firmware interposer; GA select is a direct port write.
+    ;; ---- stream BANK@@BANK@@.BIN -> RAM@@BANK@@ via staging buffer + LDIR ----
+    ;; The firmware CAS routines manage their own RAM banking, so a CAS_IN_DIRECT
+    ;; straight to 0x4000 under GA Config @@BANK@@ lands the data in RAM1, NOT
+    ;; RAM@@BANK@@.  Instead: CAS-load the bank to the always-mapped staging buffer
+    ;; at 0x9000 (RAM2, under Config 0), then copy staging -> RAM@@BANK@@ at the
+    ;; 0x4000 window with the firmware NOT involved in the copy (di / GA select /
+    ;; LDIR / GA restore).  Bank streamed VERBATIM (stays ZX0-compressed).
     ld   b, @@BANK_FILE_LEN@@        ;; filename length
     ld   hl, _bankname_@@BANK@@      ;; filename "@@BANK_FILE@@"
     ld   de, 0x8000                 ;; 2K firmware CAS buffer (page C, stays mapped)
     call firmware
     defw CAS_IN_OPEN
     jp   nc, _loader_error
-    ld   a, 0x@@BANK_CONFIG_HEX@@    ;; GA RAMR (0xC0 | config @@BANK@@) -> RAM@@BANK@@ @ 0x4000
-    ld   bc, 0x7F00                 ;; B=0x7F = Gate-Array port (mirrors 00bswitch.c)
-    out  (c), a
-    ld   hl, 0x4000                 ;; destination = swap window (VERBATIM, stays compressed)
+    ld   hl, 0x9000                 ;; load bank to staging buffer (RAM2, always mapped)
     call firmware
     defw CAS_IN_DIRECT
-    push af                         ;; preserve the load result across the Config-0 restore
-    ld   a, 0xC0                    ;; restore GA Config 0 (base map: RAM0/1/2/3)
-    ld   bc, 0x7F00
-    out  (c), a
+    push af                         ;; preserve the load result across CAS IN CLOSE
     call firmware
     defw CAS_IN_CLOSE
     pop  af
     jp   nc, _loader_error
+    ;; copy staging (0x9000) -> RAM@@BANK@@ at the 0x4000 window (firmware-free)
+    di
+    ld   a, 0x@@BANK_CONFIG_HEX@@    ;; GA RAMR (0xC0 | @@BANK@@) -> RAM@@BANK@@ @ 0x4000
+    ld   bc, 0x7F00                 ;; B=0x7F = Gate-Array port (mirrors 00bswitch.c)
+    out  (c), a
+    ld   hl, 0x9000                 ;; src = staging buffer
+    ld   de, 0x4000                 ;; dest = swap window (RAM@@BANK@@)
+    ld   bc, @@BANK_SIZE@@          ;; bytes to copy (whole bank)
+    ldir
+    ld   a, 0xC0                    ;; restore GA Config 0 (base map: RAM0/1/2/3)
+    ld   bc, 0x7F00
+    out  (c), a
+    ei
     jr   _bankdone_@@BANK@@
 _bankname_@@BANK@@:
     defm "@@BANK_FILE@@"
