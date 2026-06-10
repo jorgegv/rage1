@@ -16,6 +16,7 @@
 #include "rage1/dataset.h"
 #include "rage1/memory.h"
 #include "rage1/game_state.h"
+#include "rage1/interrupts.h"
 
 #include "game_data.h"
 
@@ -35,6 +36,20 @@ void dataset_activate( uint8_t d ) __z88dk_fastcall {
     if ( game_state.active_dataset == d )
         return;
 
+    // INTERIM FIX (cpc-banked): on cpc-banked the IM1 interrupt dispatch path
+    // (the +cpc CRT interposer's z88dk-clib vector dispatcher + its vector
+    // tables) currently resides in the 0x4000-0x7FFF swap window; a tick firing
+    // while a dataset bank is paged in there vectors into paged-out code and
+    // crashes.  Hold interrupts off across the whole Config-N
+    // window using the nesting interlock (inner memory_switch_bank EIs are
+    // suppressed while nesting stays >0).  ZX128 is unaffected (its swap window
+    // is 0xC000, ISR is below it) so it is guarded out and stays byte-identical.
+    // Permanent fix (planned) = own the IM1 vector with a low-memory ISR, after
+    // which interrupts can stay live across the decompress and this can be removed.
+#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+    intrinsic_di_if_needed();
+#endif
+
     // save previous memory bank, switch the proper memory bank for the
     // given dataset
     previous_memory_bank = memory_switch_bank( dataset_info[ d ].bank_num );
@@ -46,6 +61,10 @@ void dataset_activate( uint8_t d ) __z88dk_fastcall {
 
     // switch back to previous memory bank
     memory_switch_bank( previous_memory_bank );
+
+#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+    intrinsic_ei_if_needed();
+#endif
 
     // Save the dataset that was activated here and in game_state - Beware!
     // This has to be done AFTER switching back to bank 0!
