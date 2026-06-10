@@ -272,6 +272,26 @@ where runnable + independent review for non-trivial/asm; commit per step)
        `code_crt_common` is mis-dropped at 0x0000 over the Z80 vectors — a second placement bug.)
        The dzx0-only PoC (copy compressed dataset out of the window before decompress) did NOT fix it,
        confirming the corruption is broader than dzx0 (PoC reverted).
+
+       **⚠ CORRECTION + RESOLUTION (2026-06-09 late) — the 9.3-REMAINING root cause above was a
+       PHANTOM; boot was the real blocker, now FIXED.** The "garbled render while engine runs" premise
+       was wrong: the engine NEVER reached main() — it crashed in the two-CRT firmware-state handover
+       (GAME.BIN's stock +cpc CRT prologue ran kl_rom_walk/drive-restore/loadbanks in the loader's
+       process-exx state). The 9.4 custom mmap (commit 60b284f, swap-active globals <0x4000) is sound
+       housekeeping but did NOT fix the garble (chased the phantom).
+       - **9.5 ✅ DONE — boot fixed via custom minimal crt0 (Option 1).** NEW `crt0-cpc-banked.asm`
+         = stock cpc_crt0.asm minus the firmware prologue + loader.asm INCLUDE (rest byte-identical;
+         keeps cpc_enable_process_exx_set — firmware-free under CRT_DISABLE_FIRMWARE_ISR=1). Wired via
+         `-crt0=$(CURDIR)/crt0-cpc-banked.asm` on the GAME.BIN link only; loader fail-safe DIAG reverted.
+         cap32: engine boots→main()→clears screen→runs loop→responds to keys (Q/A/O/P+Space). Review PASS.
+       - **mmap.inc separation (build hygiene).** `git mv mmap.inc mmap-zx.inc`; `./mmap.inc` is now a
+         gitignored per-build artifact staged by a shared `STAGE_MMAP=cp $(MMAP_SRC) mmap.inc`
+         (Makefile.common); each platform sets `MMAP_SRC` (mmap-zx.inc / mmap-cpc-banked.inc). Killing a
+         build can no longer corrupt a tracked map (the old overwrite-and-trap-restore was SIGKILL-unsafe).
+       - **NEW open item (the REAL render bug):** with boot fixed, the engine draws sprites GARBLED —
+         after movement+fire the bottom rows fill with regular dashed yellow/white/red lines = sprites
+         written to WRONG CPC mode-1 screen addresses. Data was already verified-correct, so this is a
+         screen-WRITE addressing bug in the gfx/JSP CPC sprite draw+erase path. THIS is now step-10's gate.
        **FIX = the cpc-banked LOWMEM discipline (B5/B6 custom-memory-map work):** place ALL swap-active
        code+data in a page-A (<0x4000) section — the analog of zx128's "everything below the 0xC000 swap
        window" (on zx128 this is trivially satisfied since the window is at the top; on cpc-banked the

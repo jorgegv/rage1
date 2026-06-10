@@ -244,7 +244,7 @@ SPLIT_TESTS_DIR		= $(BUILD_DIR)/_tests
 SPLIT_COPY_ITEMS	= engine external tools lib etc games \
 			  Makefile Makefile.common Makefile-48 Makefile-128 \
 			  Makefile-zx48 Makefile-zx128 Makefile-cpc-flat Makefile-cpc-banked Makefile.game \
-			  $(wildcard *.inc)
+			  $(wildcard *.inc) $(wildcard crt0-*.asm)
 
 ZX_SPLIT_TARGETS	= $(addprefix test-build-split-,$(ZX_TEST_GAMES))
 CPC_SPLIT_TARGETS	= $(addprefix test-build-split-,$(CPC_TEST_GAMES))

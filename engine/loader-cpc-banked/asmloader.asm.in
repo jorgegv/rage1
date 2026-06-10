@@ -65,9 +65,13 @@ _mainname:
 _maindone:
 
 @@BANK_LOAD_BLOCK@@    ;; engine image + all banks loaded; GA is back in Config 0.
-    ;; Hand over to the resident engine entry.  Firmware is still live; the
-    ;; engine's CRT re-inits and init_interrupts() disables it / installs the
-    ;; IM1 ISR.
+    ;; Hand over to the resident engine entry.  GAME.BIN uses a custom minimal
+    ;; crt0 (crt0-cpc-banked.asm, B7 step 9.5) that is self-contained at entry:
+    ;; it runs NO firmware-dependent startup, so this loader does NOT need to
+    ;; restore firmware-native exx/ISR state before the jp.  It just hands over
+    ;; the state it already established (ROMs disabled by this loader's own CRT
+    ;; mc_start_program; firmware still live for the 300 Hz disc tick until the
+    ;; engine's init_interrupts() takes over the IM1 ISR).
     jp @@MAIN_CODE_START@@
 
     ;; A firmware file op failed (disc error / missing file).  With a correctly

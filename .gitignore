@@ -29,6 +29,13 @@ debug_script.cfg
 *.cdt
 # the root-level linked CPC binary written by `zcc -create-app -o game`
 /game
+# B7 step 9.5: the link-time memory map is a per-build staged artifact.
+# z88dk's crt_section.inc hard-codes INCLUDE "./mmap.inc" (fixed, cwd-relative)
+# when __MMAP=-1, so each platform stages its OWN tracked source map
+# (mmap-zx.inc / mmap-cpc-banked.inc) to this transient ./mmap.inc right before
+# the main link.  It is never a tracked file, so an interrupted build cannot
+# corrupt a committed map (the bug that motivated splitting the ZX/CPC maps).
+/mmap.inc
 # B7 step 9.2c: cpc-banked banking-build artifacts at repo root
 /GAME.BIN
 /LOADER.BIN

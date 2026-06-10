@@ -24,6 +24,17 @@ GENERATED_DIR_SUBS		= $(GENERATED_DIR)/subs
 GAME_SRC_DIR			= $(BUILD_DIR)/game_src
 GAME_DATA_DIR			= $(BUILD_DIR)/game_data
 
+# B7 step 9.5: link-time memory map staging (shared by all __MMAP=-1 platforms).
+# z88dk's crt/classic/crt_section.inc hard-codes `INCLUDE "./mmap.inc"` (a fixed,
+# cwd-relative name) when __MMAP=-1, so each platform must present ITS map as
+# ./mmap.inc in the link cwd.  Rather than have the CPC build overwrite a tracked
+# ZX mmap.inc (which an interrupted build could leave corrupted), every platform
+# keeps its OWN tracked source map and stages it to the transient (gitignored)
+# ./mmap.inc right before the main link.  Each platform Makefile sets MMAP_SRC
+# (mmap-zx.inc / mmap-cpc-banked.inc); STAGE_MMAP is invoked as `$(STAGE_MMAP); \`
+# immediately before the linker call.  Recursive (=) so MMAP_SRC resolves at use.
+STAGE_MMAP			= cp -f $(MMAP_SRC) mmap.inc
+
 # by default, build the main test game
 # override this in the build command line (with e.g. "make build128 target_game=../famargon") to build your own game
 # you can also build other test games under the games/ directory
@@ -440,4 +451,4 @@ lis-link:
 
 section-check:
 	echo "Checking all compiler sections in MMAP.INC..."
-	./tools/check_mmap_sections.sh main.map mmap.inc
+	./tools/check_mmap_sections.sh main.map $(MMAP_SRC)

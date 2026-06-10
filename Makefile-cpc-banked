@@ -198,22 +198,28 @@ OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 # include root, and REGISTER_SP); empty unless GFX_BACKEND=jsp on +cpc.
 CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(JSP_CPC_CFLAGS) $(DEBUG_FLAGS)
 
-# The custom mmap file for section-check AND, since B7 step 9.4, the REAL
-# linker memory map (zpragma sets MMAP=-1).
-CPC_MMAP_INC		= mmap-cpc-banked.inc
+# B7 step 9.5: this platform's link-time memory map source (zpragma sets
+# MMAP=-1).  Staged to the transient ./mmap.inc by the shared $(STAGE_MMAP) in
+# Makefile.common right before each +cpc link.  Previously this build overwrote
+# the tracked ZX mmap.inc with a backup/restore trap; that trap was bypassed by
+# SIGKILL (an interrupted build left the ZX map corrupted).  Now mmap.inc is a
+# gitignored per-build artifact and the ZX/CPC source maps are fully separate.
+MMAP_SRC		= mmap-cpc-banked.inc
 
-# B7 step 9.4: crt/classic/crt_section.inc hard-codes `INCLUDE "./mmap.inc"`
-# (cwd-relative) when __MMAP == -1, so the +cpc link MUST find the cpc-banked
-# map AS ./mmap.inc in the link cwd.  But the repo root already ships the ZX
-# mmap.inc (used by the ZX `make build` link), and the per-game test trees copy
-# it in too — overwriting it would break a concurrent/subsequent ZX link.  So
-# stage $(CPC_MMAP_INC) -> mmap.inc just for the +cpc link, restoring any prior
-# mmap.inc afterwards (trap fires on link success OR failure).  $$ escapes the
-# make $ so the shell sees a real subshell/trap.
-STAGE_MMAP		= _bk=mmap.inc.cpcbanked-bak; \
-			  if [ -e mmap.inc ]; then cp -p mmap.inc $$_bk; fi; \
-			  trap 'if [ -e '"$$_bk"' ]; then mv -f '"$$_bk"' mmap.inc; else rm -f mmap.inc; fi' EXIT; \
-			  cp -f $(CPC_MMAP_INC) mmap.inc
+# B7 step 9.5 ("Option 1"): custom minimal crt0 for the resident GAME.BIN image.
+# The stock +cpc CRT prologue runs firmware-dependent startup (kl_rom_walk /
+# AMSDOS drive restore / loadbanks) BEFORE its own exx-seize; GAME.BIN is jp'd
+# into from LOADER.BIN (already in process-exx state, ROMs off), so those calls
+# crash before main().  This crt0 drops that prologue (see its header).  Passed
+# to the GAME.BIN link via -crt0=; only the GAME.BIN link uses it (datasets /
+# codesets are --no-crt; the loader keeps the stock CRT for its firmware calls).
+# Absolute path: zcc relocates the crt0 into its own temp build dir, so a cwd-
+# relative path is unreliable (see zcc.c "-crt0" note); $(CURDIR) is the build
+# root for both the normal build and the per-game split-test snapshot.
+CPC_CRT0		= $(CURDIR)/crt0-cpc-banked.asm
+
+# B7 step 9.5: STAGE_MMAP (cp $(MMAP_SRC) -> ./mmap.inc) is shared in
+# Makefile.common; this build invokes it before each +cpc link via `$(STAGE_MMAP); \`.
 
 # ---- Phase G7: engine compile-test path --------------------------------
 # G7-4: type-check the WHOLE RAGE1 engine (engine/src/*.c) under +cpc against
@@ -366,7 +372,7 @@ game_image: $(GAME_IMAGE)
 $(GAME_IMAGE): $(CPC_SRC)
 	echo "Linking headerless engine image $(GAME_IMAGE) (full engine, org $(CRT_ORG_CODE))..."
 	$(STAGE_MMAP); \
-	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
+	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -crt0=$(CPC_CRT0) -create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
 	cp $(CPC_NAME) $(GAME_IMAGE)
 	cp $(CPC_NAME).map main.map
 
