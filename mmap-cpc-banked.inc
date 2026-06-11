@@ -75,6 +75,16 @@
 IF !__crt_model
     INCLUDE "crt/classic/crt_section_data.inc"
 ENDIF
+    ;; Shape A (cpc-banked): code+rodata+data stay contiguous with the program
+    ;; (single load image, no gap) and end below the page-B JSP block; only the
+    ;; (zero-initialised, NOT-in-binary) BSS is relocated to page C at
+    ;; CPC_BANKED_PAGE_C_DATA_BASE (above the 0x8000 dataset buffer).  This frees
+    ;; page B 0x6000-0x7FFF for the JSP data block (the __at jsp_* tables, whose
+    ;; addresses come from rage1-config.yml).  The org constant is injected by
+    ;; Makefile-cpc-banked via -Ca-D from yq.  (RODATA/DATA must NOT be org-jumped:
+    ;; z88dk emits the post-jump initialised sections as a SEPARATE binary that the
+    ;; single RUN" load would not pick up.)  See cpc-banked-bringup.md DC3/DC7.
+    org CPC_BANKED_PAGE_C_DATA_BASE
     INCLUDE "crt/classic/crt_section_bss.inc"
 
 ; For ROM compilation, the data section has to sit in RAM. It's placed

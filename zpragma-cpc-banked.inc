@@ -24,8 +24,10 @@
 // (Shape B — full-page-A dataset buffer, code in page C, CRT_ORG_CODE=0x8000 —
 //  is the alternative under experiment per DC3-D; selected via these constants.)
 
-// CRT_ORG_CODE: Shape-A page-A code origin. z88dk +cpc default is 0x1200.
-#pragma output CRT_ORG_CODE           = 0x1200
+// CRT_ORG_CODE: Shape-A page-A code origin.  Now sourced from
+// etc/rage1-config.yml (memory_map.cpc_banked.crt_org_code) and injected by
+// Makefile-cpc-banked via -pragma-define:CRT_ORG_CODE (single source of truth);
+// NOT set here, as a value here would conflict with the command-line override.
 
 // Stack at top of page C, just below screen RAM at 0xC000 (banking.md §3.1.4).
 #pragma output REGISTER_SP            = 0xBF00

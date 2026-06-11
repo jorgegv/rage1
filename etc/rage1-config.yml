@@ -100,6 +100,64 @@ banking:
       main_file:             GAME.BIN
 
 ##
+## Resident memory map (per-platform addresses)
+##
+## Externalises the cpc-banked Shape A memory map
+## (doc/multiplatform-plan/management/cpc-banked-bringup.md lines 56-66) so the
+## build is the single source of truth.  Read in the Makefile with `yq`, turned
+## into make vars, and injected as C (-D) / asm (-Ca-D) / pragma (-pragma-define)
+## #defines that the consumers (zpragma, mmap, memory.h, JSP jsp_data.c) use.
+##
+## Key names use snake_case for coherence with the other keys in this file.
+##
+## Shape A (cpc_banked):
+##   RAM0 page A 0x0000-0x3FFF : vectors/ISR@0x0038; resident asm; engine C from
+##                               crt_org_code; code may overflow into page-B low.
+##   RAM1 page B 0x4000-0x7FFF : Config-0 home.  jsp_data block at the TOP
+##                               (0x5800-0x7FFF) co-located with the JSP render
+##                               code [DC7]; Config 4-7 page the banks over it.
+##   RAM2 page C 0x8000-0xBFFF : dataset decompress buffer at
+##                               banked_dataset_base; engine rodata/data/bss at
+##                               page_c_data_base (above the buffer); stack
+##                               top-down from register_sp.
+##   RAM3 page D 0xC000-0xFFFF : SCREEN — no code/data.
+##
+memory_map:
+  cpc_banked:
+    ## engine code origin (page A).  z88dk +cpc defaults to 0x1200 (a
+    ## conservative gap); 0x0040-0x11FF is reclaimable RAM (no resident code,
+    ## no firmware low-RAM workspace there), so we drop it low to reclaim ~4 KB
+    ## of page-A budget for resident code.  Each drop is validated on cap32
+    ## (still RUN"-loads + loadbanks works).  Min is 0x0040 (above the RST/IM1
+    ## vectors at 0x0000-0x003F).
+    crt_org_code:               0x0200
+    register_sp:                0xBF00   # stack top (page C, grows down)
+    ## datasets: compressed source read at dataset_load_base in the paged bank
+    ## (= swap_window), decompressed to banked_dataset_base in page C.
+    dataset_load_base:          0x4000
+    banked_dataset_base:        0x8000
+    codeset_assets_base:        0x4000
+    banked_function_table_base: 0x4000
+    ## engine bss relocated into page C at this address (above the dataset
+    ## buffer), so page B 0x5800-0x7FFF is free for the JSP data block.  (Only
+    ## bss moves; rodata/data stay contiguous with code in the single load image.)
+    ## CEILING: this caps the in-place dataset decompress buffer
+    ## (banked_dataset_base .. page_c_data_base) at 0x9800-0x8000 = 6 KB.  A
+    ## decompressed dataset larger than that overruns bss — datagen's
+    ## BUILD_MAX_DATASET_SIZE_CPC6128 must stay <= 6 KB (TODO: add a build-time
+    ## assertion; the doc's old MAXDS~10KB estimate predates bss landing here).
+    page_c_data_base:           0x9800
+    ## JSP data block at the top of the 0x4000 swap window (page-B home RAM1).
+    ## The cpc-flat 0x9800-0xBFFF block shifted down 0x4000.  ROTTBL is
+    ## 256-aligned and the block ends at 0x7FFF.
+    jsp_data:
+      bat:                      0x5800
+      ftt:                      0x6000
+      dtt:                      0x6100
+      btt:                      0x6200
+      rottbl:                   0x7200
+
+##
 ## build configuration
 ##
 build:

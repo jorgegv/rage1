@@ -46,6 +46,35 @@ ZPRAGMA_INC		= zpragma-cpc-banked.inc
 # T2-1: CPC z88dk target
 ZCC_TARGET		= +cpc
 
+# ---- Shape A memory map, sourced from etc/rage1-config.yml via yq -----------
+# Single source of truth for the cpc-banked resident map
+# (doc/multiplatform-plan/management/cpc-banked-bringup.md lines 56-66).  These
+# vars are injected below as C (-D) / asm (-Ca-D) #defines that the consumers
+# (JSP jsp_data.c, the linker mmap) read.  MUST be set BEFORE `-include
+# Makefile.common` so JSP_CPC_CFLAGS picks up JSP_REGISTER_SP.
+RAGE1_CONFIG_YML	= etc/rage1-config.yml
+MM_CRT_ORG_CODE		:= $(shell yq '.memory_map.cpc_banked.crt_org_code'               $(RAGE1_CONFIG_YML))
+MM_REGISTER_SP		:= $(shell yq '.memory_map.cpc_banked.register_sp'                $(RAGE1_CONFIG_YML))
+MM_PAGE_C_DATA_BASE	:= $(shell yq '.memory_map.cpc_banked.page_c_data_base'           $(RAGE1_CONFIG_YML))
+MM_JSP_BAT		:= $(shell yq '.memory_map.cpc_banked.jsp_data.bat'               $(RAGE1_CONFIG_YML))
+MM_JSP_FTT		:= $(shell yq '.memory_map.cpc_banked.jsp_data.ftt'               $(RAGE1_CONFIG_YML))
+MM_JSP_DTT		:= $(shell yq '.memory_map.cpc_banked.jsp_data.dtt'               $(RAGE1_CONFIG_YML))
+MM_JSP_BTT		:= $(shell yq '.memory_map.cpc_banked.jsp_data.btt'               $(RAGE1_CONFIG_YML))
+MM_JSP_ROTTBL		:= $(shell yq '.memory_map.cpc_banked.jsp_data.rottbl'            $(RAGE1_CONFIG_YML))
+
+# Override the JSP stack (Makefile.common's JSP_CPC_CFLAGS default is 0x9800 for
+# cpc-flat); cpc-banked's JSP block moved to page B so the stack lives in page C.
+JSP_REGISTER_SP		:= $(MM_REGISTER_SP)
+
+# JSP data-block addresses -> jsp_data.c (C arrays, __at). The #ifndef guards in
+# jsp_data.c let these -D values win over the cpc-flat 0x9800 defaults.
+# page_c_data_base -> the mmap (asm), to org rodata/data/bss into page C.
+CPC_MM_DEFINES		= -DBAT_ADDR=$(MM_JSP_BAT) -DFTT_ADDR=$(MM_JSP_FTT) \
+			  -DDTT_ADDR=$(MM_JSP_DTT) -DBTT_ADDR=$(MM_JSP_BTT) \
+			  -DROTTBL_ADDR=$(MM_JSP_ROTTBL) \
+			  -Ca-DCPC_BANKED_PAGE_C_DATA_BASE=$(MM_PAGE_C_DATA_BASE) \
+			  -pragma-define:CRT_ORG_CODE=$(MM_CRT_ORG_CODE)
+
 # T3a: no-banking image, no TAP/bank list (banking machinery is Phase B6/B7).
 CPC_NAME		= game
 CPC_FILE		= $(CPC_NAME).cpc
@@ -202,7 +231,7 @@ OBJS			= $(CSRC:.c=.o) $(ASMSRC:.asm=.o)
 # $(JSP_CPC_CFLAGS) (from Makefile.common) carries the JSP CPC build flags
 # (JSP_TARGET_CPC + CPC_MODE1 + JSP_CELL_MODEL_PIXEL to C and asm, the asm
 # include root, and REGISTER_SP); empty unless GFX_BACKEND=jsp on +cpc.
-CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(JSP_CPC_CFLAGS) $(DEBUG_FLAGS)
+CFLAGS			= -vn -SO2 --opt-code-size -compiler=sdcc --max-allocs-per-node200000 -pragma-include $(ZPRAGMA_INC) $(INC) $(CPC_EXTRA_INC) $(JSP_CPC_CFLAGS) $(CPC_MM_DEFINES) $(DEBUG_FLAGS)
 
 # B7 step 9.5: this platform's link-time memory map source (zpragma sets
 # MMAP=-1).  Staged to the transient ./mmap.inc by the shared $(STAGE_MMAP) in
@@ -619,7 +648,8 @@ section-check-cpc:
 	fi
 
 ##
-## CRT_ORG_CODE exposed for appmake (read from zpragma-cpc-banked.inc)
+## CRT_ORG_CODE exposed for appmake — sourced from rage1-config.yml via yq
+## (MM_CRT_ORG_CODE), same value injected into the engine link via -pragma-define.
 ##
 
-CRT_ORG_CODE		= 0x1200
+CRT_ORG_CODE		= $(MM_CRT_ORG_CODE)

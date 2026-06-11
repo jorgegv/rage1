@@ -209,10 +209,14 @@ ifeq ($(BUILD_GFX_BACKEND),jsp)
     JSP_CSRC		:= $(wildcard $(JSP_DIR)/lib/*.c)
     ifeq ($(ZCC_TARGET),+cpc)
         JSP_ASMSRC	:= $(wildcard $(JSP_DIR)/lib/*.asm) $(wildcard $(JSP_DIR)/lib/cpc/*.asm)
+        # JSP stack: cpc-flat keeps 0x9800 (stack below its 0x9800-0xBFFF JSP
+        # block). cpc-banked overrides JSP_REGISTER_SP from rage1-config.yml
+        # (memory_map.cpc_banked.register_sp) — its JSP block moved to page B.
+        JSP_REGISTER_SP	?= 0x9800
         JSP_CPC_CFLAGS	:= -DJSP_TARGET_CPC -Ca-DJSP_TARGET_CPC \
 				   -DCPC_MODE1 -Ca-DCPC_MODE1 \
 				   -DJSP_CELL_MODEL_PIXEL -Ca-DJSP_CELL_MODEL_PIXEL \
-				   -Ca-I$(JSP_DIR) -pragma-define:REGISTER_SP=0x9800
+				   -Ca-I$(JSP_DIR) -pragma-define:REGISTER_SP=$(JSP_REGISTER_SP)
     else
         JSP_ASMSRC	:= $(wildcard $(JSP_DIR)/lib/*.asm) $(wildcard $(JSP_DIR)/lib/zx/*.asm)
     endif
