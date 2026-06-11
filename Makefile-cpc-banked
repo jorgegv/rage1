@@ -218,11 +218,19 @@ MMAP_SRC		= mmap-cpc-banked.inc
 # into from LOADER.BIN (already in process-exx state, ROMs off), so those calls
 # crash before main().  This crt0 drops that prologue (see its header).  Passed
 # to the GAME.BIN link via -crt0=; only the GAME.BIN link uses it (datasets /
-# codesets are --no-crt; the loader keeps the stock CRT for its firmware calls).
+# codesets are --no-crt).
 # Absolute path: zcc relocates the crt0 into its own temp build dir, so a cwd-
 # relative path is unreliable (see zcc.c "-crt0" note); $(CURDIR) is the build
 # root for both the normal build and the per-game split-test snapshot.
 CPC_CRT0		= $(CURDIR)/crt0-cpc-banked.asm
+
+# B7 step 10: custom crt0 for the cold-boot LOADER.BIN.  It is the stock +cpc
+# crt0 MINUS the `call cpc_enable_process_exx_set`, so the loader keeps the
+# firmware exx/ISR state PRISTINE and can do sequential AMSDOS CAS disc loads
+# (with DIRECT $bcxx calls) without the 2nd-transaction crash that the
+# process-exx seize causes (bisected 2026-06-11; see the crt0's header).  Passed
+# to the loader link via -crt0=; absolute path for the same reason as CPC_CRT0.
+CPC_LOADER_CRT0		= $(CURDIR)/crt0-cpc-banked-loader.asm
 
 # B7 step 9.5: STAGE_MMAP (cp $(MMAP_SRC) -> ./mmap.inc) is shared in
 # Makefile.common; this build invokes it before each +cpc link via `$(STAGE_MMAP); \`.
@@ -252,7 +260,7 @@ ENGINE_COMPILE_TEST_OBJS	= $(ENGINE_COMPILE_TEST_CSRC:.c=.o)
 # -included above). Reusing the bare names produced 7x "overriding recipe for
 # target" GNU Make warnings on every build.
 .PHONY: build main loader asmloader cpc dsk cdt final-cpc section-check-cpc compile-test \
-	banking-build datasets codesets banked_code_empty banks game_image \
+	banking-build datasets codesets banked_code_empty banks bank_scaffold game_image \
 	banked_loader bank_files banked_dsk cas-buffer-check org-crosscheck
 
 ifeq ($(CPC_BANKED_BANKING),1)
@@ -299,19 +307,17 @@ MAIN_CODE_START_CPC	= $(shell awk '/^    loader:/{f=1} f&&/main_code_start:/{pri
 banking-build:
 	# remove stale repo-root artifacts: these targets have no prerequisites, so
 	# make would skip rebuilding them if a previous build left them in place
-	# (top-level `make clean` only clears build/).
-	rm -f $(GAME_IMAGE) $(LOADER_BIN_CPC) loader_cpc loader_cpc.* BANK*.BIN main.map $(BANKED_DSK) $(CPC_NAME) $(CPC_NAME).*
+	# (top-level `make clean` only clears build/).  Includes the per-bank section
+	# binaries zcc emits ($(CPC_NAME)_BANK_*.bin) and the AMSDOS bank files
+	# (*.b[0-7]) so a stale bank cannot leak into the disc.
+	rm -f $(GAME_IMAGE) main.map $(CPC_NAME) $(CPC_NAME).* $(CPC_NAME)_BANK_*.bin *.b[0-7] $(GENERATED_DIR)/bank_scaffold.asm
 	$(MYMAKE) datasets
 	$(MYMAKE) codesets
 	$(MYMAKE) banked_code_empty
 	$(MYMAKE) banks
+	$(MYMAKE) bank_scaffold
 	$(MYMAKE) game_image
-	$(MYMAKE) bank_files
-	$(MYMAKE) banked_loader
-	$(MYMAKE) banked_dsk
 	$(MYMAKE) section-check-cpc
-	$(MYMAKE) org-crosscheck
-	$(MYMAKE) cas-buffer-check
 	echo "Build completed SUCCESSFULLY (cpc-banked, banking)"
 
 ##
@@ -367,20 +373,50 @@ banks:
 	./tools/banktool.pl -p cpc-banked -i $(GENERATED_DIR_DATASETS) -c $(GENERATED_DIR_CODESETS) -o $(GENERATED_DIR)
 
 ##
-## Headerless full-engine image GAME.BIN.  Reuses the proven single-step
-## -create-app link (CPC_SRC = full engine via CPC_LINK_ENGINE_FULL); the
-## linked binary $(CPC_NAME) is the raw headerless image (org = CRT_ORG_CODE).
-## The .map drives section-check / cas-buffer-check.  zcc also writes a
-## single-file $(CPC_NAME).dsk which we then OVERWRITE with the multi-file disc.
+## z88dk bank scaffold (B7 step 10 redesign): for each populated bank_<n>.bin,
+## emit `SECTION BANK_<n>` + `BINARY "bank_<n>.bin"` into bank_scaffold.asm.
+## Linked into GAME (it lands in $(GENERATED_DIR), matched by the engine link's
+## $(GENERATED_DIR)/*.asm wildcard).  The linker splits each BANK_<n> section
+## into its own binary (org'ed in expansion RAM by mmap-cpc-banked.inc), and
+## appmake +cpc --disk emits one AMSDOS bank disc file (GAME.B<n>) per populated
+## bank + patches __crt_loader_filename so z88dk loadbanks streams them at boot.
+##
+bank_scaffold:
+	echo "Generating cpc-banked z88dk bank scaffold (bankscaffoldtool)..."
+	./tools/bankscaffoldtool.pl -p cpc-banked -i $(GENERATED_DIR) -o $(GENERATED_DIR)
+
+##
+## Full-engine image + bootable disc (B7 step 10 z88dk-banking redesign).
+## The single-step -create-app -subtype=dsk link is now the WHOLE banking
+## packaging: $(CPC_SRC) includes the generated bank_scaffold.asm (picked up by
+## the $(GENERATED_DIR)/*.asm wildcard), so the linker splits each populated
+## BANK_<n> section into its own binary and appmake +cpc --disk writes the
+## bootable $(CPC_NAME).dsk containing the AMSDOS-headered main image (RUN-able
+## as GAME) PLUS one bank file (GAME.B<n>) per populated bank, and patches
+## __crt_loader_filename so the crt0's loadbanks streams them at boot.  No
+## separate LOADER.BIN / hand-rolled multi-file disc anymore — this .dsk is the
+## final artifact.  $(GAME_IMAGE) is a copy of the raw linked binary kept for
+## reference/inspection; the .map drives section-check.
 ##
 game_image: $(GAME_IMAGE)
 
 $(GAME_IMAGE): $(CPC_SRC)
-	echo "Linking headerless engine image $(GAME_IMAGE) (full engine, org $(CRT_ORG_CODE))..."
+	echo "Linking full-engine image + bootable banked disc (org $(CRT_ORG_CODE), loadbanks crt0)..."
 	$(STAGE_MMAP); \
 	$(ZCC) $(ZCC_TARGET) $(CFLAGS) $(CFLAGS_LIST) -crt0=$(CPC_CRT0) -create-app -subtype=dsk -o $(CPC_NAME) $(CPC_SRC)
 	cp $(CPC_NAME) $(GAME_IMAGE)
 	cp $(CPC_NAME).map main.map
+
+################################################################################
+## LEGACY hand-rolled cold-boot LOADER pipeline (B7 step 9 / early step 10).
+## RETAINED-BUT-UNWIRED as of the B7 step 10 z88dk-banking redesign: the targets
+## below (bank_files / banked_loader / banked_dsk / org-crosscheck /
+## cas-buffer-check) and the CPC_LOADER_CRT0 / crt0-cpc-banked-loader.asm +
+## engine/loader-cpc-banked/*.in templates are NO LONGER invoked by
+## banking-build (z88dk loadbanks + appmake --disk own bank loading now), but are
+## kept on disk + invokable for easy revert / comparison.  See the step-10
+## redesign notes in .prompts/2026-06-11.md and cpc-banked-bringup.md.
+################################################################################
 
 ##
 ## Per-bank BANK<n>.BIN (headerless, raw, from banktool's bank_<n>.bin).
@@ -414,8 +450,8 @@ banked_loader: $(LOADER_BIN_CPC)
 $(LOADER_BIN_CPC):
 	echo "Generating cpc-banked cold-boot loader (loadertool)..."
 	./tools/loadertool.pl --platform=cpc-banked -i $(GENERATED_DIR) -o $(GENERATED_DIR_ASMLOADER)
-	echo "Building loader as a +cpc CRT program (org $(LOADER_ORG_CPC), firmware interposer)..."
-	$(ZCC) $(ZCC_TARGET) $(LOADER_CFLAGS) $(CFLAGS_LIST) -o loader_cpc $(ASMLOADER_SRC)
+	echo "Building loader as a +cpc CRT program (org $(LOADER_ORG_CPC), pristine-fw custom crt0, direct CAS)..."
+	$(ZCC) $(ZCC_TARGET) $(LOADER_CFLAGS) $(CFLAGS_LIST) -crt0=$(CPC_LOADER_CRT0) -o loader_cpc $(ASMLOADER_SRC)
 	echo "Wrapping loader -> AMSDOS LOADER.BIN (RUN\"LOADER, load+entry $(LOADER_ORG_CPC))..."
 	$(APPMAKE) --org $(LOADER_ORG_CPC) -b loader_cpc -o $(LOADER_BIN_CPC)
 

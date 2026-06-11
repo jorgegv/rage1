@@ -68,8 +68,10 @@ DISPLAY="$DISP" SDL_VIDEODRIVER=x11 WAYLAND_DISPLAY= \
   "$CAP32_BIN" -c "$CAP32_CFG" -a "run\"$RUNNAME." "$DISK" >"$LOG" 2>&1 &
 CAP_PID=$!
 
-# --- 5. Give it time to boot + load (CPC6128 boot is a few seconds).
-sleep 8
+# --- 5. Give it time to boot + load (CPC6128 boot is a few seconds; a full
+#        RAGE1 engine image + loadbanks bank-load needs longer — override with
+#        CAP32_BOOT_SLEEP, e.g. CAP32_BOOT_SLEEP=20).
+sleep "${CAP32_BOOT_SLEEP:-8}"
 if ! kill -0 "$CAP_PID" 2>/dev/null; then
   echo "cap32 exited early. Log:"; cat "$LOG"; exit 1
 fi

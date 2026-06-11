@@ -1,46 +1,32 @@
-;       CRT0 for the Amstrad CPC family — RAGE1 cpc-banked CUSTOM MINIMAL variant
+;       CRT0 for the Amstrad CPC family
+;       — RAGE1 cpc-banked COLD-BOOT LOADER variant (LOADER.BIN only) —
 ;
-;       Derived from z88dk lib/target/cpc/classic/cpc_crt0.asm (Stefano Bodrato,
-;       $Id: cpc_crt0.asm,v 1.37 2016-07-15 21:03:25 dom Exp $).  Selected for the
-;       GAME.BIN link via `-crt0=crt0-cpc-banked.asm` (Makefile-cpc-banked).
+;       Stefano Bodrato 8/6/2000  ($Id: cpc_crt0.asm,v 1.37 ... $)
+;       RAGE1 derivative for the cold-boot loader, B7 step 10.
 ;
-;       WHY A CUSTOM CRT0 (cpc-banked B7 step 10 z88dk-banking redesign):
-;       GAME is the resident full-engine image AND the disc boot target: it is
-;       loaded fresh by the AMSDOS firmware (RUN"GAME) in NATIVE firmware state —
-;       there is NO separate LOADER.BIN anymore.  The expansion-RAM banks are
-;       streamed by z88dk's STOCK `loadbanks` (target/cpc/classic/loader.asm),
-;       run HERE in the crt0 prologue in pristine firmware state, BEFORE the
-;       exx-seize — exactly as z88dk's own banked +cpc programs do.  This avoids
-;       the large-CAS-poison bug that killed the old separate-LOADER model (a big
-;       CAS_IN_DIRECT could not coexist with any other CAS op; bisected
-;       2026-06-11).  The bank disc files (GAME.B<n>) are emitted by appmake
-;       +cpc --disk from the populated BANK_<n> sections (the generated
-;       bank_scaffold.asm BINARY-incbins each bank_<n>.bin), and appmake patches
-;       __crt_loader_filename so loadbanks finds them.
+;       WHY A CUSTOM LOADER CRT0 (bisected 2026-06-11):
+;       The loader firmware-loads several files off disc via the AMSDOS CAS
+;       routines (BANK<n>.BIN + the resident GAME.BIN), then jp's the engine.
+;       With the STOCK +cpc crt0, those loads run from _main — i.e. AFTER the crt0
+;       has called `cpc_enable_process_exx_set` (which seizes the firmware
+;       alt-register/exx set and installs the clib interposer ISR over the
+;       firmware ISR at 0x0039).  That disturbance leaves ONLY THE FIRST disc
+;       transaction reliable: a second CAS_IN_OPEN — or a large CAS_IN_DIRECT as a
+;       non-first op — HARD-CRASHES (the 2nd motor spin-up / multi-track seek
+;       faults).  Calling cpc_enable_fw_exx_set later does NOT fully undo it.
 ;
-;       This crt0 is therefore the STOCK cpc_crt0.asm (full firmware prologue:
-;       mc_start_program / kl_rom_walk / AMSDOS drive restore / `call loadbanks`)
-;       with EXACTLY ONE RAGE1 change: the IM1 __interposer_isr__ is trimmed to a
-;       do-nothing ei/ret (see below).
-;
-;       KEPT (stock, essential):
-;         - the firmware prologue + `call loadbanks` (loads the BANK_<n> disc
-;           files into expansion RAM at 0x4000 under each GA config, in pristine
-;           fw state) + the target/cpc/classic/loader.asm INCLUDE and its
-;           __BANK_<n>_END_tail externs (the BANK_<n> sections come from the
-;           custom mmap-cpc-banked.inc, since MMAP=-1).
-;         - SP init, crt0_init (data/BSS), atexit init, heap/eidi init.
-;         - cpc_enable_process_exx_set: exx bookkeeping + installs the IM1 stub at
-;           0x0038/0x0039 to cover the brief startup window before main() runs
-;           init_interrupts(), which then pokes `jp rage1_cpc_isr` over 0x0038 and
-;           OWNS IM1 (engine/src/cpc-banked/rage1_cpc_isr.asm).
-;       RAGE1 TRIM (the only change vs stock):
-;         - the do-nothing __interposer_isr__ (ei/ret).  The z88dk-clib fast/VSYNC
-;           vector walk (im1_vectors/fast_vectors via asm_interrupt_handler) and
-;           the cpc_add_fast_isr/cpc_add_vsync_isr aliases are REMOVED: RAGE1 never
-;           registers a clib handler, so they were dead code that needlessly
-;           pulled the clib interrupt dispatcher into the link.
-;
+;       FIX = z88dk's own ordering: z88dk runs `loadbanks` (open/direct/close of
+;       many large files) in cpc_crt0 BEFORE cpc_enable_process_exx_set, in
+;       PRISTINE firmware state, and loads them all without trouble.  This crt0 is
+;       the stock cpc_crt0 with EXACTLY ONE change: the `call
+;       cpc_enable_process_exx_set` in start: is REMOVED, so the loader NEVER
+;       seizes the firmware state.  _main then performs all CAS loads with DIRECT
+;       $bcxx calls (NOT the `firmware` interposer, which would re-seize per call)
+;       in pristine state, and hands over to the engine still pristine — exactly
+;       what the engine's own crt0-cpc-banked.asm expects at entry (its
+;       cpc_enable_process_exx_set captures the firmware exx set + fw ISR there).
+;       Everything else is byte-for-byte the stock crt0 (firmware prologue,
+;       loadbanks no-op, exx routines kept for link resolution, sections).
 
     MODULE  cpc_crt0
 
@@ -112,22 +98,17 @@ ENDIF
 
 IF      !DEFINED_CRT_ORG_CODE
     defc    CRT_ORG_CODE  = $1200
-ENDIF
+ENDIF   
     org     CRT_ORG_CODE
 
 
 ;--------
 ; REAL CODE
 ;--------
-; RAGE1 cpc-banked z88dk-banking redesign: the stock +cpc firmware prologue is
-; KEPT.  GAME is loaded fresh by the firmware (RUN"GAME) in native state, so it
-; must run mc_start_program / kl_rom_walk / drive-restore and then `loadbanks`
-; (the bank CAS-loading, in pristine firmware state) before seizing the machine.
-; This is byte-for-byte the stock cpc_crt0.asm `start:` prologue.
 
 start:
 ;;------------------------------------------------------------------------
-;; store the drive number GAME was run from
+;; store the drive number the loader was run from
     ld      hl,($be7d)
     ld      a,(hl)
     ld      (drive+1),a
@@ -138,12 +119,13 @@ start:
     call    mc_start_program    ;; start it
 
 ;;------------------------------------------------------------------------
+
 .start2
-    call    kl_rom_walk         ;; enable all roms
+    call    kl_rom_walk         ;; enable all roms 
 
 ;;------------------------------------------------------------------------
 ;; when AMSDOS is enabled, the drive reverts back to drive 0!
-;; This will restore the drive number to the drive GAME was run from
+;; This will restore the drive number to the drive the loader was run from
 .drive
     ld      a,0
     ld      hl,($be7d)
@@ -160,9 +142,13 @@ ENDIF
     INCLUDE "crt/classic/crt_init_atexit.inc"
 
 
-    ; enable process exx set
-    ; install interrupt interposer
-    call    cpc_enable_process_exx_set
+    ; RAGE1 cpc-banked LOADER: the stock `call cpc_enable_process_exx_set` is
+    ; REMOVED here (the ONLY change vs the stock crt0).  The loader must run its
+    ; CAS disc loads in PRISTINE firmware state (fw exx set + fw ISR at 0x0039
+    ; untouched), or only the first disc transaction is reliable.  _main loads
+    ; everything with DIRECT $bcxx calls and jp's the engine — it never returns,
+    ; so the loader never needs the process exx set.  (cpc_enable_process_exx_set
+    ; remains defined below for link resolution; it is simply never called.)
 
     INCLUDE "crt/classic/crt_init_heap.inc"
     INCLUDE "crt/classic/crt_init_eidi.inc"
@@ -188,7 +174,7 @@ __restore_sp_onexit:
     ei
     ret
 
-l_dcal:
+l_dcal: 
     jp      (hl)
 
 
@@ -206,7 +192,7 @@ cpc_enable_fw_exx_set:
     push    af
     pop     hl
     ld      (__process_exx_set_af__),hl
-
+   
 IF startup != 2
   IF CRT_DISABLE_FIRMWARE_ISR = 0
     ld      hl,(__fw_int_address__)
@@ -216,7 +202,7 @@ IF startup != 2
     ld      (0x0038),hl
   ENDIF
 ENDIF
-
+   
     ld      bc,(__fw_exx_set_bc__)           ; restore firmware exx set
     or      a
 
@@ -257,20 +243,73 @@ ENDIF
     ret
 
 IF startup != 2
-
-; RAGE1 cpc-banked: the engine OWNS the IM1 vector from init_interrupts(), which
-; pokes `jp rage1_cpc_isr` at 0x0038 (engine/src/cpc-banked/rage1_cpc_isr.asm).
-; This interposer therefore only has to survive the brief startup window between
-; crt_init_eidi (EI on startup) and init_interrupts() — so it is a do-nothing ISR
-; (the GA interrupt is acknowledged by the Z80 INT cycle; ei/ret is sufficient).
-; The z88dk-clib fast/VSYNC vector walk (im1_vectors/fast_vectors via
-; asm_interrupt_handler) and the cpc_add_fast_isr/cpc_add_vsync_isr registration
-; aliases are REMOVED: RAGE1 never registers a clib handler, so they were dead code
-; that needlessly pulled the clib interrupt dispatcher into the link.
+   PUBLIC  cpc_add_vsync_isr
+   PUBLIC  _cpc_add_vsync_isr
+   PUBLIC  cpc_add_fast_isr
+   PUBLIC  _cpc_add_fast_isr
 
 __interposer_isr__:
+IF CRT_DISABLE_FIRMWARE_ISR = 0
+   EXTERN __fw_add_vsync_isr
+   EXTERN __fw_del_vsync_isr
+   EXTERN __fw_add_fast_isr
+   EXTERN __fw_del_fast_isr
+   
+   defc cpc_add_vsync_isr = __fw_add_vsync_isr
+   defc _cpc_add_vsync_isr = cpc_add_vsync_isr
+   defc cpc_del_vsync_isr = __fw_del_vsync_isr
+   defc _cpc_del_vsync_isr = cpc_del_vsync_isr
+
+   defc cpc_add_fast_isr = __fw_add_fast_isr
+   defc _cpc_add_fast_isr = cpc_add_fast_isr
+   defc cpc_del_fast_isr = __fw_del_fast_isr
+   defc _cpc_del_sfastisr = cpc_del_fast_isr
+
+   call cpc_enable_fw_exx_set
+   call 0x0038
+   di
+   call cpc_enable_process_exx_set
    ei
    ret
+ELSE
+   EXTERN im1_vectors
+   EXTERN fast_vectors
+   EXTERN im1_install_isr
+   EXTERN im1_uninstall_isr
+   EXTERN __add_fast_isr
+   EXTERN __del_fast_isr
+   EXTERN asm_interrupt_handler
+
+   defc cpc_add_vsync_isr = im1_install_isr
+   defc _cpc_add_vsync_isr = cpc_add_vsync_isr
+   defc cpc_del_vsync_isr = im1_uninstall_isr
+   defc _cpc_del_vsync_isr = cpc_del_vsync_isr
+
+   defc cpc_add_fast_isr = __add_fast_isr
+   defc _cpc_add_fast_isr = cpc_add_fast_isr
+   defc cpc_del_fast_isr = __del_fast_isr
+   defc _cpc_del_sfastisr = cpc_del_fast_isr
+
+   push    af
+   push    hl
+   push    bc
+   ld      hl,im1_vectors
+   ; Test for VSYNC
+   ld      b,$f5
+   in      a,(c)
+   rra
+   ; Call the raster/VSYNC interrupts
+   call    c,asm_interrupt_handler
+   ; Call the fast handlers
+   ld      hl,fast_vectors
+   call    asm_interrupt_handler
+no_int:
+   pop     bc
+   pop     hl
+   pop     af
+   ei
+   ret
+ENDIF
 
 ENDIF
 
@@ -282,7 +321,7 @@ ENDIF
 
     INCLUDE "crt/classic/crt_runtime_selection.inc"
 
-    INCLUDE "crt/classic/crt_section.inc"
+    INCLUDE "crt/classic/crt_section.inc" 
 
     SECTION code_crt_init
     ld      hl,$c000

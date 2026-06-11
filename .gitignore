@@ -43,6 +43,10 @@ debug_script.cfg
 /game.com
 /loader_cpc
 /loader_cpc.*
+# B7 step 10 z88dk-banking redesign: appmake-emitted AMSDOS bank disc files
+# (GAME.B<n> -> root-level game.b<n>) at repo root.  The linker per-section bank
+# binaries (game_BANK_<n>.bin) are already covered by the global *.bin above.
+/*.b[0-7]
 # scratch screenshots from tools/cap32-shot.sh / emulator dumps
 /shot.png
 screenshot_*.png

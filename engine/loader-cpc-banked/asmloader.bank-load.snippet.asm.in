@@ -5,18 +5,17 @@
     ;; at 0x9000 (RAM2, under Config 0), then copy staging -> RAM@@BANK@@ at the
     ;; 0x4000 window with the firmware NOT involved in the copy (di / GA select /
     ;; LDIR / GA restore).  Bank streamed VERBATIM (stays ZX0-compressed).
+    ;; DIRECT CAS calls in pristine fw state (crt0-cpc-banked-loader.asm); NOT the
+    ;; `firmware` interposer (it would re-seize the fw state per call).
     ld   b, @@BANK_FILE_LEN@@        ;; filename length
     ld   hl, _bankname_@@BANK@@      ;; filename "@@BANK_FILE@@"
     ld   de, 0x8000                 ;; 2K firmware CAS buffer (page C, stays mapped)
-    call firmware
-    defw CAS_IN_OPEN
+    call CAS_IN_OPEN
     jp   nc, _loader_error
     ld   hl, 0x9000                 ;; load bank to staging buffer (RAM2, always mapped)
-    call firmware
-    defw CAS_IN_DIRECT
+    call CAS_IN_DIRECT
     push af                         ;; preserve the load result across CAS IN CLOSE
-    call firmware
-    defw CAS_IN_CLOSE
+    call CAS_IN_CLOSE
     pop  af
     jp   nc, _loader_error
     ;; copy staging (0x9000) -> RAM@@BANK@@ at the 0x4000 window (firmware-free)

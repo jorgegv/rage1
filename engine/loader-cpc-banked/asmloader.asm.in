@@ -10,13 +10,21 @@
 ;; ~0x8800) — an ALWAYS-MAPPED page that survives bank streaming (page B is paged
 ;; out when GA Config 4-7 is selected; page A holds the engine image).
 ;;
-;; CRITICAL — firmware calling convention: the AMSDOS CAS routines are reached
-;; through z88dk's `firmware` interposer (call firmware / defw <addr>), which
-;; restores the firmware alt-register/exx environment around the call.  A DIRECT
-;; `call 0xBCxx` routes CAS_IN to TAPE ("Press PLAY then any key"), NOT disc —
-;; empirically validated; the standalone-direct-call premise of design-note §6
-;; was wrong.  The step-8a PoC (a +cpc CRT program using the interposer) loaded
-;; from disc successfully; this loader mirrors that.
+;; CRITICAL — firmware calling convention: this loader is built with a CUSTOM
+;; crt0 (crt0-cpc-banked-loader.asm) that does NOT seize the firmware exx/ISR
+;; state — i.e. it omits the stock crt0's `call cpc_enable_process_exx_set`.  So
+;; _main runs in PRISTINE firmware state (fw alt-register set + fw ISR at 0x0039
+;; intact), and the AMSDOS CAS routines are called DIRECTLY (call 0xBCxx).  This
+;; mirrors z88dk's loadbanks, which loads many files in pristine state at crt0.
+;; Do NOT use the `firmware` interposer here: it calls cpc_enable_fw_exx_set /
+;; cpc_enable_process_exx_set around every call, re-seizing the firmware state —
+;; which leaves ONLY THE FIRST disc transaction reliable (a 2nd CAS_IN_OPEN, or a
+;; large CAS_IN_DIRECT as a non-first op, hard-crashes; bisected 2026-06-11).
+;; (The old "direct call routes CAS to TAPE" note held only in PROCESS exx state;
+;; in pristine/native state the direct call hits disc.)  The loader hands over to
+;; the engine still in pristine state — exactly what the engine's own
+;; crt0-cpc-banked.asm expects (its cpc_enable_process_exx_set captures the fw
+;; exx set + fw ISR at entry).
 ;;
 ;; It firmware-loads, then hands over to the engine:
 ;;   1. the resident engine image GAME.BIN (headerless raw) -> engine ORG, and
@@ -34,7 +42,6 @@
 
     SECTION code_compiler
     PUBLIC _main
-    EXTERN firmware
 
     ;; AMSDOS firmware input jumpblock (|DISC is the 6128-with-drive default)
     defc CAS_IN_OPEN   = 0xBC77    ;; B=name len, HL=name addr, DE=2K buffer addr
@@ -42,21 +49,22 @@
     defc CAS_IN_CLOSE  = 0xBC7A
 
 _main:
+    ;; Entered in PRISTINE firmware state by crt0-cpc-banked-loader.asm (no
+    ;; process-exx seize).  Interrupts are ON (fw 300 Hz tick drives the disc
+    ;; motor); SP is set; ROMs are walked.  All CAS calls below are DIRECT.
+
     ;; ---- load the resident engine image GAME.BIN -> @@MAIN_CODE_START@@ ----
-    ;; (Config 0 / base map.)  All CAS calls go through the firmware interposer.
+    ;; (Config 0 / base map.)  DIRECT CAS calls in pristine fw state.
     ld   b, @@MAIN_FILE_LEN@@        ;; filename length
     ld   hl, _mainname              ;; filename "@@MAIN_FILE@@"
     ld   de, 0x8000                 ;; 2K firmware CAS buffer (page C, just below
                                     ;; this loader's 0x8800 origin; free pre-game)
-    call firmware
-    defw CAS_IN_OPEN
+    call CAS_IN_OPEN
     jp   nc, _loader_error
     ld   hl, @@MAIN_CODE_START@@    ;; destination = engine ORG (headerless raw image)
-    call firmware
-    defw CAS_IN_DIRECT
+    call CAS_IN_DIRECT
     push af                         ;; preserve the load result across CAS IN CLOSE
-    call firmware
-    defw CAS_IN_CLOSE
+    call CAS_IN_CLOSE
     pop  af
     jp   nc, _loader_error
     jr   _maindone
