@@ -167,6 +167,29 @@ void animate_btiles( void ) {
 }
 #endif
 
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
+// CPC heartbeat: alternate a white filled-circle tile and a blank tile at the
+// bottom-right of the game area, toggling on current_time.frame bit 3 (~6 Hz).
+// On CPC there is no attribute RAM, so we can't blink by colour like the ZX does;
+// instead we swap the tile GRAPHIC.  These are direct CPC mode-1 tile graphics:
+// JSP_CELL_BYTES = 16 bytes per cell, COLUMN-MAJOR (the left byte-column's 8 pixel
+// lines, then the right byte-column's 8 lines — see external/jsp/lib/cpc/
+// jsp_screen.asm).  Each byte is mode-1 packed; a white pixel (pen 1, see
+// gfx_jsp.c palette) sets the plane-0 bit in bits 7..4 (4 px/byte).  gfx_tile_put
+// renders a tile id >= 256 — here the graphic's address — as a direct tile
+// pointer, bypassing the (ZX-only) font table.  attr is inert on CPC.
+static const uint8_t heartbeat_circle_tile[16] = {
+    0x30, 0x70, 0xF0, 0xF0, 0xF0, 0xF0, 0x70, 0x30,   // left  byte-column, lines 0..7
+    0xC0, 0xE0, 0xF0, 0xF0, 0xF0, 0xF0, 0xE0, 0xC0,   // right byte-column, lines 0..7
+};
+static const uint8_t heartbeat_blank_tile[16] = { 0 };
+
+void show_heartbeat(void) {
+    const uint8_t *tile = ( current_time.frame & 0x08 ) ? heartbeat_blank_tile
+                                                        : heartbeat_circle_tile;
+    gfx_tile_put( GAME_AREA_BOTTOM, GAME_AREA_RIGHT, GFX_DEFAULT_BG_ATTR, (gfx_tile_id_t) tile );
+}
+#else
 void show_heartbeat(void) {
     if ( current_time.frame & 0x08 ) {
         gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, GFX_DEFAULT_BG_ATTR, ' ');
@@ -174,6 +197,7 @@ void show_heartbeat(void) {
         gfx_tile_put(GAME_AREA_BOTTOM, GAME_AREA_RIGHT, GFX_ATTR(GFX_YELLOW, GFX_GREEN, 0, 0), ' ');
     }
 }
+#endif
 
 // this one is not needed, this task is run from the ISR
 // void run_music_tasks( void ) {
@@ -279,6 +303,13 @@ void run_main_game_loop(void) {
       animate_btiles();
 #endif
 
+      // CPC heartbeat indicator (debug liveness light): drawn just before the
+      // screen update so it appears the same frame.  CPC-only so ZX builds are
+      // byte-unchanged.
+#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
+      show_heartbeat();
+#endif
+
       // update screen
       gfx_update();
 
@@ -287,9 +318,6 @@ void run_main_game_loop(void) {
       // continuously but e.g.  just once every frame, please use the
       // RUN_ONLY_ONCE_PER_FRAME macro at the very beginning of the
       // function.  See how it has been done e.g.  in move_sprites()
-
-      // test light just to be sure we did not hang
-//      show_heartbeat();
    }
 
    // end of main game loop
