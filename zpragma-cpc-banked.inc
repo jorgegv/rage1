@@ -34,9 +34,10 @@
 // Disable interrupts at startup (CPC firmware live until RAGE1's CPC HAL takes over).
 #pragma output CRT_ENABLE_EIDI        = 1
 
-// Firmware-free IM1 interrupt model (banking.md §3.5): the +cpc CRT installs its
-// own IM1 interposer at 0x0038 and calls cpc_add_fast_isr()/cpc_add_vsync_isr()
-// handlers, so the lower ROM is never paged in during an interrupt.
+// Firmware-free IM1 interrupt model (banking.md §3.5): the +cpc CRT installs only
+// a do-nothing IM1 stub at 0x0038 (no firmware ISR, so the lower ROM is never
+// paged in during an interrupt); RAGE1 then owns IM1 from init_interrupts(),
+// poking `jp rage1_cpc_isr` over 0x0038 (engine/src/cpc/rage1_cpc_isr_body.inc).
 #pragma output CRT_DISABLE_FIRMWARE_ISR = 1
 
 // Standard no-file-system build (same as the cpc-flat / ZX48 profile).

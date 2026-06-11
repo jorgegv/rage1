@@ -116,7 +116,7 @@ _memory_current_memory_bank:
 ;; dataset bank is paged into 0x4000-0x7FFF — and tests/sets the reentrancy guard
 ;; there too.  Declared in interrupts.h.
 ;;
-;; extern uint8_t cpc_isr_div_counter;   // frame-position counter, 0 at VSYNC
+;; extern uint8_t cpc_isr_div_counter;   // divide-by-six counter / sub-frame index (0..5)
 ;; extern uint8_t isr_busy;              // 1-bit 50 Hz-body reentrancy guard
 ;;
 

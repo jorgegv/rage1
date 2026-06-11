@@ -31,17 +31,11 @@
 #include <z80.h>
 #endif
 
-// G8: CPC platforms use the firmware-free IM1 path.  The z88dk +cpc CRT, built
-// with CRT_DISABLE_FIRMWARE_ISR=1 (set in zpragma-cpc-flat.inc), owns the
-// 0x0038 IM1 vector and calls registered "fast" handlers at the raw CPC 300 Hz
-// rate WITHOUT paging the lower ROM (no firmware).  We register a fast handler
-// and divide its 300 Hz cadence by six to drive RAGE1's 50 Hz tick.  banking.md
-// §3.5 ("divide-by-six in software").  <arch/cpc.h> provides cpc_add_fast_isr();
-// <interrupt.h> provides isr_t.
-#if defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
-#include <arch/cpc/cpc.h>
-#include <interrupt.h>
-#endif
+// CPC platforms use a RAGE1-owned, firmware-free IM1 path: init_interrupts()
+// installs `jp rage1_cpc_isr` directly at the 0x0038 IM1 vector and takes full
+// control — no firmware ISR, no z88dk-clib vector dispatcher.  So the CPC ISR
+// needs no <arch/cpc.h> / <interrupt.h> registration helpers; the shared
+// handler lives in engine/src/cpc/rage1_cpc_isr_body.inc.
 
 #include "rage1/audio.h"
 #include "rage1/interrupts.h"
@@ -170,24 +164,24 @@ void init_interrupts(void) {
 
 #elif defined( BUILD_FEATURE_PLATFORM_CPC464 ) || defined( BUILD_FEATURE_PLATFORM_CPC6128 )
 
-// G8: real CPC IM1 interrupt path (firmware-free, owns 0x0038 via the +cpc CRT
-// interposer; banking.md §3.5).  This is the cpc-flat implementation; it is
-// written so Phase B6 can extend it for cpc-banked.  The divide-by-six counter
-// and the 50 Hz tick dispatch are kept platform-neutral here; any bank-specific
-// interlock (interrupt_nesting_level vs the bank-switch primitive — banking.md
-// §3.5.1) is guarded OUT of cpc-flat and added by B6 for cpc-banked.
+// RAGE1-owned, firmware-free CPC IM1 interrupt path — UNIFIED for cpc-flat and
+// cpc-banked.  RAGE1 installs its own low-memory ISR (rage1_cpc_isr, the shared
+// body engine/src/cpc/rage1_cpc_isr_body.inc) directly at the 0x0038 IM1 vector
+// from init_interrupts() and takes full control: no firmware ISR, no z88dk-clib
+// vector dispatcher (cpc_add_fast_isr / asm_interrupt_handler).  The ISR derives
+// the 50 Hz tick by dividing the ~300 Hz CPC raster interrupt by six (the Gate
+// Array hardware-locks 6 interrupts/frame to the display — drift-free), runs the
+// tick body interruptible, and guards reentrancy with isr_busy.  Full design:
+// doc/multiplatform-plan/cpc-interrupts.md.
+//
+// Only the ISR/state PLACEMENT differs per mode (handled by the two wrapper .asm
+// files): on cpc-banked the ISR + its state link <0x4000 (page A, always mapped)
+// so a tick may fire while a dataset bank is paged into 0x4000-0x7FFF; on cpc-flat
+// (no swap window) they are ordinary code/BSS.  The C below is identical for both.
 
-#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
-
-// cpc-banked: RAGE1 owns the IM1 vector with a low-memory ISR
-// (engine/src/cpc-banked/rage1_cpc_isr.asm, code_crt_common -> page A, <0x4000).
-// VSYNC-driven 50 Hz tick, interruptible slow path, isr_busy reentrancy guard.
-// See doc/multiplatform-plan/cpc-interrupts.md.  The asm ISR + its state live
-// below 0x4000 so a tick may fire while a dataset bank is paged into
-// 0x4000-0x7FFF (interrupts stay live across dataset_activate's decompress).
-
-// ISR state, defined low in engine/src/cpc-banked/asmdata_cpc_banked.asm
-extern uint8_t cpc_isr_div_counter;     // frame-position counter (0 at VSYNC)
+// ISR state.  cpc-banked: hand-placed <0x4000 in asmdata_cpc_banked.asm.
+// cpc-flat: plain C BSS in engine/src/cpc/asmdata_cpc.c.
+extern uint8_t cpc_isr_div_counter;     // frame-position / divide-by-six counter
 extern uint8_t isr_busy;                // 1-bit 50 Hz-body reentrancy guard
 
 // the low asm IM1 handler, installed at 0x0038 by init_interrupts()
@@ -195,9 +189,10 @@ extern void rage1_cpc_isr( void );
 
 // The 50 Hz body the asm ISR calls (interrupts enabled) on each frame tick — same
 // portable semantics as the ZX IM2 ISR body.  The asm wrapper does all register
-// saving and the divide-by-six; this is plain C.  MUST link <0x4000 (it runs while
-// a dataset bank may be mapped) — ASSERTED by section-check-cpc (Makefile-cpc-banked)
-// for _rage1_50hz_tick / _do_timer_tick / _do_periodic_isr_tasks.
+// saving and the divide-by-six; this is plain C.  On cpc-banked it MUST link
+// <0x4000 (it runs while a dataset bank may be mapped) — ASSERTED by
+// section-check-cpc (Makefile-cpc-banked) for _rage1_50hz_tick / _do_timer_tick /
+// _do_periodic_isr_tasks; cpc-flat has no such constraint.
 void rage1_50hz_tick( void ) {
    do_timer_tick();
    if ( periodic_tasks_enabled )
@@ -227,112 +222,6 @@ void init_interrupts( void ) {
    // everything is set up, allow interrupts now
    intrinsic_ei();
 }
-
-#else  // cpc-flat: firmware-free IM1 via the +cpc CRT interposer (existing path)
-
-// Divide-by-six counter: the CPC raster ISR fires at 300 Hz (fixed by the Gate
-// Array).  Every sixth fast tick is one RAGE1 50 Hz frame tick.  banking.md §3.5.
-#define CPC_ISR_DIVIDER     6
-static uint8_t cpc_isr_div_counter = 0;
-
-// CPC fast ISR (300 Hz), registered with cpc_add_fast_isr().  The +cpc CRT
-// fast-isr interposer (CRT_DISABLE_FIRMWARE_ISR=1 path, cpc_crt0.asm) saves
-// AF/HL/BC before calling asm_interrupt_handler, which saves BC/DE around each
-// registered handler.  Neither layer saves IX, IY, or the Z80 shadow/alternate
-// register set (AF'/BC'/DE'/HL').
-//
-// IX/IY must be saved because SDCC uses IX as a frame pointer in callees.
-//
-// The shadow registers must ALSO be saved because a future AU5 music tracker
-// running inside this ISR (or any library called from do_periodic_isr_tasks)
-// may use exx/ex af,af' internally.  Without the save/restore the shadow set
-// of the interrupted main code would be silently corrupted, causing intermittent
-// crashes once AU5 is wired.  Save them now so the ISR is correct regardless
-// of what the tick body does — defensive correctness, not a pre-optimisation.
-//
-// Save/restore sequence mirrors the ZX IM2 ISR (asm_im2_push/pop_registers):
-//   entry: exx + ex af,af' swaps shadow→main position; push the four regs; exx
-//          returns to the C-visible main set for the rest of the handler.
-//   exit:  reverse: exx swaps shadow back to main position; pop in LIFO order;
-//          ex af,af' + exx restores both halves.
-//   The mnemonic is written "ex af,af" (no trailing apostrophe): SDCC's C lexer
-//   reads the ' inside an __asm block as an unterminated char literal, but z80asm
-//   accepts the no-apostrophe form and emits the identical EX AF,AF' opcode (0x08).
-//
-// Body: bump the divide-by-six counter; on every sixth tick run the SAME
-// portable do_timer_tick() / do_periodic_isr_tasks() the ZX ISR drives.  Kept
-// short so the 300 Hz budget (banking.md §3.5) is respected.
-static void cpc_fast_isr( void ) {
-   __asm
-      ; --- save IX, IY (not preserved by CRT dispatcher) ---
-      push ix
-      push iy
-      ; --- save shadow/alternate register set ---
-      ; exx swaps shadow regs into main position for pushing.
-      ; "ex af,af" (apostrophe omitted: SDCC's C lexer treats the trailing ' in
-      ; an __asm block as a char-literal delimiter; z80asm emits opcode 0x08).
-      exx
-      ex af,af            ; EX AF,AF — shadow AF into main position
-      push af
-      push bc
-      push de
-      push hl
-      ; exx restores the main register set for C code that follows
-      exx
-   __endasm;
-
-   if ( ++cpc_isr_div_counter >= CPC_ISR_DIVIDER ) {
-      cpc_isr_div_counter = 0;
-
-      // one 50 Hz frame tick — identical semantics to the ZX IM2 ISR body
-      do_timer_tick();
-      if ( periodic_tasks_enabled )
-         do_periodic_isr_tasks();
-   }
-
-   __asm
-      ; --- restore shadow/alternate register set ---
-      ; exx brings shadow regs back to main position for popping
-      exx
-      pop hl
-      pop de
-      pop bc
-      pop af
-      ex af,af            ; EX AF,AF — restore shadow AF
-      exx
-      ; --- restore IX, IY ---
-      pop iy
-      pop ix
-   __endasm;
-}
-
-// Initialize the CPC interrupt path.  No IM2 table / z80 pokes (those are ZX):
-// we hand our fast handler to the CRT's IM1 interposer.  cpc_add_fast_isr()
-// installs cpc_fast_isr into the CRT 'fast_vectors' table; the CRT's 0x0038
-// interposer (CRT_DISABLE_FIRMWARE_ISR=1) calls it at 300 Hz with no firmware.
-void init_interrupts( void ) {
-
-   // do not disturb while we wire the ISR
-   intrinsic_di();
-
-   // reset the divide-by-six counter
-   cpc_isr_div_counter = 0;
-
-   // reset interrupt nesting level (shared interlock; inert on cpc-flat, used
-   // by B6 on cpc-banked — banking.md §3.5.1)
-   interrupt_nesting_level = 0;
-
-   // ensure periodic tasks do not run yet
-   periodic_tasks_enabled = 0;
-
-   // register the 300 Hz fast handler with the +cpc CRT IM1 interposer
-   cpc_add_fast_isr( (isr_t) cpc_fast_isr );
-
-   // everything is setup, allow interrupts now
-   intrinsic_ei();
-}
-
-#endif // BUILD_FEATURE_PLATFORM_CPC_BANKED (banked) vs cpc-flat
 
 #else // any other future non-ZX, non-CPC platform
 

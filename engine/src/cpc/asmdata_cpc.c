@@ -65,4 +65,11 @@ struct codeset_assets_s *codeset_assets;
 // cpc-flat, used by B6 on cpc-banked).
 uint8_t interrupt_nesting_level;
 
+// CPC IM1 ISR state (engine/src/cpc/rage1_cpc_isr_body.inc).  The divide-by-six
+// frame counter and the 1-bit 50 Hz-body reentrancy guard.  On cpc-banked these
+// are hand-placed below 0x4000 in asmdata_cpc_banked.asm; on cpc-flat (no swap
+// window) they are ordinary BSS, defined here.
+uint8_t cpc_isr_div_counter;
+uint8_t isr_busy;
+
 #endif // PLATFORM_CPC464 || PLATFORM_CPC6128

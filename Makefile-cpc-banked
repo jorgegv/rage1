@@ -116,7 +116,13 @@ CPC_ENGINE_GFX_CSRC	= $(ENGINE_DIR)/src/gfx.c \
 			  $(ENGINE_DIR)/src/gfx_sp1.c \
 			  $(ENGINE_DIR)/src/gfx_jsp.c \
 			  $(ENGINE_DIR)/src/screen.c
-CPC_ENGINE_GFX_ASMSRC	= $(wildcard $(ENGINE_DIR)/src/cpc/*.asm)
+# rage1_cpc_isr_flat.asm is the cpc-FLAT placement wrapper for the shared IM1
+# handler (engine/src/cpc/rage1_cpc_isr_body.inc); cpc-banked supplies its own
+# placement wrapper (engine/src/cpc-banked/rage1_cpc_isr.asm, code_crt_common
+# <0x4000), so filter the flat one OUT to avoid a duplicate _rage1_cpc_isr.
+# (Same filter-out pattern as 00asmdata.asm above.)
+CPC_ENGINE_GFX_ASMSRC	= $(filter-out %/rage1_cpc_isr_flat.asm, \
+			    $(wildcard $(ENGINE_DIR)/src/cpc/*.asm))
 # Pre-baked CPC asset sources live in a game_src/assets/ subdir (not matched by
 # the top-level $(GAME_SRC_DIR)/*.c wildcard) — pull them in explicitly.
 CPC_ASSET_CSRC		= $(wildcard $(GAME_SRC_DIR)/assets/*.c)

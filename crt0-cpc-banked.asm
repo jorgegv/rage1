@@ -20,11 +20,15 @@
 ;
 ;       KEPT (essential, and firmware-free under CRT_DISABLE_FIRMWARE_ISR=1):
 ;         - SP init, crt0_init (data/BSS), atexit init, heap/eidi init
-;         - cpc_enable_process_exx_set: installs the firmware-free IM1 interposer
-;           at 0x0038/0x0039 that the engine's cpc_add_fast_isr() ISR needs
-;           (interrupts.c) — with CRT_DISABLE_FIRMWARE_ISR=1 it makes NO firmware
-;           call (just exx bookkeeping + the 0x0038 vector write).
-;         - the exx routines, __interposer_isr__, and the MMAP BANK scaffolding.
+;         - cpc_enable_process_exx_set: exx bookkeeping + installs a do-nothing IM1
+;           stub (__interposer_isr__ = ei/ret) at 0x0038/0x0039 to cover the brief
+;           startup window before main() runs init_interrupts(), which then pokes
+;           `jp rage1_cpc_isr` over 0x0038 and OWNS IM1 (engine/src/cpc-banked/
+;           rage1_cpc_isr.asm).  No firmware call, no clib ISR dispatcher.
+;         - the exx routines, the do-nothing __interposer_isr__, and the MMAP BANK
+;           scaffolding.  The clib fast/VSYNC vector walk + cpc_add_fast_isr/
+;           cpc_add_vsync_isr aliases are REMOVED (RAGE1 never registers a clib
+;           handler — they only pulled the clib dispatcher into the link).
 ;       DROPPED (firmware-dependent, would crash on jp-entry; also redundant here):
 ;         - AMSDOS drive read/restore (($be7d)), mc_start_program (ROMs already
 ;           off), kl_rom_walk, and loadbanks (banks are streamed by LOADER.BIN,
@@ -221,73 +225,20 @@ ENDIF
     ret
 
 IF startup != 2
-   PUBLIC  cpc_add_vsync_isr
-   PUBLIC  _cpc_add_vsync_isr
-   PUBLIC  cpc_add_fast_isr
-   PUBLIC  _cpc_add_fast_isr
+
+; RAGE1 cpc-banked: the engine OWNS the IM1 vector from init_interrupts(), which
+; pokes `jp rage1_cpc_isr` at 0x0038 (engine/src/cpc-banked/rage1_cpc_isr.asm).
+; This interposer therefore only has to survive the brief startup window between
+; crt_init_eidi (EI on startup) and init_interrupts() — so it is a do-nothing ISR
+; (the GA interrupt is acknowledged by the Z80 INT cycle; ei/ret is sufficient).
+; The z88dk-clib fast/VSYNC vector walk (im1_vectors/fast_vectors via
+; asm_interrupt_handler) and the cpc_add_fast_isr/cpc_add_vsync_isr registration
+; aliases are REMOVED: RAGE1 never registers a clib handler, so they were dead code
+; that needlessly pulled the clib interrupt dispatcher into the link.
 
 __interposer_isr__:
-IF CRT_DISABLE_FIRMWARE_ISR = 0
-   EXTERN __fw_add_vsync_isr
-   EXTERN __fw_del_vsync_isr
-   EXTERN __fw_add_fast_isr
-   EXTERN __fw_del_fast_isr
-
-   defc cpc_add_vsync_isr = __fw_add_vsync_isr
-   defc _cpc_add_vsync_isr = cpc_add_vsync_isr
-   defc cpc_del_vsync_isr = __fw_del_vsync_isr
-   defc _cpc_del_vsync_isr = cpc_del_vsync_isr
-
-   defc cpc_add_fast_isr = __fw_add_fast_isr
-   defc _cpc_add_fast_isr = cpc_add_fast_isr
-   defc cpc_del_fast_isr = __fw_del_fast_isr
-   defc _cpc_del_sfastisr = cpc_del_fast_isr
-
-   call cpc_enable_fw_exx_set
-   call 0x0038
-   di
-   call cpc_enable_process_exx_set
    ei
    ret
-ELSE
-   EXTERN im1_vectors
-   EXTERN fast_vectors
-   EXTERN im1_install_isr
-   EXTERN im1_uninstall_isr
-   EXTERN __add_fast_isr
-   EXTERN __del_fast_isr
-   EXTERN asm_interrupt_handler
-
-   defc cpc_add_vsync_isr = im1_install_isr
-   defc _cpc_add_vsync_isr = cpc_add_vsync_isr
-   defc cpc_del_vsync_isr = im1_uninstall_isr
-   defc _cpc_del_vsync_isr = cpc_del_vsync_isr
-
-   defc cpc_add_fast_isr = __add_fast_isr
-   defc _cpc_add_fast_isr = cpc_add_fast_isr
-   defc cpc_del_fast_isr = __del_fast_isr
-   defc _cpc_del_sfastisr = cpc_del_fast_isr
-
-   push    af
-   push    hl
-   push    bc
-   ld      hl,im1_vectors
-   ; Test for VSYNC
-   ld      b,$f5
-   in      a,(c)
-   rra
-   ; Call the raster/VSYNC interrupts
-   call    c,asm_interrupt_handler
-   ; Call the fast handlers
-   ld      hl,fast_vectors
-   call    asm_interrupt_handler
-no_int:
-   pop     bc
-   pop     hl
-   pop     af
-   ei
-   ret
-ENDIF
 
 ENDIF
 
