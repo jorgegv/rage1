@@ -599,14 +599,24 @@ section-check-cpc:
 	## below 0x4000 (page A, always mapped).  The ISR + state are pinned there by the
 	## custom mmap (code_crt_common); the C body + callees land in code_compiler by link
 	## order, so assert their addresses here (see doc/multiplatform-plan/cpc-interrupts.md).
+	## Only full-engine / ISR-linking builds carry these symbols; the no-banking smoke
+	## games (cpc-hello-banked, cpc-bswitch-test) do not link the ISR, so a symbol ABSENT
+	## from the map is skipped (a real engine build that linked the ISR always has it —
+	## init_interrupts() references it, so an absent symbol would fail the LINK first).
+	checked= ; \
 	for sym in _rage1_cpc_isr _rage1_50hz_tick _do_timer_tick _do_periodic_isr_tasks ; do \
 		addr=$$(grep -E "^$$sym[[:space:]]" main.map | head -1 | sed -E 's/^[^=]*= \$$([0-9A-Fa-f]+).*/\1/') ; \
-		if [ -z "$$addr" ]; then echo "  ERROR: $$sym not found in main.map"; exit 1 ; fi ; \
+		if [ -z "$$addr" ]; then continue ; fi ; \
+		checked=1 ; \
 		if [ $$((16#$$addr)) -ge 16384 ]; then \
 			echo "  ERROR: $$sym at 0x$$addr is >= 0x4000 - the IM1 ISR path must stay below the 0x4000 bank-swap window!"; exit 1 ; \
 		fi ; \
-	done
-	echo "  OK: IM1 ISR + 50 Hz-body path links below 0x4000."
+	done ; \
+	if [ -n "$$checked" ]; then \
+		echo "  OK: IM1 ISR + 50 Hz-body path links below 0x4000." ; \
+	else \
+		echo "  OK: no RAGE1 IM1 ISR linked (no-engine smoke build) - ISR-placement check skipped." ; \
+	fi
 
 ##
 ## CRT_ORG_CODE exposed for appmake (read from zpragma-cpc-banked.inc)
