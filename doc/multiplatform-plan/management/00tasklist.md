@@ -81,7 +81,7 @@ Tasks that are in-progress should be ticked with [~] as soon as they are started
   - [~] B7 — cpc-banked banking tooling
     - [x] B7 step 8 — banktool.pl per-platform bank set from YAML
     - [x] B7 step 8a — disk-loader design note (doc/multiplatform-plan/cpc-banked-disk-loader.md) + firmware-bankload cap32 PoC: R-DL1 VALIDATED (tools/cpc-bankload-poc/, cap32-pass.png + neg control); R-DL2 resolved (appmake EDSK multi-file writer)
-    - [~] B7 step 9 — engine/loader-cpc-banked/ asmloader templates + loadertool.pl --platform=cpc-banked
+    - [x] B7 step 9 — engine/loader-cpc-banked/ asmloader templates + loadertool.pl --platform=cpc-banked (incl. 9.2/9.3 cold-boot loader + the firmware-free RAGE1 IM1 ISR; engine boots+runs; cpc-flat unified onto the same ISR — commits d9a1838 / 8f8aeef)
     - [ ] B7 step 10 — games/cpc-banked-test smoke (1 dataset + 1 codeset), cap32 visual gate
   - [ ] T3 — cpc-banked Makefile; first banked `.dsk` build
 

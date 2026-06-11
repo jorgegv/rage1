@@ -1,18 +1,24 @@
 # Phase 4 remaining — cpc-banked bring-up (B6 / B7 / T3) — execution tracker
 
-> **Status (2026-06-08): ALL decisions DC1–DC7 RESOLVED — bring-up is UNBLOCKED;
-> ready to implement Stage T3a (Makefile-cpc-banked / zpragma / mmap), built
-> SHAPE-PARAMETRIC to experiment with the two memory-map partitions (DC3-D: Shape A
-> = buffer in page C; Shape B = full-page-A buffer, code in page C).** Page-A/C fit,
-> CRT_ORG_CODE floor, and the shape choice are measure-and-iterate items during
-> implementation, not pre-decisions. This is an
-> *execution* tracker that turns the approved design in
+> **Status (2026-06-11): IMPLEMENTED through B7 step 9 — the engine BOOTS + RUNS
+> from the banked disc on cap32.** Stage B6 (bank-switch primitive + IM1 ISR) and
+> B7 steps 8 / 8a / 9 are done: a cold-boot `LOADER.BIN` streams the compressed
+> banks + the headerless `GAME.BIN` off the disc, an Option-1 custom minimal crt0
+> fixed the two-CRT firmware-state handover that had blocked boot, and RAGE1 owns a
+> firmware-free low-memory IM1 ISR (DIVIDE-BY-SIX 50 Hz tick, interruptible body +
+> `isr_busy` guard; cpc-flat is unified onto the same ISR — commits d9a1838 /
+> 8f8aeef). all-test-builds 23/23; branch `cpc_banked_bringup`, NOT pushed. Shape A
+> (dataset buffer in page C) was adopted. **REMAINING = B7 step 10:** the
+> `games/cpc-banked-test` smoke + cap32 visual gate, currently blocked by a
+> cpc-banked sprite-render bug (~7 garbled hero copies; cpc-flat renders cleanly) —
+> leading hypothesis: sprite-draw code / home data in the `0x4000-0x7FFF` swap
+> window. The DC1–DC7 decisions below are the resolved design record; the gated
+> step-by-step log lives in the daily prompt files (`.prompts/2026-06-08.md` →
+> `2026-06-11.md`). This is an *execution* tracker that turns the approved design in
 > [../banking.md §6 (B6/B7)](../banking.md) and
-> [../toolchain.md §Phase T3](../toolchain.md) into a gated step sequence, and
-> extracts the **open decisions that must be resolved before/while writing code**.
-> No engine code has been written yet (branch `cpc_banked_bringup` created off
-> `refactor_for_multiplatform`). cpc-banked = the CPC 6128 banked (ext-RAM) target;
-> `PLATFORM=cpc6128` → `Makefile-cpc-banked`.
+> [../toolchain.md §Phase T3](../toolchain.md) into a gated step sequence.
+> cpc-banked = the CPC 6128 banked (ext-RAM) target; `PLATFORM=cpc6128` →
+> `Makefile-cpc-banked`.
 
 ## Why this is gated, not big-banged
 
