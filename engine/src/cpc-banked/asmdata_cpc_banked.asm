@@ -108,3 +108,22 @@ _interrupt_nesting_level:
 public		_memory_current_memory_bank
 _memory_current_memory_bank:
 		db	0
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; CPC IM1 ISR state (rage1_cpc_isr.asm).  BOTH must be page-A low: the ISR
+;; reads/writes the counter on EVERY interrupt — including ticks that fire while a
+;; dataset bank is paged into 0x4000-0x7FFF — and tests/sets the reentrancy guard
+;; there too.  Declared in interrupts.h.
+;;
+;; extern uint8_t cpc_isr_div_counter;   // frame-position counter, 0 at VSYNC
+;; extern uint8_t isr_busy;              // 1-bit 50 Hz-body reentrancy guard
+;;
+
+public		_cpc_isr_div_counter
+_cpc_isr_div_counter:
+		db	0
+
+public		_isr_busy
+_isr_busy:
+		db	0

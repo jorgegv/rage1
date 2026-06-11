@@ -552,6 +552,19 @@ section-check-cpc:
 		echo "  ERROR: section(s) in screen RAM region (0xC000-0xFFFF)!"; exit 1; \
 	fi
 	echo "  OK: no sections in screen RAM region."
+	## The RAGE1-owned IM1 ISR (rage1_cpc_isr) and the 50 Hz body it calls run while a
+	## dataset bank may be paged into 0x4000-0x7FFF, so the WHOLE IRQ path MUST link
+	## below 0x4000 (page A, always mapped).  The ISR + state are pinned there by the
+	## custom mmap (code_crt_common); the C body + callees land in code_compiler by link
+	## order, so assert their addresses here (see doc/multiplatform-plan/cpc-interrupts.md).
+	for sym in _rage1_cpc_isr _rage1_50hz_tick _do_timer_tick _do_periodic_isr_tasks ; do \
+		addr=$$(grep -E "^$$sym[[:space:]]" main.map | head -1 | sed -E 's/^[^=]*= \$$([0-9A-Fa-f]+).*/\1/') ; \
+		if [ -z "$$addr" ]; then echo "  ERROR: $$sym not found in main.map"; exit 1 ; fi ; \
+		if [ $$((16#$$addr)) -ge 16384 ]; then \
+			echo "  ERROR: $$sym at 0x$$addr is >= 0x4000 - the IM1 ISR path must stay below the 0x4000 bank-swap window!"; exit 1 ; \
+		fi ; \
+	done
+	echo "  OK: IM1 ISR + 50 Hz-body path links below 0x4000."
 
 ##
 ## CRT_ORG_CODE exposed for appmake (read from zpragma-cpc-banked.inc)

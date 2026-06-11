@@ -177,6 +177,59 @@ void init_interrupts(void) {
 // interlock (interrupt_nesting_level vs the bank-switch primitive — banking.md
 // §3.5.1) is guarded OUT of cpc-flat and added by B6 for cpc-banked.
 
+#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+
+// cpc-banked: RAGE1 owns the IM1 vector with a low-memory ISR
+// (engine/src/cpc-banked/rage1_cpc_isr.asm, code_crt_common -> page A, <0x4000).
+// VSYNC-driven 50 Hz tick, interruptible slow path, isr_busy reentrancy guard.
+// See doc/multiplatform-plan/cpc-interrupts.md.  The asm ISR + its state live
+// below 0x4000 so a tick may fire while a dataset bank is paged into
+// 0x4000-0x7FFF (interrupts stay live across dataset_activate's decompress).
+
+// ISR state, defined low in engine/src/cpc-banked/asmdata_cpc_banked.asm
+extern uint8_t cpc_isr_div_counter;     // frame-position counter (0 at VSYNC)
+extern uint8_t isr_busy;                // 1-bit 50 Hz-body reentrancy guard
+
+// the low asm IM1 handler, installed at 0x0038 by init_interrupts()
+extern void rage1_cpc_isr( void );
+
+// The 50 Hz body the asm ISR calls (interrupts enabled) on each frame tick — same
+// portable semantics as the ZX IM2 ISR body.  The asm wrapper does all register
+// saving and the divide-by-six; this is plain C.  MUST link <0x4000 (it runs while
+// a dataset bank may be mapped) — ASSERTED by section-check-cpc (Makefile-cpc-banked)
+// for _rage1_50hz_tick / _do_timer_tick / _do_periodic_isr_tasks.
+void rage1_50hz_tick( void ) {
+   do_timer_tick();
+   if ( periodic_tasks_enabled )
+      do_periodic_isr_tasks();
+}
+
+void init_interrupts( void ) {
+
+   // do not disturb while we take over IM1
+   intrinsic_di();
+
+   // RAGE1 owns IM1: install `jp rage1_cpc_isr` at 0x0038.  No firmware ISR, no
+   // z88dk-clib vector dispatcher (cpc_add_fast_isr / asm_interrupt_handler).
+   __asm
+      im    1
+      ld    a, 0xc3                  ; JP opcode
+      ld    (0x0038), a
+      ld    hl, _rage1_cpc_isr
+      ld    (0x0039), hl
+   __endasm;
+
+   cpc_isr_div_counter = 0;
+   isr_busy = 0;
+   interrupt_nesting_level = 0;
+   periodic_tasks_enabled = 0;
+
+   // everything is set up, allow interrupts now
+   intrinsic_ei();
+}
+
+#else  // cpc-flat: firmware-free IM1 via the +cpc CRT interposer (existing path)
+
 // Divide-by-six counter: the CPC raster ISR fires at 300 Hz (fixed by the Gate
 // Array).  Every sixth fast tick is one RAGE1 50 Hz frame tick.  banking.md §3.5.
 #define CPC_ISR_DIVIDER     6
@@ -278,6 +331,8 @@ void init_interrupts( void ) {
    // everything is setup, allow interrupts now
    intrinsic_ei();
 }
+
+#endif // BUILD_FEATURE_PLATFORM_CPC_BANKED (banked) vs cpc-flat
 
 #else // any other future non-ZX, non-CPC platform
 
