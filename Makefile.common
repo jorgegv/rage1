@@ -147,6 +147,22 @@ SWAP_WINDOW_zx128	= $(shell perl -MYAML -e \
 			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); \
 			   print $$c->{"banking"}{"zx128"}{"swap_window"} // "0xC000"')
 
+# cpc-banked dataset decompress-buffer base, sourced from rage1-config.yml
+# (memory_map.cpc_banked.banked_dataset_base).  Passed to datagen via -B so the
+# emitted dataset ORG matches the engine's BANKED_DATASET_BASE_ADDRESS (which
+# Makefile-cpc-banked injects from the SAME key as -D) — single source of truth.
+BANKED_DATASET_BASE_CPC	= $(shell perl -MYAML -e \
+			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); \
+			   print $$c->{"memory_map"}{"cpc_banked"}{"banked_dataset_base"} // "0x9800"')
+
+# cpc-banked codeset base (the swap window a codeset is paged into / run from),
+# sourced from rage1-config.yml (memory_map.cpc_banked.codeset_assets_base).
+# Passed to datagen via -C so the emitted codeset ORG matches the engine's
+# CODESET_ASSETS_BASE (Makefile-cpc-banked injects the SAME key as -D).
+CODESET_ASSETS_BASE_CPC	= $(shell perl -MYAML -e \
+			  'my $$c=YAML::LoadFile("etc/rage1-config.yml"); \
+			   print $$c->{"memory_map"}{"cpc_banked"}{"codeset_assets_base"} // "0x4000"')
+
 # Final game TAP
 FINAL_TAP		= game.tap
 

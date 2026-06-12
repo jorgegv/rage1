@@ -616,8 +616,8 @@ sub dump_internal_data {
 print "Reading configuration...\n";
 $ctx->{cfg} = rage1_get_config();
 
-our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s, $opt_p );
-getopts("b:d:ct:s:p:");
+our ( $opt_b, $opt_d, $opt_c, $opt_t, $opt_s, $opt_p, $opt_B, $opt_C );
+getopts("b:d:ct:s:p:B:C:");
 if ( defined( $opt_d ) ) {
     $c_file_game_data		= "$opt_d/$c_file_game_data";
     $asm_file_game_data		= "$opt_d/$asm_file_game_data";
@@ -750,14 +750,24 @@ if ( $is_cpc_platform and not $has_screens ) {
     # B7 step 9.3: per-platform banked-asset ORG addresses.  The context
     # defaults (dataset 0x5B00 / codeset 0xC000) are the ZX 128 values; on
     # cpc-banked the engine decompresses each dataset to BANKED_DATASET_BASE_ADDRESS
-    # (0x8000, page C) and runs codesets from CODESET_ASSETS_BASE (0x4000, the
-    # swap window) — so the emitted dataset/codeset .asm `org` must match those
-    # engine macros (engine/include/rage1/dataset.h + memory.h) or the banked
-    # binaries' internal pointers resolve to the wrong runtime addresses.  ZX /
-    # cpc-flat keep the defaults (byte-identical).
+    # and runs codesets from CODESET_ASSETS_BASE (0x4000, the swap window) — so the
+    # emitted dataset/codeset .asm `org` must match those engine macros
+    # (engine/include/rage1/dataset.h + memory.h) or the banked binaries' internal
+    # pointers resolve to the wrong runtime addresses.  ZX / cpc-flat keep the
+    # defaults (byte-identical).
+    #
+    # The dataset/codeset bases are the single-source-of-truth values from
+    # rage1-config.yml (memory_map.cpc_banked.banked_dataset_base /
+    # .codeset_assets_base), passed in via -B / -C by the Makefile (the SAME values
+    # the engine gets as -DBANKED_DATASET_BASE_ADDRESS / -DCODESET_ASSETS_BASE).
+    # Fall back to the historic 0x9800 / 0x4000 if the options are omitted.
     if ( is_build_feature_enabled( $ctx, 'PLATFORM_CPC_BANKED' ) ) {
-        $ctx->{dataset_base_address} = 0x8000;
-        $ctx->{codeset_base_address} = 0x4000;
+        $ctx->{dataset_base_address} = defined( $opt_B )
+            ? ( $opt_B =~ /^0x/i ? hex( $opt_B ) : $opt_B + 0 )
+            : 0x9800;
+        $ctx->{codeset_base_address} = defined( $opt_C )
+            ? ( $opt_C =~ /^0x/i ? hex( $opt_C ) : $opt_C + 0 )
+            : 0x4000;
     }
 
     # generate output

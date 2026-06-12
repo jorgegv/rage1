@@ -56,6 +56,10 @@ RAGE1_CONFIG_YML	= etc/rage1-config.yml
 MM_CRT_ORG_CODE		:= $(shell yq '.memory_map.cpc_banked.crt_org_code'               $(RAGE1_CONFIG_YML))
 MM_REGISTER_SP		:= $(shell yq '.memory_map.cpc_banked.register_sp'                $(RAGE1_CONFIG_YML))
 MM_PAGE_C_DATA_BASE	:= $(shell yq '.memory_map.cpc_banked.page_c_data_base'           $(RAGE1_CONFIG_YML))
+MM_BANKED_DATASET_BASE	:= $(shell yq '.memory_map.cpc_banked.banked_dataset_base'        $(RAGE1_CONFIG_YML))
+MM_DATASET_LOAD_BASE	:= $(shell yq '.memory_map.cpc_banked.dataset_load_base'          $(RAGE1_CONFIG_YML))
+MM_CODESET_ASSETS_BASE	:= $(shell yq '.memory_map.cpc_banked.codeset_assets_base'        $(RAGE1_CONFIG_YML))
+MM_BANKED_FUNC_TBL_BASE	:= $(shell yq '.memory_map.cpc_banked.banked_function_table_base' $(RAGE1_CONFIG_YML))
 MM_JSP_BAT		:= $(shell yq '.memory_map.cpc_banked.jsp_data.bat'               $(RAGE1_CONFIG_YML))
 MM_JSP_FTT		:= $(shell yq '.memory_map.cpc_banked.jsp_data.ftt'               $(RAGE1_CONFIG_YML))
 MM_JSP_DTT		:= $(shell yq '.memory_map.cpc_banked.jsp_data.dtt'               $(RAGE1_CONFIG_YML))
@@ -69,9 +73,18 @@ JSP_REGISTER_SP		:= $(MM_REGISTER_SP)
 # JSP data-block addresses -> jsp_data.c (C arrays, __at). The #ifndef guards in
 # jsp_data.c let these -D values win over the cpc-flat 0x9800 defaults.
 # page_c_data_base -> the mmap (asm), to org rodata/data/bss into page C.
+# banked_dataset_base -> dataset.h BANKED_DATASET_BASE_ADDRESS (#ifndef-guarded),
+# the dataset decompress-buffer base; SAME key datagen reads via -B (Makefile).
+# dataset_load_base / codeset_assets_base / banked_function_table_base ->
+# memory.h + codeset.h (all #ifndef-guarded); the swap-window bases banked assets
+# are read/run from.  codeset_assets_base is also the SAME key datagen reads via -C.
 CPC_MM_DEFINES		= -DBAT_ADDR=$(MM_JSP_BAT) -DFTT_ADDR=$(MM_JSP_FTT) \
 			  -DDTT_ADDR=$(MM_JSP_DTT) -DBTT_ADDR=$(MM_JSP_BTT) \
 			  -DROTTBL_ADDR=$(MM_JSP_ROTTBL) \
+			  -DBANKED_DATASET_BASE_ADDRESS=$(MM_BANKED_DATASET_BASE) \
+			  -DDATASET_LOAD_BASE=$(MM_DATASET_LOAD_BASE) \
+			  -DCODESET_ASSETS_BASE=$(MM_CODESET_ASSETS_BASE) \
+			  -DBANKED_FUNCTION_TABLE_BASE=$(MM_BANKED_FUNC_TBL_BASE) \
 			  -Ca-DCPC_BANKED_PAGE_C_DATA_BASE=$(MM_PAGE_C_DATA_BASE) \
 			  -pragma-define:CRT_ORG_CODE=$(MM_CRT_ORG_CODE)
 

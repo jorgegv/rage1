@@ -26,10 +26,21 @@
 // buffer (zx128).  cpc-banked Shape A places the buffer at 0x8000 (page C);
 // Shape B would use 0x0040 (buffer fills page A) — see banking.md §3.1.4 /
 // DC3-D.  B6-3/B6-4.
-#ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
-    #define BANKED_DATASET_BASE_ADDRESS     0x8000
-#else
-    #define BANKED_DATASET_BASE_ADDRESS     0x5B00
+// NOTE (cpc-banked reorder, 2026-06-12): buffer moved HIGH in page C, overlapping
+// the firmware/AMSDOS reserved 0xA700-0xBFFF; it is runtime-only (filled after the
+// firmware is seized), freeing low page C for stack + DATA + BSS, which must stay
+// below the reserved area for boot-time loadbanks.
+//
+// Single source of truth: on cpc-banked the value is injected via -D from
+// etc/rage1-config.yml (memory_map.cpc_banked.banked_dataset_base) by
+// Makefile-cpc-banked; datagen.pl reads the SAME key so the emitted dataset ORG
+// matches.  The values below are fallbacks for when it is not -D-defined.
+#ifndef BANKED_DATASET_BASE_ADDRESS
+    #ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
+        #define BANKED_DATASET_BASE_ADDRESS     0x9800
+    #else
+        #define BANKED_DATASET_BASE_ADDRESS     0x5B00
+    #endif
 #endif
 
 // The following structure contains pointers to asset tables.  It is

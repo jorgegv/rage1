@@ -29,8 +29,10 @@
 // Makefile-cpc-banked via -pragma-define:CRT_ORG_CODE (single source of truth);
 // NOT set here, as a value here would conflict with the command-line override.
 
-// Stack at top of page C, just below screen RAM at 0xC000 (banking.md §3.1.4).
-#pragma output REGISTER_SP            = 0xBF00
+// REGISTER_SP: now sourced from etc/rage1-config.yml
+// (memory_map.cpc_banked.register_sp) and injected by Makefile-cpc-banked via
+// JSP_CPC_CFLAGS -pragma-define:REGISTER_SP (single source of truth); NOT set
+// here, as a value here would conflict with (and override) the command-line value.
 #pragma output CRT_STACK_SIZE         = 256
 
 // Disable interrupts at startup (CPC firmware live until RAGE1's CPC HAL takes over).
