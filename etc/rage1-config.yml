@@ -131,11 +131,11 @@ memory_map:
     ## (still RUN"-loads + loadbanks works).  Min is 0x0040 (above the RST/IM1
     ## vectors at 0x0000-0x003F).
     crt_org_code:               0x0200
-    register_sp:                0xBF00   # stack top (page C, grows down)
+    register_sp:                0x8080   # stack top: 128B, grows down to 0x8000 (your layout)
     ## datasets: compressed source read at dataset_load_base in the paged bank
     ## (= swap_window), decompressed to banked_dataset_base in page C.
     dataset_load_base:          0x4000
-    banked_dataset_base:        0x8000
+    banked_dataset_base:        0x9800
     codeset_assets_base:        0x4000
     banked_function_table_base: 0x4000
     ## engine bss relocated into page C at this address (above the dataset
@@ -146,7 +146,7 @@ memory_map:
     ## decompressed dataset larger than that overruns bss — datagen's
     ## BUILD_MAX_DATASET_SIZE_CPC6128 must stay <= 6 KB (TODO: add a build-time
     ## assertion; the doc's old MAXDS~10KB estimate predates bss landing here).
-    page_c_data_base:           0x9800
+    page_c_data_base:           0x8080
     ## JSP data block at the top of the 0x4000 swap window (page-B home RAM1).
     ## The cpc-flat 0x9800-0xBFFF block shifted down 0x4000.  ROTTBL is
     ## 256-aligned and the block ends at 0x7FFF.

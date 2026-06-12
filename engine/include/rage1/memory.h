@@ -55,8 +55,16 @@ void init_memory(void);
     // engine banked-function table and banked code.
     #ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
         #define ENGINE_CODE_MEMORY_BANK		4
-        #define BANKED_FUNCTION_TABLE_BASE	0x4000
-        #define DATASET_LOAD_BASE		0x4000
+        // BANKED_FUNCTION_TABLE_BASE / DATASET_LOAD_BASE are sourced from
+        // etc/rage1-config.yml (memory_map.cpc_banked.banked_function_table_base /
+        // .dataset_load_base) via -D from Makefile-cpc-banked; the fixed values
+        // below are fallbacks for direct builds without the -D.
+        #ifndef BANKED_FUNCTION_TABLE_BASE
+            #define BANKED_FUNCTION_TABLE_BASE	0x4000
+        #endif
+        #ifndef DATASET_LOAD_BASE
+            #define DATASET_LOAD_BASE		0x4000
+        #endif
     #endif
 
     // function type definitions

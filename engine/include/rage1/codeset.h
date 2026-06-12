@@ -60,7 +60,12 @@ extern struct codeset_assets_s *codeset_assets;
 // 0x4000 swap window. Mirrors banking.cpc-banked.swap_window in
 // etc/rage1-config.yml (DC3; banking.md §6).
 #ifdef BUILD_FEATURE_PLATFORM_CPC_BANKED
-    #define CODESET_ASSETS_BASE		0x4000
+    // sourced from etc/rage1-config.yml (memory_map.cpc_banked.codeset_assets_base)
+    // via -D from Makefile-cpc-banked; the fixed value is a fallback for direct
+    // builds.  datagen.pl reads the SAME key (via -C) for the codeset ORG.
+    #ifndef CODESET_ASSETS_BASE
+        #define CODESET_ASSETS_BASE		0x4000
+    #endif
 #endif
 
 ///////////////////////////////////////////////////////////

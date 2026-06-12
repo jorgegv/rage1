@@ -181,7 +181,7 @@ build-cpc: build-cpc6128
 # comes from banking.cpc-banked.swap_window (0x4000), mirroring the generic
 # ZX `data:` target.
 data-cpc6128:
-	$(DATAGEN) -p cpc6128 -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
+	$(DATAGEN) -p cpc6128 -B $(BANKED_DATASET_BASE_CPC) -C $(CODESET_ASSETS_BASE_CPC) -c -d $(GENERATED_DIR) $(GDATA_FILES) $(GDATA_PATCHES)
 	./tools/generate_banked_function_defs.pl -p cpc-banked
 
 ###############################################
